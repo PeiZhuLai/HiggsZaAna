@@ -74,10 +74,10 @@ for c in range(nCat):
 
 
             CMS_hzg_mass.setVal(mychain.H_mass + mass_H - 125.0)
-            CMS_hzg_weight.setVal(mychain.weight*mychain.reweight)
+            CMS_hzg_weight.setVal(mychain.weight)
 
-            if mychain.BDT_score > boundaries[c] and mychain.BDT_score <= boundaries[c+1]:
-                data_mass_cats.add(ArgSet,mychain.weight*mychain.reweight)
+            if mychain.bdt_score_t > boundaries[c] and mychain.bdt_score_t <= boundaries[c+1]:
+                data_mass_cats.add(ArgSet,mychain.weight)
 
         data_mass_cats.Print("v")
         #dataset_WithoutWeight.Print("v")

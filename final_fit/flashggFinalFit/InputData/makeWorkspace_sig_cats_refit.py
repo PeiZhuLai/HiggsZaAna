@@ -10,6 +10,7 @@ parser.add_argument("-j", "--json", dest="json", type=str, default="./significan
 parser.add_argument("-o", "--out", dest="out", type=str, default="./output_file", help="path to the output dir")
 parser.add_argument("-t", "--tree", dest="tree", type=str, default="test", help="name of the tree")
 parser.add_argument("-dm", "--shift", dest="shift", type=float, default=5, help="shift ALP mass")
+parser.add_argument("-c", "--channel", dest="channel", type=str, default="ele", help="ele/mu")
 args = parser.parse_args()
 
 shift = int(args.shift)
@@ -28,7 +29,7 @@ json = file_json.readline().split(' ')
 nCat = int(json[0])
 boundaries = list(map(float, json[1:nCat+2]))
 
-cat_name = 'vbf'
+
 
 # Read the input dataset
 ############################
@@ -66,14 +67,19 @@ for c in range(nCat):
         ArgSet.Print("v")
         print "#"*51
 
-        data_mass_cats = RooDataSet("ggh_{0}_13TeV_{1}_cat{2}".format(mass_H,cat_name,c),"ggh_{0}_13TeV_{1}_cat{2}".format(mass_H,cat_name,c), ArgSet, "CMS_hzg_weight")
+        data_mass_cats = RooDataSet("ggh_{0}_13TeV_cat0".format(mass_H),"ggh_{0}_13TeV_cat0".format(mass_H), ArgSet, "CMS_hzg_weight")
 
         for jentry in range(entries):
             nb = mychain.GetEntry(jentry)
             if mychain.H_mass>170. or mychain.H_mass<105.: continue
 
+            if args.channel == 'ele':
+                if abs(mychain.Z_lead_lepton_id) != 11: continue
+            if args.channel == 'mu':
+                if abs(mychain.Z_lead_lepton_id) != 13: continue
 
-            CMS_hzg_mass.setVal(mychain.H_mass + mass_H - 125.0)
+
+            CMS_hzg_mass.setVal(mychain.H_mass_refit + mass_H - 125.0)
             CMS_hzg_weight.setVal(mychain.weight*mychain.reweight)
 
             if mychain.BDT_score > boundaries[c] and mychain.BDT_score <= boundaries[c+1]:
@@ -92,6 +98,11 @@ for c in range(nCat):
 
         getattr(w,'import')(data_mass_cats)
 
-        w.writeToFile(args.out+"/HZGamma_data_sig_Hm{0}_workspace_cat{1}.root".format(mass_H,c))
+        if args.channel == 'ele':
+            w.writeToFile(args.out+"/HZGamma_data_sig_Hm{0}_workspace_cat{1}_ele_refit.root".format(mass_H,c))
+        elif args.channel == 'mu':
+            w.writeToFile(args.out+"/HZGamma_data_sig_Hm{0}_workspace_cat{1}_mu_refit.root".format(mass_H,c))
+        else:
+            w.writeToFile(args.out+"/HZGamma_data_sig_Hm{0}_workspace_cat{1}_refit.root".format(mass_H,c))
         del w
 
