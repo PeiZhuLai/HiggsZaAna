@@ -103,7 +103,8 @@ def run_analysis(config):
         sample = sample
     )
     events = systematics_producer.produce_weights(events)
-    tag_sequence = TagSequence(
+    tag_sequence = 
+    (
         name = config["name"],
         tag_list = config["tag_sequence"],
         sample = sample,

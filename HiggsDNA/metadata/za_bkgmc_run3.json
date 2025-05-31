@@ -1,15 +1,15 @@
 {
-    "name": "zgamma_preselection",
+    "name": "za_preselection",
     "function": {
         "module_name": "higgs_dna.analysis",
         "function_name": "run_analysis"
     },
     "tag_sequence": [
         {
-            "module_name": "higgs_dna.taggers.zgamma_tagger_run2",
-            "tagger": "ZGammaTaggerRun2",
+            "module_name": "higgs_dna.taggers.za_tagger_resolved_run3",
+            "tagger": "ZaTaggerRun3",
             "kwargs": {
-                "name": "zgamma_tagger_run2",
+                "name": "za_tagger_resolved_run3",
                 "options": {
                     "gen_info": {
                         "calculate": true
@@ -181,10 +181,10 @@
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "DYJetsToLL"
+            "DYGto2LG_10to50", "DYGto2LG_50to100"
         ],
         "years": [
-            "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+            "2022preEE", "2022postEE"
         ]
     },
     "variables_of_interest": [
