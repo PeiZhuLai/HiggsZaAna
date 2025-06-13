@@ -110,6 +110,7 @@ class TagSequence():
         self.summarize()
 
         return events, self.tag_idx_map
+        
     def run_taggers(self, events, syst_tag, tag_list):
         """
         Get initial selection for each tag and allow taggers to add fields to events array.

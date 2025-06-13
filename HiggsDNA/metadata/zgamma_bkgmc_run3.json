@@ -1,15 +1,15 @@
 {
-    "name": "za_preselection",
+    "name": "zgamma_preselection",
     "function": {
         "module_name": "higgs_dna.analysis",
         "function_name": "run_analysis"
     },
     "tag_sequence": [
         {
-            "module_name": "higgs_dna.taggers.za_tagger_resolved_run3",
-            "tagger": "ZaTaggerRun3",
+            "module_name": "higgs_dna.taggers.zgamma_tagger_run2",
+            "tagger": "ZGammaTaggerRun2",
             "kwargs": {
-                "name": "za_tagger_resolved_run3",
+                "name": "zgamma_tagger_run2",
                 "options": {
                     "gen_info": {
                         "calculate": true
@@ -86,15 +86,105 @@
                 ]
             }
         },
-        "independent_collections": {}
+        "independent_collections": {
+            "FNUF": {
+                "method": "from_function",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "fnuf_unc"
+                }
+            },
+            "Material": {
+                "method": "from_function",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "material_unc"
+                }
+            },
+            "JER": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Jet",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Jet",
+                        "pt_jerUp"
+                    ],
+                    "down": [
+                        "Jet",
+                        "pt_jerDown"
+                    ]
+                }
+            },
+            "JES": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Jet",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Jet",
+                        "pt_jesTotalUp"
+                    ],
+                    "down": [
+                        "Jet",
+                        "pt_jesTotalDown"
+                    ]
+                }
+            },
+            "MET_JES": {
+                "method": "from_branch",
+                "branch_modified": "MET_pt",
+                "branches": {
+                    "up": "MET_T1_pt_jesTotalUp",
+                    "down": "MET_T1_pt_jesTotalDown"
+                }
+            },
+            "MET_Unclustered": {
+                "method": "from_branch",
+                "branch_modified": "MET_pt",
+                "branches": {
+                    "up": "MET_T1_pt_unclustEnUp",
+                    "down": "MET_T1_pt_unclustEnDown"
+                }
+            },
+            "Muon_pt": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Muon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Muon",
+                        "correctedUp_pt"
+                    ],
+                    "down": [
+                        "Muon",
+                        "correctedDown_pt"
+                    ]
+                }
+            }
+        }
     },
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "DYJetsToLL"
+            "DYGto2LG_10to50", "DYGto2LG_50to100"
         ],
         "years": [
-            "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+            "2022preEE", "2022postEE"
         ]
     },
     "variables_of_interest": [
@@ -121,35 +211,6 @@
         "Z_sublead_lepton_charge",
         "Z_sublead_lepton_id",
         "Z_sublead_lepton_ptE_error",
-        "ALP_pt",
-        "ALP_eta",
-        "ALP_phi",
-        "ALP_mass",
-        "ALP_lead_photon_pt",
-        "ALP_lead_photon_eta",
-        "ALP_lead_photon_phi",
-        "ALP_lead_photon_mass",
-        "ALP_lead_photon_energyErr",
-        "ALP_lead_photon_r9",
-        "ALP_lead_photon_sieie",
-        "ALP_lead_photon_hoe_PUcorr",
-        "ALP_lead_photon_hcalPFClusterIso",
-        "ALP_lead_photon_ecalPFClusterIso",
-        "ALP_lead_photon_chiso",
-        "ALP_lead_photon_alliso",
-        "ALP_sublead_photon_pt",
-        "ALP_sublead_photon_eta",
-        "ALP_sublead_photon_phi",
-        "ALP_sublead_photon_mass",
-        "ALP_sublead_photon_energyErr",
-        "ALP_sublead_photon_r9",
-        "ALP_sublead_photon_sieie",
-        "ALP_sublead_photon_hoe_PUcorr",
-        "ALP_sublead_photon_hcalPFClusterIso",
-        "ALP_sublead_photon_ecalPFClusterIso",
-        "ALP_sublead_photon_chiso",
-        "ALP_sublead_photon_alliso",
-        "ALP_PhotonIso",
         "electron_1_energyErr",
         "electron_2_energyErr",
         "electron_3_energyErr",
@@ -273,7 +334,6 @@
         "btagWeight_CSVV2",
         "genWeight",
         "Generator_weight",
-        "Rho_fixedGridRhoAll",
         "Flag_goodVertices",
         "Flag_globalSuperTightHalo2016Filter",
         "Flag_HBHENoiseFilter",
@@ -320,9 +380,6 @@
         "Photon_energyErr",
         "Photon_r9",
         "Photon_hoe",
-        "Photon_hoe_PUcorr",
-        "Photon_hcalPFClusterIso",
-        "Photon_ecalPFClusterIso",
         "Photon_pfRelIso03_chg_quadratic",
         "Photon_pfRelIso03_all_quadratic",
         "Photon_pfRelIso03_chg",
@@ -409,10 +466,6 @@
         "Muon_correctedUp_pt",
         "Muon_correctedDown_pt",
         "LHEScaleWeight_Zero",
-        "Photon_dEsigmaDown",
-        "Photon_dEsigmaUp",
-        "Photon_pt_ScaleUp",
-        "Photon_pt_ScaleDown",
         "Jet_pt_nom",
         "Jet_pt_jerUp",
         "Jet_pt_jerDown",

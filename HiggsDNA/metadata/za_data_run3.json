@@ -1,5 +1,5 @@
 {
-    "name": "za_preselection",
+    "name": "zgamma_preselection",
     "function": {
         "module_name": "higgs_dna.analysis",
         "function_name": "run_analysis"
@@ -19,86 +19,19 @@
         }
     ],
     "systematics": {
-        "weights": {
-            "electron_veto_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.photon_systematics",
-                    "name": "photon_electron_veto_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Photon",
-                "target_collections": [
-                    [
-                        "Photon"
-                    ]
-                ]
-            },
-            "pu_reweight_sf": {
-                "type": "event",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.pileup_systematics",
-                    "name": "pu_reweight_sf"
-                },
-                "modify_central_weight": true,
-                "requires_branches": [
-                    "Pileup_nTrueInt"
-                ]
-            },
-            "btag_deepjet_wp_sf" : {
-                "type" : "object",
-                "method" : "from_function",
-                "function" : {
-                    "module_name" : "higgs_dna.systematics.jet_systematics",
-                    "name" : "btag_deepjet_wp_sf"
-                },
-                "modify_central_weight" : true,
-                "input_collection" : "Jet",
-                "target_collections" : ["SelectedJet"],
-                "working_point" : "M"
-            },
-            "electron_wplid_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "electron_WPL_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Electron",
-                "target_collections": [
-                    "SelectedElectron"
-                ]
-            },
-            "muon_looseid_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "muon_LooseID_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Muon",
-                "target_collections": [
-                    "SelectedMuon"
-                ]
-            }
-        },
+        "weights": {},
         "independent_collections": {}
     },
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "DYJetsToLL"
+            "Data"
         ],
         "years": [
             "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
         ]
     },
     "variables_of_interest": [
-        "dZ",
         "H_pt",
         "H_eta",
         "H_phi",
@@ -267,8 +200,7 @@
         "z_ee"
     ],
     "branches": [
-        "GenVtx_z",
-        "PV_z",
+        "L1PreFiringWeight_Nom",
         "btagWeight_DeepCSVB",
         "btagWeight_CSVV2",
         "genWeight",
@@ -403,43 +335,6 @@
         "run",
         "event",
         "luminosityBlock",
-        "fixedGridRhoAll",
-        "Pileup_nTrueInt",
-        "Muon_corrected_pt",
-        "Muon_correctedUp_pt",
-        "Muon_correctedDown_pt",
-        "LHEScaleWeight_Zero",
-        "Photon_dEsigmaDown",
-        "Photon_dEsigmaUp",
-        "Photon_pt_ScaleUp",
-        "Photon_pt_ScaleDown",
-        "Jet_pt_nom",
-        "Jet_pt_jerUp",
-        "Jet_pt_jerDown",
-        "Jet_pt_jesTotalUp",
-        "Jet_pt_jesTotalDown",
-        "MET_T1_pt",
-        "MET_T1_pt_jerUp",
-        "MET_T1_pt_jerDown",
-        "MET_T1_pt_jesTotalUp",
-        "MET_T1_pt_jesTotalDown",
-        "MET_T1_pt_unclustEnUp",
-        "MET_T1_pt_unclustEnDown",
-        "Muon_corrected_pt",
-        "Muon_correctedUp_pt",
-        "Muon_correctedDown_pt",
-        "Flag_goodVertices",
-        "Flag_globalSuperTightHalo2016Filter",
-        "Flag_HBHENoiseFilter",
-        "Flag_HBHENoiseIsoFilter",
-        "Flag_EcalDeadCellTriggerPrimitiveFilter",
-        "Flag_BadPFMuonFilter",
-        "Flag_BadChargedCandidateFilter",
-        "Flag_eeBadScFilter",
-        "Flag_hfNoisyHitsFilter",
-        "Flag_ecalBadCalibFilter",
-        "Flag_BadPFMuonDzFilter",
-        "TrigObj_id",
-        "TrigObj_filterBits"
+        "fixedGridRhoAll"
     ]
 }
