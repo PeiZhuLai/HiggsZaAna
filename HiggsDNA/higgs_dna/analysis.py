@@ -103,8 +103,7 @@ def run_analysis(config):
         sample = sample
     )
     events = systematics_producer.produce_weights(events)
-    tag_sequence = 
-    (
+    tag_sequence = TagSequence(
         name = config["name"],
         tag_list = config["tag_sequence"],
         sample = sample,
@@ -416,7 +415,16 @@ class AnalysisManager():
 
         for task, info in summary.items():
             logger.debug("\n[AnalysisManager : run] Task '%s', PERFORMANCE summary" % (task))
-            logger.debug("\t [PERFORMANCE : %s] Processed %d total events in %s (hours:minutes:seconds) of total runtime (%.2f Hz)." % (task, info["physics"]["n_events_initial"], str(datetime.timedelta(seconds = info["performance"]["time"])), float(info["physics"]["n_events_initial"]) / info["performance"]["time"] ))
+            logger.debug(f"n_events_initial = {info['physics']['n_events_initial']}")
+            logger.debug(f"runtime = {info['performance']['time']}")
+
+            rate = float(info["physics"]["n_events_initial"]) / info["performance"]["time"] if info["performance"]["time"] > 0 else 0.0
+            logger.debug("\t [PERFORMANCE : %s] Processed %d total events in %s (hours:minutes:seconds) of total runtime (%.2f Hz)." %
+            (task,
+             info["physics"]["n_events_initial"],
+             str(datetime.timedelta(seconds = info["performance"]["time"])),
+             rate))
+
             for portion in ["load", "syst", "taggers"]:
                 if not info["performance"]["time"] > 0:
                     continue
