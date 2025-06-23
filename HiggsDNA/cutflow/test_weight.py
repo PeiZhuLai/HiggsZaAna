@@ -7,31 +7,28 @@ import time
 
 start_time = time.time()
 
-
-# Specify the output file path
-# output_file = "syn_list/cut_yields_output_Data_run2.txt"
-output_file = "cutflow_list/cut_yields_output_Data_run3.txt"
-
-eos_path = '/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/'
-log_path = '/afs/cern.ch/work/p/pelai/HZa/Output/cutflow_outfile/run3/'
-# Reading log files from eos is too slow
-
-dataset_type = 'Data'
-dataset_names = ["Data"]
-# dataset_years = ["2016preVFP", "2016postVFP", "2017", "2018"] #"2016preVFP", "2016postVFP", "2017", "2018", "2023preBPix"
-dataset_years = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"] #"2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
-
 # eos_path = '/eos/home-p/pelai/HZgamma/Parquet/NanoV9/run2/Sig_MC/'
 # log_path = '/afs/cern.ch/work/p/pelai/HZgamma/HiggsZGammaAna/HiggsDNA/eos_logs/Sig_MC/'
 
-# dataset_type = 'signal'
-# dataset_type = 'WI_Systematic'
-# dataset_names = ["ggH_M125"] #"ggH", "VBFH", "ZH", "ttH", "WplusH", "WminusH" "ggH_M125", "VBFH_M125", "ZH_M125", "ttH_M125", "WplusH_M125", "WminusH_M125"
-# dataset_years = ["2017"]#"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+# Specify the output file path
+output_file = "cutflow_list/cut_yields_output_Sig_MC_run3_testweight.txt"
 
-# dataset_type = 'bkgmc'
+eos_path = '/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/'
+log_path = '/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/'
+# Reading log files from eos is too slow
+ 
+# dataset_type = 'Data'
+# dataset_names = ["Data"]
+# dataset_years = ["2016preVFP", "2016postVFP", "2017", "2018"] #"2016preVFP", "2016postVFP", "2017", "2018", "2023preBPix"
+
+dataset_type = 'signal'
+dataset_type = 'Sig_MC'
+dataset_names = ["ALP_M5"] #"ggH", "VBFH", "ZH", "ttH", "WplusH", "WminusH" "ggH_M125", "VBFH_M125", "ZH_M125", "ttH_M125", "WplusH_M125", "WminusH_M125"
+dataset_years = ["2022preEE"]#"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+
+# dataset_type = 'Bkg_MC'
 # dataset_names = ["DYJetsToLL"] # "DYJetsToLL", "EWKZ2J", "ZG2JToG2L2J" "ZGToLLG" "Data_SingleMuon", "Data_DoubleMuon", "Data_SingleElectron", "Data_DoubleEG"
-# dataset_years = ["2017"] #"2016preVFP", "2016postVFP", "2017", "2018"]
+# dataset_years = ["2022preEE"] #"2016preVFP", "2016postVFP", "2017", "2018"]
 
 cutflow_type = ['zgammas','zgammas_ele','zgammas_mu','zgammas_w','zgammas_ele_w','zgammas_mu_w']
 type_num = len(cutflow_type)
@@ -60,10 +57,21 @@ for dataset in dataset_names:
         try:
             print("reading: {}{}/{}_{}/merged_nominal.parquet".format(eos_path, dataset_type, dataset, year))
             data = pd.read_parquet("{}{}/{}_{}/merged_nominal.parquet".format(eos_path, dataset_type, dataset, year))
-            print(data["weight_central"].to_numpy().astype('float64'), data["weight_central_no_lumi"].to_numpy().astype('float64'))
+            print(f"weight_central: {data['weight_central'].to_numpy().astype('float64')}")
+            print(f"sum weight_central: {data['weight_central'].to_numpy().astype('float64').sum()}")
+
+            print(f"weight: {data['weight'].to_numpy().astype('float64')}")
+            print(f"sum weight: {data['weight'].to_numpy().astype('float64').sum()}")
+
+            print(f"weight_central_no_lumi: {data['weight_central_no_lumi'].to_numpy().astype('float64')}")
+            print(f"sum weight_central_no_lumi: {data['weight_central_no_lumi'].to_numpy().astype('float64').sum()}")
+            print(f"weight_central_initial: {data['weight_central_initial'].to_numpy().astype('float64')}")
+            print(f"sum weight_central_initial: {data['weight_central_initial'].to_numpy().astype('float64').sum()}")
+            print(f"sum weight_central/weight_central_initial: {data['weight_central'].to_numpy().astype('float64').sum()/data['weight_central_initial'].to_numpy().astype('float64').sum()}")
+
             print("{}{}/{}_{}/merged_nominal.parquet".format(eos_path, dataset_type, dataset, year))
             if 'weight_central_initial' in data.keys():
-                weight = data['weight_central'].to_numpy().astype('float64')[1]/data['weight_central_initial'].to_numpy().astype('float64')[1]
+                weight = data['weight_central'].to_numpy().astype('float64').sum()/len( data['weight_central_initial'].to_numpy().astype('float64') ) 
             else:
                 weight = 1
                 print("No weight exists, set it as 1.")
@@ -145,6 +153,7 @@ for dataset in dataset_names:
                                 yields_dict[cut_type] = {}  # Initialize as an empty dictionary
 
                             # Ensure `cut` exists and accumulates yields
+                                                        # Ensure `cut` exists and accumulates yields
                             if cut in yields_dict[cut_type]:
                                 # print(f"🔄 Updating existing cut: {cut} (Previous: {yields_dict[cut_type][cut]}, Adding: {yields})")
                                 # print(f"cut_type: {cut_type}")

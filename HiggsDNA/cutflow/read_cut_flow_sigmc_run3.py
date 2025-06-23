@@ -11,10 +11,10 @@ start_time = time.time()
 # log_path = '/afs/cern.ch/work/p/pelai/HZgamma/HiggsZGammaAna/HiggsDNA/eos_logs/Sig_MC/'
 
 # Specify the output file path
-output_file = "syn_list/cut_yields_output_Sig_MC_run2.txt"
+output_file = "cutflow_list/cut_yields_output_Sig_MC_run3.txt"
 
-eos_path = '/eos/home-p/pelai/HZgamma/Parquet/NanoV9/run2/'
-log_path = '/afs/cern.ch/work/p/pelai/HZgamma/HiggsZGammaAna/HiggsDNA/synchronization/eos_logs/'
+eos_path = '/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/'
+log_path = '/afs/cern.ch/work/p/pelai/HZa/Output/cutflow_outfile/run3/'
 # Reading log files from eos is too slow
  
 # dataset_type = 'Data'
@@ -22,9 +22,9 @@ log_path = '/afs/cern.ch/work/p/pelai/HZgamma/HiggsZGammaAna/HiggsDNA/synchroniz
 # dataset_years = ["2016preVFP", "2016postVFP", "2017", "2018"] #"2016preVFP", "2016postVFP", "2017", "2018", "2023preBPix"
 
 # dataset_type = 'signal'
-dataset_type = 'WI_Systematic'
-dataset_names = ["ggH_M125", "ttH_M125", "ZH_M125"] #"ggH", "VBFH", "ZH", "ttH", "WplusH", "WminusH" "ggH_M125", "VBFH_M125", "ZH_M125", "ttH_M125", "WplusH_M125", "WminusH_M125"
-dataset_years = ["2016preVFP", "2016postVFP", "2017", "2018"]#"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+dataset_type = 'Sig_MC'
+dataset_names = ["ALP_M5", "ALP_M15", "ALP_M30"] #"ggH", "VBFH", "ZH", "ttH", "WplusH", "WminusH" "ggH_M125", "VBFH_M125", "ZH_M125", "ttH_M125", "WplusH_M125", "WminusH_M125"
+dataset_years = ["2022preEE"]#"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
 
 # dataset_type = 'Bkg_MC'
 # dataset_names = ["DYJetsToLL", "ZGToLLG"] # "DYJetsToLL", "EWKZ2J", "ZG2JToG2L2J" "ZGToLLG" "Data_SingleMuon", "Data_DoubleMuon", "Data_SingleElectron", "Data_DoubleEG"
@@ -32,14 +32,14 @@ dataset_years = ["2016preVFP", "2016postVFP", "2017", "2018"]#"2016preVFP", "201
 
 cutflow_type = ['zgammas','zgammas_ele','zgammas_mu','zgammas_w','zgammas_ele_w','zgammas_mu_w']
 type_num = len(cutflow_type)
-cut_type = ['all', 'N_lep_sel','trig_cut','lep_pt_cut','has_g_cand', 'has_z_cand','sel_h_1','sel_h_2','sel_h_3', 'event']
+cut_type = ['all', 'N_lep_sel','trig_cut','lep_pt_cut','has_z_cand','has_2g_cand','sel_h_1','sel_h_2','event']
 cut_name = {
-    'zgammas':['Initial Events', r'$N_{l} \geq 2$', 'e, ee trigger || $\mu\mu$, $\mu$ triggers ', r'lepton trigger pT cut', r'$N_{\gamma} \geq 1$', r'$80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$', r'$p_{T}^{\gamma}/m_{ll\gamma} > 15/110$', r'$m_{ll} + m_{ll\gamma} > 185 \text{ GeV}$', r'$100 \text{ GeV} < m_{ll\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
-    'zgammas_ele':['Initial Events', r'$N_{\textrm{e}} \geq 2$', 'ee, e triggers ', r'ee, e trigger pT cut', r'$N_{\gamma} \geq 1$', r'$80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$', r'$p_{T}^{\gamma}/m_{\textrm{ee}\gamma} > 15/110$', r'$m_{\textrm{ee}} + m_{\textrm{ee}\gamma} > 185 \text{ GeV}$', r'$100 \text{ GeV} < m_{\textrm{ee}\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
-    'zgammas_mu':['Initial Events', r'$N_{\mu} \geq 2$', '$\mu\mu$, $\mu$ triggers ', r'$\mu\mu$, $\mu$ trigger pT cut', r'$N_{\gamma} \geq 1$', r'$80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$', r'$p_{T}^{\gamma}/m_{\mu\mu\gamma} > 15/110$', r'$m_{\mu\mu} + m_{\mu\mu\gamma} > 185 \text{ GeV}$', r'$100 \text{ GeV} < m_{\mu\mu\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
-    'zgammas_w':['Initial Events', r'$N_{l} \geq 2$', 'e, ee trigger || $\mu\mu$, $\mu$ triggers ', r'lepton trigger pT cut', r'$N_{\gamma} \geq 1$', r'$80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$', r'$p_{T}^{\gamma}/m_{ll\gamma} > 15/110$', r'$m_{ll} + m_{ll\gamma} > 185 \text{ GeV}$', r'$100 \text{ GeV} < m_{ll\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
-    'zgammas_ele_w':['Initial Events', r'$N_{\textrm{e}} \geq 2$', 'ee, e triggers ', r'ee, e trigger pT cut', r'$N_{\gamma} \geq 1$', r'$80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$', r'$p_{T}^{\gamma}/m_{\textrm{ee}\gamma} > 15/110$', r'$m_{\textrm{ee}} + m_{\textrm{ee}\gamma} > 185 \text{ GeV}$', r'$100 \text{ GeV} < m_{\textrm{ee}\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
-    'zgammas_mu_w':['Initial Events', r'$N_{\mu} \geq 2$', '$\mu\mu$, $\mu$ triggers ', r'$\mu\mu$, $\mu$ trigger pT cut', r'$N_{\gamma} \geq 1$', r'$80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$', r'$p_{T}^{\gamma}/m_{\mu\mu\gamma} > 15/110$', r'$m_{\mu\mu} + m_{\mu\mu\gamma} > 185 \text{ GeV}$', r'$100 \text{ GeV} < m_{\mu\mu\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
+    'zgammas':[         'Initial Events', r'$N_{l} \geq 2$',            'e, ee trigger || $\mu\mu$, $\mu$ triggers ', r'lepton trigger pT cut',          r'$N_{\gamma} \geq 2$', r'$80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$',            r'$m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$',                   r'$95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
+    'zgammas_ele':[     'Initial Events', r'$N_{\textrm{e}} \geq 2$',   'ee, e triggers ',                            r'ee, e trigger pT cut',           r'$N_{\gamma} \geq 2$', r'$80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$',   r'$m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$', r'$95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
+    'zgammas_mu':[      'Initial Events', r'$N_{\mu} \geq 2$',          '$\mu\mu$, $\mu$ triggers ',                  r'$\mu\mu$, $\mu$ trigger pT cut', r'$N_{\gamma} \geq 2$', r'$80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$',        r'$m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$',           r'$95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
+    'zgammas_w':[       'Initial Events', r'$N_{l} \geq 2$',            'e, ee trigger || $\mu\mu$, $\mu$ triggers ', r'lepton trigger pT cut',          r'$N_{\gamma} \geq 2$', r'$80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$',            r'$m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$',                   r'$95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
+    'zgammas_ele_w':[   'Initial Events', r'$N_{\textrm{e}} \geq 2$',   'ee, e triggers ',                            r'ee, e trigger pT cut',           r'$N_{\gamma} \geq 2$', r'$80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$',   r'$m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$', r'$95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
+    'zgammas_mu_w':[    'Initial Events', r'$N_{\mu} \geq 2$',          '$\mu\mu$, $\mu$ triggers ',                  r'$\mu\mu$, $\mu$ trigger pT cut', r'$N_{\gamma} \geq 2$', r'$80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$',        r'$m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$',           r'$95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$', 'Event Filtering', 'Total Baseline Events'],
 }
 cut_num = len(cut_type)
 cutflow = {'zgammas':np.array(np.zeros(cut_num)), 'zgammas_ele':np.array(np.zeros(cut_num)), 'zgammas_mu':np.array(np.zeros(cut_num)), 'zgammas_w':np.array(np.zeros(cut_num)), 'zgammas_ele_w':np.array(np.zeros(cut_num)), 'zgammas_mu_w':np.array(np.zeros(cut_num))}
@@ -58,9 +58,11 @@ for dataset in dataset_names:
             print("reading: {}{}/{}_{}/merged_nominal.parquet".format(eos_path, dataset_type, dataset, year))
             data = pd.read_parquet("{}{}/{}_{}/merged_nominal.parquet".format(eos_path, dataset_type, dataset, year))
             print(data["weight_central"].to_numpy().astype('float64'), data["weight_central_no_lumi"].to_numpy().astype('float64'))
+            print(data["weight_central"].to_numpy().astype('float64').sum(), data["weight_central_initial"].to_numpy().astype('float64').sum())
             print("{}{}/{}_{}/merged_nominal.parquet".format(eos_path, dataset_type, dataset, year))
             if 'weight_central_initial' in data.keys():
-                weight = data['weight_central'].to_numpy().astype('float64')[1]/data['weight_central_initial'].to_numpy().astype('float64')[1]
+                # 乘 2.0 是因為沒有 skimmed root files ，填上ㄧ樣的 root file 導致 sum of weights 變兩倍，scale1fb 小了兩倍
+                weight = 2.0*data['weight_central'].to_numpy().astype('float64').sum()/data['weight_central_initial'].to_numpy().astype('float64').sum()
             else:
                 weight = 1
                 print("No weight exists, set it as 1.")
@@ -145,22 +147,29 @@ for dataset in dataset_names:
                                                         # Ensure `cut` exists and accumulates yields
                             if cut in yields_dict[cut_type]:
                                 # print(f"🔄 Updating existing cut: {cut} (Previous: {yields_dict[cut_type][cut]}, Adding: {yields})")
-                                if 'w' in cut:
+                                # print(f"cut_type: {cut_type}")
+                                if '_w' in cut_type:
                                     yields_dict[cut_type][cut] += yields*weight  # ✅ Accumulate the value
                                 else:
                                     yields_dict[cut_type][cut] += yields  # ✅ Accumulate the value
                             else:
                                 # print(f"🆕 Adding new cut: {cut} with initial value {yields}")
-                                yields_dict[cut_type][cut] = yields  # ✅ Initialize the first time
-            f.close()
+                                if '_w' in cut_type:
+                                    yields_dict[cut_type][cut] = yields*weight  # ✅ Accumulate the value
+                                else:
+                                    yields_dict[cut_type][cut] = yields  # ✅ Accumulate the value            f.close()
 
         # Output BEFORE replacement
         print(f"\n📌 Years {year}\n")
         print("\n📌 Final Stored Data:")
         for cut_type, cuts in yields_dict.items():
             print(f"Cut Type: {cut_type}")
-            for cut, yield_value in cuts.items():
-                print(f"   - {cut:30} → {yield_value:.0f}")
+            if '_w' in cut_type:
+                for cut, yield_value in cuts.items():
+                    print(f"   - {cut:30} → {yield_value:.6f}")
+            else: 
+                for cut, yield_value in cuts.items():
+                    print(f"   - {cut:30} → {yield_value:.0f}")
 
         # Output AFTER replacement
         print("\n📌 Final Stored Data (After Replacement):")
@@ -169,7 +178,10 @@ for dataset in dataset_names:
             if cut_type_key in cut_name:  # Check if cut_type_key exists in cut_name
                 for i, (cut, yield_value) in enumerate(cuts.items()):
                     descriptive_name = cut_name[cut_type_key][i]  # Use mapped name
-                    print(f"     {descriptive_name:30} & {yield_value:.0f} \\\\")
+                    if '_w' in cut_type_key: 
+                        print(f"     {descriptive_name:30} & {yield_value:.6f} \\\\")
+                    else: 
+                        print(f"     {descriptive_name:30} & {yield_value:.0f} \\\\")
             else:
                 # If not in cut_name, use the original cut names
                 for cut, yield_value in cuts.items():
@@ -186,7 +198,10 @@ for dataset in dataset_names:
             for cut_type_key, cuts in yields_dict.items():
                 f.write(f"Cut Type: {cut_type_key}\n")
                 for cut, yield_value in cuts.items():
-                    f.write(f"   - {cut:30} → {yield_value:.0f}\n")
+                    if '_w' in cut_type_key: 
+                        f.write(f"   - {cut:30} → {yield_value:.6f}\n")
+                    else: 
+                        f.write(f"   - {cut:30} → {yield_value:.0f}\n")
 
             # Output AFTER replacement
             f.write("\n📌 Final Stored Data (After Replacement):\n")
@@ -195,7 +210,10 @@ for dataset in dataset_names:
                 if cut_type_key in cut_name:  # Check if cut_type_key exists in cut_name
                     for i, (cut, yield_value) in enumerate(cuts.items()):
                         descriptive_name = cut_name[cut_type_key][i]  # Use mapped name
-                        f.write(f"     {descriptive_name:30} & {yield_value:.0f} \\\\ \n")
+                        if '_w' in cut_type_key: 
+                            f.write(f"     {descriptive_name:30} & {yield_value:.6f} \\\\ \n")
+                        else:
+                            f.write(f"     {descriptive_name:30} & {yield_value:.0f} \\\\ \n")
                 else:
                     # If not in cut_name, use the original cut names
                     for cut, yield_value in cuts.items():
