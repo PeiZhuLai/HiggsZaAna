@@ -508,6 +508,7 @@ def decorate(data):
 
     data['H_m'] = data.H_mass
     data['ALP_m'] = data.ALP_mass
+    data['Z_m'] = data.Z_mass
 
     data['var_dEta_g1Z'] = data.apply(lambda x: compute_delta_eta_g1Z(x), axis=1) 
     data['var_dPhi_g1Z'] = data.apply(lambda x: compute_delta_phi_g1Z(x), axis=1) 

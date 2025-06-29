@@ -92,7 +92,8 @@ class Analyzer_Config:
             self.bkg_names  = ['DYJetsToLL', 'DYGto2LG']
             self.samp_names = self.bkg_names + self.sig_names + ['Data']
             self.plot_output_path = "{0}/plot_{1}".format(self.out_dir, self.out_region_name)
-            self.sys_names  = ['CMS_eff_g_up','CMS_eff_g_dn','CMS_pileup_up','CMS_pileup_dn','CMS_eff_lep_up','CMS_eff_lep_dn']
+            # self.sys_names  = ['CMS_eff_g_up','CMS_eff_g_dn','CMS_pileup_up','CMS_pileup_dn','CMS_eff_lep_up','CMS_eff_lep_dn']
+            self.sys_names  = ['weight_electron_veto_sf_Photon_up','weight_electron_veto_sf_Photon_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down']
         else:
             print("channel is invalid: channel = %s" %self.channel)
             sys.exit()

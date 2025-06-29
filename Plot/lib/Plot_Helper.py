@@ -11,11 +11,59 @@ from array import array
 import math
 #####################################################################
 
+def ScaleBkgToData(histos, ana_cfg):
+    """
+    Scale background histograms to match the total yield of the data histogram.
+    
+    Parameters:
+    - histos (dict): Dictionary of histograms for a given variable, keyed by sample name.
+    - ana_cfg (Analyzer_Config): Configuration object containing sample names, including bkg_names and data.
+    
+    Returns:
+    - None: Modifies the histograms in place.
+    """
+    # Get the data histogram
+    data_hist = histos.get('Data')
+    if not data_hist:
+        print("[ScaleBkgToData] Warning: No 'Data' histogram found. Skipping scaling.")
+        return
+    
+    # Calculate total data yield
+    data_integral = data_hist.Integral()
+    if data_integral <= 0:
+        print("[ScaleBkgToData] Warning: Data integral is zero or negative. Skipping scaling.")
+        return
+    
+    # Calculate total background yield
+    bkg_integral = 0.0
+    for sample in ana_cfg.bkg_names:
+        if sample in histos:
+            bkg_integral += histos[sample].Integral()
+    
+    if bkg_integral <= 0:
+        print("[ScaleBkgToData] Warning: Background integral is zero or negative. Skipping scaling.")
+        return
+    
+    # Compute scaling factor
+    scale_factor = data_integral / bkg_integral
+    print(f"[ScaleBkgToData] Scaling factor: {scale_factor:.4f} (Data integral: {data_integral:.2f}, Bkg integral: {bkg_integral:.2f})")
+    
+    # Apply scaling factor to each background histogram
+    for sample in ana_cfg.bkg_names:
+        if sample in histos:
+            histos[sample].Scale(scale_factor)
+            print(f"[ScaleBkgToData] Scaled histogram for {sample} by {scale_factor:.4f}")
+
+
 def LoadNtuples(ana_cfg):
     ntuples = {}
     for sample in ana_cfg.samp_names:
-        ntuples[sample] = TChain("passedEvents","chain_" + sample)
-        ntuples[sample]. Add(ana_cfg.sample_loc + '/ALP_%s.root' %sample)
+        if "M" in sample: 
+            ntuples[sample] = TChain("test","chain_" + sample)
+            ntuples[sample].Add(ana_cfg.sample_loc + '/ALP_%s/run3.root' %sample)
+        else: 
+            ntuples[sample] = TChain("inclusive","chain_" + sample)
+            ntuples[sample].Add(ana_cfg.sample_loc + '/%s/run3.root' %sample)
     return ntuples
 
 
@@ -39,14 +87,14 @@ def MakeStack(histos, ana_cfg, var_name):
     return stacks
 
 def CreateCanvas(canv_name):
-    canv = TCanvas(canv_name, canv_name, 800,800)
+    canv = TCanvas(canv_name, canv_name, 800, 800)
     return canv
 
 def MakeLumiLabel(lumi):
     tex = TLatex()
     tex.SetTextSize(0.035)
     tex.SetTextAlign(31)
-    tex.DrawLatexNDC(0.9, 0.91, '%s fb^{-1} (13 TeV)' %lumi)
+    tex.DrawLatexNDC(0.9, 0.91, '%s fb^{-1} (13.6 TeV)' %lumi)
     return tex
 
 def MakeCMSDASLabel():
@@ -101,7 +149,7 @@ def MakeRatioPlot(h_data, h_MC, var_name):
 def MakeLegend(plt_cfg, histos, scaled_signal):
     legend = TLegend(0.55,0.65,0.85,0.86)
     legend.SetNColumns(1)
-    legend.AddEntry(histos["data"], "Data", "PE")
+    legend.AddEntry(histos["Data"], "Data", "PE")
     for sample in plt_cfg.ana_cfg.sig_names:
     #for sample in ["M1","M10","M20","M30"]:
         legend.AddEntry(scaled_signal[sample], sample, "l")
@@ -302,21 +350,21 @@ def Total_Unc(hist_norm, hist_sys, analyzer_cfg):
 
     return [graph_Total, graph_norm_Total]
 
+def Draw_unc(graph, color):
+    graph.SetFillColor(color)
+    graph.SetFillStyle(3001)
+    graph.SetLineColor(color)
+    #graph.Draw("SAME2")
+    graph.Draw("SAME2")
+
 # def Draw_unc(graph, color):
-#     graph.SetFillColor(color)
-#     graph.SetFillStyle(3001)
-#     graph.SetLineColor(color)
-#     #graph.Draw("SAME2")
+#     # gStyle.SetHatchesSpacing(1)
+#     gStyle.SetHatchesLineWidth(2)
+#     graph.SetFillColor(1)
+#     graph.SetFillStyle(3004)
+#     graph.SetLineColor(0)
 #     graph.Draw("SAME2")
 
-def Draw_unc(graph, color):
-    # gStyle.SetHatchesSpacing(1)
-    gStyle.SetHatchesLineWidth(2)
-    graph.SetFillColor(1)
-    graph.SetFillStyle(3004)
-    graph.SetLineColor(0)
-    graph.Draw("SAME2")
-        
 def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY):
 
     canv.SetBottomMargin(0.012)
@@ -343,33 +391,33 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     if logY:
         upper_pad.SetLogy()
         stacks['all'].SetMinimum(1e-2)
-        stacks['all'].SetMaximum(9e7)
+        stacks['all'].SetMaximum(9e9)
 
-        histos['data'].SetMinimum(1e-2)
-        histos['data'].SetMaximum(9e7)
+        histos['Data'].SetMinimum(1e-2)
+        histos['Data'].SetMaximum(9e9)
 
-    if histos['data'].GetMaximum() > stacks['all'].GetMaximum():
-        h_max = histos['data'].GetMaximum()
+    if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
+        h_max = histos['Data'].GetMaximum()
     else:
         h_max = stacks['all'].GetMaximum()
     if h_max < stacks['sig'].GetMaximum():
         h_max = stacks['sig'].GetMaximum()
 
-    histos['data'].SetMaximum(h_max*1.4)
+    histos['Data'].SetMaximum(h_max*1.4)
     stacks['all'].SetMaximum(h_max*1.4)
 
-    histos['data'].Draw('PE')
-    histos['data'].GetXaxis().SetLabelSize(0)
-    histos['data'].GetXaxis().SetTitleOffset(0.95)
-    histos['data'].GetYaxis().SetLabelSize(0.06)
+    histos['Data'].Draw('PE')
+    histos['Data'].GetXaxis().SetLabelSize(0)
+    histos['Data'].GetXaxis().SetTitleOffset(0.95)
+    histos['Data'].GetYaxis().SetLabelSize(0.06)
     
     if var_name in ["H_m","ALP_m","Z_m"]:
-        histos['data'].GetYaxis().SetTitle('Events / (%.2f GeV)' %histos['data'].GetBinWidth(1))
+        histos['Data'].GetYaxis().SetTitle('Events / (%.2f GeV)' %histos['Data'].GetBinWidth(1))
     else:
-        histos['data'].GetYaxis().SetTitle('Events')
-    histos['data'].GetYaxis().SetTitleSize(0.07)
-    histos['data'].GetYaxis().SetTitleFont(42)
-    histos['data'].GetYaxis().SetTitleOffset(1.15)
+        histos['Data'].GetYaxis().SetTitle('Events')
+    histos['Data'].GetYaxis().SetTitleSize(0.07)
+    histos['Data'].GetYaxis().SetTitleFont(42)
+    histos['Data'].GetYaxis().SetTitleOffset(1.15)
     stacks['all'].Draw('HISTSAME')
 
     if (var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names):
@@ -378,30 +426,31 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         if bdtCut:
             scaled_sig[mA].Draw('HISTSAME')
         else:
-            # for sample, i in ["M1", "M10", "M20", "M30"]:
             line_styles = [1, 5, 7, 9]
-            for sample, i in zip(["M1", "M10", "M20", "M30"], range(4)):
+            # Run2 Paper
+            # for sample, i in zip(["M1", "M10", "M20", "M30"], range(4)):
+            for sample, i in zip(["M5", "M15", "M30"], range(3)):
                 scaled_sig[sample].SetLineStyle(line_styles[i])
                 scaled_sig[sample].SetLineWidth(4)
                 scaled_sig[sample].Draw('HISTSAME')
 
-    histos['data'].SetMarkerStyle(20)
-    histos['data'].SetLineWidth(2)
-    histos['data'].GetXaxis().SetTickLength(0.04)
+    histos['Data'].SetMarkerStyle(20)
+    histos['Data'].SetLineWidth(2)
+    histos['Data'].GetXaxis().SetTickLength(0.04)
     
     ### Draw the uncertainties
     global stat_err, stat_err_norm
     stat_err,  stat_err_norm= Get_StatUnc(stacks['bkg'].GetStack().Last())
 
     Draw_unc(total_unc[0], kGray+10)
-    # Draw_unc(stat_err, kRed-10)
+    Draw_unc(stat_err, kRed-10)
 
-    histos['data'].Draw('SAMEPE')
-    histos['data'].Draw("AXIS SAME")
+    histos['Data'].Draw('SAMEPE')
+    histos['Data'].Draw("AXIS SAME")
 
     if var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names:
         # legend.Clear()
-        # legend.AddEntry(histos["data"], "Data", "PE")
+        # legend.AddEntry(histos["Data"], "Data", "PE")
         # for sample_bkg in plt_cfg.ana_cfg.bkg_names:
         #     legend.AddEntry(histos[sample_bkg], "Z \rightarrow \ell^{+}\ell^{-}", "f")
         #     # legend.SetHeader("#splitline{Title on top line}{Title on second line}")
@@ -419,13 +468,19 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         legend_1 = TLegend(0.18, 0.68, 0.48, 0.88)
 
         ROOT.SetOwnership(legend_1, False)
-        legend_1.AddEntry(histos["data"], "Data", "PE")
+        legend_1.AddEntry(histos["Data"], "Data", "PE")
 
-        for sample_bkg in plt_cfg.ana_cfg.bkg_names:
-            legend_1.AddEntry(histos[sample_bkg], r"Z + jets", "f")
+        legend_1.AddEntry(histos["DYJetsToLL"], r"Z + jets", "f")
+        legend_1.AddEntry(histos["DYGto2LG"], r"Z + /gamma", "f")
+
+        # for sample_bkg in plt_cfg.ana_cfg.bkg_names:
+        #     legend_1.AddEntry(histos[sample_bkg], r"Z + jets", "f")
         
-        legend_1.AddEntry(total_unc[0],"Uncertainty","f")
-
+        # Statistic 
+        legend_1.AddEntry(stat_err,"Stat. Uncer.","f")
+        
+        # Total Uncertainty
+        legend_1.AddEntry(total_unc[0],"Syst. Uncer.","f")
 
         legend_2 = TLegend(0.43, 0.80, 0.73, 0.88)
         ROOT.SetOwnership(legend_2, False)
@@ -448,22 +503,26 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 
 
     else:
-        legend_1 = TLegend(0.18, 0.68, 0.48, 0.88)
+        legend_1 = TLegend(0.18, 0.64, 0.48, 0.88)
         ROOT.SetOwnership(legend_1, False)
-        legend_1.AddEntry(histos["data"], "Data", "PE")
-        for sample_bkg in plt_cfg.ana_cfg.bkg_names:
-            legend_1.AddEntry(histos[sample_bkg], r"Z + jets", "f")
+        legend_1.AddEntry(histos["Data"], "Data", "PE")
+        bkg_labels = {"DYJetsToLL": r"Z + jets",                    
+                      "DYGto2LG": r"Z + \gamma"}    
+            
+        for sample_bkg in plt_cfg.ana_cfg.bkg_names:            
+            legend_1.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
+            
+        legend_1.AddEntry(stat_err,"Stat. uncertainty","f")
+        legend_1.AddEntry(total_unc[0],"Syst. uncertainty","f")
+        # legend_1.AddEntry(total_unc[0],"Uncertainty","f")
 
-        # legend_1.AddEntry(stat_err,"Stat. uncertainty","f")
-        # legend_1.AddEntry(total_unc[0],"Syst. uncertainty","f")
-        legend_1.AddEntry(total_unc[0],"Uncertainty","f")
-
-        legend_2 = TLegend(0.43, 0.68, 0.73, 0.88)
+        legend_2 = TLegend(0.53, 0.64, 0.83, 0.88)
         ROOT.SetOwnership(legend_2, False)
         if bdtCut:
             legend_2.AddEntry(scaled_sig[mA], r"m_{a} = %s GeV" % (mA.lstrip("M")), "l")
         else:
-            for s in ["M1","M10","M20","M30"]:
+            # for s in ["M1","M10","M20","M30"]:
+            for s in ["M5","M15","M30"]:
                 legend_2.AddEntry(scaled_sig[s], r"m_{a} = %s GeV" % (s.lstrip("M")), "l")
 
         legend_1.SetBorderSize(0)
@@ -496,7 +555,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     CMS_lumi.outOfFrame = True
 
     CMS_lumi.lumiText_posX = -0.010
-    CMS_lumi.CMS_lumi(canv,4,0,plt_cfg.year)
+    CMS_lumi.CMS_lumi(canv,5,0,plt_cfg.year)
 
     canv.cd()
     #lower_pad = TPad("lowerpad_"+var_name, "lowerpad_"+var_name, 0, 0.01, 1,0.22)
@@ -519,7 +578,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     ratio_plot.Draw("APZ SAME")
 
     Draw_unc(total_unc[1], kGray+10)
-    # Draw_unc(stat_err_norm, kRed-10)
+    Draw_unc(stat_err_norm, kRed-10)
     ratio_plot.Draw("SAMEPZ")
 
     
@@ -529,6 +588,7 @@ def SaveCanvPic(canv, save_dir, save_name):
     canv.cd()
     canv.SaveAs(save_dir + '/' + save_name + '.pdf')
     canv.SaveAs(save_dir + '/' + save_name + '.png')
+    # print(f"[SaveCanvPic] Writing {save_name}")
     # canv.SaveAs(save_dir + '/' + save_name + '.eps')
 
     canv.Close()

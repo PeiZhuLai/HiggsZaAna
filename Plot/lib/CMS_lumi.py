@@ -50,6 +50,16 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year ):
         lumi_sqrtS = "59.83 fb^{-1}"
     elif year == 'run2':
         lumi_sqrtS = "138 fb^{-1}"
+    elif year == '2022preEE':
+        lumi_sqrtS = "7.98 fb^{-1}"
+    elif year == '2022postEE':
+        lumi_sqrtS = "26.67 fb^{-1}"
+    elif year == '2023preBPix':
+        lumi_sqrtS = "17.79 fb^{-1}"
+    elif year == '2023postBPix':
+        lumi_sqrtS = "9.45 fb^{-1}"
+    elif year == 'run3':
+        lumi_sqrtS = "62 fb^{-1}"
     else:
         print("do not include at 2016/2017/2018")
         exit(0)
@@ -93,6 +103,9 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year ):
         # lumiText += lumi_13TeV
         lumiText += lumi_sqrtS
         lumiText += " (13 TeV)"
+    elif ( iPeriod==5 ):
+        lumiText += lumi_sqrtS
+        lumiText += "(13.6 TeV)"
     elif ( iPeriod==7 ):
         if( outOfFrame ):lumiText += "#scale[0.85]{"
         lumiText += lumi_13TeV
@@ -118,10 +131,9 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year ):
         if( outOfFrame): lumiText += "}"
     elif ( iPeriod==0 ):
         lumiText += lumi_sqrtS
-    elif ( iPeriod==5 ):
-        lumiText += "13 TeV"
 
-    print(lumiText)
+
+    # print(lumiText)
 
     latex = rt.TLatex()
     latex.SetNDC()

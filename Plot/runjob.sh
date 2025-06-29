@@ -29,8 +29,12 @@ conda activate higgs-alp-ana
 
 #### job
 
+python ALP_plot_param.py -y run3 --ln -b
+
+# python ALP_plot_param.py --tune
+
 ##########hep_sub runjob.sh -g cms -mem 8000 -wt mid -o job.out -e job.err
-#python ALP_plot_param.py -m -y 2016 
+# python ALP_plot_param.py -m -y 2016 
 
 #python ALP_Optimization.py -y run2 -o ./optimize_run2 --doOpt -c 5
 #python ALP_plot_param.py -y run2 -m --ln
@@ -48,7 +52,7 @@ path_code='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot'
 export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
 
 if [ "$1" -eq 0 ]; then
-    python3 $path_code/ALP_plot_param.py -y run2 --ln
+    python3 $path_code/ALP_plot_param.py -y run3 --ln
 elif [ "$1" -eq 1 ]; then
     python3 $path_code/ALP_plot_param.py -y run2 -m --ln
 elif [ "$1" -eq 2 ]; then

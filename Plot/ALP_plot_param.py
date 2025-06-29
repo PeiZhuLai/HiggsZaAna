@@ -8,7 +8,7 @@ import gc
 
 sys.path.insert(0, '%s/lib' % os.getcwd())
 from ROOT import *
-from Plot_Helper import LoadNtuples, MakeStack, CreateCanvas, DrawOnCanv, SaveCanvPic, MakeLumiLabel, MakeCMSDASLabel, ScaleSignal, MakeRatioPlot, MakeLegend, Total_Unc
+from Plot_Helper import LoadNtuples, MakeStack, CreateCanvas, DrawOnCanv, SaveCanvPic, MakeLumiLabel, MakeCMSDASLabel, ScaleSignal, MakeRatioPlot, MakeLegend, Total_Unc, ScaleBkgToData
 from Analyzer_Helper import getMassSigma
 import Analyzer_Configs as AC
 import Plot_Configs     as PC
@@ -24,7 +24,7 @@ import random
 
 import argparse
 parser = argparse.ArgumentParser(description="A simple ttree plotter")
-parser.add_argument("-y", "--Year", dest="year", default="run2", help="which year's datasetes")
+parser.add_argument("-y", "--Year", dest="year", default="run3", help="which year's datasetes")
 parser.add_argument("--region", dest="region", type=int, default=0, help="0 for full region, 1 for signal region, 2 for sideband region")
 parser.add_argument('-m', '--mva', dest='mva', action='store_true', default=False, help='use mva or not')
 parser.add_argument('--cut', dest='cut', action='store_true', default=False, help='apply mva')
@@ -35,7 +35,6 @@ parser.add_argument('-ln', '--ln', dest='ln', action='store_true', default=False
 parser.add_argument('--ele', dest='ele', action='store_true', default=False, help='electron channel?')
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
 args = parser.parse_args()
-
 
 
 gROOT.SetBatch(True)
@@ -94,25 +93,26 @@ def main():
         histos[var_name] = {}
         
     for sample in analyzer_cfg.samp_names:
+        # print(f"sample: {sample}")
         histos['pho1Pt'][sample]    = TH1F('pho1Pt'    + '_' + sample, 'pho1Pt'    + '_' + sample, 25,  8., 50.)
         histos['pho1eta'][sample]    = TH1F('pho1eta'    + '_' + sample, 'pho1eta'    + '_' + sample, 20,  -3., 3.)
         histos['pho1phi'][sample]    = TH1F('pho1phi'    + '_' + sample, 'pho1phi'    + '_' + sample, 20,  -4., 4.)
         histos['pho1R9'][sample]    = TH1F('pho1R9'    + '_' + sample, 'pho1R9'    + '_' + sample, 25,  0.1, 1.)
-        histos['pho1IetaIeta'][sample]    = TH1F('pho1IetaIeta'    + '_' + sample, 'pho1IetaIeta'    + '_' + sample, 15,  0., 0.06)
+        # histos['pho1IetaIeta'][sample]    = TH1F('pho1IetaIeta'    + '_' + sample, 'pho1IetaIeta'    + '_' + sample, 15,  0., 0.06)
         histos['pho1IetaIeta55'][sample]    = TH1F('pho1IetaIeta55'    + '_' + sample, 'pho1IetaIeta55'    + '_' + sample, 15,  0., 0.06)
-        histos['pho1PIso_noCorr'][sample]    = TH1F('pho1PIso_noCorr'    + '_' + sample, 'pho1PIso_noCorr'    + '_' + sample, 10, 0., 40.)
+        histos['pho1ECALIso'][sample]    = TH1F('pho1ECALIso'    + '_' + sample, 'pho1ECALIso'    + '_' + sample, 10, 0., 40.)
         histos['pho1CIso'][sample]    = TH1F('pho1CIso'    + '_' + sample, 'pho1CIso'    + '_' + sample, 10, 0., 0.7)
-        histos['pho1NIso'][sample]    = TH1F('pho1NIso'    + '_' + sample, 'pho1NIso'    + '_' + sample, 10, 0., 3.0)
+        histos['pho1HCALIso'][sample]  = TH1F('pho1HCALIso'    + '_' + sample, 'pho1HCALIso'    + '_' + sample, 10, 0., 3.0)
         histos['pho1HOE'][sample]    = TH1F('pho1HOE'    + '_' + sample, 'pho1HOE'    + '_' + sample, 10, 0., 0.032)
         histos['pho2Pt'][sample]    = TH1F('pho2Pt'    + '_' + sample, 'pho2Pt'    + '_' + sample, 12,  8., 30.)
         histos['pho2eta'][sample]    = TH1F('pho2eta'    + '_' + sample, 'pho2eta'    + '_' + sample, 20,  -3., 3.)
         histos['pho2phi'][sample]    = TH1F('pho2phi'    + '_' + sample, 'pho2phi'    + '_' + sample, 20,  -4., 4.)
         histos['pho2R9'][sample]    = TH1F('pho2R9'    + '_' + sample, 'pho2R9'    + '_' + sample, 25,  0.1, 1.)
-        histos['pho2IetaIeta'][sample]    = TH1F('pho2IetaIeta'    + '_' + sample, 'pho2IetaIeta'    + '_' + sample, 15,  0., 0.06)
+        # histos['pho2IetaIeta'][sample]    = TH1F('pho2IetaIeta'    + '_' + sample, 'pho2IetaIeta'    + '_' + sample, 15,  0., 0.06)
         histos['pho2IetaIeta55'][sample]    = TH1F('pho2IetaIeta55'    + '_' + sample, 'pho2IetaIeta55'    + '_' + sample, 15,  0., 0.06)
-        histos['pho2PIso_noCorr'][sample]    = TH1F('pho2PIso_noCorr'    + '_' + sample, 'pho2PIso_noCorr'    + '_' + sample, 10, 0., 40.)
+        histos['pho2ECALIso'][sample]    = TH1F('pho2ECALIso'    + '_' + sample, 'pho2ECALIso'    + '_' + sample, 10, 0., 40.)
         histos['pho2CIso'][sample]    = TH1F('pho2CIso'    + '_' + sample, 'pho2CIso'    + '_' + sample, 10, 0., 0.7)
-        histos['pho2NIso'][sample]    = TH1F('pho2NIso'    + '_' + sample, 'pho2NIso'    + '_' + sample, 10, 0., 3.)
+        histos['pho2HCALIso'][sample]    = TH1F('pho2HCALIso'    + '_' + sample, 'pho2HCALIso'    + '_' + sample, 10, 0., 3.)
         histos['pho2HOE'][sample]    = TH1F('pho2HOE'    + '_' + sample, 'pho2HOE'    + '_' + sample, 10, 0., 0.032)
         histos['Z_m'][sample]    = TH1F('Z_m'    + '_' + sample, 'Z_m'    + '_' + sample, 20,  50., 130.)
         histos['H_m'][sample]    = TH1F('H_m'    + '_' + sample, 'H_m'    + '_' + sample, 25,  95., 180.)
@@ -127,7 +127,7 @@ def main():
         histos['var_MhMa'][sample] = TH1F('var_MhMa' + '_' + sample, 'var_MhMa' + '_' + sample, 20, 100., 200.)
         histos['var_MhMZ'][sample] = TH1F('var_MhMZ' + '_' + sample, 'var_MhMZ' + '_' + sample, 20, 145., 310.)
         histos['ALP_calculatedPhotonIso'][sample] = TH1F('ALP_calculatedPhotonIso' + '_' + sample, 'ALP_calculatedPhotonIso' + '_' + sample, 20, 0., 5.)
-        # histos['param'][sample] = TH1F('param' + '_' + sample, 'param' + '_' + sample, 25, -0.3, 0.6)
+        histos['param'][sample] = TH1F('param' + '_' + sample, 'param' + '_' + sample, 25, -0.3, 0.6)
 
         if args.mva:
             for ALP_mass in analyzer_cfg.sig_names:
@@ -166,7 +166,7 @@ def main():
         for iEvt in range( ntup.GetEntries() ):
     
             ntup.GetEvent(iEvt)
-            # if (iEvt == 100): break
+            if (iEvt == 1000): break
 
 
             if (iEvt % 100000 == 1):
@@ -174,23 +174,25 @@ def main():
 
             
             if args.ele:
-                if abs(ntup.l1_id) == 13: 
+                if abs(ntup.z_mumu) == 1: 
                     continue
             if args.mu:
-                if abs(ntup.l1_id) == 11: 
+                if abs(ntup.z_ee) == 1: 
                     continue
             
 
-            weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
+            # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
+            weight = ntup.factor * 1.1
 
             if (ntup.H_m > -90):
                 #if ntup.dR_pho < 0.02: continue
                 #if not ntup.passEleVeto: continue
                 
-                if not ntup.passChaHadIso: continue
-                if not ntup.passNeuHadIso: continue
-                if not ntup.passdR_gl: continue
-                if not ntup.passHOverE: continue
+                # if not ntup.passChaHadIso: continue
+                # if not ntup.passNeuHadIso: continue
+                # if not ntup.passdR_gl: continue
+                # if not ntup.passHOverE: continue
+                
                 #if not ntup.pho1passCutBasedIDTight or ntup.pho2passCutBasedIDTight: continue
                 #if (ntup.pho1IetaIeta > 0.00996) or (ntup.pho2IetaIeta > 0.00996): continue
                 #if (ntup.pho1PIso_noCorr > (0.317 + 0.01512*ntup.pho1Pt + 0.00002259*ntup.pho1Pt*ntup.pho1Pt)) or (ntup.pho1PIso_noCorr > (0.317 + 0.01512*ntup.pho2Pt + 0.00002259*ntup.pho2Pt*ntup.pho2Pt)): continue
@@ -260,7 +262,7 @@ def main():
                         #if sample == 'DYJetsToLL':
                             #histos['mvaVal_bkg'].Fill(mass_list[ALP_mass], MVA_value[ALP_mass], weight)
                 
-                var_map = {'Z_m':ntup.Z_m, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.pho1eta, 'pho1phi':ntup.pho1phi, 'pho1R9':ntup.pho1R9, 'pho1IetaIeta':ntup.pho1IetaIeta, 'pho1IetaIeta55':ntup.pho1IetaIeta55,'pho1PIso_noCorr':ntup.pho1PIso_noCorr, 'pho1CIso':ntup.pho1CIso, 'pho1NIso':ntup.pho1NIso, 'pho1HOE':ntup.pho1HOE, 'pho2Pt':ntup.pho2Pt, 'pho2eta':ntup.pho2eta, 'pho2phi':ntup.pho2phi, 'pho2R9':ntup.pho2R9, 'pho2IetaIeta':ntup.pho2IetaIeta, 'pho2IetaIeta55':ntup.pho2IetaIeta55,'pho2PIso_noCorr':ntup.pho2PIso_noCorr, 'pho2CIso':ntup.pho2CIso, 'pho2NIso':ntup.pho2NIso, 'pho2HOE':ntup.pho2HOE,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa}
+                var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa}
                 
                 if args.mva:
                     var_map_mva = {}
@@ -274,37 +276,37 @@ def main():
                             
                     var_map.update(var_map_mva)
 
-                histos['pho1Pt'][sample].Fill( ntup.pho1Pt, weight )
-                histos['pho1eta'][sample].Fill( ntup.pho1eta, weight )
-                histos['pho1phi'][sample].Fill( ntup.pho1phi, weight )
-                histos['pho1R9'][sample].Fill( ntup.pho1R9, weight )
-                histos['pho1IetaIeta'][sample].Fill( ntup.pho1IetaIeta, weight )
-                histos['pho1IetaIeta55'][sample].Fill( ntup.pho1IetaIeta55, weight )
-                histos['pho1PIso_noCorr'][sample].Fill( ntup.pho1PIso_noCorr, weight )
-                histos['pho2Pt'][sample].Fill( ntup.pho2Pt, weight )
-                histos['pho2eta'][sample].Fill( ntup.pho2eta, weight )
-                histos['pho2phi'][sample].Fill( ntup.pho2phi, weight )
-                histos['pho2R9'][sample].Fill( ntup.pho2R9, weight )
-                histos['pho2IetaIeta'][sample].Fill( ntup.pho2IetaIeta, weight )
-                histos['pho2IetaIeta55'][sample].Fill( ntup.pho2IetaIeta55, weight )
-                histos['pho2PIso_noCorr'][sample].Fill( ntup.pho2PIso_noCorr, weight )
+                histos['pho1Pt'][sample].Fill( ntup.ALP_lead_photon_pt, weight )
+                histos['pho1eta'][sample].Fill( ntup.ALP_lead_photon_eta, weight )
+                histos['pho1phi'][sample].Fill( ntup.ALP_lead_photon_phi, weight )
+                histos['pho1R9'][sample].Fill( ntup.ALP_lead_photon_r9, weight )
+                # histos['pho1IetaIeta'][sample].Fill( ntup.pho1IetaIeta, weight )
+                histos['pho1IetaIeta55'][sample].Fill( ntup.ALP_lead_photon_sieie, weight )
+                histos['pho1ECALIso'][sample].Fill( ntup.ALP_lead_photon_ecalPFClusterIso, weight )
+                histos['pho2Pt'][sample].Fill( ntup.ALP_sublead_photon_pt, weight )
+                histos['pho2eta'][sample].Fill( ntup.ALP_sublead_photon_eta, weight )
+                histos['pho2phi'][sample].Fill( ntup.ALP_sublead_photon_phi, weight )
+                histos['pho2R9'][sample].Fill( ntup.ALP_sublead_photon_r9, weight )
+                # histos['pho2IetaIeta'][sample].Fill( ntup.pho2IetaIeta, weight )
+                histos['pho2IetaIeta55'][sample].Fill( ntup.ALP_sublead_photon_sieie, weight )
+                histos['pho2ECALIso'][sample].Fill( ntup.ALP_sublead_photon_ecalPFClusterIso, weight )
 
-                histos['pho1CIso'][sample].Fill( ntup.pho1CIso, weight)
-                histos['pho1NIso'][sample].Fill( ntup.pho1NIso, weight)
-                histos['pho1HOE'][sample].Fill( ntup.pho1HOE, weight)
-                histos['pho2CIso'][sample].Fill( ntup.pho2CIso, weight)
-                histos['pho2NIso'][sample].Fill( ntup.pho2NIso, weight)
-                histos['pho2HOE'][sample].Fill( ntup.pho2HOE, weight)
+                histos['pho1CIso'][sample].Fill( ntup.ALP_lead_photon_chiso, weight)
+                histos['pho1HCALIso'][sample].Fill( ntup.ALP_lead_photon_hcalPFClusterIso, weight)
+                histos['pho1HOE'][sample].Fill( ntup.ALP_lead_photon_hoe_PUcorr, weight)
+                histos['pho2CIso'][sample].Fill( ntup.ALP_sublead_photon_chiso, weight)
+                histos['pho2HCALIso'][sample].Fill( ntup.ALP_sublead_photon_hcalPFClusterIso, weight)
+                histos['pho2HOE'][sample].Fill( ntup.ALP_sublead_photon_hoe_PUcorr, weight)
 
                 if args.blind:
-                    if not (sample == 'data' and (ntup.H_m<135. and ntup.H_m>115.)): 
+                    if not (sample == 'Data' and (ntup.H_m<135. and ntup.H_m>115.)): 
                         histos['H_m'][sample].Fill( ntup.H_m, weight )
                 else:        
                     histos['H_m'][sample].Fill( ntup.H_m, weight )
 
                 histos['H_pt'][sample].Fill( ntup.H_pt, weight )
                 histos['ALP_m'][sample].Fill( ntup.ALP_m, weight )
-                histos['Z_m'][sample].Fill( ntup.Z_m, weight )
+                histos['Z_m'][sample].Fill( ntup.Z_mass, weight )
 
                 histos['var_dR_Za'][sample].Fill( ntup.var_dR_Za, weight )
                 histos['var_dR_g1g2'][sample].Fill( ntup.var_dR_g1g2, weight )
@@ -325,35 +327,61 @@ def main():
                 
                 var_map.update(param_val)
 
-                # histos['param'][sample].Fill( param_val['param'], weight )
+                histos['param'][sample].Fill( param_val['param'], weight )
                     
 
                 for sys_name in analyzer_cfg.sys_names:
-
-                    if sys_name =='CMS_eff_g_up':
-                        #weight = ntup.factor * (ntup.pho1SFs+ntup.pho1SFs_sys) * (ntup.pho2SFs+ntup.pho2SFs_sys)
-                        weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * (ntup.pho1SFs+ntup.pho1SFs_sys) * (ntup.pho2SFs+ntup.pho2SFs_sys)
-                    elif sys_name =='CMS_eff_g_dn':
-                        #weight = ntup.factor * (ntup.pho1SFs-ntup.pho1SFs_sys) * (ntup.pho2SFs-ntup.pho2SFs_sys)
-                        weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * (ntup.pho1SFs-ntup.pho1SFs_sys) * (ntup.pho2SFs-ntup.pho2SFs_sys)
-                    elif sys_name =='CMS_pileup_up':
-                        weight_sys = ntup.event_genWeight * ntup.event_pileupWeightUp * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                    elif sys_name =='CMS_pileup_dn':
-                        weight_sys = ntup.event_genWeight * ntup.event_pileupWeightDn * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                    elif sys_name =='CMS_eff_lep_up':
-                        weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * (ntup.l1_dataMC+ntup.l1_dataMCErr) * (ntup.l2_dataMC+ntup.l2_dataMCErr) * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                    elif sys_name =='CMS_eff_lep_dn':
-                        weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * (ntup.l1_dataMC-ntup.l1_dataMCErr) * (ntup.l2_dataMC-ntup.l2_dataMCErr) * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-
-                    for var in var_names:
-                        histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
-
+                    if sample != "Data": 
+                        # Good Example, Pei-Zhu
+                        if sys_name =='CMS_eff_g_up':
+                            #weight = ntup.factor * (ntup.pho1SFs+ntup.pho1SFs_sys) * (ntup.pho2SFs+ntup.pho2SFs_sys)
+                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * (ntup.pho1SFs+ntup.pho1SFs_sys) * (ntup.pho2SFs+ntup.pho2SFs_sys)
+                        elif sys_name =='CMS_eff_g_dn':
+                            #weight = ntup.factor * (ntup.pho1SFs-ntup.pho1SFs_sys) * (ntup.pho2SFs-ntup.pho2SFs_sys)
+                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * (ntup.pho1SFs-ntup.pho1SFs_sys) * (ntup.pho2SFs-ntup.pho2SFs_sys)
+                        elif sys_name =='CMS_pileup_up':
+                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeightUp * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
+                        elif sys_name =='CMS_pileup_dn':
+                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeightDn * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
+                        elif sys_name =='CMS_eff_lep_up':
+                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * (ntup.l1_dataMC+ntup.l1_dataMCErr) * (ntup.l2_dataMC+ntup.l2_dataMCErr) * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
+                        elif sys_name =='CMS_eff_lep_dn':
+                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * (ntup.l1_dataMC-ntup.l1_dataMCErr) * (ntup.l2_dataMC-ntup.l2_dataMCErr) * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
+                        
+                        # Nominal_Weight = weight * weight_electron_veto_sf_Photon_central * weight_pu_reweight_sf_central * weight_electron_wplid_sf_SelectedElectron_central * weight_muon_looseid_sf_SelectedMuon_central
+                        elif sys_name =='weight_electron_veto_sf_Photon_up':
+                            weight_sys = ntup.weight_electron_veto_sf_Photon_up / ntup.weight_electron_veto_sf_Photon_central
+                        elif sys_name =='weight_electron_veto_sf_Photon_down':
+                            weight_sys = ntup.weight_electron_veto_sf_Photon_down / ntup.weight_electron_veto_sf_Photon_central
+                        elif sys_name =='weight_pu_reweight_sf_up':
+                            weight_sys = ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
+                        elif sys_name =='weight_pu_reweight_sf_down':
+                            weight_sys = ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
+                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
+                            weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
+                            weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_down  / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
+                            weight_sys = ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
+                            weight_sys = ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                        for var in var_names:
+                            # print(f"weight_sys: {weight_sys}")
+                            histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
+                    else: 
+                        for var in var_names:
+                            histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
                 
 
 
 
         ## End of for iEvt in range( ntup.GetEntries() )
     ## End of for sample in analyzer_cfg.samp_names
+
+    for var in ['H_m', 'pho1Pt', 'Z_m']:
+        entries = histos[var][sample].GetEntries()
+        print(f"[{sample}] {var} histogram entries: {entries}")
+
 
     ### save raw histograms
     raw_dir = out_file.mkdir('raw_plots')
@@ -380,11 +408,18 @@ def main():
     scaled_sig = {}
     for var_name in var_names:
         stacks = MakeStack(histos[var_name], analyzer_cfg, var_name)
-        #scaled_sig = 0
-        #ratio_plot = 0
+        # 新增：將 bkg histograms scale 到 Data
+        ScaleBkgToData(histos[var_name], analyzer_cfg)
+        stacks = MakeStack(histos[var_name], analyzer_cfg, var_name)
+        
+        if stacks['all'].GetStack().GetEntries() == 0:
+            stack_entry = stacks['all'].GetStack().GetEntries()
+            print(f"stack_entry: {stack_entry}")
+            print(f"[Warning] Stack for {var_name} is empty. Skipping drawing.")
+
         for sample in analyzer_cfg.sig_names:
             scaled_sig[sample] = ScaleSignal(plot_cfg, stacks[sample], histos[var_name][sample], var_name)
-        ratio_plot = MakeRatioPlot(histos[var_name]['data'], stacks['all'].GetStack().Last(), var_name)
+        ratio_plot = MakeRatioPlot(histos[var_name]['Data'], stacks['all'].GetStack().Last(), var_name)
         legend = MakeLegend(plot_cfg, histos[var_name], scaled_sig)
 
         #### uncertainty graph

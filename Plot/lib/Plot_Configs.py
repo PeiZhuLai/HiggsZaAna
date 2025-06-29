@@ -32,7 +32,7 @@ class Plot_Config:
         elif year == '2023postBPix':
             self.lumi    = '9.45'
         elif year == 'run3':
-            self.lumi    = '62.32'
+            self.lumi    = '62.'
         else:
             print('do not in 2016/2017/2018!')
             exit(0)
@@ -76,21 +76,21 @@ class Plot_Config:
             'pho1eta':r"\eta_{\gamma 1}",
             'pho1phi':r"\phi_{\gamma 1}", 
             'pho1R9':r"R_{9,\gamma 1}", 
-            'pho1IetaIeta':r"\sigma_{i\eta i\eta 3\times3,\gamma 1}", 
+            # 'pho1IetaIeta':r"\sigma_{i\eta i\eta 3\times3,\gamma 1}", 
             'pho1IetaIeta55':r"\sigma_{i\eta i\eta,\gamma 1}",
-            'pho1PIso_noCorr':r"I_{\gamma,\gamma 1}", 
+            'pho1ECALIso':r"I_{ECAL,\gamma 1}", 
             'pho1CIso':r"I_{ch,\gamma 1}", 
-            'pho1NIso':r"I_{n,\gamma 1}", 
+            'pho1HCALIso':r"I_{HCAL,\gamma 1}", 
             'pho1HOE':r"\gamma 1\ H/E",
             'pho2Pt':r"p_{T,\gamma 2}", 
             'pho2eta':r"\eta_{\gamma 2}", 
             'pho2phi':r"\phi_{\gamma_2}", 
             'pho2R9':r"R_{9,\gamma 2}", 
-            'pho2IetaIeta':r"\sigma_{i\eta i\eta 3\times3,\gamma 2}",
+            # 'pho2IetaIeta':r"\sigma_{i\eta i\eta 3\times3,\gamma 2}",
             'pho2IetaIeta55':r"\sigma_{i\eta i\eta,\gamma 2}",
-            'pho2PIso_noCorr':r"I_{\gamma,\gamma 2}", 
+            'pho2ECALIso':r"I_{ECAL,\gamma 2}", 
             'pho2CIso':r"I_{ch,\gamma 2}", 
-            'pho2NIso':r"I_{n,\gamma 2}", 
+            'pho2HCALIso':r"I_{HCAL,\gamma 2}", 
             'pho2HOE':r"\gamma 2\ H/E",
             'ALP_calculatedPhotonIso':r"I_{\gamma,ALPs}", 
             'var_dR_Za':r"\Delta R(Z,a)", 

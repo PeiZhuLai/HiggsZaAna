@@ -20,7 +20,7 @@ def getMassSigma(ana_cfg):
     for sample in ana_cfg.sig_names:
         files = TFile(ana_cfg.sample_loc + '/ALP_%s/run3.root' %sample)
         filesTree = files.Get("test")
-        filesTree.Draw("{0}>>tree{0}".format("H_m"),"factor*pho1SFs*pho1SFs*({0})".format("H_m>-90&&passChaHadIso&&passNeuHadIso&&passdR_gl&&passHOverE&&H_m>115&&H_m<135"))
+        filesTree.Draw("{0}>>tree{0}".format("H_m"),"factor*({0})".format("H_m>-90&&H_m>115&&H_m<135"))
         Hist = gDirectory.Get("tree{0}".format("H_m"))
         sigma_bin = 0
         for i in range(int(Hist.GetNbinsX()/2)):
