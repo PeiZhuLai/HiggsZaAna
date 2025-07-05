@@ -1,0 +1,33 @@
+
+import os
+from Plot_Helper import MakeStack
+import Plot_Configs as PC
+import Analyzer_Configs as AC
+from ROOT import *
+
+#####################################################################
+class MuPair:
+    def __init__(self, vec, idx1, idx2):
+        self.dimu_vec = vec
+        self.mass     = vec.M()
+        self.pt       = vec.Pt()
+        self.mu1_idx  = idx1
+        self.mu2_idx  = idx2
+
+def getMassSigma(ana_cfg):
+    sigma_low = {}
+    sigma_hig = {}
+    for sample in ana_cfg.sig_names:
+        files = TFile(ana_cfg.sample_loc + '/ALP_%s/run3.root' %sample)
+        filesTree = files.Get("test")
+        filesTree.Draw("{0}>>tree{0}".format("H_m"),"factor*({0})".format("H_m>-90&&H_m>115&&H_m<135"))
+        Hist = gDirectory.Get("tree{0}".format("H_m"))
+        sigma_bin = 0
+        for i in range(int(Hist.GetNbinsX()/2)):
+            if Hist.Integral(50-i,51+i)/Hist.Integral()>0.683: 
+                sigma_bin = i
+                break
+        sigma_low[sample] = Hist.GetBinCenter(50-sigma_bin)-125.0-Hist.GetBinWidth(50-sigma_bin)/2.0
+        sigma_hig[sample] = Hist.GetBinCenter(51+sigma_bin)-125.0+Hist.GetBinWidth(51+sigma_bin)/2.0
+    
+    return sigma_low, sigma_hig
