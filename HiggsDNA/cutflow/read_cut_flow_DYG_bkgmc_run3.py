@@ -1,27 +1,4 @@
 #!/usr/bin/env python3
-"""
-Cut‑flow aggregator for Run‑3 background MC samples.
-
-Features (compared with original script):
-─────────────────────────────────────────
-1.  **year_to_datasets mapping**
-    – One place to configure which datasets should be summed for every year.
-2.  **Outer loop on `year`, inner loop on `dataset`**
-    – Guarantees that yields are accumulated across all datasets *within* the same year.
-3.  **`yields_dict` reset only once per year**
-    – Prevents accidental overwriting; keeps a clean per‑year summary.
-4.  **Robust parquet loading & weight handling**
-    – Graceful fallback to weight = 1 when file or columns are missing.
-5.  **Cleaner log parsing**
-    – Regex compiled once; string clean‑up consolidated.
-6.  **Structured file output**
-    – Appends yearly sections to `output_file`.
-7.  **Timing & memory hygiene**
-    – `del data` after each parquet to free RAM; prints total runtime.
-
-Author: ChatGPT (modified for pelai)
-Date  : 2025‑06‑18
-"""
 
 import os
 import re
@@ -65,50 +42,55 @@ CUT_NAME = {
         "Initial Events", r"$N_{l} \geq 2$",
         r"e, ee trigger || $\mu\mu$, $\mu$ triggers ",
         r"lepton trigger pT cut",
+        r"$m_{ll} > 50 \text{ GeV}$",
         r"$N_{\gamma} \geq 2$",
-        r"$80 \\text{ GeV} < m_{ll} < 100 \\text{ GeV}$",
-        r"$m_{ll} + m_{ll\gamma\gamma} > 185 \\text{ GeV}$",
-        r"$95 \\text{ GeV} < m_{ll\gamma\gamma} < 180 \\text{ GeV}$",
+        r"$m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$",
+        r"$95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$",
         "Event Filtering", "Total Baseline Events",
     ],
     "zgammas_ele": [
-        "Initial Events", r"$N_{\\textrm{e}} \geq 2$", "ee, e triggers ",
-        r"ee, e trigger pT cut", r"$N_{\\gamma} \geq 2$",
-        r"$80 \\text{ GeV} < m_{\\textrm{ee}} < 100 \\text{ GeV}$",
-        r"$m_{\\textrm{ee}} + m_{\\textrm{ee}\\gamma\\gamma} > 185 \\text{ GeV}$",
-        r"$95 \\text{ GeV} < m_{\\textrm{ee}\\gamma\\gamma} < 180 \\text{ GeV}$",
+        "Initial Events", r"$N_{\textrm{e}} \geq 2$", "ee, e triggers ",
+        r"ee, e trigger pT cut",
+        r"$m_{\textrm{ee}} > 50 \text{ GeV}$", 
+        r"$N_{\gamma} \geq 2$",
+        r"$m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$",
+        r"$95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$",
         "Event Filtering", "Total Baseline Events",
     ],
     "zgammas_mu": [
         "Initial Events", r"$N_{\mu} \geq 2$", r"$\mu\mu$, $\mu$ triggers ",
-        r"$\mu\mu$, $\mu$ trigger pT cut", r"$N_{\gamma} \geq 2$",
-        r"$80 \\text{ GeV} < m_{\mu\mu} < 100 \\text{ GeV}$",
-        r"$m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \\text{ GeV}$",
-        r"$95 \\text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \\text{ GeV}$",
+        r"$\mu\mu$, $\mu$ trigger pT cut", 
+        r"$m_{\mu\mu} > 50 \text{ GeV}$",
+        r"$N_{\gamma} \geq 2$",
+        r"$m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$",
+        r"$95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$",
         "Event Filtering", "Total Baseline Events",
     ],
     "zgammas_w": [
         "Initial Events", r"$N_{l} \geq 2$", r"e, ee trigger || $\mu\mu$, $\mu$ triggers ",
-        r"lepton trigger pT cut", r"$N_{\gamma} \geq 2$",
-        r"$80 \\text{ GeV} < m_{ll} < 100 \\text{ GeV}$",
-        r"$m_{ll} + m_{ll\gamma\gamma} > 185 \\text{ GeV}$",
-        r"$95 \\text{ GeV} < m_{ll\gamma\gamma} < 180 \\text{ GeV}$",
+        r"lepton trigger pT cut",
+        r"$m_{ll} > 50 \text{ GeV}$", 
+        r"$N_{\gamma} \geq 2$",
+        r"$m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$",
+        r"$95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$",
         "Event Filtering", "Total Baseline Events",
     ],
     "zgammas_ele_w": [
-        "Initial Events", r"$N_{\\textrm{e}} \geq 2$", "ee, e triggers ",
-        r"ee, e trigger pT cut", r"$N_{\\gamma} \geq 2$",
-        r"$80 \\text{ GeV} < m_{\\textrm{ee}} < 100 \\text{ GeV}$",
-        r"$m_{\\textrm{ee}} + m_{\\textrm{ee}\\gamma\\gamma} > 185 \\text{ GeV}$",
-        r"$95 \\text{ GeV} < m_{\\textrm{ee}\\gamma\\gamma} < 180 \\text{ GeV}$",
+        "Initial Events", r"$N_{\textrm{e}} \geq 2$", "ee, e triggers ",
+        r"ee, e trigger pT cut",
+        r"$m_{\textrm{ee}} > 50 \text{ GeV}$", 
+        r"$N_{\gamma} \geq 2$",
+        r"$m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$",
+        r"$95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$",
         "Event Filtering", "Total Baseline Events",
     ],
     "zgammas_mu_w": [
         "Initial Events", r"$N_{\mu} \geq 2$", r"$\mu\mu$, $\mu$ triggers ",
-        r"$\mu\mu$, $\mu$ trigger pT cut", r"$N_{\gamma} \geq 2$",
-        r"$80 \\text{ GeV} < m_{\mu\mu} < 100 \\text{ GeV}$",
-        r"$m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \\text{ GeV}$",
-        r"$95 \\text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \\text{ GeV}$",
+        r"$\mu\mu$, $\mu$ trigger pT cut", 
+        r"$m_{\mu\mu} > 50 \text{ GeV}$",
+        r"$N_{\gamma} \geq 2$",
+        r"$m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$",
+        r"$95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$",
         "Event Filtering", "Total Baseline Events",
     ],
 }
@@ -127,6 +109,7 @@ TAGGER_REGEX = re.compile(
 )
 
 
+
 def append_output(section: str) -> None:
     """Append ``section`` to OUTPUT_FILE, creating folders if needed."""
     Path(OUTPUT_FILE).parent.mkdir(parents=True, exist_ok=True)
@@ -141,6 +124,9 @@ def append_output(section: str) -> None:
 if __name__ == "__main__":
     t0 = time.time()
 
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as fh:
+        fh.write("📌📌📌📌📌📌📌📌📌📌📌📌📌")
+        
     append_output("📌📌📌 Start of cut‑flow summary 📌📌📌")
 
     for year, datasets in YEAR_TO_DATASETS.items():
@@ -219,10 +205,10 @@ if __name__ == "__main__":
             if ct in CUT_NAME:
                 for idx, (cut, yield_val) in enumerate(cuts.items()):
                     pretty = CUT_NAME[ct][idx] if idx < len(CUT_NAME[ct]) else cut
-                    lines.append(f"     {pretty:30} & {yield_val:.0f} \\" )
+                    lines.append(f"     {pretty:30} & {yield_val:.0f} \\\\" )
             else:
                 for cut, yield_val in cuts.items():
-                    lines.append(f"     {cut:30} & {yield_val:.0f} \\" )
+                    lines.append(f"     {cut:30} & {yield_val:.0f} \\\\" )
         append_output("\n".join(lines))
 
     # ────────────────────────────────

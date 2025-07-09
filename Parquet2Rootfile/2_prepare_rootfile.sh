@@ -1,6 +1,8 @@
 # # !/bin/bash                                                                                                                                                                       
 
+#########################################################################
 # # Prepare annoying DYGto2LG
+#########################################################################
 # DYGto2LG_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG
 # DYGto2LG_10to50_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG_10to50
 # DYGto2LG_50to100_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG_50to100
@@ -36,7 +38,9 @@
 # echo "hadd $output_file $input_files"
 # hadd $output_file $input_files
 
+#########################################################################
 # # Prepare DYJetsToLL
+#########################################################################
 # DYJetsToLL_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYJetsToLL
 # years=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
 
@@ -49,24 +53,27 @@
 # echo "hadd $output_file $input_files"
 # hadd $output_file $input_files
 
+#########################################################################
 # Add run3.root all background
-DYJetsToLL_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYJetsToLL
-DYGto2LG_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG
-Bkg_MC_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/All_Bkg
-if [ -d "$Bkg_MC_path" ]; then
-    echo "Directory exists: $Bkg_MC_path — removing it."
-    rm -rf "$Bkg_MC_path"
-else
-    echo "Directory does not exist: $Bkg_MC_path — creating it."
-fi
-mkdir -p "$Bkg_MC_path"
+#########################################################################
+# DYJetsToLL_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYJetsToLL
+# DYGto2LG_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG
+# Bkg_MC_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/All_Bkg
+# if [ -d "$Bkg_MC_path" ]; then
+#     echo "Directory exists: $Bkg_MC_path — removing it."
+#     rm -rf "$Bkg_MC_path"
+# else
+#     echo "Directory does not exist: $Bkg_MC_path — creating it."
+# fi
+# mkdir -p "$Bkg_MC_path"
 
-echo "hadd $Bkg_MC_path/run3.root $DYJetsToLL_path/run3.root $DYGto2LG_path/run3.root"
-hadd $Bkg_MC_path/run3.root $DYJetsToLL_path/run3.root $DYGto2LG_path/run3.root
+# echo "hadd $Bkg_MC_path/run3.root $DYJetsToLL_path/run3.root $DYGto2LG_path/run3.root"
+# hadd $Bkg_MC_path/run3.root $DYJetsToLL_path/run3.root $DYGto2LG_path/run3.root
 
 
-
+#########################################################################
 # # Prepare Data
+#########################################################################
 # Data_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/Data
 # years=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
 
@@ -80,38 +87,53 @@ hadd $Bkg_MC_path/run3.root $DYJetsToLL_path/run3.root $DYGto2LG_path/run3.root
 # hadd $output_file $input_files
 
 
-
+#########################################################################
 # # Prepare Sig
-# base_path=/eos/home-p/pelai/HZa/Root_Dataset/run3
-# massList=( M5 M15 M30 )
-# years=( 2022preEE )
+#########################################################################
+base_path=/eos/home-p/pelai/HZa/Root_Dataset/run3
+massList=( M5 M15 M30 )
+years=( 2022preEE )
 
-# # Add years into run3.root
-# for mass in "${massList[@]}"; do
-#     input_files=""
-#     for year in "${years[@]}"; do
-#         input_files+=" $base_path/ALP_${mass}/${year}.root"
-#     done
+# Add years into run3.root
+for mass in "${massList[@]}"; do
+    input_files=""
+    for year in "${years[@]}"; do
+        input_files+=" $base_path/ALP_${mass}/${year}.root"
+    done
 
-#     output_file="$base_path/ALP_${mass}/run3.root"
-#     echo "hadd $output_file $input_files"
-#     hadd $output_file $input_files
-# done
+    output_file="$base_path/ALP_${mass}/run3.root"
+    
+    # Check if output file exists and remove it
+    if [ -f "$output_file" ]; then
+        echo "File exists: $output_file — removing it."
+        rm -f "$output_file"
+    fi
+    
+    echo "hadd $output_file $input_files"
+    hadd $output_file $input_files
+done
 
-# # Add run3.root in all ALP mass points
-# Sig_MC_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/All_Sig
-# if [ -d "$Sig_MC_path" ]; then
-#     echo "Directory exists: $Sig_MC_path — removing it."
-#     rm -rf "$Sig_MC_path"
-# else
-#     echo "Directory does not exist: $Sig_MC_path — creating it."
-# fi
-# mkdir -p "$Sig_MC_path"
+# Add run3.root in all ALP mass points
+Sig_MC_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/All_Sig
+if [ -d "$Sig_MC_path" ]; then
+    echo "Directory exists: $Sig_MC_path — removing it."
+    rm -rf "$Sig_MC_path"
+else
+    echo "Directory does not exist: $Sig_MC_path — creating it."
+fi
+mkdir -p "$Sig_MC_path"
 
-# input_files=""
-# for mass in "${massList[@]}"; do
-#     input_files+=" $base_path/ALP_${mass}/run3.root"
-# done
-# output_file="$Sig_MC_path/run3.root"
-# echo "hadd $output_file $input_files"
-# hadd $output_file $input_files
+input_files=""
+for mass in "${massList[@]}"; do
+    input_files+=" $base_path/ALP_${mass}/run3.root"
+done
+output_file="$Sig_MC_path/run3.root"
+
+# Check if output file exists and remove it
+if [ -f "$output_file" ]; then
+    echo "File exists: $output_file — removing it."
+    rm -f "$output_file"
+fi
+
+echo "hadd $output_file $input_files"
+hadd $output_file $input_files

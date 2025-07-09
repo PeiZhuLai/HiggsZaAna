@@ -73,38 +73,38 @@ Cut Type: zgammas_mu
    - event                          → 2688
    - all cuts                       → 5029
 Cut Type: zgammas_w
-   - all                            → 0.791107
-   - N_lep_sel                      → 0.342453
-   - trig_cut                       → 0.327039
-   - lep_pt_cut                     → 0.323619
-   - has_z_cand                     → 0.320926
-   - has_2g_cand                    → 0.043415
-   - sel_h_1                        → 0.041066
-   - sel_h_2                        → 0.040187
-   - event                          → 0.040187
-   - all cuts                       → 0.040187
+   - all                            → 791.107135
+   - N_lep_sel                      → 342.453498
+   - trig_cut                       → 327.038895
+   - lep_pt_cut                     → 323.618755
+   - has_z_cand                     → 320.925794
+   - has_2g_cand                    → 43.415001
+   - sel_h_1                        → 41.065652
+   - sel_h_2                        → 40.186644
+   - event                          → 40.186644
+   - all cuts                       → 40.186644
 Cut Type: zgammas_ele_w
-   - all                            → 0.791107
-   - N_lep_sel                      → 0.168706
-   - trig_cut                       → 0.156687
-   - lep_pt_cut                     → 0.154218
-   - has_z_cand                     → 0.152979
-   - has_2g_cand                    → 0.020249
-   - sel_h_1                        → 0.019114
-   - sel_h_2                        → 0.018707
-   - event                          → 0.018707
-   - all cuts                       → 0.040187
+   - all                            → 791.107135
+   - N_lep_sel                      → 168.705594
+   - trig_cut                       → 156.687159
+   - lep_pt_cut                     → 154.217945
+   - has_z_cand                     → 152.979343
+   - has_2g_cand                    → 20.249146
+   - sel_h_1                        → 19.114427
+   - sel_h_2                        → 18.706887
+   - event                          → 18.706887
+   - all cuts                       → 40.186644
 Cut Type: zgammas_mu_w
-   - all                            → 0.791107
-   - N_lep_sel                      → 0.173748
-   - trig_cut                       → 0.170288
-   - lep_pt_cut                     → 0.169345
-   - has_z_cand                     → 0.167938
-   - has_2g_cand                    → 0.023166
-   - sel_h_1                        → 0.021951
-   - sel_h_2                        → 0.021480
-   - event                          → 0.021480
-   - all cuts                       → 0.040187
+   - all                            → 791.107135
+   - N_lep_sel                      → 173.747903
+   - trig_cut                       → 170.287809
+   - lep_pt_cut                     → 169.344873
+   - has_z_cand                     → 167.938460
+   - has_2g_cand                    → 23.165854
+   - sel_h_1                        → 21.951225
+   - sel_h_2                        → 21.479757
+   - event                          → 21.479757
+   - all cuts                       → 40.186644
 
 📌 Final Stored Data (After Replacement):
 Cut Type: SelectedElectron
@@ -149,8 +149,8 @@ Cut Type: zgammas
      $N_{l} \geq 2$                 & 42855 \\ 
      e, ee trigger || $\mu\mu$, $\mu$ triggers  & 40926 \\ 
      lepton trigger pT cut          & 40498 \\ 
-     $N_{\gamma} \geq 2$            & 40161 \\ 
-     $80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$ & 5433 \\ 
+     $m_{ll} > 50 \text{ GeV}$      & 40161 \\ 
+     $N_{\gamma} \geq 2$            & 5433 \\ 
      $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 5139 \\ 
      $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 5029 \\ 
      Event Filtering                & 5029 \\ 
@@ -160,8 +160,8 @@ Cut Type: zgammas_ele
      $N_{\textrm{e}} \geq 2$        & 21112 \\ 
      ee, e triggers                 & 19608 \\ 
      ee, e trigger pT cut           & 19299 \\ 
-     $N_{\gamma} \geq 2$            & 19144 \\ 
-     $80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$ & 2534 \\ 
+     $m_{\textrm{ee}} > 50 \text{ GeV}$ & 19144 \\ 
+     $N_{\gamma} \geq 2$            & 2534 \\ 
      $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 2392 \\ 
      $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 2341 \\ 
      Event Filtering                & 2341 \\ 
@@ -171,45 +171,45 @@ Cut Type: zgammas_mu
      $N_{\mu} \geq 2$               & 21743 \\ 
      $\mu\mu$, $\mu$ triggers       & 21310 \\ 
      $\mu\mu$, $\mu$ trigger pT cut & 21192 \\ 
-     $N_{\gamma} \geq 2$            & 21016 \\ 
-     $80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$ & 2899 \\ 
+     $m_{\mu\mu} > 50 \text{ GeV}$  & 21016 \\ 
+     $N_{\gamma} \geq 2$            & 2899 \\ 
      $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 2747 \\ 
      $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 2688 \\ 
      Event Filtering                & 2688 \\ 
      Total Baseline Events          & 5029 \\ 
 Cut Type: zgammas_w
-     Initial Events                 & 0.791107 \\ 
-     $N_{l} \geq 2$                 & 0.342453 \\ 
-     e, ee trigger || $\mu\mu$, $\mu$ triggers  & 0.327039 \\ 
-     lepton trigger pT cut          & 0.323619 \\ 
-     $N_{\gamma} \geq 2$            & 0.320926 \\ 
-     $80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$ & 0.043415 \\ 
-     $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 0.041066 \\ 
-     $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 0.040187 \\ 
-     Event Filtering                & 0.040187 \\ 
-     Total Baseline Events          & 0.040187 \\ 
+     Initial Events                 & 791.107135 \\ 
+     $N_{l} \geq 2$                 & 342.453498 \\ 
+     e, ee trigger || $\mu\mu$, $\mu$ triggers  & 327.038895 \\ 
+     lepton trigger pT cut          & 323.618755 \\ 
+     $m_{ll} > 50 \text{ GeV}$      & 320.925794 \\ 
+     $N_{\gamma} \geq 2$            & 43.415001 \\ 
+     $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 41.065652 \\ 
+     $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 40.186644 \\ 
+     Event Filtering                & 40.186644 \\ 
+     Total Baseline Events          & 40.186644 \\ 
 Cut Type: zgammas_ele_w
-     Initial Events                 & 0.791107 \\ 
-     $N_{\textrm{e}} \geq 2$        & 0.168706 \\ 
-     ee, e triggers                 & 0.156687 \\ 
-     ee, e trigger pT cut           & 0.154218 \\ 
-     $N_{\gamma} \geq 2$            & 0.152979 \\ 
-     $80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$ & 0.020249 \\ 
-     $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 0.019114 \\ 
-     $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 0.018707 \\ 
-     Event Filtering                & 0.018707 \\ 
-     Total Baseline Events          & 0.040187 \\ 
+     Initial Events                 & 791.107135 \\ 
+     $N_{\textrm{e}} \geq 2$        & 168.705594 \\ 
+     ee, e triggers                 & 156.687159 \\ 
+     ee, e trigger pT cut           & 154.217945 \\ 
+     $m_{\textrm{ee}} > 50 \text{ GeV}$ & 152.979343 \\ 
+     $N_{\gamma} \geq 2$            & 20.249146 \\ 
+     $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 19.114427 \\ 
+     $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 18.706887 \\ 
+     Event Filtering                & 18.706887 \\ 
+     Total Baseline Events          & 40.186644 \\ 
 Cut Type: zgammas_mu_w
-     Initial Events                 & 0.791107 \\ 
-     $N_{\mu} \geq 2$               & 0.173748 \\ 
-     $\mu\mu$, $\mu$ triggers       & 0.170288 \\ 
-     $\mu\mu$, $\mu$ trigger pT cut & 0.169345 \\ 
-     $N_{\gamma} \geq 2$            & 0.167938 \\ 
-     $80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$ & 0.023166 \\ 
-     $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 0.021951 \\ 
-     $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 0.021480 \\ 
-     Event Filtering                & 0.021480 \\ 
-     Total Baseline Events          & 0.040187 \\ 
+     Initial Events                 & 791.107135 \\ 
+     $N_{\mu} \geq 2$               & 173.747903 \\ 
+     $\mu\mu$, $\mu$ triggers       & 170.287809 \\ 
+     $\mu\mu$, $\mu$ trigger pT cut & 169.344873 \\ 
+     $m_{\mu\mu} > 50 \text{ GeV}$  & 167.938460 \\ 
+     $N_{\gamma} \geq 2$            & 23.165854 \\ 
+     $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 21.951225 \\ 
+     $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 21.479757 \\ 
+     Event Filtering                & 21.479757 \\ 
+     Total Baseline Events          & 40.186644 \\ 
 
 📌 Years 2022preEE
 reading: /eos/home-p/pelai/HZa/Parquet/NanoV12/run3/Sig_MC/ALP_M15_2022preEE/merged_nominal.parquet
@@ -285,38 +285,38 @@ Cut Type: zgammas_mu
    - event                          → 2646
    - all cuts                       → 4852
 Cut Type: zgammas_w
-   - all                            → 0.790757
-   - N_lep_sel                      → 0.341607
-   - trig_cut                       → 0.325161
-   - lep_pt_cut                     → 0.321742
-   - has_z_cand                     → 0.318899
-   - has_2g_cand                    → 0.042166
-   - sel_h_1                        → 0.039666
-   - sel_h_2                        → 0.038755
-   - event                          → 0.038755
-   - all cuts                       → 0.038755
+   - all                            → 790.757401
+   - N_lep_sel                      → 341.607197
+   - trig_cut                       → 325.161041
+   - lep_pt_cut                     → 321.742413
+   - has_z_cand                     → 318.898881
+   - has_2g_cand                    → 42.165741
+   - sel_h_1                        → 39.665669
+   - sel_h_2                        → 38.755100
+   - event                          → 38.755100
+   - all cuts                       → 38.755100
 Cut Type: zgammas_ele_w
-   - all                            → 0.790757
-   - N_lep_sel                      → 0.167816
-   - trig_cut                       → 0.154909
-   - lep_pt_cut                     → 0.152233
-   - has_z_cand                     → 0.150843
-   - has_2g_cand                    → 0.019154
-   - sel_h_1                        → 0.018028
-   - sel_h_2                        → 0.017620
-   - event                          → 0.017620
-   - all cuts                       → 0.038755
+   - all                            → 790.757401
+   - N_lep_sel                      → 167.816293
+   - trig_cut                       → 154.908576
+   - lep_pt_cut                     → 152.232781
+   - has_z_cand                     → 150.842965
+   - has_2g_cand                    → 19.153901
+   - sel_h_1                        → 18.027671
+   - sel_h_2                        → 17.620311
+   - event                          → 17.620311
+   - all cuts                       → 38.755100
 Cut Type: zgammas_mu_w
-   - all                            → 0.790757
-   - N_lep_sel                      → 0.173791
-   - trig_cut                       → 0.170077
-   - lep_pt_cut                     → 0.169358
-   - has_z_cand                     → 0.168024
-   - has_2g_cand                    → 0.023012
-   - sel_h_1                        → 0.021638
-   - sel_h_2                        → 0.021135
-   - event                          → 0.021135
-   - all cuts                       → 0.038755
+   - all                            → 790.757401
+   - N_lep_sel                      → 173.790904
+   - trig_cut                       → 170.076741
+   - lep_pt_cut                     → 169.357870
+   - has_z_cand                     → 168.023967
+   - has_2g_cand                    → 23.011839
+   - sel_h_1                        → 21.637998
+   - sel_h_2                        → 21.134789
+   - event                          → 21.134789
+   - all cuts                       → 38.755100
 
 📌 Final Stored Data (After Replacement):
 Cut Type: SelectedElectron
@@ -361,8 +361,8 @@ Cut Type: zgammas
      $N_{l} \geq 2$                 & 42768 \\ 
      e, ee trigger || $\mu\mu$, $\mu$ triggers  & 40709 \\ 
      lepton trigger pT cut          & 40281 \\ 
-     $N_{\gamma} \geq 2$            & 39925 \\ 
-     $80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$ & 5279 \\ 
+     $m_{ll} > 50 \text{ GeV}$      & 39925 \\ 
+     $N_{\gamma} \geq 2$            & 5279 \\ 
      $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 4966 \\ 
      $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 4852 \\ 
      Event Filtering                & 4852 \\ 
@@ -372,8 +372,8 @@ Cut Type: zgammas_ele
      $N_{\textrm{e}} \geq 2$        & 21010 \\ 
      ee, e triggers                 & 19394 \\ 
      ee, e trigger pT cut           & 19059 \\ 
-     $N_{\gamma} \geq 2$            & 18885 \\ 
-     $80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$ & 2398 \\ 
+     $m_{\textrm{ee}} > 50 \text{ GeV}$ & 18885 \\ 
+     $N_{\gamma} \geq 2$            & 2398 \\ 
      $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 2257 \\ 
      $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 2206 \\ 
      Event Filtering                & 2206 \\ 
@@ -383,45 +383,45 @@ Cut Type: zgammas_mu
      $N_{\mu} \geq 2$               & 21758 \\ 
      $\mu\mu$, $\mu$ triggers       & 21293 \\ 
      $\mu\mu$, $\mu$ trigger pT cut & 21203 \\ 
-     $N_{\gamma} \geq 2$            & 21036 \\ 
-     $80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$ & 2881 \\ 
+     $m_{\mu\mu} > 50 \text{ GeV}$  & 21036 \\ 
+     $N_{\gamma} \geq 2$            & 2881 \\ 
      $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 2709 \\ 
      $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 2646 \\ 
      Event Filtering                & 2646 \\ 
      Total Baseline Events          & 4852 \\ 
 Cut Type: zgammas_w
-     Initial Events                 & 0.790757 \\ 
-     $N_{l} \geq 2$                 & 0.341607 \\ 
-     e, ee trigger || $\mu\mu$, $\mu$ triggers  & 0.325161 \\ 
-     lepton trigger pT cut          & 0.321742 \\ 
-     $N_{\gamma} \geq 2$            & 0.318899 \\ 
-     $80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$ & 0.042166 \\ 
-     $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 0.039666 \\ 
-     $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 0.038755 \\ 
-     Event Filtering                & 0.038755 \\ 
-     Total Baseline Events          & 0.038755 \\ 
+     Initial Events                 & 790.757401 \\ 
+     $N_{l} \geq 2$                 & 341.607197 \\ 
+     e, ee trigger || $\mu\mu$, $\mu$ triggers  & 325.161041 \\ 
+     lepton trigger pT cut          & 321.742413 \\ 
+     $m_{ll} > 50 \text{ GeV}$      & 318.898881 \\ 
+     $N_{\gamma} \geq 2$            & 42.165741 \\ 
+     $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 39.665669 \\ 
+     $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 38.755100 \\ 
+     Event Filtering                & 38.755100 \\ 
+     Total Baseline Events          & 38.755100 \\ 
 Cut Type: zgammas_ele_w
-     Initial Events                 & 0.790757 \\ 
-     $N_{\textrm{e}} \geq 2$        & 0.167816 \\ 
-     ee, e triggers                 & 0.154909 \\ 
-     ee, e trigger pT cut           & 0.152233 \\ 
-     $N_{\gamma} \geq 2$            & 0.150843 \\ 
-     $80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$ & 0.019154 \\ 
-     $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 0.018028 \\ 
-     $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 0.017620 \\ 
-     Event Filtering                & 0.017620 \\ 
-     Total Baseline Events          & 0.038755 \\ 
+     Initial Events                 & 790.757401 \\ 
+     $N_{\textrm{e}} \geq 2$        & 167.816293 \\ 
+     ee, e triggers                 & 154.908576 \\ 
+     ee, e trigger pT cut           & 152.232781 \\ 
+     $m_{\textrm{ee}} > 50 \text{ GeV}$ & 150.842965 \\ 
+     $N_{\gamma} \geq 2$            & 19.153901 \\ 
+     $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 18.027671 \\ 
+     $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 17.620311 \\ 
+     Event Filtering                & 17.620311 \\ 
+     Total Baseline Events          & 38.755100 \\ 
 Cut Type: zgammas_mu_w
-     Initial Events                 & 0.790757 \\ 
-     $N_{\mu} \geq 2$               & 0.173791 \\ 
-     $\mu\mu$, $\mu$ triggers       & 0.170077 \\ 
-     $\mu\mu$, $\mu$ trigger pT cut & 0.169358 \\ 
-     $N_{\gamma} \geq 2$            & 0.168024 \\ 
-     $80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$ & 0.023012 \\ 
-     $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 0.021638 \\ 
-     $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 0.021135 \\ 
-     Event Filtering                & 0.021135 \\ 
-     Total Baseline Events          & 0.038755 \\ 
+     Initial Events                 & 790.757401 \\ 
+     $N_{\mu} \geq 2$               & 173.790904 \\ 
+     $\mu\mu$, $\mu$ triggers       & 170.076741 \\ 
+     $\mu\mu$, $\mu$ trigger pT cut & 169.357870 \\ 
+     $m_{\mu\mu} > 50 \text{ GeV}$  & 168.023967 \\ 
+     $N_{\gamma} \geq 2$            & 23.011839 \\ 
+     $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 21.637998 \\ 
+     $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 21.134789 \\ 
+     Event Filtering                & 21.134789 \\ 
+     Total Baseline Events          & 38.755100 \\ 
 
 📌 Years 2022preEE
 reading: /eos/home-p/pelai/HZa/Parquet/NanoV12/run3/Sig_MC/ALP_M30_2022preEE/merged_nominal.parquet
@@ -497,38 +497,38 @@ Cut Type: zgammas_mu
    - event                          → 4087
    - all cuts                       → 7663
 Cut Type: zgammas_w
-   - all                            → 0.789986
-   - N_lep_sel                      → 0.334744
-   - trig_cut                       → 0.314431
-   - lep_pt_cut                     → 0.309708
-   - has_z_cand                     → 0.306178
-   - has_2g_cand                    → 0.072586
-   - sel_h_1                        → 0.065535
-   - sel_h_2                        → 0.064417
-   - event                          → 0.064401
-   - all cuts                       → 0.064401
+   - all                            → 789.986059
+   - N_lep_sel                      → 334.743987
+   - trig_cut                       → 314.431260
+   - lep_pt_cut                     → 309.708152
+   - has_z_cand                     → 306.178427
+   - has_2g_cand                    → 72.586272
+   - sel_h_1                        → 65.535227
+   - sel_h_2                        → 64.417480
+   - event                          → 64.400672
+   - all cuts                       → 64.400672
 Cut Type: zgammas_ele_w
-   - all                            → 0.789986
-   - N_lep_sel                      → 0.165023
-   - trig_cut                       → 0.149198
-   - lep_pt_cut                     → 0.145660
-   - has_z_cand                     → 0.144046
-   - has_2g_cand                    → 0.033692
-   - sel_h_1                        → 0.030616
-   - sel_h_2                        → 0.030053
-   - event                          → 0.030053
-   - all cuts                       → 0.064401
+   - all                            → 789.986059
+   - N_lep_sel                      → 165.023045
+   - trig_cut                       → 149.198112
+   - lep_pt_cut                     → 145.659983
+   - has_z_cand                     → 144.046394
+   - has_2g_cand                    → 33.692065
+   - sel_h_1                        → 30.616162
+   - sel_h_2                        → 30.053087
+   - event                          → 30.053087
+   - all cuts                       → 64.400672
 Cut Type: zgammas_mu_w
-   - all                            → 0.789986
-   - N_lep_sel                      → 0.169721
-   - trig_cut                       → 0.165006
-   - lep_pt_cut                     → 0.163872
-   - has_z_cand                     → 0.162090
-   - has_2g_cand                    → 0.038894
-   - sel_h_1                        → 0.034919
-   - sel_h_2                        → 0.034364
-   - event                          → 0.034348
-   - all cuts                       → 0.064401
+   - all                            → 789.986059
+   - N_lep_sel                      → 169.720941
+   - trig_cut                       → 165.006237
+   - lep_pt_cut                     → 163.871683
+   - has_z_cand                     → 162.090012
+   - has_2g_cand                    → 38.894207
+   - sel_h_1                        → 34.919065
+   - sel_h_2                        → 34.364394
+   - event                          → 34.347585
+   - all cuts                       → 64.400672
 
 📌 Final Stored Data (After Replacement):
 Cut Type: SelectedElectron
@@ -573,8 +573,8 @@ Cut Type: zgammas
      $N_{l} \geq 2$                 & 39831 \\ 
      e, ee trigger || $\mu\mu$, $\mu$ triggers  & 37414 \\ 
      lepton trigger pT cut          & 36852 \\ 
-     $N_{\gamma} \geq 2$            & 36432 \\ 
-     $80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$ & 8637 \\ 
+     $m_{ll} > 50 \text{ GeV}$      & 36432 \\ 
+     $N_{\gamma} \geq 2$            & 8637 \\ 
      $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 7798 \\ 
      $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 7665 \\ 
      Event Filtering                & 7663 \\ 
@@ -584,8 +584,8 @@ Cut Type: zgammas_ele
      $N_{\textrm{e}} \geq 2$        & 19636 \\ 
      ee, e triggers                 & 17753 \\ 
      ee, e trigger pT cut           & 17332 \\ 
-     $N_{\gamma} \geq 2$            & 17140 \\ 
-     $80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$ & 4009 \\ 
+     $m_{\textrm{ee}} > 50 \text{ GeV}$ & 17140 \\ 
+     $N_{\gamma} \geq 2$            & 4009 \\ 
      $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 3643 \\ 
      $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 3576 \\ 
      Event Filtering                & 3576 \\ 
@@ -595,42 +595,42 @@ Cut Type: zgammas_mu
      $N_{\mu} \geq 2$               & 20195 \\ 
      $\mu\mu$, $\mu$ triggers       & 19634 \\ 
      $\mu\mu$, $\mu$ trigger pT cut & 19499 \\ 
-     $N_{\gamma} \geq 2$            & 19287 \\ 
-     $80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$ & 4628 \\ 
+     $m_{\mu\mu} > 50 \text{ GeV}$  & 19287 \\ 
+     $N_{\gamma} \geq 2$            & 4628 \\ 
      $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 4155 \\ 
      $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 4089 \\ 
      Event Filtering                & 4087 \\ 
      Total Baseline Events          & 7663 \\ 
 Cut Type: zgammas_w
-     Initial Events                 & 0.789986 \\ 
-     $N_{l} \geq 2$                 & 0.334744 \\ 
-     e, ee trigger || $\mu\mu$, $\mu$ triggers  & 0.314431 \\ 
-     lepton trigger pT cut          & 0.309708 \\ 
-     $N_{\gamma} \geq 2$            & 0.306178 \\ 
-     $80 \text{ GeV} < m_{ll} < 100 \text{ GeV}$ & 0.072586 \\ 
-     $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 0.065535 \\ 
-     $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 0.064417 \\ 
-     Event Filtering                & 0.064401 \\ 
-     Total Baseline Events          & 0.064401 \\ 
+     Initial Events                 & 789.986059 \\ 
+     $N_{l} \geq 2$                 & 334.743987 \\ 
+     e, ee trigger || $\mu\mu$, $\mu$ triggers  & 314.431260 \\ 
+     lepton trigger pT cut          & 309.708152 \\ 
+     $m_{ll} > 50 \text{ GeV}$      & 306.178427 \\ 
+     $N_{\gamma} \geq 2$            & 72.586272 \\ 
+     $m_{ll} + m_{ll\gamma\gamma} > 185 \text{ GeV}$ & 65.535227 \\ 
+     $95 \text{ GeV} < m_{ll\gamma\gamma} < 180 \text{ GeV}$ & 64.417480 \\ 
+     Event Filtering                & 64.400672 \\ 
+     Total Baseline Events          & 64.400672 \\ 
 Cut Type: zgammas_ele_w
-     Initial Events                 & 0.789986 \\ 
-     $N_{\textrm{e}} \geq 2$        & 0.165023 \\ 
-     ee, e triggers                 & 0.149198 \\ 
-     ee, e trigger pT cut           & 0.145660 \\ 
-     $N_{\gamma} \geq 2$            & 0.144046 \\ 
-     $80 \text{ GeV} < m_{\textrm{ee}} < 100 \text{ GeV}$ & 0.033692 \\ 
-     $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 0.030616 \\ 
-     $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 0.030053 \\ 
-     Event Filtering                & 0.030053 \\ 
-     Total Baseline Events          & 0.064401 \\ 
+     Initial Events                 & 789.986059 \\ 
+     $N_{\textrm{e}} \geq 2$        & 165.023045 \\ 
+     ee, e triggers                 & 149.198112 \\ 
+     ee, e trigger pT cut           & 145.659983 \\ 
+     $m_{\textrm{ee}} > 50 \text{ GeV}$ & 144.046394 \\ 
+     $N_{\gamma} \geq 2$            & 33.692065 \\ 
+     $m_{\textrm{ee}} + m_{\textrm{ee}\gamma\gamma} > 185 \text{ GeV}$ & 30.616162 \\ 
+     $95 \text{ GeV} < m_{\textrm{ee}\gamma\gamma} < 180 \text{ GeV}$ & 30.053087 \\ 
+     Event Filtering                & 30.053087 \\ 
+     Total Baseline Events          & 64.400672 \\ 
 Cut Type: zgammas_mu_w
-     Initial Events                 & 0.789986 \\ 
-     $N_{\mu} \geq 2$               & 0.169721 \\ 
-     $\mu\mu$, $\mu$ triggers       & 0.165006 \\ 
-     $\mu\mu$, $\mu$ trigger pT cut & 0.163872 \\ 
-     $N_{\gamma} \geq 2$            & 0.162090 \\ 
-     $80 \text{ GeV} < m_{\mu\mu} < 100 \text{ GeV}$ & 0.038894 \\ 
-     $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 0.034919 \\ 
-     $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 0.034364 \\ 
-     Event Filtering                & 0.034348 \\ 
-     Total Baseline Events          & 0.064401 \\ 
+     Initial Events                 & 789.986059 \\ 
+     $N_{\mu} \geq 2$               & 169.720941 \\ 
+     $\mu\mu$, $\mu$ triggers       & 165.006237 \\ 
+     $\mu\mu$, $\mu$ trigger pT cut & 163.871683 \\ 
+     $m_{\mu\mu} > 50 \text{ GeV}$  & 162.090012 \\ 
+     $N_{\gamma} \geq 2$            & 38.894207 \\ 
+     $m_{\mu\mu} + m_{\mu\mu\gamma\gamma} > 185 \text{ GeV}$ & 34.919065 \\ 
+     $95 \text{ GeV} < m_{\mu\mu\gamma\gamma} < 180 \text{ GeV}$ & 34.364394 \\ 
+     Event Filtering                & 34.347585 \\ 
+     Total Baseline Events          & 64.400672 \\ 

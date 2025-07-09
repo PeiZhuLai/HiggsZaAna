@@ -31,6 +31,12 @@ conda activate higgs-alp-ana
 
 python ALP_plot_param.py -y run3 --ln -b
 
+python3 ALP_plot_param.py -y run3 -m --ln
+
+python3 ALP_plot_param.py -y run3 -m --region 1 --ln
+
+python3 ALP_plot_param.py -y run3 -m --region 2 --ln
+
 # python ALP_plot_param.py --tune
 
 ##########hep_sub runjob.sh -g cms -mem 8000 -wt mid -o job.out -e job.err

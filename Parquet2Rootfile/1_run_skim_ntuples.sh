@@ -21,8 +21,8 @@ target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
 
 # years=(2016preVFP 2016postVFP 2017 2018 2022preEE 2022postEE 2023preBPix 2023postBPix)
 # years=(2016preVFP 2016postVFP 2017 2018)
-years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
-# years=(2022preEE)
+# years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+years=(2022preEE)
 # years=(2022preEE 2022postEE)
 # years=(2023preBPix 2023postBPix)
 systs=("FNUF" "Material" "Scale" "Smearing" "JER" "JES" "MET_JES" "MET_Unclustered" "Muon_pt")
@@ -114,16 +114,16 @@ process_sample_syst() {
 # samples=(ggH_M125 VBF_M125 WplusH_M125 WminusH_M125 ZH_M125 ttH_M125 ggH_M120 VBFH_M120 WplusH_M120 WminusH_M120 ZH_M120 ttH_M120 ggH_M130 VBFH_M130 WplusH_M130 WminusH_M130 ZH_M130 ttH_M130 ggH_mix VBF_mix ggH VBF WplusH WminusH ZH ttH)
 # samples=(ALP_M5 ALP_M15 ALP_M30)
 
-# samples=(ALP_M15) 
-# type="Sig_MC"
-# for sample in "${samples[@]}"; do
-#     mkdir -p "$target${sample}/"
-#     # 存储后台任务的进程ID列表
-#     pid_list=()
+samples=(ALP_M5 ALP_M15 ALP_M30)
+type="Sig_MC"
+for sample in "${samples[@]}"; do
+    mkdir -p "$target${sample}/"
+    # 存储后台任务的进程ID列表
+    pid_list=()
 
-#     # 调用函数处理样本数据
-#     process_sample "$sample" "$type"
-# done
+    # 调用函数处理样本数据
+    process_sample "$sample" "$type"
+done
 
 # samples=(ttH_M125) # ggH_M125 VBF_M125 WplusH_M125 WminusH_M125 ZH_M125 ttH_M125
 # type="Sig_MC_WI_Systematic"
@@ -214,16 +214,16 @@ process_sample_syst() {
 
 # # 处理 data 样本
 
-samples=(Data)
-type="Data"
-for sample in "${samples[@]}"; do
-    mkdir -p "$target$sample"
-    # 存储后台任务的进程ID列表
-    pid_list=()
+# samples=(Data)
+# type="Data"
+# for sample in "${samples[@]}"; do
+#     mkdir -p "$target$sample"
+#     # 存储后台任务的进程ID列表
+#     pid_list=()
 
-    # 调用函数处理样本数据
-    process_sample "$sample" "$type"
-done
+#     # 调用函数处理样本数据
+#     process_sample "$sample" "$type"
+# done
 
 # Use fake photon background estimation with data-driven
 

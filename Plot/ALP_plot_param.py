@@ -166,7 +166,7 @@ def main():
         for iEvt in range( ntup.GetEntries() ):
     
             ntup.GetEvent(iEvt)
-            if (iEvt == 1000): break
+            # if (iEvt == 1000): break
 
 
             if (iEvt % 100000 == 1):
@@ -360,7 +360,7 @@ def main():
                         elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
                             weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
                         elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
-                            weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_down  / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                            weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
                         elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
                             weight_sys = ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
                         elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
@@ -368,7 +368,7 @@ def main():
                         for var in var_names:
                             # print(f"weight_sys: {weight_sys}")
                             histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
-                    else: 
+                    else:
                         for var in var_names:
                             histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
                 

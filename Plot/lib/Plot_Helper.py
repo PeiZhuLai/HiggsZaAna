@@ -442,8 +442,10 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     global stat_err, stat_err_norm
     stat_err,  stat_err_norm= Get_StatUnc(stacks['bkg'].GetStack().Last())
 
-    Draw_unc(total_unc[0], kGray+10)
-    Draw_unc(stat_err, kRed-10)
+    # Draw_unc(total_unc[0], kGray+10)
+    # Draw_unc(stat_err, kRed-10)
+    # Draw_unc(total_unc[0], TColor.GetColor("#324376")) # Navy Blue 
+    Draw_unc(stat_err, TColor.GetColor("#F76C5E")) # orange
 
     histos['Data'].Draw('SAMEPE')
     histos['Data'].Draw("AXIS SAME")
@@ -465,13 +467,13 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         # legend.SetFillColor(0)
         # legend.Draw()
 
-        legend_1 = TLegend(0.18, 0.68, 0.48, 0.88)
+        legend_1 = TLegend(0.18, 0.64, 0.48, 0.88)
 
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
 
         legend_1.AddEntry(histos["DYJetsToLL"], r"Z + jets", "f")
-        legend_1.AddEntry(histos["DYGto2LG"], r"Z + /gamma", "f")
+        legend_1.AddEntry(histos["DYGto2LG"], r"Z + \gamma", "f")
 
         # for sample_bkg in plt_cfg.ana_cfg.bkg_names:
         #     legend_1.AddEntry(histos[sample_bkg], r"Z + jets", "f")
@@ -480,7 +482,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         legend_1.AddEntry(stat_err,"Stat. Uncer.","f")
         
         # Total Uncertainty
-        legend_1.AddEntry(total_unc[0],"Syst. Uncer.","f")
+        # legend_1.AddEntry(total_unc[0],"Syst. Uncer.","f")
 
         legend_2 = TLegend(0.43, 0.80, 0.73, 0.88)
         ROOT.SetOwnership(legend_2, False)
@@ -512,8 +514,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         for sample_bkg in plt_cfg.ana_cfg.bkg_names:            
             legend_1.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
             
-        legend_1.AddEntry(stat_err,"Stat. uncertainty","f")
-        legend_1.AddEntry(total_unc[0],"Syst. uncertainty","f")
+        legend_1.AddEntry(stat_err,"Stat. Uncer.","f")
+        # legend_1.AddEntry(total_unc[0],"Syst. Uncer.","f")
         # legend_1.AddEntry(total_unc[0],"Uncertainty","f")
 
         legend_2 = TLegend(0.53, 0.64, 0.83, 0.88)
@@ -577,8 +579,11 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     ratio_plot.GetXaxis().SetTitleOffset(1.0)
     ratio_plot.Draw("APZ SAME")
 
-    Draw_unc(total_unc[1], kGray+10)
-    Draw_unc(stat_err_norm, kRed-10)
+    # Draw_unc(total_unc[1], kGray+10)
+    # Draw_unc(stat_err_norm, kRed-10)
+    # Draw_unc(total_unc[1], TColor.GetColor("#324376")) # Navy Blue
+    Draw_unc(stat_err_norm, TColor.GetColor("#F76C5E")) # orange
+
     ratio_plot.Draw("SAMEPZ")
 
     
