@@ -37,6 +37,8 @@ python3 ALP_plot_param.py -y run3 -m --region 1 --ln
 
 python3 ALP_plot_param.py -y run3 -m --region 2 --ln
 
+python3 ALP_Optimization.py -y run3 -o ./optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
+
 # python ALP_plot_param.py --tune
 
 ##########hep_sub runjob.sh -g cms -mem 8000 -wt mid -o job.out -e job.err

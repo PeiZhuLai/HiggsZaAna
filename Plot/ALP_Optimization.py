@@ -86,7 +86,23 @@ elif options.year == 'run2':
         
         #name_SR = "ALP_plot_run2_UL_Ns_10_SR.root"
         #name_CR = "ALP_plot_run2_UL_Ns_10_CR.root"
-    
+elif options.year == 'run3':
+    file_out = 'plots_run3UL'
+    if options.ele:
+        name_SR = "ALP_plot_run3_UL_SR_ele.root"
+        name_CR = "ALP_plot_run3_UL_CR_ele.root"
+    elif options.mu:
+        name_SR = "ALP_plot_run3_UL_SR_mu.root"
+        name_CR = "ALP_plot_run3_UL_CR_mu.root"
+    else:
+        name_SR = "ALP_plot_run3_UL_SR.root"
+        name_CR = "ALP_plot_run3_UL_CR.root"
+
+        #name_SR = "ALP_plot_run3_UL_onlyM10_SR.root"
+        #name_CR = "ALP_plot_run3_UL_onlyM10_CR.root"
+        
+        #name_SR = "ALP_plot_run3_UL_Ns_10_SR.root"
+        #name_CR = "ALP_plot_run3_UL_Ns_10_CR.root"  
 else:
     print ("do not include at 2016/2017/2018")
     exit(0)
@@ -326,14 +342,23 @@ def compare(hist, hist_smooth, ma):
     return canv
 
 
-def GetHist(file, var):
-
-    hist = get_hist(file, var)
+def GetHist(file, var_list):
+    if isinstance(var_list, str):
+        var_list = [var_list]
     
-    graph = hist2graph(hist, 0.01)
-    hist_smooth = smooth(graph, hist, 0.01)
+    hist_combined = None
+    for i, var in enumerate(var_list):
+        hist = get_hist(file, var)
+        if i == 0:
+            hist_combined = hist.Clone(f"combined_{var}")
+        else:
+            hist_combined.Add(hist)
+    
+    graph = hist2graph(hist_combined, 0.01)
+    hist_smooth = smooth(graph, hist_combined, 0.01)
 
-    return hist, hist_smooth
+    return hist_combined, hist_smooth
+
 
 def computeSignificance(s,b,d_noSmooth):
   significance = -999.
@@ -535,11 +560,11 @@ def main():
         for r in signal_region:
             if r == 'all':
                 hist_signal[r][sig] = get_hist(file['SR'], "mvaVal_"+sig+"_"+sig)
-                hist_SR[r][sig], hist_SR_smooth[r][sig] = GetHist(file['SR'], "mvaVal_"+sig+"_DYJetsToLL")
+                hist_SR[r][sig], hist_SR_smooth[r][sig] = GetHist(file['SR'], ["mvaVal_"+sig+"_DYJetsToLL", "mvaVal_"+sig+"_DYGto2LG"])
             else:
                 hist_signal[r][sig] = get_hist(file['SR'], "mvaVal_"+r+"_"+sig+"_"+sig)
-                hist_SR[r][sig], hist_SR_smooth[r][sig] = GetHist(file['SR'], "mvaVal_"+r+"_"+sig+"_DYJetsToLL")
-        hist_CR[sig], hist_CR_smooth[sig] = GetHist(file['CR'], "mvaVal_"+sig+"_data")
+                hist_SR[r][sig], hist_SR_smooth[r][sig] = GetHist(file['SR'], ["mvaVal_"+r+"_"+sig+"_DYJetsToLL", "mvaVal_"+r+"_"+sig+"_DYGto2LG"])
+        hist_CR[sig], hist_CR_smooth[sig] = GetHist(file['CR'], "mvaVal_"+sig+"_Data")
 
         if options.plot:
             for r in signal_region:
@@ -599,7 +624,7 @@ def main():
             
             if nCats == 1:
                 
-                w = hist_signal['all']['M1'].GetBinWidth(1)            
+                w = hist_signal['all']['M5'].GetBinWidth(1)            
                 '''
                 plt.plot([(i-1)*w for i in significance_all['all'].keys()], significance_all['all'].values(), "o-", markersize=2., label='Significance')
                 #plt.plot([(i-1)*w for i in significance_all['all'].keys()], significance_all_up['all'].values(), "o-", c='red')
