@@ -79,10 +79,109 @@ from pdb import set_trace
 #     for i, h in enumerate(hist):
 #         print(f'{year} MET_pt {i*10}-{(i+1)*10}: {h}')
 
+# # =====================================
+# # Generate Event Count Table for ggH M125 2017
+# # =====================================
+# print("\nEvent Count Table for ggH M125 2017 (Electron Channel)")
+# print("======================================================================")
+
+# file_path = "/eos/home-j/jiehan/root/skimmed_ntuples_run2/ggH_M125/2017.root"
+# tree_name = "inclusive"
+
+# # Define all columns that will be used to speed up loading
+# columns_to_load = [
+#     'z_ee', 'n_iso_photons', 'Z_mass', 'gamma_pt', 'H_mass',
+#     'Z_cos_theta', 'lep_cos_theta', 'lep_phi', 'gamma_mvaID',
+#     'l1g_deltaR', 'l2g_deltaR', 'H_relpt', 'gamma_ptRelErr',
+#     'Z_lead_lepton_eta', 'Z_sublead_lepton_eta', 'weight_central', # Add weight for potential weighted counts
+#     'Z_lead_lepton_deltaphi', 'Z_sublead_lepton_deltaphi', 'gamma_eta'
+# ]
+
+# try:
+#     df_full = uproot.open(file_path)[tree_name].arrays(columns_to_load, library='pd')
+# except Exception as e:
+#     print(f"Error loading file: {e}")
+#     df_full = pd.DataFrame() # Empty dataframe to avoid further errors
+
+# if not df_full.empty:
+#     # Helper function to print rows in the desired format
+#     def print_row(label, count_or_df, is_weighted=False):
+#         count = 0
+#         if isinstance(count_or_df, pd.DataFrame):
+#             if is_weighted and 'weight_central' in count_or_df.columns:
+#                 count = count_or_df['weight_central'].sum()
+#             else:
+#                 count = len(count_or_df)
+#         else:
+#             count = count_or_df
+        
+#         # Format count to match example (integer or float if weighted)
+#         count_str = f"{count:.0f}" if not is_weighted or count == int(count) else f"{count:.2f}"
+#         print(f"{label.ljust(60)} & {count_str}")
+
+#     # Apply selections sequentially
+#     df = df_full.copy()
+
+#     df = df[df['z_ee'] > 0]  # Z_ee channel
+#     print_row(r"$Z_ee channel$", df)
+
+#     baseline_df = df.copy()
+#     print_row("Event filters (baseline for subsequent)", baseline_df)
+
+#     # # Cuts relative to baseline
+#     # print_row(r"baseline + cosTheta>0", baseline_df[baseline_df['Z_cos_theta'] > 0])
+#     # print_row(r"baseline + cosTheta>0.5", baseline_df[baseline_df['Z_cos_theta'] > 0.5])
+    
+#     # print_row(r"baseline + costheta>0", baseline_df[baseline_df['lep_cos_theta'] > 0])
+#     # print_row(r"baseline + costheta>0.5", baseline_df[baseline_df['lep_cos_theta'] > 0.5])
+
+#     # print_row(r"baseline + phi (psi)>0", baseline_df[baseline_df['lep_phi'] > 0])
+#     # print_row(r"baseline + phi (psi)>0.5", baseline_df[baseline_df['lep_phi'] > 0.5])
+
+#     # print_row(r"baseline + Photonmva>0.6", baseline_df[baseline_df['gamma_mvaID'] > 0.6])
+#     # print_row(r"baseline + Photonmva>0.75", baseline_df[baseline_df['gamma_mvaID'] > 0.75])
+
+#     # print_row(r"baseline + mindR>1", baseline_df[baseline_df['l2g_deltaR'] > 1]) # l2g_deltaR is min(dR(l,g))
+#     # print_row(r"baseline + mindR>1.2", baseline_df[baseline_df['l2g_deltaR'] > 1.2])
+
+#     # print_row(r"baseline + maxdR>1.5", baseline_df[baseline_df['l1g_deltaR'] > 1.5]) # l1g_deltaR is max(dR(l,g))
+#     # print_row(r"baseline + maxdR>2", baseline_df[baseline_df['l1g_deltaR'] > 2])
+    
+#     # # Ensure H_mass is not zero for H_relpt calculation if not already filtered
+#     # temp_df_ptmass = baseline_df[baseline_df['H_mass'] != 0]
+#     # print_row(r"baseline + pT mass>0.25", temp_df_ptmass[temp_df_ptmass['H_relpt'] > 0.25])
+#     # print_row(r"baseline + pT mass>0.5", temp_df_ptmass[temp_df_ptmass['H_relpt'] > 0.5])
+
+#     # print_row(r"baseline + $\gamma$ resolution>0.02", baseline_df[baseline_df['gamma_ptRelErr'] > 0.02])
+#     # print_row(r"baseline + $\gamma$ resolution>0.05", baseline_df[baseline_df['gamma_ptRelErr'] > 0.05])
+
+#     # print_row(r"baseline + lead lep $\eta$>0", baseline_df[baseline_df['Z_lead_lepton_eta'] > 0])
+#     # print_row(r"baseline + lead lep $\eta$>0.5", baseline_df[baseline_df['Z_lead_lepton_eta'] > 0.5])
+
+#     # print_row(r"baseline + sublead lep $\eta$>0", baseline_df[baseline_df['Z_sublead_lepton_eta'] > 0])
+#     # print_row(r"baseline + sublead lep $\eta$>0.5", baseline_df[baseline_df['Z_sublead_lepton_eta'] > 0.5])
+
+
+#     print_row(r"baseline + lead lepton $\eta$>1", baseline_df[baseline_df['Z_lead_lepton_eta'] > 1])
+#     print_row(r"baseline + lead lepton $\eta$>2", baseline_df[baseline_df['Z_lead_lepton_eta'] > 2])
+
+#     print_row(r"baseline + sublead lepton $\eta$>1", baseline_df[baseline_df['Z_sublead_lepton_eta'] > 1])
+#     print_row(r"baseline + sublead lepton $\eta$>2", baseline_df[baseline_df['Z_sublead_lepton_eta'] > 2])
+
+#     print_row(r"baseline + photon $\eta$>1", baseline_df[baseline_df['gamma_eta'] > 1])
+#     print_row(r"baseline + photon $\eta$>2", baseline_df[baseline_df['gamma_eta'] > 2])
+
+#     print_row(r"baseline + lead lep photon dphi>1", baseline_df[baseline_df['Z_sublead_lepton_deltaphi'] > 1])
+#     print_row(r"baseline + lead lep photon dphi>2", baseline_df[baseline_df['Z_sublead_lepton_deltaphi'] > 2])
+
+#     print_row(r"baseline + sublead lep photon dphi>1", baseline_df[baseline_df['Z_lead_lepton_deltaphi'] > 1])
+#     print_row(r"baseline + sublead lep photon dphi>2", baseline_df[baseline_df['Z_lead_lepton_deltaphi'] > 2])
+
+# print("======================================================================")
+
 # =====================================
 # Compare two log file
 # =====================================
-
 # with open('2022preEE_two_jet_ele.txt', 'r') as f:
 #     data1 = f.readlines()
 # with open('daje.txt', 'r') as f:
@@ -101,40 +200,103 @@ from pdb import set_trace
 #         print(d2, end='')
 
 # # =====================================
-# # Get weight with syst
+# # Check weight in specific events
 # # =====================================
-# cats = ["inclusive"]
-# years = ['2017']
-# types = ["mumu", "ee"]
-# for year in years:
-#     # data = uproot.open(f"/eos/home-j/jiehan/root/cutflow/ggH_M125/{year}.root")
-#     data = pd.read_parquet(f"/eos/home-j/jiehan/parquet/nanov9/cutflow/ggH_M125_{year}/merged_nominal.parquet")
-#     print(data.columns)
-#     for cat in cats:
-#         # 加入所有满足这个格式的变量 'weight*central'
-#         variables = ['H_mass', 'z_mumu', 'z_ee']
-#         # for i in data[cat].keys():
-#         #     if i.startswith('weight') and i.endswith('central'):
-#         #         variables.append(i)
-#         # cat_data = data[cat].arrays(variables, library='pd')
-#         if cat == "inclusive":
-#             cat_data = data
-#         else:
-#             exit()
-#         for t in types:
-#             temp = cat_data.query(f'z_{t} > 0')
-#             weight = temp["weight_central"]
-#             print(f'{year} {cat} {t} lumi weight: {weight.sum()}')
-#             weight = weight * temp["weight_L1_prefiring_sf_central"]
-#             print(f'{year} {cat} {t} prefire weight: {weight.sum()}')
-#             weight = weight * temp["weight_pu_reweight_sf_central"]
-#             print(f'{year} {cat} {t} pileup weight: {weight.sum()}')
-#             weight = weight * temp["weight_btag_deepjet_wp_sf_SelectedJet_central"]
-#             print(f'{year} {cat} {t} btag weight: {weight.sum()}')
-#             weight = weight * temp["weight_electron_wplid_sf_SelectedElectron_central"]
-#             print(f'{year} {cat} {t} ele id weight: {weight.sum()}')
-#             weight = weight * temp["weight_muon_looseid_sf_SelectedMuon_central"]
-#             print(f'{year} {cat} {t} muon id weight: {weight.sum()}')
+# data = pd.read_parquet("/eos/home-j/jiehan/parquet/cutflow_ggf/ggH_M125_2023postBPix/merged_nominal.parquet")
+# run = [1, 1, 1, 1, 1]
+# lumi = [17, 1, 49, 17, 17]
+# event = [16185, 138, 48333, 16369, 16437]
+# for i in range(len(run)):
+#     temp = data[(data['run'] == run[i]) & (data['luminosityBlock'] == lumi[i]) & (data['event'] == event[i])]
+#     if len(temp) > 0:
+#         print(f'Run: {run[i]}, Lumi: {lumi[i]}, Event: {event[i]}, Weight: {(temp["weight_photon_csev_sf_Photon_central"] * temp["weight_photon_id_sf_Photon_central"]).values[0]}')
+#     else:
+#         print(f'Run: {run[i]}, Lumi: {lumi[i]}, Event: {event[i]} not found in data.')
+        
+# =====================================
+# Get weight with syst
+# =====================================
+cats = ["inclusive"]
+years = ['2018'] # '2023postBPix'
+types = ["mumu", "ee"]
+
+# Define weight lists and corresponding display names
+# Comment out any weight you don't want to apply by adding # at the beginning
+weight_configs = [
+    ("weight_pu_reweight_sf_central", "pileup weight"),
+    ("weight_btag_deepjet_wp_sf_SelectedJet_central", "btag weight"),
+    ("weight_hlt_sf_central", "hlt weight"),
+    ("weight_electron_wplid_sf_SelectedElectron_central", "electron wplid weight"),
+    ("weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central", "electron wplid nomatch weight"),
+    ("weight_electron_iso_sf_SelectedElectron_central", "electron iso weight"),
+    ("weight_electron_reco_sf_SelectedElectron_central", "electron reco weight"),
+    ("weight_muon_looseid_sf_SelectedMuon_central", "muon looseid weight"),
+    ("weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central", "muon looseid nomatch weight"),
+    ("weight_muon_iso_sf_SelectedMuon_central", "muon iso weight"),
+    ("weight_muon_reco_sf_SelectedMuon_central", "muon reco weight"),
+    ("weight_photon_id_sf_SelectedPhoton_central", "photon id weight"),
+    ("weight_photon_id_shape_sf_SelectedPhoton_central", "photon id shape weight"),
+    ("weight_photon_csev_sf_SelectedPhoton_central", "photon csev weight"),
+    # Examples of how to comment out weights:
+    # ("weight_electron_iso_sf_SelectedElectron_central", "electron iso weight"),  # Commented out
+    # ("weight_muon_iso_sf_SelectedMuon_central", "muon iso weight"),  # Commented out
+]
+
+# Extract active weights (uncommented ones)
+weight_list = [config[0] for config in weight_configs]
+name_list = [config[1] for config in weight_configs]
+
+ggH_weight_list = [
+    "weight_nnlo_sf_GenHzgHiggs_central"
+]
+
+ggH_name_list = [
+    "nnlo weight"
+]
+
+signal_weight_list = [
+    "pythia_weight"
+]
+
+background_weight_list = [
+    "weight_photon_fake_photon_sf_SelectedPhoton_central",
+    "kin_weight"
+]
+for year in years:
+    data = uproot.open(f"/eos/home-j/jiehan/root/skimmed_ntuples/ggH_M125/{year}.root")['inclusive'].arrays(library='pd')
+    # data = pd.read_parquet(f"/eos/home-j/jiehan/parquet/cutflow_ggf/ggH_M125_{year}/merged_nominal.parquet")
+    for i in data.columns:
+        if "weight" in i and "central" in i:
+            print(i)
+    for cat in cats:
+        # 加入所有满足这个格式的变量 'weight*central'
+        variables = ['H_mass', 'z_mumu', 'z_ee']
+        # for i in data[cat].keys():
+        #     if i.startswith('weight') and i.endswith('central'):
+        #         variables.append(i)
+        # cat_data = data[cat].arrays(variables, library='pd')
+        if cat == "inclusive":
+            cat_data = data
+        else:
+            exit()
+
+        for t in types:
+            temp = cat_data.query(f'z_{t} > 0')
+            weight = temp["weight_central"]
+            print(f'{year} {cat} {t}')
+            print(f'{"total events:":>35}{len(temp)}')
+            weight = weight * temp["pythia_weight"]
+            print(f'{"lumi weight:":>35}{weight.sum():.4f}')
+            
+            # Apply weights from weight_list
+            for weight_name, display_name in zip(weight_list, name_list):
+                weight = weight * temp[weight_name]
+                print(f'{display_name + ":":>35}{weight.sum():.4f}')
+            
+            # Apply ggH specific weights
+            for weight_name, display_name in zip(ggH_weight_list, ggH_name_list):
+                weight = weight * temp[weight_name]
+                print(f'{display_name + ":":>35}{weight.sum():.4f}')
 
 # =====================================
 # Have a look at the hgg data
@@ -194,23 +356,63 @@ from pdb import set_trace
 # selection += " & (jet_1_pt>35) & (jet_2_pt>25)"
 # print(f"sf: {data.query(selection)['weight'].sum() / bkg.query(selection)['weight'].sum()}")
 
-# =================================
-# Check the data
-# =================================
-path = "/eos/home-j/jiehan/root/fitting_signal/"
-years = ["2016preVFP", "2016postVFP", "2017", "2018"]
-samples = ["ggH", "VBF", "ZH", "WH", "ttH"]
-cats = ["VBF0", "VBF1", "VBF2", "VBF3"]
+# # =================================
+# # Check the data
+# # =================================
+# path = "/eos/home-j/jiehan/root/fitting_signal/"
+# years = ["2016preVFP", "2016postVFP", "2017", "2018"]
+# samples = ["ggH", "VBF", "ZH", "WH", "ttH"]
+# cats = ["VBF0", "VBF1", "VBF2", "VBF3"]
 
-for cat in cats:
-    yields = 0
-    for sample in samples:
-        for year in years:
-            for flav in ('ele', 'mu'):
-                # print(f"{path}/{sample}_M125_{year}/output_{sample}_M125.root")
-                data = uproot.open(f"{path}/{sample}_M125_{year}/output_{sample}_M125.root")[f"DiphotonTree/{sample}_125_{flav}_13TeV_{cat}"].arrays(['weight'], library='pd')
-                signal = data['weight'].sum()
-                count = data['weight'].count()
-                print(f'{year} {sample} {cat} {flav} yields: {signal:.3f}({count})')
-                yields += data['weight'].sum()
-    print(f'{cat} yields: {yields}\n')
+# for cat in cats:
+#     yields = 0
+#     for sample in samples:
+#         for year in years:
+#             for flav in ('ele', 'mu'):
+#                 # print(f"{path}/{sample}_M125_{year}/output_{sample}_M125.root")
+#                 data = uproot.open(f"{path}/{sample}_M125_{year}/output_{sample}_M125.root")[f"DiphotonTree/{sample}_125_{flav}_13TeV_{cat}"].arrays(['weight'], library='pd')
+#                 signal = data['weight'].sum()
+#                 count = data['weight'].count()
+#                 print(f'{year} {sample} {cat} {flav} yields: {signal:.3f}({count})')
+#                 yields += data['weight'].sum()
+#     print(f'{cat} yields: {yields}\n')
+
+# # =====================================
+# # Plot weight distributions
+# # =====================================
+# cats = ["inclusive"]
+# years = ['2023postBPix']
+# types = ["mumu", "ee"]
+# for year in years:
+#     # data = uproot.open(f"/eos/home-j/jiehan/root/cutflow/ggH_M125/{year}.root")
+#     data = pd.read_parquet(f"/eos/home-j/jiehan/parquet/cutflow_ggf/ggH_M125_{year}/merged_nominal.parquet")
+
+#     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+#     for year in years:
+#         for cat in cats:
+#             # 加入所有满足这个格式的变量 'weight*central'
+#             variables = ['H_mass', 'z_mumu', 'z_ee']
+#             # for i in data[cat].keys():
+#             #     if i.startswith('weight') and i.endswith('central'):
+#             #         variables.append(i)
+#             # cat_data = data[cat].arrays(variables, library='pd')
+#             if cat == "inclusive":
+#                 cat_data = data
+#             else:
+#                 exit()
+
+#             for t in types:
+#                 temp = cat_data.query(f'z_{t} > 0')
+#                 # temp["weight_photon_csev_sf_Photon_central"] * temp["weight_photon_id_sf_Photon_central"]
+#                 weight = temp["weight_pu_reweight_sf_central"]
+#                 hist = np.histogram(weight, bins=1000, range=(0, 10), density=True)
+#                 # Only plot if histogram values are non-zero
+#                 non_zero_mask = hist[0] > 0
+#                 if non_zero_mask.any():
+#                     ax.scatter(hist[1][:-1][non_zero_mask], hist[0][non_zero_mask], label=f'{t}', marker='o', linestyle='-')
+
+#     ax.set_xlabel('Weight')
+#     ax.set_ylabel('Density')
+#     ax.set_title('Weight Distributions')
+#     ax.legend()
+#     plt.savefig('weight_distributions.png')

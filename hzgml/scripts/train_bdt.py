@@ -8,6 +8,8 @@ import uproot
 import pickle
 from sklearn.metrics import roc_curve, auc, confusion_matrix, roc_auc_score
 from sklearn.preprocessing import StandardScaler, QuantileTransformer
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_array, check_is_fitted
 import xgboost as xgb
 from tabulate import tabulate
 import matplotlib.pyplot as plt
@@ -15,6 +17,8 @@ from tqdm import tqdm
 from pdb import set_trace
 import ROOT
 ROOT.gErrorIgnoreLevel = ROOT.kError + 1
+
+from weighted_quantile_transformer import WeightedQuantileTransformer # New import
 
 def getArgs():
     """Get arguments from command line."""
@@ -34,6 +38,7 @@ def getArgs():
     parser.add_argument('--optuna_metric', action='store', default='auc', choices=['eval_auc', 'sqrt_eval_auc_minus_train_auc', 'eval_auc_minus_train_auc', 'eval_auc_over_train_auc', "eval_auc_minus_train_auc", "eval_significance", "sqrt_eval_significance_minus_train_significance", 'eval_auc_with_mass_shape_factor'], help='Optuna metric to optimize')
     parser.add_argument('--n-calls', action='store', type=int, default=36, help='Steps of hyperparameter tuning using optuna')
     parser.add_argument('--continue-optuna', action='store', type=int, default=0, help='Continue tuning hyperparameters using optuna')
+    parser.add_argument('--oneHyperparameter', action='store_true', default=False, help='Use one hyperparameter set for all folds')
 
     parser.add_argument('-s', '--shield', action='store', type=int, default=-1, help='Which variables needs to be shielded')
     parser.add_argument('-a', '--add', action='store', type=int, default=-1, help='Which variables needs to be added')
@@ -67,6 +72,7 @@ class XGBoostHandler(object):
         self.n_calls = args.n_calls
         self._shield = args.shield
         self._add = args.add
+        self.oneHyperparameter = args.oneHyperparameter
 
         self._region = region
 
@@ -104,6 +110,8 @@ class XGBoostHandler(object):
         self.m_score_test_sig = {}
         self.m_score_test_bkg = {}
         self.m_tsf = {}
+        self.m_test_sig_w = {} # New: For storing test signal weights
+        self.m_test_bkg_w = {} # New: For storing test background weights
 
         self.inputTree = 'inclusive'
         self.train_signal = []
@@ -119,8 +127,8 @@ class XGBoostHandler(object):
         self.randomIndex = 'eventNumber'
         self.weight = 'weight'
         self.params = [{'eval_metric': ['auc', 'logloss']}]
-        self.early_stopping_rounds = 10
-        self.numRound = 1000
+        self.early_stopping_rounds = 200
+        self.numRound = 10000
         self.SF = -1
         self.readConfig(configPath)
         self.checkConfig()
@@ -349,6 +357,14 @@ class XGBoostHandler(object):
 
         data = data[sorted(data.columns)]
 
+        # Replace values less than -900 with np.nan for correlation calculation
+        # This modification is local to the 'data' DataFrame in this function
+        for col_name in data.columns:
+            # Ensure the column is numeric before attempting comparison and assignment
+            if pd.api.types.is_numeric_dtype(data[col_name]):
+            # Use .loc for safe assignment to avoid SettingWithCopyWarning
+                data.loc[data[col_name] < -900, col_name] = np.nan
+
         data = data.corr() * 100
         # data = data.dropna(axis=0, how='all').dropna(axis=1, how='all')
 
@@ -460,6 +476,11 @@ class XGBoostHandler(object):
         self.m_val_wt[fold][self.m_val_wt[fold] < 0] = 0
         self.m_test_wt[fold] = pd.concat([test_sig_wt, test_bkg_wt]).to_numpy()
         self.m_test_wt[fold][self.m_test_wt[fold] < 0] = 0
+        
+        # Store weights for test signal and background separately for transformScore
+        self.m_test_sig_w[fold] = test_sig[self.weight].values.flatten()
+        self.m_test_bkg_w[fold] = test_bkg[self.weight].values.flatten()
+
 
         # setup the truth labels
         print('XGB INFO: Signal labeled as one; background labeled as zero.')
@@ -488,7 +509,7 @@ class XGBoostHandler(object):
         evals_result = {}
         eval_result_history = []
         try:
-            self.m_bst[fold] = xgb.train(param, self.m_dTrain[fold], self.numRound, evals=evallist, early_stopping_rounds=self.early_stopping_rounds, evals_result=evals_result, verbose_eval=False)
+            self.m_bst[fold] = xgb.train(param, self.m_dTrain[fold], self.numRound, evals=evallist, early_stopping_rounds=self.early_stopping_rounds, evals_result=evals_result, verbose_eval=50)
         except KeyboardInterrupt:
             print('Finishing on SIGINT.')
 
@@ -666,13 +687,25 @@ class XGBoostHandler(object):
 
         print(f'XGB INFO: transforming scores based on {sample}')
         # transform the scores
-        self.m_tsf[fold] = QuantileTransformer(n_quantiles=1000, output_distribution='uniform', subsample=1000000000, random_state=0)
-        #plt.hist(score_test_sig, bins='auto')
-        #plt.show()
-        if sample == 'sig': self.m_tsf[fold].fit(self.m_score_test_sig[fold].reshape(-1, 1))
-        elif sample == 'bkg': self.m_tsf[fold].fit(self.m_score_test_bkg[fold].reshape(-1, 1))
-        #score_test_sig_t=tsf.transform(self.m_score_test_sig[fold].reshape(-1, 1)).reshape(-1)
-        #plt.hist(score_test_sig_t, bins='auto')
+        # Use the new WeightedQuantileTransformer
+        self.m_tsf[fold] = WeightedQuantileTransformer(n_quantiles=1000, output_distribution='uniform', random_state=0)
+        
+        if sample == 'sig':
+            scores_to_fit = self.m_score_test_sig[fold].reshape(-1, 1)
+            weights_for_fit = self.m_test_sig_w[fold]
+            self.m_tsf[fold].fit(scores_to_fit, sample_weight=weights_for_fit)
+        elif sample == 'bkg':
+            scores_to_fit = self.m_score_test_bkg[fold].reshape(-1, 1)
+            weights_for_fit = self.m_test_bkg_w[fold]
+            self.m_tsf[fold].fit(scores_to_fit, sample_weight=weights_for_fit)
+        
+        # The following lines for plotting transformed scores can be uncommented if needed for debugging
+        score_test_sig_t=self.m_tsf[fold].transform(self.m_score_test_sig[fold].reshape(-1, 1)).reshape(-1)
+        plt.hist(score_test_sig_t, weights=self.m_test_sig_w[fold] if sample=='sig' else None) # Example of weighted histogram
+        if os.path.isdir('plots/score_transform') is False:
+            os.makedirs('plots/score_transform')
+        plt.savefig('plots/score_transform/%d_BDT_%s_%d_%s_weighted.png' % (self._shield+1, self._region, fold, sample))
+        plt.clf() # Clear figure if shown or saved in loop
         #plt.show()
 
     def save(self, fold=0):
@@ -693,10 +726,56 @@ class XGBoostHandler(object):
         import optuna
         from xgboost import XGBClassifier
         import optuna.visualization as vis
+        import logging
+
+        # Setup logging for optuna
+        exp_dir = f'models/optuna_{self._region}/'
+        if not os.path.exists(exp_dir):
+            os.makedirs(exp_dir)
+        
+        if self.oneHyperparameter:
+            log_filename = f"{exp_dir}optuna_optimization_unified.log"
+        else:
+            log_filename = f"{exp_dir}optuna_optimization_fold_{fold}.log"
+        
+        # Configure logging
+        logger = logging.getLogger(f'optuna_optimization_{self._region}_{fold}')
+        logger.setLevel(logging.INFO)
+        
+        # Remove existing handlers to avoid duplicate logs
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+        
+        # Create file handler
+        file_handler = logging.FileHandler(log_filename, mode='a')
+        file_handler.setLevel(logging.INFO)
+        
+        # Create formatter
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        
+        # Add handler to logger
+        logger.addHandler(file_handler)
+        
+        # Also add a stream handler for console output
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        
+        # Log optimization start
+        if self.oneHyperparameter:
+            logger.info(f"Starting unified hyperparameter optimization for region {self._region}")
+            logger.info(f"Optimization metric: {self.optuna_metric}")
+            logger.info(f"Number of trials: {self.n_calls}")
+        else:
+            logger.info(f"Starting hyperparameter optimization for region {self._region}, fold {fold}")
+            logger.info(f"Optimization metric: {self.optuna_metric}")
+            logger.info(f"Number of trials: {self.n_calls}")
 
         def objective(trial):
             params = {
-                'max_depth': trial.suggest_int('max_depth', 3, 50),
+                'max_depth': trial.suggest_int('max_depth', 3, 60),
                 'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.05, log=True),
                 'subsample': trial.suggest_float('subsample', 0.4, 1.0),
                 'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 1.0),
@@ -705,46 +784,82 @@ class XGBoostHandler(object):
                 'max_delta_step': trial.suggest_int('max_delta_step', 10, 100),
             }
             
-            self.setParams(params, fold)
-            self.trainModel(fold, self.params[fold])
-            self.testModel(fold)
-            eval_auc = self.getAUC(fold)[-1]
-            train_auc = self.getAUC(fold, 'train')[-1]
-            eval_signi, eval_signi_err = self.getSignificance(fold, 'val')
-            train_signi, train_signi_err = self.getSignificance(fold, 'train')
-            mass_shape_factor = self.get_mass_shape_factor(fold, 'val')
+            # Helper function to calculate metrics for a single fold
+            def calculate_fold_metrics(fold_idx):
+                eval_auc = self.getAUC(fold_idx)[-1]
+                train_auc = self.getAUC(fold_idx, 'train')[-1]
+                eval_signi, eval_signi_err = self.getSignificance(fold_idx, 'val')
+                train_signi, train_signi_err = self.getSignificance(fold_idx, 'train')
+                mass_shape_factor = self.get_mass_shape_factor(fold_idx, 'val')
+                
+                return {
+                    'train_auc': train_auc,
+                    'eval_auc': eval_auc,
+                    'sqrt_eval_auc_minus_train_auc': np.sqrt(train_auc * (2 * eval_auc - train_auc)),
+                    'eval_auc_minus_train_auc': eval_auc * 2 - train_auc,
+                    'eval_auc_over_train_auc': eval_auc ** 2 / ((eval_auc + train_auc) / 2),
+                    'eval_significance': eval_signi,
+                    'train_significance': train_signi,
+                    'sqrt_eval_significance_minus_train_significance': np.sqrt(train_signi * (2 * eval_signi - train_signi)),
+                    'eval_auc_with_mass_shape_factor': eval_auc + mass_shape_factor
+                }
             
-            metrics = {
-                'train_auc': train_auc,
-                'eval_auc': eval_auc,
-                'sqrt_eval_auc_minus_train_auc': np.sqrt(train_auc * (2 * eval_auc - train_auc)),
-                'eval_auc_minus_train_auc': eval_auc * 2 - train_auc,
-                'eval_auc_over_train_auc': eval_auc ** 2 / ((eval_auc + train_auc) / 2),
-                'eval_auc_minus_train_auc': 2 * eval_auc - train_auc,
-                'eval_significance': eval_signi,
-                'train_significance': train_signi,
-                'sqrt_eval_significance_minus_train_significance': np.sqrt(train_signi * (2 * eval_signi - train_signi)),
-                'eval_auc_with_mass_shape_factor': eval_auc + mass_shape_factor
-            }
-            print(f"params: {params}, eval_auc: {eval_auc}, train_auc: {train_auc}, "
-                  f"sqrt_eval_auc_minus_train_auc: {metrics['sqrt_eval_auc_minus_train_auc']}, "
-                  f"eval_auc_minus_train_auc: {metrics['eval_auc_minus_train_auc']}, "
-                  f"eval_auc_over_train_auc: {metrics['eval_auc_over_train_auc']}, "
-                  f"eval_auc_minus_train_auc: {metrics['eval_auc_minus_train_auc']}, "
-                  f"eval_significance: {eval_signi}, train_significance: {train_signi}, "
-                  f"sqrt_eval_significance_minus_train_significance: {metrics['sqrt_eval_significance_minus_train_significance']}, "
-                  f"eval_auc_with_mass_shape_factor: {metrics['eval_auc_with_mass_shape_factor']}"
-                )
-            return metrics.get(self.optuna_metric, eval_auc)
+            # Helper function to log and print results
+            def log_and_print_results(metrics, params, trial_number):
+                # Log results
+                logger.info(f"Trial {trial_number} results: " + 
+                           ", ".join([f"{key}={value:.6f}" for key, value in metrics.items()]))
+                
+                # Print results
+                metrics_str = ", ".join([f"{key}: {value}" for key, value in metrics.items()])
+                print(f"params: {params}, {metrics_str}")
+
+            if self.oneHyperparameter:
+                # Calculate metrics for each fold, then average them
+                fold_metrics = []
+                for current_fold in range(4):
+                    self.setParams(params, current_fold)
+                    self.trainModel(current_fold, self.params[current_fold])
+                    self.testModel(current_fold)
+                    fold_metrics.append(calculate_fold_metrics(current_fold))
+                
+                # Average the compound metrics across all valid folds
+                if len(fold_metrics) == 0:
+                    return -999
+                
+                metrics = {}
+                for key in fold_metrics[0].keys():
+                    metrics[key] = np.mean([fold_metric[key] for fold_metric in fold_metrics])
+                
+                log_and_print_results(metrics, params, trial.number)
+                return metrics.get(self.optuna_metric, metrics['eval_auc'])
+            else:
+                # Original single fold optimization
+                self.setParams(params, fold)
+                self.trainModel(fold, self.params[fold])
+                self.testModel(fold)
+                metrics = calculate_fold_metrics(fold)
+                
+                log_and_print_results(metrics, params, trial.number)
+                return metrics.get(self.optuna_metric, metrics['eval_auc'])
         
         exp_dir = f'models/optuna_{self._region}/'
         if not os.path.exists(exp_dir):
             os.makedirs(exp_dir)
 
-        study_name = f"study_fold_{fold}"  # Unique study name
-        storage_name = f"sqlite:///{exp_dir}optuna_study_fold_{fold}.sqlite3"  # Storage name for SQLite
-        if not self.continue_optuna and os.path.exists(f"{exp_dir}optuna_study_fold_{fold}.sqlite3"):
-            os.remove(f"{exp_dir}optuna_study_fold_{fold}.sqlite3")
+        if self.oneHyperparameter:
+            # For oneHyperparameter mode, use a single study for all folds
+            study_name = f"study_unified"
+            storage_name = f"sqlite:///{exp_dir}optuna_study_unified.sqlite3"
+            if not self.continue_optuna and os.path.exists(f"{exp_dir}optuna_study_unified.sqlite3"):
+                os.remove(f"{exp_dir}optuna_study_unified.sqlite3")
+        else:
+            # Original fold-specific study
+            study_name = f"study_fold_{fold}"
+            storage_name = f"sqlite:///{exp_dir}optuna_study_fold_{fold}.sqlite3"
+            if not self.continue_optuna and os.path.exists(f"{exp_dir}optuna_study_fold_{fold}.sqlite3"):
+                os.remove(f"{exp_dir}optuna_study_fold_{fold}.sqlite3")
+            
         self.study = optuna.create_study(
                 sampler=optuna.samplers.TPESampler(n_startup_trials=10, multivariate=True, group=True),
                 study_name=study_name, 
@@ -752,13 +867,40 @@ class XGBoostHandler(object):
                 load_if_exists=True, 
                 direction='maximize'
             )
+        
+        logger.info(f"Created optuna study: {study_name}")
+        logger.info(f"Storage: {storage_name}")
+        
         self.study.optimize(objective, n_trials=self.n_calls)
         
-        best_params_path = f"{exp_dir}BDT_region_{self._region}_fold{fold}.json"
+        # Log optimization completion and best results
+        logger.info(f"Optimization completed after {len(self.study.trials)} trials")
+        logger.info(f"Best value: {self.study.best_value:.6f}")
+        logger.info(f"Best parameters: {self.study.best_params}")
+        
+        if self.oneHyperparameter:
+            # Save unified hyperparameters for all folds
+            best_params_path = f"{exp_dir}BDT_region_{self._region}_unified.json"
+            # Set the best params for all folds
+            for current_fold in range(4):
+                self.setParams(self.study.best_params, current_fold)
+        else:
+            # Original fold-specific save
+            best_params_path = f"{exp_dir}BDT_region_{self._region}_fold{fold}.json"
+            self.setParams(self.study.best_params, fold)
      
-        self.setParams(self.study.best_params, fold)
         with open(best_params_path, 'w') as f:
-            json.dump(self.params[fold], f)
+            if self.oneHyperparameter:
+                # Save the same params for unified mode
+                json.dump(self.params[0], f)
+                logger.info(f"Saved unified hyperparameters to {best_params_path}")
+            else:
+                json.dump(self.params[fold], f)
+                logger.info(f"Saved hyperparameters for fold {fold} to {best_params_path}")
+        
+        # Close the log file handler
+        file_handler.close()
+        logger.removeHandler(file_handler)
 
 def main():
 
@@ -772,11 +914,32 @@ def main():
     if args.params: xgb_model.setParams(args.params)
 
     if args.hyperparams_path:
-        for fold in range(4):
-            path = "{}/BDT_region_{}_fold{}.json".format(args.hyperparams_path, args.region, fold)
-            stream = open(path, 'r')
-            xgb_model.params[fold] = json.load(stream)
-            xgb_model.setParams(xgb_model.params[fold], fold)
+        if xgb_model.oneHyperparameter:
+            # For oneHyperparameter mode, load unified hyperparameters
+            path = "{}/BDT_region_{}_unified.json".format(args.hyperparams_path, args.region)
+            if os.path.exists(path):
+                stream = open(path, 'r')
+                unified_params = json.load(stream)
+                stream.close()
+                # Set the same parameters for all folds
+                for fold in range(4):
+                    xgb_model.params[fold] = unified_params.copy()
+                    xgb_model.setParams(xgb_model.params[fold], fold)
+                print(f"Loaded unified hyperparameters from {path}")
+            else:
+                print(f"Warning: Unified hyperparameter file {path} not found, using default parameters")
+        else:
+            # Original fold-specific hyperparameters
+            for fold in range(4):
+                path = "{}/BDT_region_{}_fold{}.json".format(args.hyperparams_path, args.region, fold)
+                if os.path.exists(path):
+                    stream = open(path, 'r')
+                    xgb_model.params[fold] = json.load(stream)
+                    stream.close()
+                    xgb_model.setParams(xgb_model.params[fold], fold)
+                    print(f"Loaded hyperparameters for fold {fold} from {path}")
+                else:
+                    print(f"Warning: Hyperparameter file {path} not found for fold {fold}")
         # xgb_model.setParams(hyperparameters)
         
     xgb_model.readData()
@@ -787,6 +950,16 @@ def main():
 
     # xgb_model.reweightSignal()
 
+    if xgb_model.oneHyperparameter:
+        if args.optuna:
+            for i in range(4):
+                xgb_model.prepareData(i)
+            print("Running unified hyperparameter optimization for all folds...")
+            xgb_model.optunaHP(-1)
+            print("Unified hyperparameter optimization completed.")
+        else:
+            print(f"Skipping hyperparameter optimization(using unified parameters)")
+
     # looping over the "4 folds"
     for i in args.fold:
 
@@ -795,11 +968,11 @@ def main():
         print('===================================================')
 
         #xgb_model.setParams({'eval_metric': ['auc', 'logloss']}, i)
-        xgb_model.set_early_stopping_rounds(20)
+        # xgb_model.set_early_stopping_rounds(200)
 
         xgb_model.prepareData(i)
 
-        if args.optuna:
+        if args.optuna and not xgb_model.oneHyperparameter:
             try:
                 xgb_model.optunaHP(i)
             except KeyboardInterrupt:

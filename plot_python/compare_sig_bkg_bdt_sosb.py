@@ -1,12 +1,20 @@
 import pic_template as pic
 import plotting as plot
 import ROOT
+import argparse
+import sys
 
 COLORS = ["Red", "Blue"]
 
 print("=====================================================================")
 print("Starting to run the tutorial of plotting in Higgs to Z Gamma analysis")
 print("=====================================================================")
+
+# 解析命令行参数
+parser = argparse.ArgumentParser(description='Plot signal vs background BDT distributions')
+parser.add_argument('--channel', type=str, default='two_jet', 
+                    help='Channel to analyze (default: two_jet)')
+args = parser.parse_args()
 
 # 设置要使用的文件夹（"val" 或 "test"）
 folder = "test"  # 可以切换为 "test"
@@ -18,16 +26,16 @@ sig_legend = ["sig", "ggH", "VBF"]
 # path = "/afs/cern.ch/user/j/jiehan/private/HiggsZGammaAna/final_fit/CMSSW_10_2_13/src/flashggFinalFit/InputData/outputs/"
 path = f"/eos/home-j/jiehan/root/outputs/{folder}/"
 # boundaries 文件的路径固定在 test 文件夹中
-boundaries_path = "/eos/home-j/jiehan/root/outputs/test/significances/bin_boundaries_1D_two_jet.txt"
-channel = "two_jet"
-tree = "two_jet"
+channel = args.channel
+tree = channel
+boundaries_path = f"/eos/home-j/jiehan/root/outputs/test/significances/bin_boundaries_1D_{channel}.txt"
 var = "bdt_score_t"
-bins = 100
-x_range = (0, 1)
+bins = 50
+x_range = (-0, 1)
 blind_range = (120, 130)
 x_title = "Transformed BDT score"
 y_title = "Events/{:.2f}".format((x_range[1]-x_range[0])/bins)
-sub_y_title = "S/#sqrt{B}"
+sub_y_title = "Significance"
 selections = ["H_mass>120", "H_mass<130"]
 
 # Dataset list
@@ -38,12 +46,13 @@ sig_file_list = [
 ]
 mc_file_list = [
     "ZGToLLG.root",
-    ["DYJetsToLL.root", "EWKZ2J.root"],
-    "ZG2JToG2L2J.root",
-    "TT.root",
-    ["TTGJets.root", "TGJets.root"],
-    ["ttWJets.root", "ttZJets.root"],
-    ["WW.root", "WZ.root", "ZZ.root", "WWG.root", "WZG.root", "ZZG.root"]
+    ["DYJetsToLL.root"],
+    "EWKZ2J.root",
+    # "ZG2JToG2L2J.root",
+    # "TT.root",
+    # ["TTGJets.root", "TGJets.root"],
+    # ["ttWJets.root", "ttZJets.root"],
+    # ["WW.root", "WZ.root", "ZZ.root", "WWG.root", "WZG.root", "ZZG.root"]
     # "data_driven_bkg_v3.root"
 ]
 
@@ -205,7 +214,7 @@ print("Finish drawing lower pad")
 print("========================")
 
 plot.DrawCMSLogo(c1, "CMS", "Preliminary", 0, 0., -0.02, 1.2, cmsTextSize=0.55);
-plot.DrawCMSLogo(c1, "137 fb^{-1} (13 TeV)", "", 3, 0., -0.02, 1.2, cmsTextSize=0.45);
+plot.DrawCMSLogo(c1, "137 fb^{-1} (13 TeV) & 62 fb^{-1} (13.6TeV)", "", 3, 0., -0.02, 1.2, cmsTextSize=0.45);
 
 print("========================")
 print("Finish adding CMS word")

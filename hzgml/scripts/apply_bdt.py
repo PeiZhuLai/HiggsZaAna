@@ -12,11 +12,48 @@ from sklearn.preprocessing import StandardScaler, QuantileTransformer
 import xgboost as xgb
 from tqdm import tqdm
 import logging
+import gc  # Add garbage collection
 from pdb import set_trace
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 import ROOT
 ROOT.gErrorIgnoreLevel = ROOT.kError + 1
 pd.options.mode.chained_assignment = None
+
+try:
+    import psutil  # For memory monitoring
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    print("WARNING: psutil not available, memory monitoring disabled")
+
+try:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    PYARROW_AVAILABLE = True
+except ImportError:
+    PYARROW_AVAILABLE = False
+    print("WARNING: pyarrow not available, using pickle for temporary files")
+
+from weighted_quantile_transformer import WeightedQuantileTransformer # New import
+
+def get_memory_usage():
+    """Get current memory usage in GB."""
+    if PSUTIL_AVAILABLE:
+        process = psutil.Process(os.getpid())
+        return process.memory_info().rss / 1024 / 1024 / 1024
+    else:
+        return 0.0
+
+def check_hadd_available():
+    """Check if ROOT's hadd command is available."""
+    import subprocess
+    try:
+        result = subprocess.run(['which', 'hadd'], capture_output=True, text=True)
+        return result.returncode == 0
+    except:
+        return False
+
+HADD_AVAILABLE = check_hadd_available()
 
 def getArgs():
     """Get arguments from command line."""
@@ -27,7 +64,6 @@ def getArgs():
     parser.add_argument('-o', '--outputFolder', action='store', default='/eos/home-j/jiehan/root/outputs/test', help='directory for outputs')
     parser.add_argument('-r', '--region', action='store', choices=['two_jet', 'one_jet', 'zero_jet', 'zero_to_one_jet', 'VH_ttH', 'all_jet'], default='zero_jet', help='Region to process')
     parser.add_argument('-cat', '--category', action='store', nargs='+', help='apply only for specific categories')
-
     parser.add_argument('-s', '--shield', action='store', type=int, default=-1, help='Which variables needs to be shielded')
     parser.add_argument('-a', '--add', action='store', type=int, default=-1, help='Which variables needs to be added')
 
@@ -51,7 +87,7 @@ class ApplyXGBHandler(object):
         self._inputTree = region if region else 'inclusive'
         self._modelFolder = ''
         self._outputFolder = ''
-        self._chunksize = 500000
+        self._chunksize = 1000000
         self._category = []
         self._branches = []
         self._outbranches = []
@@ -229,57 +265,334 @@ class ApplyXGBHandler(object):
         print('-------------------------------------------------')
         for f in f_list: print('XGB INFO: Including sample: ', f)
 
-        #TODO put this to the config
-        # for data in tqdm(read_root(sorted(f_list), key=self._inputTree, columns=branches, chunksize=self._chunksize), bar_format='{desc}: {percentage:3.0f}%|{bar:20}{r_bar}', desc='XGB INFO: Applying BDTs to %s samples' % category):
-        with uproot.recreate(output_path) as output_file:
-            out_data = pd.DataFrame()
-            for filename in tqdm(sorted(f_list), desc='XGB INFO: Applying BDTs to %s samples' % category, bar_format='{desc}: {percentage:3.0f}%|{bar:20}{r_bar}'):
-                try:
-                    file = uproot.open(filename)
-                except Exception as e:
-                    print('XGB ERROR: Failed to open file: ', filename)
-                    continue
-                for data in file[self._inputTree].iterate(branches, library='pd', step_size=self._chunksize): 
-                # for data in file[self._inputTree].iterate(library='pd', step_size=self._chunksize):
-                    data = self.preselect(data)
-                    # data = data[data.Z_sublead_lepton_pt >= 15]
-                    # if category == "DYJetsToLL":
-                    #     data = data[data.n_iso_photons == 0]
-                    # if category != "data_fake" and category != "mc_true" and category != "mc_med":
-                    #     pass
-                    #     # data = data[data.gamma_mvaID_WP80 > 0] #TODO: check this one
-                    #     data = data[data.gamma_mvaID_WPL > 0] #TODO: check this one
+        # Use ultra-low memory mode by default
+        print("XGB INFO: Using ultra-low memory mode")
+        self._process_files(f_list, output_path, branches, outputbraches, scale, shift, category)
 
-                    for i in range(4):
-
-                        data_s = data[(data[self.randomIndex]-shift)%314159%4 == i]
-                        data_o = data_s
-                        # data_o = data_s[outputbraches]
-                        if data_s.shape[0] == 0: continue
-
-                        for model in self.train_variables.keys():
-                            x_Events = data_s[self.train_variables[model]]
-                            dEvents = xgb.DMatrix(x_Events)
-                            scores = self.m_models[model][i].predict(dEvents)
-                            if len(scores) > 0:
-                                scores_t = self.m_tsfs[model][i].transform(scores.reshape(-1,1)).reshape(-1)
-                            else:
-                                scores_t = scores
-                        
-                            xgb_basename = self.models[model]
-                            data_o[xgb_basename] = scores
-                            data_o[xgb_basename+'_t'] = scores_t
-
-                        if out_data.shape[0] != 0:
-                            out_data = pd.concat([out_data, data_o], ignore_index=True, sort=False)
-                        else:
-                            out_data = data_o
-
-                # out_data.to_root(output_path, key='test', mode='a', index=False)
+    def _process_files(self, f_list, output_path, branches, outputbraches, scale, shift, category):
+        """Process files with ultra-low memory usage."""
+        import tempfile
+        temp_files = []
+        
+        initial_memory = get_memory_usage()
+        print(f"XGB INFO: Initial memory usage: {initial_memory:.2f} GB")
+        
+        # Process each file individually and save to temp files immediately
+        for file_idx, filename in enumerate(tqdm(sorted(f_list), desc='XGB INFO: Applying BDTs to %s samples' % category, bar_format='{desc}: {percentage:3.0f}%|{bar:20}{r_bar}')):
+            try:
+                file = uproot.open(filename)
+            except Exception as e:
+                print('XGB ERROR: Failed to open file: ', filename)
+                continue
+            
+            # Process each chunk immediately without batching
+            chunk_count = 0
+            for data in file[self._inputTree].iterate(library='pd', step_size=self._chunksize):  # Use smaller chunks
+                data = self.preselect(data)
                 
-            output_file[self._region] = out_data
-            del out_data, data_s, data_o
+                for i in range(4):
+                    data_s = data[(data[self.randomIndex]-shift)%314159%4 == i]
+                    if data_s.shape[0] == 0: continue
+                    
+                    data_o = data_s.copy()
 
+                    for model in self.train_variables.keys():
+                        x_Events = data_s[self.train_variables[model]]
+                        dEvents = xgb.DMatrix(x_Events)
+                        scores = self.m_models[model][i].predict(dEvents)
+                        if len(scores) > 0:
+                            scores_t = self.m_tsfs[model][i].transform(scores.reshape(-1,1)).reshape(-1)
+                        else:
+                            scores_t = scores
+                    
+                        xgb_basename = self.models[model]
+                        data_o[xgb_basename] = scores
+                        data_o[xgb_basename+'_t'] = scores_t
+                    
+                    # Save immediately to temp file
+                    if len(data_o) > 0:
+                        if PYARROW_AVAILABLE:
+                            temp_file = tempfile.NamedTemporaryFile(suffix='.parquet', delete=False)
+                            data_o.to_parquet(temp_file.name, engine='pyarrow')
+                        else:
+                            temp_file = tempfile.NamedTemporaryFile(suffix='.pkl', delete=False)
+                            data_o.to_pickle(temp_file.name)
+                        temp_files.append(temp_file.name)
+                        temp_file.close()
+                    
+                    # Clear immediately
+                    del data_o
+                    chunk_count += 1
+                    
+                    # Force garbage collection more frequently
+                    if chunk_count % 4 == 0:
+                        gc.collect()
+                
+                # Clear chunk data
+                del data, data_s
+                gc.collect()
+            
+            file.close()
+            gc.collect()
+            
+            current_memory = get_memory_usage()
+            print(f"XGB INFO: Processed file {file_idx+1}/{len(f_list)}, Memory: {current_memory:.2f} GB, Temp files: {len(temp_files)}")
+        
+        # Combine temp files with minimal memory usage
+        print(f"XGB INFO: Combining {len(temp_files)} temporary files...")
+        self._combine_temp_files(temp_files, output_path)
+        
+        # Clean up
+        for temp_file in temp_files:
+            try:
+                os.remove(temp_file)
+            except:
+                pass
+        
+        final_memory = get_memory_usage()
+        print(f"XGB INFO: Final memory usage: {final_memory:.2f} GB")
+        
+    def _combine_temp_files(self, temp_files, output_path):
+        """Combine temporary files using ROOT hadd for optimal performance."""
+        if not temp_files:
+            return
+        
+        print(f"XGB INFO: Ultra-low memory combination of {len(temp_files)} files...")
+        
+        # Convert temporary files to ROOT files
+        root_temp_files = []
+        total_rows = 0
+        
+        for i, temp_file in enumerate(temp_files):
+            try:
+                if PYARROW_AVAILABLE and temp_file.endswith('.parquet'):
+                    df = pd.read_parquet(temp_file, engine='pyarrow')
+                else:
+                    df = pd.read_pickle(temp_file)
+                
+                # Remove index column if it exists
+                if "index" in df.columns:
+                    df = df.drop('index', axis=1)
+                
+                # Create temporary ROOT file
+                import tempfile
+                root_temp = tempfile.NamedTemporaryFile(suffix='.root', delete=False)
+                root_temp.close()
+                
+                with uproot.recreate(root_temp.name) as root_file:
+                    root_file[self._region] = df
+                
+                root_temp_files.append(root_temp.name)
+                total_rows += len(df)
+                del df
+                gc.collect()
+                
+                if (i + 1) % 50 == 0:  # Report every 50 files
+                    current_memory = get_memory_usage()
+                    print(f"XGB INFO: Converted {i+1}/{len(temp_files)} temp files to ROOT, Memory: {current_memory:.2f} GB")
+                    
+            except Exception as e:
+                print(f"XGB WARNING: Failed to process temp file {temp_file}: {e}")
+                continue
+        
+        # Use ROOT's hadd to combine all files
+        if root_temp_files:
+            if HADD_AVAILABLE:
+                print("XGB INFO: Using ROOT hadd to combine files...")
+                hadd_command = f"hadd -f {output_path} " + " ".join(root_temp_files)
+                
+                import subprocess
+                try:
+                    result = subprocess.run(hadd_command, shell=True, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print(f"XGB INFO: Successfully combined {total_rows} rows using hadd")
+                    else:
+                        print(f"XGB ERROR: hadd failed: {result.stderr}")
+                        # Fallback to manual combination
+                        self._fallback_combine_files(root_temp_files, output_path)
+                except Exception as e:
+                    print(f"XGB ERROR: Failed to run hadd: {e}")
+                    # Fallback to manual combination
+                    self._fallback_combine_files(root_temp_files, output_path)
+            else:
+                print("XGB WARNING: hadd not available, using manual combination...")
+                self._fallback_combine_files(root_temp_files, output_path)
+            
+            # Clean up temporary ROOT files
+            for root_file in root_temp_files:
+                try:
+                    os.remove(root_file)
+                except:
+                    pass
+    
+    def _fallback_combine_files(self, root_files, output_path):
+        """Fallback method to combine ROOT files manually if hadd fails."""
+        print("XGB INFO: Using fallback method to combine files...")
+        
+        if not root_files:
+            return
+        
+        # Read first file to initialize
+        with uproot.open(root_files[0]) as first_file:
+            combined_data = first_file[self._region].arrays(library='pd')
+        
+        # Append remaining files one by one
+        for root_file in root_files[1:]:
+            try:
+                with uproot.open(root_file) as file:
+                    data = file[self._region].arrays(library='pd')
+                    combined_data = pd.concat([combined_data, data], ignore_index=True, sort=False)
+                    del data
+                    gc.collect()
+            except Exception as e:
+                print(f"XGB WARNING: Failed to read {root_file}: {e}")
+                continue
+        
+        # Write final result
+        with uproot.recreate(output_path) as output_file:
+            output_file[self._region] = combined_data
+        
+        del combined_data
+        gc.collect()
+
+    def _combine_files_streaming(self, temp_files, output_path):
+        """Combine temporary files using ROOT hadd in streaming mode."""
+        if not temp_files:
+            return
+        
+        print(f"XGB INFO: Combining {len(temp_files)} files using ROOT hadd...")
+        
+        # Convert temporary files to ROOT files in batches
+        root_temp_files = []
+        batch_size = 20  # Process 20 temp files at a time
+        
+        for batch_start in range(0, len(temp_files), batch_size):
+            batch_end = min(batch_start + batch_size, len(temp_files))
+            batch_files = temp_files[batch_start:batch_end]
+            
+            # Create ROOT files for this batch
+            batch_root_files = []
+            for i, temp_file in enumerate(batch_files):
+                try:
+                    if PYARROW_AVAILABLE and temp_file.endswith('.parquet'):
+                        df = pd.read_parquet(temp_file, engine='pyarrow')
+                    else:
+                        df = pd.read_pickle(temp_file)
+                    
+                    # Remove index column if it exists
+                    if "index" in df.columns:
+                        df = df.drop('index', axis=1)
+                    
+                    # Create temporary ROOT file
+                    import tempfile
+                    root_temp = tempfile.NamedTemporaryFile(suffix='.root', delete=False)
+                    root_temp.close()
+                    
+                    with uproot.recreate(root_temp.name) as root_file:
+                        root_file[self._region] = df
+                    
+                    batch_root_files.append(root_temp.name)
+                    del df
+                    gc.collect()
+                    
+                except Exception as e:
+                    print(f"XGB WARNING: Failed to process temp file {temp_file}: {e}")
+                    continue
+            
+            # Combine this batch into a single ROOT file
+            if batch_root_files:
+                batch_output = tempfile.NamedTemporaryFile(suffix='.root', delete=False)
+                batch_output.close()
+                
+                hadd_command = f"hadd -f {batch_output.name} " + " ".join(batch_root_files)
+                
+                import subprocess
+                if HADD_AVAILABLE:
+                    try:
+                        result = subprocess.run(hadd_command, shell=True, capture_output=True, text=True)
+                        if result.returncode == 0:
+                            root_temp_files.append(batch_output.name)
+                            print(f"XGB INFO: Combined batch {batch_start//batch_size + 1}/{(len(temp_files) + batch_size - 1)//batch_size}")
+                        else:
+                            print(f"XGB ERROR: hadd failed for batch: {result.stderr}")
+                            # Fallback: combine manually for this batch
+                            self._manual_combine_batch(batch_root_files, batch_output.name)
+                            root_temp_files.append(batch_output.name)
+                    except Exception as e:
+                        print(f"XGB ERROR: Failed to run hadd for batch: {e}")
+                        # Fallback: combine manually for this batch
+                        self._manual_combine_batch(batch_root_files, batch_output.name)
+                        root_temp_files.append(batch_output.name)
+                else:
+                    print("XGB WARNING: hadd not available, using manual combination for batch...")
+                    self._manual_combine_batch(batch_root_files, batch_output.name)
+                    root_temp_files.append(batch_output.name)
+                
+                # Clean up batch temp files
+                for batch_file in batch_root_files:
+                    try:
+                        os.remove(batch_file)
+                    except:
+                        pass
+        
+        # Final combination of all batch files
+        if root_temp_files:
+            print("XGB INFO: Final combination of all batches...")
+            
+            if HADD_AVAILABLE:
+                final_hadd_command = f"hadd -f {output_path} " + " ".join(root_temp_files)
+                
+                import subprocess
+                try:
+                    result = subprocess.run(final_hadd_command, shell=True, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print("XGB INFO: Successfully combined all files using hadd")
+                    else:
+                        print(f"XGB ERROR: Final hadd failed: {result.stderr}")
+                        # Fallback to manual combination
+                        self._fallback_combine_files(root_temp_files, output_path)
+                except Exception as e:
+                    print(f"XGB ERROR: Failed to run final hadd: {e}")
+                    # Fallback to manual combination
+                    self._fallback_combine_files(root_temp_files, output_path)
+            else:
+                print("XGB WARNING: hadd not available, using manual combination...")
+                self._fallback_combine_files(root_temp_files, output_path)
+            
+            # Clean up batch files
+            for root_file in root_temp_files:
+                try:
+                    os.remove(root_file)
+                except:
+                    pass
+    
+    def _manual_combine_batch(self, root_files, output_path):
+        """Manually combine a batch of ROOT files."""
+        if not root_files:
+            return
+        
+        # Read first file
+        with uproot.open(root_files[0]) as first_file:
+            combined_data = first_file[self._region].arrays(library='pd')
+        
+        # Append remaining files
+        for root_file in root_files[1:]:
+            try:
+                with uproot.open(root_file) as file:
+                    data = file[self._region].arrays(library='pd')
+                    combined_data = pd.concat([combined_data, data], ignore_index=True, sort=False)
+                    del data
+                    gc.collect()
+            except Exception as e:
+                print(f"XGB WARNING: Failed to read {root_file}: {e}")
+                continue
+        
+        # Write combined result
+        with uproot.recreate(output_path) as output_file:
+            output_file[self._region] = combined_data
+        
+        del combined_data
+        gc.collect()
 
 def main():
 
@@ -307,6 +620,16 @@ def main():
     for category in sample_list:
         if args.category and category not in args.category: continue
         xgb.applyBDT(category, shift=1)
+
+    xgb.setOutputFolder(args.outputFolder.replace('test', 'train1'))
+    for category in sample_list:
+        if args.category and category not in args.category: continue
+        xgb.applyBDT(category, shift=2)
+
+    xgb.setOutputFolder(args.outputFolder.replace('test', 'train2'))
+    for category in sample_list:
+        if args.category and category not in args.category: continue
+        xgb.applyBDT(category, shift=3)
         
     return
 

@@ -48,8 +48,8 @@ def calculate_significance_for_fold(data_dir, region, variable, boundaries, tran
     # Setup for analysis
     nscan = 100  # Fixed bin count
     fold_condition = "1" if fold == -1 else f"((event%{prime})%{nfold}=={fold})"
-    signal_window = f"weight*((H_mass>=120&&H_mass<=130)&&{fold_condition})"
-    sideband = f"weight*((H_mass>=100&&H_mass<=180)&&!(H_mass>=120&&H_mass<=130)&&{fold_condition})"
+    signal_window = f"weight_corr*((H_mass>=120&&H_mass<=130)&&{fold_condition})"
+    sideband = f"weight_corr*((H_mass>=100&&H_mass<=180)&&!(H_mass>=120&&H_mass<=130)&&{fold_condition})"
     score_var = f"{variable}_score{'_t' if transform else ''}"
     
     # Fill histograms
@@ -371,9 +371,11 @@ def add_category_texts(plt_obj, boundaries, bin_zs, bin_z_errs, fold, y_factor, 
         
         # Create significance text with error if available
         if fold == -1 and bin_z_errs is not None and i < len(bin_z_errs):
-            text = f'{prefix} significance: {cat_sig:.3f}±{bin_z_errs[i]:.3f}'
+            # text = f'{prefix} significance: {cat_sig:.3f}±{bin_z_errs[i]:.3f}'
+            text = f'{cat_sig:.3f}±{bin_z_errs[i]:.3f}'
         else:
-            text = f'{prefix} significance: {cat_sig:.3f}'
+            # text = f'{prefix} significance: {cat_sig:.3f}'
+            text = f'{cat_sig:.3f}'
         
         # Add original significance info when available
         if fold == -1 and bin_zs_orig is not None and i < len(bin_zs_orig):

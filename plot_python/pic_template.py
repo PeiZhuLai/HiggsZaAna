@@ -13,7 +13,7 @@ def read_root_file(file, var=None, tree="inclusive", selections=[]):
     selections: a list of selection(<str>). If there is '&' or '|' in one item, MUST use "()" to enclose each subitem.(exp. '(H_eta>1.5) & (H_pt>10)')
     '''
     print("Reading {}:{}...".format(file, tree))
-    variables = ["weight", "H_mass"]
+    variables = ["weight_corr", "H_mass"]
     if isinstance(var, str):
         variables.append(var)
     else:
@@ -82,7 +82,7 @@ def get_hist(arrays, variable, ratio, name, bins, range, hist=None, selections=[
         arrays = arrays[eval(i)]
     arrays = arrays.reset_index(drop=True)
     for i in trange(0, len(arrays[variable])):
-        hist.Fill(float(arrays[variable][i]), float(arrays['weight'][i])*ratio)
+        hist.Fill(float(arrays[variable][i]), float(arrays['weight_corr'][i])*ratio)
     hist.SetLineWidth(3)
     hist.SetMarkerStyle(0)
     yield_inte = hist.Integral()
@@ -98,7 +98,7 @@ def get_hist_sb(arrays, variable, ratio, name, bins, range, blind_range, hist=No
     for i in trange(0, len(arrays[variable])):
         if (arrays["H_mass"][i]>blind_range[1] and arrays["H_mass"][i]<blind_range[0]):
             continue
-        hist.Fill(float(arrays[variable][i]), float(arrays['weight'][i])*ratio)
+        hist.Fill(float(arrays[variable][i]), float(arrays['weight_corr'][i])*ratio)
     hist.SetLineWidth(3)
     hist.SetMarkerStyle(0)
     yield_inte = hist.Integral()
@@ -164,11 +164,15 @@ def get_S_over_sqrtB(hist_s, hist_b, ratio, yrange=None):
         
         maximum = 0
         # Avoid division by zero
-        if b_bin_content > 0 and b_bin_content_err / b_bin_content < 5:
-            ssqrtoverb = s_bin_content / (b_bin_content ** 0.5)
+        if b_bin_content > 0: # and b_bin_content_err / b_bin_content < 5:
+            # ssqrtoverb = s_bin_content / (b_bin_content ** 0.5)
+            n_tot = s_bin_content + b_bin_content
+            ssqrtoverb = np.sqrt(2*(n_tot*np.log(n_tot/b_bin_content)-s_bin_content))
             if ssqrtoverb > maximum:
                 maximum = ssqrtoverb
-            ssqrtoverb_err = ((s_bin_content_err / b_bin_content ** 0.5) ** 2 + (s_bin_content * b_bin_content_err / b_bin_content ** 1.5 / 2) ** 2) ** 0.5
+            # ssqrtoverb_err = ((s_bin_content_err / b_bin_content ** 0.5) ** 2 + (s_bin_content * b_bin_content_err / b_bin_content ** 1.5 / 2) ** 2) ** 0.5
+            ssqrtoverb_err = np.sqrt((np.log(n_tot/b_bin_content)*s_bin_content_err)**2 + ((np.log(n_tot/b_bin_content) - (s_bin_content/b_bin_content))*b_bin_content_err)**2)
+            print(f"significance: {ssqrtoverb}, error: {ssqrtoverb_err}")
             hist_sosb.SetBinContent(i, ssqrtoverb)
             hist_sosb.SetBinError(i, ssqrtoverb_err)
     
