@@ -1,4 +1,4 @@
-import awkward
+import awkward as ak
 import time
 import numpy
 import numba
@@ -231,17 +231,19 @@ DEFAULT_OPTIONS = {
 
 # Diphoton preselection below synced with flashgg, see details in:
 #   - https://indico.cern.ch/event/1071721/contributions/4551056/attachments/2320292/3950844/HiggsDNA_DiphotonPreselectionAndSystematics_30Sep2021.pdf
+# EA from 
+#   - https://indico.cern.ch/event/1204277/contributions/5064356/attachments/2538496/4369369/CutBasedPhotonID_20221031.pdf
 
 
 def to_momentum4d(obj):
-    out = awkward.zip({
+    out = ak.zip({
         "pt": obj.pt,
         "eta": obj.eta,
         "phi": obj.phi,
         "mass": obj.mass if "mass" in obj.fields else ak.zeros_like(obj.pt),
     }, with_name="Momentum4D")
     # 强制 materialize layout 以触发行为绑定
-    out = awkward.Array(out.layout)  # 👈 核心所在
+    out = ak.Array(out.layout)  # 👈 核心所在
     return out
 
 class ZaTaggerRun3(Tagger):
@@ -276,7 +278,7 @@ class ZaTaggerRun3(Tagger):
             else:
                 raise RuntimeError("Rho not found in central nanoAOD! Cannot apply PU correction.")
         else:
-            rho = awkward.ones_like(events.Photon)
+            rho = ak.ones_like(events.Photon)
 
         if not self.is_data:
             self.overlap_removal(events=events)
@@ -313,7 +315,7 @@ class ZaTaggerRun3(Tagger):
         iso_cut = object_selections.delta_R(iso_photons, truth_objects, 0.05)
         iso_photons = iso_photons[iso_cut]
 
-        n_iso_photons = awkward.num(iso_photons)
+        n_iso_photons = ak.num(iso_photons)
         awkward_utils.add_field(events, "n_iso_photons", n_iso_photons, overwrite=True)
 
     def produce_and_select_zgammas(self, events, rho, options):
@@ -323,13 +325,13 @@ class ZaTaggerRun3(Tagger):
         per event is possible.
 
         :param events: events array to calculate diphoton candidates from
-        :type events: awkward.highlevel.Array
+        :type events: ak.highlevel.Array
         :param photons: array of selected photons from events
-        :type photons: awkward.highlevel.Array
+        :type photons: ak.highlevel.Array
         :param options: dictionary containing configurable options for the diphoton preselection
         :type options: dict
         :return: boolean array indicating which events pass the diphoton preselection
-        :rtype: awkward.highlevel.Array
+        :rtype: ak.highlevel.Array
         """
 
         start = time.time()
@@ -353,8 +355,8 @@ class ZaTaggerRun3(Tagger):
         )
         
         # generate the index in the original array and add to electrons
-        arr = awkward.local_index(events.Electron["pt"], axis=1)[electron_cut]
-        electron_idx = awkward.mask(arr, awkward.num(arr) > 0)
+        arr = ak.local_index(events.Electron["pt"], axis=1)[electron_cut]
+        electron_idx = ak.mask(arr, ak.num(arr) > 0)
         awkward_utils.add_field(events = electrons, name = "Idx", data = electron_idx)
 
         # Muons
@@ -385,7 +387,7 @@ class ZaTaggerRun3(Tagger):
         photons = events.Photon[photon_selection]
 
         # lepton-photon overlap removal 
-        clean_photon_mask = awkward.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & awkward.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
+        clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
         # object_selections.delta_R(photons, muons, 0.3) & object_selections.delta_R(photons, electrons, 0.3)
         photons = photons[clean_photon_mask]
         
@@ -395,7 +397,7 @@ class ZaTaggerRun3(Tagger):
                 name = "Photon",
                 data = events.Photon[photon_selection],
         )
-        photons = awkward.with_field(photons, awkward.ones_like(photons.pt) * 0.0, "mass")
+        photons = ak.with_field(photons, ak.ones_like(photons.pt) * 0.0, "mass")
 
         # Jets
         jet_cut = jet_selections.select_jets(
@@ -437,14 +439,14 @@ class ZaTaggerRun3(Tagger):
             name = "SelectedFSRPhotons",
             data = events.FsrPhoton[FSRphoton_selection]
         )
-        FSRphotons = awkward.with_field(FSRphotons, awkward.ones_like(FSRphotons.pt) * 0.0, "mass")
+        FSRphotons = ak.with_field(FSRphotons, ak.ones_like(FSRphotons.pt) * 0.0, "mass")
 
         if "2017" in self.year or "2018" in self.year:
             year = self.year[:4]
             b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][year]
         else:
             b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][self.year]
-        jets = awkward.with_field(jets, b_jet_cut, "is_med_bjet") 
+        jets = ak.with_field(jets, b_jet_cut, "is_med_bjet") 
 
         # Add object fields to events array
         for objects, name in zip([electrons, muons, jets], ["electron", "muon", "jet"]):
@@ -460,11 +462,11 @@ class ZaTaggerRun3(Tagger):
             dZ = events.GenVtx_z - events.PV_z
             awkward_utils.add_field(events, "dZ", dZ, overwrite=True)
 
-        n_electrons = awkward.fill_none(awkward.num(electrons), 0)
+        n_electrons = ak.fill_none(ak.num(electrons), 0)
         # N_e_cut = n_electrons>=2
         awkward_utils.add_field(events, "n_electrons", n_electrons, overwrite=True)
 
-        n_muons = awkward.num(muons)
+        n_muons = ak.num(muons)
         # N_mu_cut = n_muons>=2
         awkward_utils.add_field(events, "n_muons", n_muons, overwrite=True)
 
@@ -472,38 +474,38 @@ class ZaTaggerRun3(Tagger):
         # N_e_mu_cut = N_e_cut | N_mu_cut
         awkward_utils.add_field(events, "n_leptons", n_leptons, overwrite=True)
 
-        n_jets = awkward.num(jets)
+        n_jets = ak.num(jets)
         # logger.debug(f"Number of jets(tagger): {n_jets[:10]}")
         awkward_utils.add_field(events, "n_jets", n_jets, overwrite=True)
 
-        n_b_jets = awkward.sum(b_jet_cut, axis=1)
+        n_b_jets = ak.sum(b_jet_cut, axis=1)
         awkward_utils.add_field(events, "n_b_jets", n_b_jets, overwrite=True)
 
-        n_photons = awkward.num(photons)
+        n_photons = ak.num(photons)
         logger.debug(f"Number of photons(tagger): {n_photons[:10]}")
         awkward_utils.add_field(events, "n_photons", n_photons, overwrite=True)
 
         # PDG ID
-        electrons = awkward.with_field(electrons, awkward.ones_like(electrons.pt) * 11, "id")
-        # electrons = awkward.with_field(electrons, awkward.ones_like(electrons.pt) * 0.00051099895, "mass")
-        muons = awkward.with_field(muons, awkward.ones_like(muons.pt) * 13, "id")
+        electrons = ak.with_field(electrons, ak.ones_like(electrons.pt) * 11, "id")
+        # electrons = ak.with_field(electrons, ak.ones_like(electrons.pt) * 0.00051099895, "mass")
+        muons = ak.with_field(muons, ak.ones_like(muons.pt) * 13, "id")
 
         # leptons ptE_error
-        electrons = awkward.with_field(electrons, electrons.energyErr, "ptE_error")
-        muons = awkward.with_field(muons, muons.ptErr, "ptE_error")
+        electrons = ak.with_field(electrons, electrons.energyErr, "ptE_error")
+        muons = ak.with_field(muons, muons.ptErr, "ptE_error")
 
         # Sort objects by pt
-        photons = photons[awkward.argsort(photons.pt, ascending=False, axis=1)]
-        electrons = electrons[awkward.argsort(electrons.pt, ascending=False, axis=1)]
-        muons = muons[awkward.argsort(muons.pt, ascending=False, axis=1)]
+        photons = photons[ak.argsort(photons.pt, ascending=False, axis=1)]
+        electrons = electrons[ak.argsort(electrons.pt, ascending=False, axis=1)]
+        muons = muons[ak.argsort(muons.pt, ascending=False, axis=1)]
 
         # self.select_fake_and_medium_photons(events=events, photons=photons)
 
         # Register as `vector.Momentum4D` objects so we can do four-vector operations with them
-        photons = awkward.Array(photons, with_name = "Momentum4D")
-        electrons = awkward.Array(electrons, with_name = "Momentum4D")
-        muons = awkward.Array(muons, with_name = "Momentum4D")
-        FSRphotons = awkward.Array(FSRphotons, with_name = "Momentum4D")
+        photons = ak.Array(photons, with_name = "Momentum4D")
+        electrons = ak.Array(electrons, with_name = "Momentum4D")
+        muons = ak.Array(muons, with_name = "Momentum4D")
+        FSRphotons = ak.Array(FSRphotons, with_name = "Momentum4D")
 
         awkward_utils.add_object_fields(
                 events = events,
@@ -515,42 +517,42 @@ class ZaTaggerRun3(Tagger):
 
 
         # 未修正的 Z boson 重建（不包含 FSR）
-        ee_pairs_noFSR = awkward.combinations(electrons, 2, fields=["LeadLepton", "SubleadLepton"])
+        ee_pairs_noFSR = ak.combinations(electrons, 2, fields=["LeadLepton", "SubleadLepton"])
         os_cut_noFSR = (ee_pairs_noFSR.LeadLepton.charge * ee_pairs_noFSR.SubleadLepton.charge) == -1
         ee_pairs_noFSR = ee_pairs_noFSR[os_cut_noFSR]
-        mm_pairs_noFSR = awkward.combinations(muons, 2, fields=["LeadLepton", "SubleadLepton"])
+        mm_pairs_noFSR = ak.combinations(muons, 2, fields=["LeadLepton", "SubleadLepton"])
         os_cut_noFSR = (mm_pairs_noFSR.LeadLepton.charge * mm_pairs_noFSR.SubleadLepton.charge) == -1
         mm_pairs_noFSR = mm_pairs_noFSR[os_cut_noFSR]
-        z_cands_noFSR = awkward.concatenate([ee_pairs_noFSR, mm_pairs_noFSR], axis=1)
+        z_cands_noFSR = ak.concatenate([ee_pairs_noFSR, mm_pairs_noFSR], axis=1)
         z_cands_noFSR["ZCand"] = z_cands_noFSR.LeadLepton + z_cands_noFSR.SubleadLepton
-        z_cands_noFSR = z_cands_noFSR[awkward.argsort(abs(z_cands_noFSR.ZCand.mass - 91.1876), axis=1)]
-        z_ee_cut_noFSR = awkward.fill_none(awkward.firsts(z_cands_noFSR).LeadLepton.id == 11, False)
-        z_mumu_cut_noFSR = awkward.fill_none(awkward.firsts(z_cands_noFSR).LeadLepton.id == 13, False)
+        z_cands_noFSR = z_cands_noFSR[ak.argsort(abs(z_cands_noFSR.ZCand.mass - 91.1876), axis=1)]
+        z_ee_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 11, False)
+        z_mumu_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 13, False)
 
         # 修正 electrons 和 muons（包含 FSR）
         electrons_withFSR = self.assign_fsr_photon(electrons, FSRphotons)
         muons_withFSR = self.assign_fsr_photon(muons, FSRphotons)
 
         # 修正的 Z boson 重建（包含 FSR）
-        ee_pairs = awkward.combinations(electrons_withFSR, 2, fields = ["LeadLepton", "SubleadLepton"])
+        ee_pairs = ak.combinations(electrons_withFSR, 2, fields = ["LeadLepton", "SubleadLepton"])
         os_cut = (ee_pairs.LeadLepton.charge * ee_pairs.SubleadLepton.charge) == -1
         ee_pairs = ee_pairs[os_cut]
-        mm_pairs = awkward.combinations(muons_withFSR, 2, fields = ["LeadLepton", "SubleadLepton"])
+        mm_pairs = ak.combinations(muons_withFSR, 2, fields = ["LeadLepton", "SubleadLepton"])
         os_cut = (mm_pairs.LeadLepton.charge * mm_pairs.SubleadLepton.charge) == -1
         mm_pairs = mm_pairs[os_cut]
-        z_cands = awkward.concatenate([ee_pairs, mm_pairs], axis = 1)
+        z_cands = ak.concatenate([ee_pairs, mm_pairs], axis = 1)
         z_cands["ZCand"] = z_cands.LeadLepton + z_cands.SubleadLepton
-        z_cands = z_cands[awkward.argsort(abs(z_cands.ZCand.mass - 91.1876), axis = 1)]
-        z_ee_cut = awkward.fill_none(awkward.firsts(z_cands).LeadLepton.id == 11, False)
-        z_mumu_cut = awkward.fill_none(awkward.firsts(z_cands).LeadLepton.id == 13, False)
+        z_cands = z_cands[ak.argsort(abs(z_cands.ZCand.mass - 91.1876), axis = 1)]
+        z_ee_cut = ak.fill_none(ak.firsts(z_cands).LeadLepton.id == 11, False)
+        z_mumu_cut = ak.fill_none(ak.firsts(z_cands).LeadLepton.id == 13, False)
 
         # Make trigger cuts 
         if self.year is not None:
             year = self.year[:4]
-            single_ele_trigger_cut = awkward.num(events.Photon) < 0 # dummy cut, all False
-            double_ele_trigger_cut = awkward.num(events.Photon) < 0
-            single_mu_trigger_cut = awkward.num(events.Photon) < 0
-            double_mu_trigger_cut = awkward.num(events.Photon) < 0 
+            single_ele_trigger_cut = ak.num(events.Photon) < 0 # dummy cut, all False
+            double_ele_trigger_cut = ak.num(events.Photon) < 0
+            single_mu_trigger_cut = ak.num(events.Photon) < 0
+            double_mu_trigger_cut = ak.num(events.Photon) < 0 
             for hlt in self.options["single_ele_trigger"][year]:
                 if hasattr(events, hlt):
                     single_ele_trigger_cut = (single_ele_trigger_cut) | (events[hlt] == True)
@@ -572,13 +574,13 @@ class ZaTaggerRun3(Tagger):
                 else:
                     logger.debug("[ZGammaTagger] %s is not in these event" % (hlt))
         else:
-            single_ele_trigger_cut = awkward.num(events.Photon) >= 0 # dummy cut, all True
-            double_ele_trigger_cut = awkward.num(events.Photon) >= 0
-            single_mu_trigger_cut = awkward.num(events.Photon) >= 0
-            double_mu_trigger_cut = awkward.num(events.Photon) >= 0
+            single_ele_trigger_cut = ak.num(events.Photon) >= 0 # dummy cut, all True
+            double_ele_trigger_cut = ak.num(events.Photon) >= 0
+            single_mu_trigger_cut = ak.num(events.Photon) >= 0
+            double_mu_trigger_cut = ak.num(events.Photon) >= 0
             
         if "2017" in self.year:
-            single_ele_trigger_cut = awkward.any((events.TrigObj.id == 11) & ((events.TrigObj.filterBits & 0x400) != 0), axis=1) & single_ele_trigger_cut
+            single_ele_trigger_cut = ak.any((events.TrigObj.id == 11) & ((events.TrigObj.filterBits & 0x400) != 0), axis=1) & single_ele_trigger_cut
 
         trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut | single_mu_trigger_cut  | double_mu_trigger_cut
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
@@ -646,14 +648,14 @@ class ZaTaggerRun3(Tagger):
         #     return prob, uncr
 
         # def GetFlavorProbability(lepton_pt, lepton_eta, pass_singlelep, pass_dilep, is_data, is_electron):
-        #     n_pass_lower = awkward.num(1*HLT_ele_cat1[1*HLT_ele_cat1>0])+awkward.num(1*HLT_mu_cat1[1*HLT_mu_cat1>0])
-        #     n_pass_upper = awkward.num(1*HLT_ele_cat2[1*HLT_ele_cat2>0])+awkward.num(1*HLT_mu_cat2[1*HLT_mu_cat2>0])
-        #     n_pass_single = awkward.num(1*HLT_ele_cat3[1*HLT_ele_cat3>0])+awkward.num(1*HLT_mu_cat3[1*HLT_mu_cat3>0])
-        #     relevant_cat = awkward.ones_like(lepton_pt) * True
-        #     relevant_cat = awkward.where(((n_pass_single>0)!=pass_singlelep), awkward.ones_like(relevant_cat) * False, relevant_cat)
-        #     relevant_cat = awkward.where((((n_pass_upper>0)&(n_pass_lower>1))!=pass_dilep), awkward.ones_like(relevant_cat) * False, relevant_cat)
-        #     lep_prob = awkward.zero_like(lepton_pt) 
-        #     lep_unc = awkward.zero_like(lepton_pt)
+        #     n_pass_lower = ak.num(1*HLT_ele_cat1[1*HLT_ele_cat1>0])+ak.num(1*HLT_mu_cat1[1*HLT_mu_cat1>0])
+        #     n_pass_upper = ak.num(1*HLT_ele_cat2[1*HLT_ele_cat2>0])+ak.num(1*HLT_mu_cat2[1*HLT_mu_cat2>0])
+        #     n_pass_single = ak.num(1*HLT_ele_cat3[1*HLT_ele_cat3>0])+ak.num(1*HLT_mu_cat3[1*HLT_mu_cat3>0])
+        #     relevant_cat = ak.ones_like(lepton_pt) * True
+        #     relevant_cat = ak.where(((n_pass_single>0)!=pass_singlelep), ak.ones_like(relevant_cat) * False, relevant_cat)
+        #     relevant_cat = ak.where((((n_pass_upper>0)&(n_pass_lower>1))!=pass_dilep), ak.ones_like(relevant_cat) * False, relevant_cat)
+        #     lep_prob = ak.zero_like(lepton_pt) 
+        #     lep_unc = ak.zero_like(lepton_pt)
 
         # def GetTotalProbability(electron_pt,muon_pt, electron_eta,muon_eta, pass_singleel,pass_singlemu,pass_diel,pass_dimu, is_data):
         #     electron_prob = GetFlavorProbability(electron_pt, electron_eta,pass_singleel, pass_diel, is_data, True)
@@ -678,13 +680,13 @@ class ZaTaggerRun3(Tagger):
         # a trick that give 0 to the empty array    
         if self.year is not None:
             year = self.year[:4]
-            e_cut = awkward.fill_none(awkward.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_ele_pt"][year]
-            m_cut = awkward.fill_none(awkward.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_mu_pt"][year]
+            e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_ele_pt"][year]
+            m_cut = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_mu_pt"][year]
         else:
-            e_cut = awkward.fill_none(awkward.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > 25
-            m_cut = awkward.fill_none(awkward.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > 20
-        ee_cut = (awkward.fill_none(awkward.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > 25) & (awkward.fill_none(awkward.pad_none(electrons.pt, 2, axis=1)[:, 1], 0) > 15)
-        mm_cut = (awkward.fill_none(awkward.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > 20) & (awkward.fill_none(awkward.pad_none(muons.pt, 2, axis=1)[:, 1], 0) > 10)
+            e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > 25
+            m_cut = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > 20
+        ee_cut = (ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > 25) & (ak.fill_none(ak.pad_none(electrons.pt, 2, axis=1)[:, 1], 0) > 15)
+        mm_cut = (ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > 20) & (ak.fill_none(ak.pad_none(muons.pt, 2, axis=1)[:, 1], 0) > 10)
         
         ele_trigger_pt_cut = (single_ele_trigger_cut & e_cut) | (double_ele_trigger_cut & ee_cut)
         mu_trigger_pt_cut = (single_mu_trigger_cut & m_cut) | (double_mu_trigger_cut & mm_cut)
@@ -704,61 +706,61 @@ class ZaTaggerRun3(Tagger):
         if self.year=="2018" and self.is_data:
             hem_run=events.run > 319077        
             # checked 65.15623538907509% events in data could pass this run cut
-            hem_jet=awkward.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-            hem_fatjet=awkward.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
+            hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
+            hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
             hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))        
         elif self.year=="2018" and not self.is_data:
             #random number generator from 0 to 1
             fraction=0.6515623538907509
             events['random'] = numpy.random.rand(len(events))
             hem_run=events.random < fraction
-            hem_jet=awkward.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-            hem_fatjet=awkward.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
+            hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
+            hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
             hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))
         else:
-            hem_cut=awkward.num(events.Photon) >= 0 
+            hem_cut=ak.num(events.Photon) >= 0 
         events = events[hem_cut]
         
         # # Construct di-electron/di-muon pairs
-        # ee_pairs = awkward.combinations(electrons, 2, fields = ["LeadLepton", "SubleadLepton"])
+        # ee_pairs = ak.combinations(electrons, 2, fields = ["LeadLepton", "SubleadLepton"])
         # if self.year is not None:
         #     year = self.year[:4]
         #     e_cut = ee_pairs.LeadLepton.pt > self.options["lead_ele_pt"][year]
         # else:
         #     e_cut = ee_pairs.LeadLepton.pt > 25
         # ee_cut = (ee_pairs.LeadLepton.pt > 25) & (ee_pairs.SubleadLepton.pt > 15)
-        # ee_pairs = awkward.concatenate([ee_pairs[double_ele_trigger_cut & ee_cut], ee_pairs[single_ele_trigger_cut & e_cut]], axis = 1)
-        # ele_pair_cut = awkward.num(ee_pairs) >= 1
+        # ee_pairs = ak.concatenate([ee_pairs[double_ele_trigger_cut & ee_cut], ee_pairs[single_ele_trigger_cut & e_cut]], axis = 1)
+        # ele_pair_cut = ak.num(ee_pairs) >= 1
 
-        # mm_pairs = awkward.combinations(muons, 2, fields = ["LeadLepton", "SubleadLepton"])
+        # mm_pairs = ak.combinations(muons, 2, fields = ["LeadLepton", "SubleadLepton"])
         # if self.year is not None:
         #     year = self.year[:4]
         #     m_cut = mm_pairs.LeadLepton.pt > self.options["lead_mu_pt"][year]
         # else:
         #     m_cut = mm_pairs.LeadLepton.pt > 20
         # mm_cut = (mm_pairs.LeadLepton.pt > 20) & (mm_pairs.SubleadLepton.pt > 10)
-        # mm_pairs = awkward.concatenate([mm_pairs[double_mu_trigger_cut & mm_cut], mm_pairs[single_mu_trigger_cut & m_cut]], axis = 1)
-        # muon_pair_cut = awkward.num(mm_pairs) >= 1
+        # mm_pairs = ak.concatenate([mm_pairs[double_mu_trigger_cut & mm_cut], mm_pairs[single_mu_trigger_cut & m_cut]], axis = 1)
+        # muon_pair_cut = ak.num(mm_pairs) >= 1
 
         # # Concatenate these together
-        # z_cands = awkward.concatenate([ee_pairs, mm_pairs], axis = 1)
+        # z_cands = ak.concatenate([ee_pairs, mm_pairs], axis = 1)
 
         # # Make Z candidate-level cuts
-        # # print('!!!!charge of lead lepton{}, charge of sublead lepton {}, flavour of lepton {}'.format(awkward.flatten(z_cands[os_cut]).LeadLepton.charge, awkward.flatten(z_cands[os_cut]).SubleadLepton.charge, awkward.flatten(z_cands[os_cut]).LeadLepton.id))
+        # # print('!!!!charge of lead lepton{}, charge of sublead lepton {}, flavour of lepton {}'.format(ak.flatten(z_cands[os_cut]).LeadLepton.charge, ak.flatten(z_cands[os_cut]).SubleadLepton.charge, ak.flatten(z_cands[os_cut]).LeadLepton.id))
         # os_cut = (z_cands.LeadLepton.charge * z_cands.SubleadLepton.charge) == -1
         # z_cands = z_cands[os_cut]
-        # os_cut = awkward.num(z_cands) >= 1
+        # os_cut = ak.num(z_cands) >= 1
 
         # z_cands["ZCand"] = z_cands.LeadLepton + z_cands.SubleadLepton # these add as 4-vectors since we registered them as "Momentum4D" objects
         # mass_cut = (z_cands.ZCand.mass > 80.) & (z_cands.ZCand.mass < 100.)
         # # mass_cut = (z_cands.ZCand.mass > 50.)
         # z_cands = z_cands[mass_cut] # OSSF lepton pairs with m_ll > 50.
 
-        # z_cands = z_cands[awkward.argsort(abs(z_cands.ZCand.mass - 91.1876), axis = 1)] # take the one with mass closest to mZ
+        # z_cands = z_cands[ak.argsort(abs(z_cands.ZCand.mass - 91.1876), axis = 1)] # take the one with mass closest to mZ
 
-        has_z_cand = awkward.num(z_cands) >= 1
-        z_cand = awkward.firsts(z_cands)
-        z_cand_noFSR = awkward.firsts(z_cands_noFSR)
+        has_z_cand = ak.num(z_cands) >= 1
+        z_cand = ak.firsts(z_cands)
+        z_cand_noFSR = ak.firsts(z_cands_noFSR)
 
         # Add Z-related fields to array
         for field in ["pt", "eta", "phi", "mass", "charge", "id", "ptE_error"]:
@@ -767,7 +769,7 @@ class ZaTaggerRun3(Tagger):
                 awkward_utils.add_field(
                         events,
                         "Z_%s" % field,
-                        awkward.fill_none(getattr(z_cand.ZCand, field), DUMMY_VALUE)
+                        ak.fill_none(getattr(z_cand.ZCand, field), DUMMY_VALUE)
                 )
                 # Without FSR
                 awkward_utils.add_field(
@@ -778,12 +780,12 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(
                     events,
                     "Z_lead_lepton_%s" % field,
-                    awkward.fill_none(z_cand.LeadLepton[field], DUMMY_VALUE)
+                    ak.fill_none(z_cand.LeadLepton[field], DUMMY_VALUE)
             )
             awkward_utils.add_field(
                     events,
                     "Z_sublead_lepton_%s" % field,
-                    awkward.fill_none(z_cand.SubleadLepton[field], DUMMY_VALUE)
+                    ak.fill_none(z_cand.SubleadLepton[field], DUMMY_VALUE)
             )
             awkward_utils.add_field(
                 events,
@@ -797,18 +799,18 @@ class ZaTaggerRun3(Tagger):
             )
 
         # Make gamma candidate-level cuts
-        has_2gamma_cand = (awkward.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
+        has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
 
-        gamma_pairs = awkward.combinations(photons, 2, fields=["LeadPhoton", "SubleadPhoton"])
-        gamma_pairs = gamma_pairs[awkward.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
+        gamma_pairs = ak.combinations(photons, 2, fields=["LeadPhoton", "SubleadPhoton"])
+        gamma_pairs = gamma_pairs[ak.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
         
-        gamma_pairs["LeadPhoton"] = awkward.with_name(gamma_pairs.LeadPhoton, "Momentum4D")
-        gamma_pairs["SubleadPhoton"] = awkward.with_name(gamma_pairs.SubleadPhoton, "Momentum4D")
+        gamma_pairs["LeadPhoton"] = ak.with_name(gamma_pairs.LeadPhoton, "Momentum4D")
+        gamma_pairs["SubleadPhoton"] = ak.with_name(gamma_pairs.SubleadPhoton, "Momentum4D")
 
-        alp_cand = awkward.firsts(gamma_pairs)
+        alp_cand = ak.firsts(gamma_pairs)
 
         # alp_cand["ALPCand"] = alp_cand.LeadPhoton + alp_cand.SubleadPhoton
-        alp_cand["ALPCand"] = awkward.with_name(alp_cand.LeadPhoton + alp_cand.SubleadPhoton, "Momentum4D")
+        alp_cand["ALPCand"] = ak.with_name(alp_cand.LeadPhoton + alp_cand.SubleadPhoton, "Momentum4D")
 
         events = self.calculate_alp_photon_isolation(events, alp_cand, photons)
 
@@ -818,17 +820,17 @@ class ZaTaggerRun3(Tagger):
                 awkward_utils.add_field(
                     events,
                     "ALP_%s" % field,
-                    awkward.fill_none(getattr(alp_cand.ALPCand, field), DUMMY_VALUE)
+                    ak.fill_none(getattr(alp_cand.ALPCand, field), DUMMY_VALUE)
                 )
             awkward_utils.add_field(
                 events,
                 "ALP_lead_photon_%s" % field,
-                awkward.fill_none(alp_cand.LeadPhoton[field], DUMMY_VALUE)
+                ak.fill_none(alp_cand.LeadPhoton[field], DUMMY_VALUE)
             )
             awkward_utils.add_field(
                 events,
                 "ALP_sublead_photon_%s" % field,
-                awkward.fill_none(alp_cand.SubleadPhoton[field], DUMMY_VALUE)
+                ak.fill_none(alp_cand.SubleadPhoton[field], DUMMY_VALUE)
             )
         if int(self.year[:4]) < 2020:
             awkward_utils.add_field(events, "ALP_lead_photon_chiso",  alp_cand.LeadPhoton.pfRelIso03_chg) #run2
@@ -842,18 +844,18 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(events, "ALP_sublead_photon_alliso",  alp_cand.SubleadPhoton.pfRelIso03_all_quadratic) #run3
         
         # Gamma candidate 
-        gamma_cand = awkward.firsts(photons)
+        gamma_cand = ak.firsts(photons)
         gamma_mvaID_WPL = ((gamma_cand.isScEtaEB & (gamma_cand.mvaID > self.options["photons"]["mvaID_barrel"])) | (gamma_cand.isScEtaEE & (gamma_cand.mvaID > self.options["photons"]["mvaID_endcap"])))
         gamma_e_veto = gamma_cand.electronVeto > self.options["photons"]["e_veto"]
 
-        awkward_utils.add_field(gamma_cand, "mass", awkward.ones_like(gamma_cand.pt) * 0) #TODO: run3 BUG
+        awkward_utils.add_field(gamma_cand, "mass", ak.ones_like(gamma_cand.pt) * 0) #TODO: run3 BUG
 
         # Add gamma-related fields to array
         for field in ["pt", "eta", "phi", "mass", "mvaID", "energyErr", "sieie", "hoe", "r9", "mvaID_WP80", "mvaID_WP90"]:
             awkward_utils.add_field(
                 events,
                 "gamma_%s" % field,
-                awkward.fill_none(getattr(gamma_cand, field), DUMMY_VALUE)
+                ak.fill_none(getattr(gamma_cand, field), DUMMY_VALUE)
             )
         awkward_utils.add_field(events, "gamma_mvaID_WPL",  gamma_mvaID_WPL)
         awkward_utils.add_field(events, "gamma_e_veto",  gamma_e_veto)
@@ -871,15 +873,15 @@ class ZaTaggerRun3(Tagger):
         h_cand = (z_cand.ZCand + alp_cand.ALPCand)
         sel_h_1 = (z_cand.ZCand.mass + h_cand.mass) > options["mass_sum"]
         sel_h_2 = (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1])
-        sel_h_1 = awkward.fill_none(sel_h_1, value = False)
-        sel_h_2 = awkward.fill_none(sel_h_2, value = False)
+        sel_h_1 = ak.fill_none(sel_h_1, value = False)
+        sel_h_2 = ak.fill_none(sel_h_2, value = False)
         
         # Use No FSR Z boson 
         h_cand_noFSR = z_cand_noFSR.ZCand + alp_cand.ALPCand
         sel_h_1_noFSR = (z_cand_noFSR.ZCand.mass + h_cand_noFSR.mass) > options["mass_sum"]
         sel_h_2_noFSR = (h_cand_noFSR.mass > options["mass_h"][0]) & (h_cand_noFSR.mass < options["mass_h"][1])
-        sel_h_1_noFSR = awkward.fill_none(sel_h_1_noFSR, value=False)
-        sel_h_2_noFSR = awkward.fill_none(sel_h_2_noFSR, value=False)
+        sel_h_1_noFSR = ak.fill_none(sel_h_1_noFSR, value=False)
+        sel_h_2_noFSR = ak.fill_none(sel_h_2_noFSR, value=False)
 
         print(f'!!!!has H: {sum(has_z_cand & has_2gamma_cand & z_mumu_cut)} | {sum(has_z_cand & has_2gamma_cand & z_ee_cut)}')
 
@@ -888,23 +890,23 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(
                 events,
                 "H_%s" % field,
-                awkward.fill_none(getattr(h_cand, field), DUMMY_VALUE)
+                ak.fill_none(getattr(h_cand, field), DUMMY_VALUE)
             )
             # 不包含 FSR
             awkward_utils.add_field(
                 events,
                 f"H_noFSR_{field}",
-                awkward.fill_none(getattr(h_cand_noFSR, field), DUMMY_VALUE)
+                ak.fill_none(getattr(h_cand_noFSR, field), DUMMY_VALUE)
             )
 
         # additional leptons
-        leptons = awkward.concatenate([electrons, muons], axis = 1)
-        max_I_mini = awkward.fill_none(awkward.max(leptons.miniPFRelIso_all, axis = 1), 9999)
+        leptons = ak.concatenate([electrons, muons], axis = 1)
+        max_I_mini = ak.fill_none(ak.max(leptons.miniPFRelIso_all, axis = 1), 9999)
         awkward_utils.add_field(events, "max_I_mini", max_I_mini)
         
         veto_Z_leptons = (leptons.pt != events.Z_lead_lepton_pt) & (leptons.pt != events.Z_sublead_lepton_pt)
         additional_leptons = leptons[veto_Z_leptons]       
-        additional_leptons = additional_leptons[awkward.argsort(additional_leptons.pt, ascending=False, axis=1)]
+        additional_leptons = additional_leptons[ak.argsort(additional_leptons.pt, ascending=False, axis=1)]
 
         for objects, name in zip([additional_leptons], ["additional_lepton"]):
             awkward_utils.add_object_fields(
@@ -917,17 +919,17 @@ class ZaTaggerRun3(Tagger):
 
         event_filter = (events.Flag_goodVertices & 
                         events.Flag_globalSuperTightHalo2016Filter & 
-                        events.Flag_HBHENoiseFilter & 
-                        events.Flag_HBHENoiseIsoFilter & 
+                        ((awkward.num(events.Photon) >= 0) if "202" in self.year else events.Flag_HBHENoiseFilter) & 
+                        ((awkward.num(events.Photon) >= 0) if "202" in self.year else events.Flag_HBHENoiseIsoFilter) & 
                         events.Flag_EcalDeadCellTriggerPrimitiveFilter & 
                         events.Flag_BadPFMuonFilter & 
                         events.Flag_BadPFMuonDzFilter & 
                         events.Flag_hfNoisyHitsFilter & 
                         events.Flag_eeBadScFilter & 
-                        ((awkward.num(events.Photon) >= 0) if "2016" in self.year else events.Flag_ecalBadCalibFilter) # 2016 dummy cut, all True
+                        ((ak.num(events.Photon) >= 0) if "2016" in self.year else events.Flag_ecalBadCalibFilter) # 2016 dummy cut, all True
                         )
         
-        all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h_1 & sel_h_2 & event_filter #& awkward.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
+        all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h_1 & sel_h_2 & event_filter #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
 
         for cut_type in ["zgammas", "zgammas_ele", "zgammas_mu", "zgammas_w", "zgammas_ele_w", "zgammas_mu_w"]:
             if "_w" in cut_type:
@@ -938,7 +940,7 @@ class ZaTaggerRun3(Tagger):
             else:
                 weighted = False
 
-            cut0 = awkward.num(events.Photon) >= 0
+            cut0 = ak.num(events.Photon) >= 0
 
             cut1 = z_ee_cut | z_mumu_cut
             if "ele" in cut_type:
@@ -1020,7 +1022,7 @@ class ZaTaggerRun3(Tagger):
         elapsed_time = time.time() - start
         logger.debug("[ZGammaTagger] %s, syst variation : %s, total time to execute select_zgammas: %.6f s" % (self.name, self.current_syst, elapsed_time))
 
-        #dummy_cut =  awkward.num(events.Photon) >= 0
+        #dummy_cut =  ak.num(events.Photon) >= 0
         return all_cuts, events 
 
 
@@ -1045,10 +1047,10 @@ class ZaTaggerRun3(Tagger):
     #     medium_and_control_cut = ((bitmap & mask1) == mask1) | ((bitmap & (mask2 + (3<<12))) == mask2) | ((bitmap & (mask3 + (3<<10))) == mask3) | ((bitmap & (mask4 + (3<<8))) == mask4) | ((bitmap & mask6) == mask6)
     #     selected_medium_or_control_photons = photons[medium_and_control_cut] # append the medium and control photons
 
-    #     pass_selection1 = awkward.num(selected_medium_or_control_photons) >= 1  # select medium and control photons without fake photon
+    #     pass_selection1 = ak.num(selected_medium_or_control_photons) >= 1  # select medium and control photons without fake photon
     #     awkward_utils.add_field(events, "pass_selection1", pass_selection1)  # has selected medium and control photons
 
-    #     med_cand = awkward.firsts(selected_medium_or_control_photons) #similar to the gamma_cand
+    #     med_cand = ak.firsts(selected_medium_or_control_photons) #similar to the gamma_cand
 
     #     bitmap = med_cand.vidNestedWPBitmap 
     #     photon_selection = (
@@ -1060,20 +1062,20 @@ class ZaTaggerRun3(Tagger):
     #         (((bitmap & mask5) == mask5) << 5) + 
     #         ((((bitmap & mask6) == mask6) & ((bitmap & mask5) != mask5)) << 6)
     #     )
-    #     awkward_utils.add_field(events, "photon_selection", awkward.fill_none(photon_selection, -1))
+    #     awkward_utils.add_field(events, "photon_selection", ak.fill_none(photon_selection, -1))
     #     #pass_selection1 && photon_selection==1 or 5 or 7 -> build ture template from MC and data template from data
     #     #pass_selection1 && photon_selection==4 or 6 or 8  && chiso side band -> build fake tempalte from data
     #     #pass_selection1 && ((photon_selection!=1 && photon_selection==2) || (!1 && ==3) || (!1 && ==4) || (!=1 && ==5)) -> build non-prompt photon sample from data
 
-    #     awkward_utils.add_field(events, "photon_is_barrel", awkward.fill_none(med_cand.isScEtaEB, -1))
-    #     awkward_utils.add_field(events, "photon_is_endcap", awkward.fill_none(med_cand.isScEtaEE, -1))
+    #     awkward_utils.add_field(events, "photon_is_barrel", ak.fill_none(med_cand.isScEtaEB, -1))
+    #     awkward_utils.add_field(events, "photon_is_endcap", ak.fill_none(med_cand.isScEtaEE, -1))
     #     for field in ["pt", "eta", "phi", "sieie"]:
     #         awkward_utils.add_field(
     #             events,
     #             "photon_%s" % field,
-    #             awkward.fill_none(getattr(med_cand, field), DUMMY_VALUE)
+    #             ak.fill_none(getattr(med_cand, field), DUMMY_VALUE)
     #         )
-    #     awkward_utils.add_field(events, "photon_chiso",  awkward.fill_none(med_cand.pfRelIso03_chg, DUMMY_VALUE))
+    #     awkward_utils.add_field(events, "photon_chiso",  ak.fill_none(med_cand.pfRelIso03_chg, DUMMY_VALUE))
     
     def calculate_gen_info(self, zgammas, options):
         """
@@ -1139,13 +1141,13 @@ class ZaTaggerRun3(Tagger):
         Cuts specific to a diphoton pair are not enforced here.
 
         :param photons: input collection of photons to use for calculating selected photons
-        :type photons: awkward.highlevel.Array
+        :type photons: ak.highlevel.Array
         :param rho: energy density in each event, used for corrections to photon isolation cuts
-        :type rho: awkward.highlevel.Array
+        :type rho: ak.highlevel.Array
         :param options: dictionary containing configurable options for the photon selection
         :type options: dict
         :return: boolean array indicating which photons pass the photon selection
-        :rtype: awkward.highlevel.Array
+        :rtype: ak.highlevel.Array
         """
         tagger_name = "none" if self is None else self.name
 
@@ -1168,12 +1170,12 @@ class ZaTaggerRun3(Tagger):
         official_id_cut = []
         sieie_cut = []
         PFECalIso_cut = []
-        rho_broadcasted, _ = awkward.broadcast_arrays(rho, photons.pt)
+        rho_broadcasted, _ = ak.broadcast_arrays(rho, photons.pt)
         rho = rho_broadcasted
         photon_abs_eta = numpy.abs(photons.eta)
         if int(year) < 2020:
-            customized_id_cut = awkward.ones_like(photons.pt) # all true, dummy TODO
-            official_id_cut = awkward.ones_like(photons.pt) # all true, dummy TODO
+            customized_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
+            official_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
         elif int(year) > 2020:
             # ID
             # id_cut = photons.mvaID_WP80
@@ -1365,13 +1367,13 @@ class ZaTaggerRun3(Tagger):
         # electron veto
         e_veto_cut = (photons.electronVeto > options["e_veto"])
         
-        photon_ele_idx = awkward.where(awkward.num(photons.electronIdx, axis=1) == 0, awkward.ones_like(photons.pt)*-1, photons.electronIdx)
-        new_pho = awkward.unflatten(awkward.unflatten(awkward.flatten(photon_ele_idx), [1]*awkward.sum(awkward.num(photon_ele_idx))), awkward.num(photon_ele_idx, axis=1))
-        new_ele = awkward.broadcast_arrays(electrons.Idx[:,None], new_pho, depth_limit=2)[0]
-        eg_overlap_cut = ~awkward.where(
-            awkward.is_none(electrons.Idx),
-            awkward.broadcast_arrays(photons.electronIdx, False)[1],
-            awkward.flatten(awkward.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1)
+        photon_ele_idx = ak.where(ak.num(photons.electronIdx, axis=1) == 0, ak.ones_like(photons.pt)*-1, photons.electronIdx)
+        new_pho = ak.unflatten(ak.unflatten(ak.flatten(photon_ele_idx), [1]*ak.sum(ak.num(photon_ele_idx))), ak.num(photon_ele_idx, axis=1))
+        new_ele = ak.broadcast_arrays(electrons.Idx[:,None], new_pho, depth_limit=2)[0]
+        eg_overlap_cut = ~ak.where(
+            ak.is_none(electrons.Idx),
+            ak.broadcast_arrays(photons.electronIdx, False)[1],
+            ak.flatten(ak.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1)
         ) # some events may have no electrons, so we need to replace None with False
 
         # use_central_nano = options["use_central_nano"] # indicates whether we are using central nanoAOD (with some branches that are necessary for full diphoton preselection missing) or custom nanoAOD (with these branches added)
@@ -1393,9 +1395,9 @@ class ZaTaggerRun3(Tagger):
             all_cuts = (all_cuts) & cut
             if i == 0:
                 # In an event, at least 2 photons pass selections
-                cut_results[i] = (awkward.sum(cut, axis=1) > 1)
+                cut_results[i] = (ak.sum(cut, axis=1) > 1)
             else:
-                cut_results[i] = (awkward.sum(cut, axis=1) > 1) & cut_results[i-1]
+                cut_results[i] = (ak.sum(cut, axis=1) > 1) & cut_results[i-1]
 
         # Print out cut flow results
         self.register_cuts(
@@ -1413,27 +1415,27 @@ class ZaTaggerRun3(Tagger):
     #     excluding the lead and sublead photons that form the ALP candidate.
 
     #     :param events: Input events array to add isolation field to
-    #     :type events: awkward.highlevel.Array
+    #     :type events: ak.highlevel.Array
     #     :param alp_cand: ALP candidate with LeadPhoton, SubleadPhoton, and ALPCand fields
-    #     :type alp_cand: awkward.highlevel.Array
+    #     :type alp_cand: ak.highlevel.Array
     #     :param photons: Reconstructed photons (events.Photon after selection)
-    #     :type photons: awkward.highlevel.Array
+    #     :type photons: ak.highlevel.Array
     #     :param delta_r_cone: Delta R cone size for isolation (default: 0.3)
     #     :type delta_r_cone: float
     #     :param delta_r_self_match: Delta R to identify lead/sublead photons (default: 0.08)
     #     :type delta_r_self_match: float
     #     :return: Events array with added isolation field
-    #     :rtype: awkward.highlevel.Array
+    #     :rtype: ak.highlevel.Array
     #     """
 
     #     # Initialize isolation array with zeros
-    #     iso_pt = awkward.full_like(alp_cand["ALPCand"].pt, 0.0, dtype=float)
+    #     iso_pt = ak.full_like(alp_cand["ALPCand"].pt, 0.0, dtype=float)
 
     #     # Ensure arrays have Momentum4D behavior
-    #     alp_cand["ALPCand"] = awkward.with_name(alp_cand["ALPCand"], "Momentum4D")
-    #     photons = awkward.with_name(photons, "Momentum4D")
-    #     lead_photon = awkward.with_name(alp_cand.LeadPhoton, "Momentum4D")
-    #     sublead_photon = awkward.with_name(alp_cand.SubleadPhoton, "Momentum4D")
+    #     alp_cand["ALPCand"] = ak.with_name(alp_cand["ALPCand"], "Momentum4D")
+    #     photons = ak.with_name(photons, "Momentum4D")
+    #     lead_photon = ak.with_name(alp_cand.LeadPhoton, "Momentum4D")
+    #     sublead_photon = ak.with_name(alp_cand.SubleadPhoton, "Momentum4D")
 
     #     print(len(photons), len(alp_cand))
 
@@ -1443,16 +1445,16 @@ class ZaTaggerRun3(Tagger):
     #     assert hasattr(alp_cand["ALPCand"], "delta_r")
 
     #     # Compute DeltaR between ALPCand and all photons
-    #     alp_broadcasted = awkward.broadcast_arrays(alp_cand["ALPCand"], photons)[0]
+    #     alp_broadcasted = ak.broadcast_arrays(alp_cand["ALPCand"], photons)[0]
     #     dr = alp_broadcasted.delta_r(photons)
 
     #     # Exclude lead and sublead photons by checking DeltaR with them
-    #     lead_photon_broadcasted = awkward.broadcast_arrays(lead_photon, photons)[0]
-    #     lead_photon_vec_broadcasted = awkward.with_name(lead_photon_broadcasted, "Momentum4D")
+    #     lead_photon_broadcasted = ak.broadcast_arrays(lead_photon, photons)[0]
+    #     lead_photon_vec_broadcasted = ak.with_name(lead_photon_broadcasted, "Momentum4D")
     #     dr_lead = lead_photon_vec_broadcasted.delta_r(photons)
 
-    #     sublead_photon_broadcasted = awkward.broadcast_arrays(sublead_photon, photons)[0]
-    #     sublead_photon_vec_broadcasted = awkward.with_name(sublead_photon_broadcasted, "Momentum4D")
+    #     sublead_photon_broadcasted = ak.broadcast_arrays(sublead_photon, photons)[0]
+    #     sublead_photon_vec_broadcasted = ak.with_name(sublead_photon_broadcasted, "Momentum4D")
     #     dr_sublead = sublead_photon_vec_broadcasted.delta_r(photons)
     #     is_self_matched = (dr_lead < delta_r_self_match) | (dr_sublead < delta_r_self_match)
 
@@ -1460,13 +1462,13 @@ class ZaTaggerRun3(Tagger):
     #     iso_mask = (dr <= delta_r_cone) & (~is_self_matched)
 
     #     # Sum photon pt within the isolation cone
-    #     iso_pt = awkward.sum(photons.pt[iso_mask], axis=-1)
+    #     iso_pt = ak.sum(photons.pt[iso_mask], axis=-1)
 
     #     # Fill None values with 0.0 for events with no photons in the cone
-    #     iso_pt = awkward.fill_none(iso_pt, 0.0)
+    #     iso_pt = ak.fill_none(iso_pt, 0.0)
 
     #     # Add isolation field to events
-    #     events = awkward.with_field(events, iso_pt, "ALP_PhotonIso")
+    #     events = ak.with_field(events, iso_pt, "ALP_PhotonIso")
 
     #     return events
 
@@ -1475,46 +1477,46 @@ class ZaTaggerRun3(Tagger):
         # logger.debug(f"len(photons) = {len(photons)}, len(alp_cand) = {len(alp_cand)}")
         # print(len(photons), len(alp_cand))
         # photons_P4 = to_momentum4d(photons)
-        # print(f"photons_P4: {type(photons_P4)}, {awkward.type(photons_P4)}")
+        # print(f"photons_P4: {type(photons_P4)}, {ak.type(photons_P4)}")
         # ph0 = photons_P4[0][0]
         # print(ph0)  # 这应该是一个 Momentum4D object
         # print(hasattr(ph0, "deltaR"))  # ✅ True！
         # print(ph0.deltaR(ph0))         # ✅ 应该是 0.0
         # print(photons.fields)
-        # print(f"photons: {type(photons)}, {awkward.type(photons)}")
+        # print(f"photons: {type(photons)}, {ak.type(photons)}")
         # print(hasattr(photons, "deltaR"))
         # print(photons[0].deltaR(photons[0]))
         # print(alp_b.fields)
-        # print(f"alp_b: {type(alp_b)}, {awkward.type(alp_b)}")
-        # print(f"pho_b: {type(pho_b)}, {awkward.type(pho_b)}")
+        # print(f"alp_b: {type(alp_b)}, {ak.type(alp_b)}")
+        # print(f"pho_b: {type(pho_b)}, {ak.type(pho_b)}")
 
         # Ensure momentum behavior
-        photons = awkward.with_name(photons, "Momentum4D")
-        lead = awkward.with_name(alp_cand.LeadPhoton, "Momentum4D")
-        sublead = awkward.with_name(alp_cand.SubleadPhoton, "Momentum4D")
-        alp_vec = awkward.with_name(alp_cand.ALPCand, "Momentum4D")
+        photons = ak.with_name(photons, "Momentum4D")
+        lead = ak.with_name(alp_cand.LeadPhoton, "Momentum4D")
+        sublead = ak.with_name(alp_cand.SubleadPhoton, "Momentum4D")
+        alp_vec = ak.with_name(alp_cand.ALPCand, "Momentum4D")
 
         # Broadcast to photons
-        alp_b, pho_b = awkward.broadcast_arrays(alp_vec, photons)
-        alp_b = awkward.with_name(alp_b, "Momentum4D")
-        pho_b = awkward.with_name(pho_b, "Momentum4D")
+        alp_b, pho_b = ak.broadcast_arrays(alp_vec, photons)
+        alp_b = ak.with_name(alp_b, "Momentum4D")
+        pho_b = ak.with_name(pho_b, "Momentum4D")
         
         dr = alp_b.deltaR(pho_b)
 
         # Exclude self photons (lead/sublead)
-        lead_b = awkward.broadcast_arrays(lead, photons)[0]
-        sublead_b = awkward.broadcast_arrays(sublead, photons)[0]
+        lead_b = ak.broadcast_arrays(lead, photons)[0]
+        sublead_b = ak.broadcast_arrays(sublead, photons)[0]
         dr_lead = lead_b.deltaR(photons)
         dr_sublead = sublead_b.deltaR(photons)
         is_self = (dr_lead < delta_r_self_match) | (dr_sublead < delta_r_self_match)
 
         # Mask and sum
         iso_mask = (dr <= delta_r_cone) & (~is_self)
-        iso_pt = awkward.sum(photons.pt[iso_mask], axis=-1)
-        iso_pt = awkward.fill_none(iso_pt, 0.0)
+        iso_pt = ak.sum(photons.pt[iso_mask], axis=-1)
+        iso_pt = ak.fill_none(iso_pt, 0.0)
 
         # Add to events
-        return awkward.with_field(events, iso_pt, "ALP_PhotonIso")
+        return ak.with_field(events, iso_pt, "ALP_PhotonIso")
 
     def select_FSRphotons(self, FSRphotons, electrons, muons, photons, options):
         FSR_pt_cut = FSRphotons.pt > options["pt"]
@@ -1529,13 +1531,14 @@ class ZaTaggerRun3(Tagger):
         # Discard FSRphoton if dR(FSRphoton, lep) > 0.5
         dR0p5_FSRphoton_lep = object_selections.delta_R(FSRphotons, electrons, 0.5) & object_selections.delta_R(FSRphotons, muons, 0.5)
         FSRphoton_lep_indR0p5 = ~dR0p5_FSRphoton_lep
-        
-        print(awkward.__file__)
-        print(awkward.__version__)
-        
+
         # --- 新增：與前兩大 pT photons 的 ΔR > 0.2 -------------------------------
         # 1. 挑出每個 event 中 pT 最大的兩顆 photon（若不足兩顆則長度 < 2）
-        lead_photons = awkward.topk(photons, k=2, key="pt")
+        # 排序 photons，按 pt 降序排列
+        photons_sorted = photons[ak.argsort(photons.pt, ascending=False)]
+
+        # 取前兩顆 photon，即使不足兩顆也會正常處理
+        lead_photons = photons_sorted[:, :2]
 
         FSRphoton_clean_photons = object_selections.delta_R(FSRphotons, lead_photons, 0.2)
 
@@ -1543,32 +1546,81 @@ class ZaTaggerRun3(Tagger):
 
         return FSR_all_cuts
 
-    # 定義函數以分配 FSR photon 給 leptons
-    def assign_fsr_photon(leptons, fsr_photons):
-        """
-        為每個輕子分配 dROverEt2 值最小的 FSR photon（若存在）。
-        返回修正後的輕子四動量（若有 FSR photon 則相加，否則保持不變）。
-        """
-        if awkward.num(fsr_photons) == 0:
-            return leptons  # 無 FSR photons，直接返回原始輕子
+    def assign_fsr_photon(self, leptons, fsr_photons):
+        # ---- 0. 若所有事件都没有 photon，直接返回 ----
+        if ak.max(ak.num(fsr_photons)) == 0:
+            return leptons                    # nothing to do
 
-        # Check dR(lep, FSRphoton) < 0.5
-        dR0p5_FSRphoton_lep = object_selections.delta_R(FSRphotons, leptons, 0.5)
-        FSRphoton_lep_indR0p5 = ~dR0p5_FSRphoton_lep
+        # ---- 1. 确保每个 event 至少有 1 个 “占位 photon” ----
+        #    （避免在完全空列表上索引越界）
+        zero_ph = ak.zip({"pt":   0.0,
+                        "eta":  0.0,
+                        "phi":  0.0,
+                        "mass": 0.0,
+                        "dROverEt2": numpy.inf,   # 填一个 ∞，保证不会被选中
+                        },
+                        with_name="Momentum4D")
 
-        # 選擇 dROverEt2 最小的 FSR photon
-        min_dROverEt2_idx = awkward.argmin(fsr_photons.dROverEt2, axis=-1, keepdims=True)
-        valid_fsr_mask = ~awkward.is_none(min_dROverEt2_idx) & (awkward.num(fsr_photons) > 0) & FSRphoton_lep_indR0p5
-        closest_fsr = awkward.mask(fsr_photons[min_dROverEt2_idx], valid_fsr_mask)
+        fsr_padded = ak.fill_none(ak.pad_none(fsr_photons, 1, clip=False),
+                                zero_ph)     # 长度 <1 时补 None→zero_ph
 
-        # 修正輕子四動量
-        corrected_leptons = awkward.where(
-            valid_fsr_mask,
-            leptons + awkward.fill_none(closest_fsr, vector.obj(pt=0, eta=0, phi=0, mass=0)),
-            leptons
+        # ---- 2. 列出 (event, lepton, photon) 组合 ----
+        pairs = ak.cartesian({"lep": leptons, "ph": fsr_padded},
+                            axis=1,
+                            nested=True)      # shape: (ev, lep, pho)
+
+        dR = pairs.lep.deltaR(pairs.ph)
+
+        # ---- 3. 只允许 dR < 0.5 的配对 ----
+        valid_mask       = dR < 0.5
+        dROverEt2        = pairs.ph.dROverEt2
+        dROverEt2_masked = ak.where(valid_mask, dROverEt2, numpy.inf)
+
+        # ---- 4. 每个 (ev, lep) 取最小值所在的 photon 下标 ----
+        best_idx  = ak.argmin(dROverEt2_masked, axis=2)    # (ev, lep)
+        has_valid = ak.any(valid_mask,          axis=2)    # (ev, lep)
+
+        # ---- 5. 把无合法 photon 的 lepton 标成 None（用 ak.mask！）----
+        best_idx_opt = ak.mask(best_idx, has_valid)        # OptionArray[int64]
+
+        # ---- 6. 取出最佳 photon；None → None ----
+        best_ph = fsr_padded[best_idx_opt]                 # OptionArray[Momentum4D]
+
+        # ---- 7. None → 零动量向量 ----
+        best_ph = ak.fill_none(best_ph, zero_ph)
+
+        # ==== 8. 四動量相加，但只更新 pt/eta/phi/mass，其餘欄位保留 ====
+        vec_sum  = leptons + best_ph
+        corrected = leptons
+        for fld in ("pt", "eta", "phi", "mass"):
+            corrected = ak.with_field(corrected, getattr(vec_sum, fld), fld)
+
+        # 最後修正 mass（這時才是真的寫到 corrected 上）
+        corrected = ak.with_field(
+            corrected,
+            ak.where((corrected.mass < 0) | ak.is_none(corrected.mass), 0.0, corrected.mass),
+            "mass"
         )
 
-        return corrected_leptons
+        # print("\n✅ 以下是有成功匹配 FSR photon 的 lepton：")
+
+        # for i in range(len(leptons)):  # 所有 event
+        #     if leptons[i] is None:
+        #         continue
+
+        #     for j in range(len(leptons[i])):  # 每個 lepton
+        #         if not has_valid[i][j]:
+        #             continue  # 忽略沒匹配成功的
+
+        #         l0 = leptons[i][j]
+        #         l1 = corrected[i][j]
+        #         ph = best_ph[i][j]
+        #         print(f"\nEvent {i}, Lepton {j} matched:")
+        #         print(f"  Before: pt={l0.pt:.2f}, eta={l0.eta:.2f}, phi={l0.phi:.2f}, mass={l0.mass:.2f}")
+        #         print(f"  After : pt={l1.pt:.2f}, eta={l1.eta:.2f}, phi={l1.phi:.2f}, mass={l1.mass:.2f}")
+        #         print(f"  FSR   : pt={ph.pt:.2f},  eta={ph.eta:.2f},  phi={ph.phi:.2f},  mass={ph.mass:.2f}")
+
+        return corrected
 
 
 

@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "PyYAML"]
+build-backend = "setuptools.build_meta"
+
+# 可选：把运行期依赖也声明出来（按需增删）
+[project]
+name = "higgs_dna"
+version = "0.0.0"
+dependencies = [
+    "PyYAML",
+]

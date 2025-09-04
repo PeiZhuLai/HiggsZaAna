@@ -375,6 +375,37 @@ class ZaTaggerRun3(Tagger):
             data = events.Muon[muon_cut]
         )
 
+        if not self.is_data:
+            # gen mu not reco
+            gen_muons = events.GenPart[(abs(events.GenPart.pdgId) == 13)]
+            reco_muons = events.Muon
+
+            unmatched_gen_mask = ak.fill_none(object_selections.delta_R(gen_muons, reco_muons, 0.4), True)
+            
+            unmatched_gen_muons = gen_muons[unmatched_gen_mask]
+            unmatched_gen_muons = unmatched_gen_muons[unmatched_gen_muons.pt > self.options["muons"]["pt"]]
+
+            unmatched_gen_muons = awkward_utils.add_field(
+                events = events,
+                name = "SelectedGenNoRecoMuon",
+                data = unmatched_gen_muons
+            )
+
+            # gen ele not reco
+            gen_eles = events.GenPart[(abs(events.GenPart.pdgId) == 11)]
+            reco_eles = events.Electron
+
+            unmatched_gen_mask = ak.fill_none(object_selections.delta_R(gen_eles, reco_eles, 0.4), True)
+
+            unmatched_gen_eles = gen_eles[unmatched_gen_mask]
+            unmatched_gen_eles = unmatched_gen_eles[unmatched_gen_eles.pt > self.options["electrons"]["pt"]]
+
+            unmatched_gen_eles = awkward_utils.add_field(
+                events = events,
+                name = "SelectedGenNoRecoElectron",
+                data = unmatched_gen_eles
+            )
+
         # Photons
         photon_selection = self.select_photons(
                 photons = events.Photon,
@@ -383,49 +414,47 @@ class ZaTaggerRun3(Tagger):
                 rho = rho,
                 year = self.year[:4]
         )
-
         photons = events.Photon[photon_selection]
-
+        
         # lepton-photon overlap removal 
         clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
         # object_selections.delta_R(photons, muons, 0.3) & object_selections.delta_R(photons, electrons, 0.3)
         photons = photons[clean_photon_mask]
-        
-        # 沒有正確的添加回events，但是後面也不用 photon ， 都是用 photons 
-        photon = awkward_utils.add_field(
-                events = events,
-                name = "Photon",
-                data = events.Photon[photon_selection],
-        )
         photons = ak.with_field(photons, ak.ones_like(photons.pt) * 0.0, "mass")
 
-        # Jets
-        jet_cut = jet_selections.select_jets(
-            jets = events.Jet,
-            options = self.options["jets"],
-            clean = {
-                "photons" : {
-                    "objects" : photons,
-                    "min_dr" : self.options["jets"]["dr_photons"]
-                },
-                "electrons" : {
-                    "objects" : electrons,
-                    "min_dr" : self.options["jets"]["dr_electrons"]
-                },
-                "muons" : {
-                    "objects" : muons,
-                    "min_dr" : self.options["jets"]["dr_muons"]
-                }
-            },
-            year = self.year,
-            name = "SelectedJet",
-            tagger = self
-        )
-        jets = awkward_utils.add_field(
-            events = events,
-            name = "SelectedJet",
-            data = events.Jet[jet_cut]
-        )
+        # photons = awkward_utils.add_field(
+        #     events = events,
+        #     name = "SelectedPhoton",
+        #     data = photons[:, :2]
+        # )
+
+        # # Jets
+        # jet_cut = jet_selections.select_jets(
+        #     jets = events.Jet,
+        #     options = self.options["jets"],
+        #     clean = {
+        #         "photons" : {
+        #             "objects" : photons,
+        #             "min_dr" : self.options["jets"]["dr_photons"]
+        #         },
+        #         "electrons" : {
+        #             "objects" : electrons,
+        #             "min_dr" : self.options["jets"]["dr_electrons"]
+        #         },
+        #         "muons" : {
+        #             "objects" : muons,
+        #             "min_dr" : self.options["jets"]["dr_muons"]
+        #         }
+        #     },
+        #     year = self.year,
+        #     name = "SelectedJet",
+        #     tagger = self
+        # )
+        # jets = awkward_utils.add_field(
+        #     events = events,
+        #     name = "SelectedJet",
+        #     data = events.Jet[jet_cut]
+        # )
 
         FSRphoton_selection = self.select_FSRphotons(
                 FSRphotons = events.FsrPhoton,
@@ -441,15 +470,15 @@ class ZaTaggerRun3(Tagger):
         )
         FSRphotons = ak.with_field(FSRphotons, ak.ones_like(FSRphotons.pt) * 0.0, "mass")
 
-        if "2017" in self.year or "2018" in self.year:
-            year = self.year[:4]
-            b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][year]
-        else:
-            b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][self.year]
-        jets = ak.with_field(jets, b_jet_cut, "is_med_bjet") 
+        # if "2017" in self.year or "2018" in self.year:
+        #     year = self.year[:4]
+        #     b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][year]
+        # else:
+        #     b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][self.year]
+        # jets = ak.with_field(jets, b_jet_cut, "is_med_bjet") 
 
         # Add object fields to events array
-        for objects, name in zip([electrons, muons, jets], ["electron", "muon", "jet"]):
+        for objects, name in zip([electrons, muons], ["electron", "muon"]):
             awkward_utils.add_object_fields(
                 events = events,
                 name = name,
@@ -474,12 +503,12 @@ class ZaTaggerRun3(Tagger):
         # N_e_mu_cut = N_e_cut | N_mu_cut
         awkward_utils.add_field(events, "n_leptons", n_leptons, overwrite=True)
 
-        n_jets = ak.num(jets)
-        # logger.debug(f"Number of jets(tagger): {n_jets[:10]}")
-        awkward_utils.add_field(events, "n_jets", n_jets, overwrite=True)
+        # n_jets = ak.num(jets)
+        # # logger.debug(f"Number of jets(tagger): {n_jets[:10]}")
+        # awkward_utils.add_field(events, "n_jets", n_jets, overwrite=True)
 
-        n_b_jets = ak.sum(b_jet_cut, axis=1)
-        awkward_utils.add_field(events, "n_b_jets", n_b_jets, overwrite=True)
+        # n_b_jets = ak.sum(b_jet_cut, axis=1)
+        # awkward_utils.add_field(events, "n_b_jets", n_b_jets, overwrite=True)
 
         n_photons = ak.num(photons)
         logger.debug(f"Number of photons(tagger): {n_photons[:10]}")
@@ -502,18 +531,28 @@ class ZaTaggerRun3(Tagger):
         # self.select_fake_and_medium_photons(events=events, photons=photons)
 
         # Register as `vector.Momentum4D` objects so we can do four-vector operations with them
-        photons = ak.Array(photons, with_name = "Momentum4D")
         electrons = ak.Array(electrons, with_name = "Momentum4D")
         muons = ak.Array(muons, with_name = "Momentum4D")
+        photons = ak.Array(photons, with_name = "Momentum4D")
         FSRphotons = ak.Array(FSRphotons, with_name = "Momentum4D")
 
-        awkward_utils.add_object_fields(
+        awkward_utils.add_field(
                 events = events,
-                name = "gamma_fsr",
-                objects = FSRphotons,
-                n_objects = 2,
-                dummy_value = DUMMY_VALUE
-            )
+                name = "SelectedPhoton",
+                data = photons,
+        )
+
+        awkward_utils.add_object_fields(
+            events = events,
+            name = "gamma_fsr",
+            objects = FSRphotons,
+            n_objects = 1,
+            dummy_value = DUMMY_VALUE
+        )
+
+        awkward_utils.add_field(events, "n_fsr", ak.num(FSRphotons), overwrite=True)
+        logger.debug(f"Number of FSR photons: {ak.num(FSRphotons)}")
+        logger.debug(f"Total number of FSR photons: {sum(ak.num(FSRphotons)>0)}")
 
 
         # 未修正的 Z boson 重建（不包含 FSR）
@@ -530,7 +569,8 @@ class ZaTaggerRun3(Tagger):
         z_mumu_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 13, False)
 
         # 修正 electrons 和 muons（包含 FSR）
-        electrons_withFSR = self.assign_fsr_photon(electrons, FSRphotons)
+        # electrons_withFSR = self.assign_fsr_photon(electrons, FSRphotons)
+        electrons_withFSR = electrons
         muons_withFSR = self.assign_fsr_photon(muons, FSRphotons)
 
         # 修正的 Z boson 重建（包含 FSR）
@@ -702,24 +742,24 @@ class ZaTaggerRun3(Tagger):
         z_cands = z_cands[mass_cut] # OSSF lepton pairs with m_ll > 50.
         z_cands_noFSR = z_cands_noFSR[mass_cut]
 
-        # HEM cut
-        if self.year=="2018" and self.is_data:
-            hem_run=events.run > 319077        
-            # checked 65.15623538907509% events in data could pass this run cut
-            hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-            hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
-            hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))        
-        elif self.year=="2018" and not self.is_data:
-            #random number generator from 0 to 1
-            fraction=0.6515623538907509
-            events['random'] = numpy.random.rand(len(events))
-            hem_run=events.random < fraction
-            hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-            hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
-            hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))
-        else:
-            hem_cut=ak.num(events.Photon) >= 0 
-        events = events[hem_cut]
+        # # HEM cut
+        # if self.year=="2018" and self.is_data:
+        #     hem_run=events.run > 319077        
+        #     # checked 65.15623538907509% events in data could pass this run cut
+        #     hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
+        #     hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
+        #     hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))        
+        # elif self.year=="2018" and not self.is_data:
+        #     #random number generator from 0 to 1
+        #     fraction=0.6515623538907509
+        #     events['random'] = numpy.random.rand(len(events))
+        #     hem_run=events.random < fraction
+        #     hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
+        #     hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
+        #     hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))
+        # else:
+        #     hem_cut=ak.num(events.Photon) >= 0 
+        # events = events[hem_cut]
         
         # # Construct di-electron/di-muon pairs
         # ee_pairs = ak.combinations(electrons, 2, fields = ["LeadLepton", "SubleadLepton"])
@@ -919,8 +959,8 @@ class ZaTaggerRun3(Tagger):
 
         event_filter = (events.Flag_goodVertices & 
                         events.Flag_globalSuperTightHalo2016Filter & 
-                        events.Flag_HBHENoiseFilter & 
-                        events.Flag_HBHENoiseIsoFilter & 
+                        ((ak.num(events.Photon) >= 0) if "202" in self.year else events.Flag_HBHENoiseFilter) & 
+                        ((ak.num(events.Photon) >= 0) if "202" in self.year else events.Flag_HBHENoiseIsoFilter) & 
                         events.Flag_EcalDeadCellTriggerPrimitiveFilter & 
                         events.Flag_BadPFMuonFilter & 
                         events.Flag_BadPFMuonDzFilter & 
@@ -1519,6 +1559,7 @@ class ZaTaggerRun3(Tagger):
         return ak.with_field(events, iso_pt, "ALP_PhotonIso")
 
     def select_FSRphotons(self, FSRphotons, electrons, muons, photons, options):
+        
         FSR_pt_cut = FSRphotons.pt > options["pt"]
         FSR_eta_cut = abs(FSRphotons.eta) < options["eta"]
 
@@ -1532,13 +1573,9 @@ class ZaTaggerRun3(Tagger):
         dR0p5_FSRphoton_lep = object_selections.delta_R(FSRphotons, electrons, 0.5) & object_selections.delta_R(FSRphotons, muons, 0.5)
         FSRphoton_lep_indR0p5 = ~dR0p5_FSRphoton_lep
 
-        # --- 新增：與前兩大 pT photons 的 ΔR > 0.2 -------------------------------
-        # 1. 挑出每個 event 中 pT 最大的兩顆 photon（若不足兩顆則長度 < 2）
-        # 排序 photons，按 pt 降序排列
         photons_sorted = photons[ak.argsort(photons.pt, ascending=False)]
 
-        # 取前兩顆 photon，即使不足兩顆也會正常處理
-        lead_photons = photons_sorted[:, :2]
+        lead_photons = photons_sorted[:, :1]
 
         FSRphoton_clean_photons = object_selections.delta_R(FSRphotons, lead_photons, 0.2)
 
@@ -1547,6 +1584,7 @@ class ZaTaggerRun3(Tagger):
         return FSR_all_cuts
 
     def assign_fsr_photon(self, leptons, fsr_photons):
+        
         # ---- 0. 若所有事件都没有 photon，直接返回 ----
         if ak.max(ak.num(fsr_photons)) == 0:
             return leptons                    # nothing to do
@@ -1621,7 +1659,6 @@ class ZaTaggerRun3(Tagger):
         #         print(f"  FSR   : pt={ph.pt:.2f},  eta={ph.eta:.2f},  phi={ph.phi:.2f},  mass={ph.mass:.2f}")
 
         return corrected
-
 
 
 # Below is an example of how the diphoton preselection could be performed with an explicit loop (C++ style) 
