@@ -144,53 +144,6 @@
                 "target_collections": [
                     "SelectedMuon"
                 ]
-            },
-            "photon_id_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.photon_systematics",
-                    "name": "photon_id_sf"
-                },
-                "working_point": "wp80",
-                "modify_central_weight": true,
-                "input_collection": "SelectedPhoton",
-                "target_collections": [
-                    [
-                        "SelectedPhoton"
-                    ]
-                ]
-            },
-            "photon_csev_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.photon_systematics",
-                    "name": "photon_CSEV_sf"
-                },
-                "working_point": "MVA80",
-                "modify_central_weight": true,
-                "input_collection": "SelectedPhoton",
-                "target_collections": [
-                    [
-                        "SelectedPhoton"
-                    ]
-                ]
-            },
-            "photon_id_shape_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.photon_id_shape_systematics",
-                    "name": "photon_id_shape_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "SelectedPhoton",
-                "target_collections": [
-                    [
-                        "SelectedPhoton"
-                    ]
-                ]
             }
         },
         "independent_collections": {
@@ -303,7 +256,7 @@
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "ALP_M5"
+            "ALP_M5", "ALP_M15", "ALP_M30"
         ],
         "years": [
             "2022preEE"

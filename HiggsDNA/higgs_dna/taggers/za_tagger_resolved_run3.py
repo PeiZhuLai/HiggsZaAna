@@ -135,7 +135,10 @@ DEFAULT_OPTIONS = {
         "relative_pt_gamma" : 15.0/110.,
         "mass_h" : [95., 180.],
         "mass_sum" : 185,
-        "select_highest_pt_sum" : True
+        "select_highest_pt_sum" : True,
+        # 新增：ALP isolation 除錯開關與最多印出的事件數
+        "debug_alp_iso": False,
+        "debug_alp_iso_max_events": 10,
     },
     "single_muon_trigger":{
         "2016":["HLT_IsoMu24", "HLT_IsoTkMu24"],
@@ -418,9 +421,12 @@ class ZaTaggerRun3(Tagger):
         
         # lepton-photon overlap removal 
         clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
-        # object_selections.delta_R(photons, muons, 0.3) & object_selections.delta_R(photons, electrons, 0.3)
         photons = photons[clean_photon_mask]
         photons = ak.with_field(photons, ak.ones_like(photons.pt) * 0.0, "mass")
+
+        # 加入在原始 events.Photon 中的索引，方便稍後做全體 photon 的排除
+        pho_orig_idx = ak.local_index(events.Photon.pt, axis=1)
+        photons = ak.with_field(photons, pho_orig_idx[photon_selection][clean_photon_mask], "origIndex")
 
         # photons = awkward_utils.add_field(
         #     events = events,
@@ -841,18 +847,66 @@ class ZaTaggerRun3(Tagger):
         # Make gamma candidate-level cuts
         has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
 
-        gamma_pairs = ak.combinations(photons, 2, fields=["LeadPhoton", "SubleadPhoton"])
-        gamma_pairs = gamma_pairs[ak.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
-        
-        gamma_pairs["LeadPhoton"] = ak.with_name(gamma_pairs.LeadPhoton, "Momentum4D")
-        gamma_pairs["SubleadPhoton"] = ak.with_name(gamma_pairs.SubleadPhoton, "Momentum4D")
+        # ------------------------------------------------------------
+        # 重新以 index 方式構建 gamma pairs（保留原本邏輯但加入索引）
+        # ------------------------------------------------------------
+        idx_photons = ak.local_index(photons.pt, axis=1)
+        pairs_idx = ak.combinations(idx_photons, 2, fields=["i1", "i2"])
+        lead_idx = ak.where(photons.pt[pairs_idx.i1] >= photons.pt[pairs_idx.i2], pairs_idx.i1, pairs_idx.i2)
+        sub_idx  = ak.where(photons.pt[pairs_idx.i1] >= photons.pt[pairs_idx.i2], pairs_idx.i2, pairs_idx.i1)
 
+        lead_ph = photons[lead_idx]
+        sub_ph  = photons[sub_idx]
+
+        # 同時保存原始 Photon 索引，後續隔離時用來排除 ALP 的兩顆 photon
+        lead_orig = photons.origIndex[lead_idx]
+        sub_orig  = photons.origIndex[sub_idx]
+
+        gamma_pairs = ak.zip({
+            "LeadPhoton": lead_ph,
+            "SubleadPhoton": sub_ph,
+            "LeadIndex": lead_idx,
+            "SubleadIndex": sub_idx,
+            "LeadOrigIndex": lead_orig,
+            "SubleadOrigIndex": sub_orig
+        })
+
+        # 依照 leadPhoton pt 排序並取第一個（最高 lead pt）
+        gamma_pairs = gamma_pairs[ak.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
         alp_cand = ak.firsts(gamma_pairs)
 
-        # alp_cand["ALPCand"] = alp_cand.LeadPhoton + alp_cand.SubleadPhoton
-        alp_cand["ALPCand"] = ak.with_name(alp_cand.LeadPhoton + alp_cand.SubleadPhoton, "Momentum4D")
+        # 建立 ALP 四動量
+        alp_cand = ak.with_field(alp_cand,
+                                 ak.with_name(alp_cand.LeadPhoton + alp_cand.SubleadPhoton, "Momentum4D"),
+                                 "ALPCand")
+        # ------------------------------------------------------------
+        # 以 ALP 四動量對「所有未經過篩選的 photon」做 ΔR<0.3 的 pt 加總，
+        # 並排除組成 ALP 的那兩顆 photon（用原始索引判斷）
+        # ------------------------------------------------------------
+        alp_iso = self._compute_alp_iso(events.Photon, alp_cand, dr_cone=0.3)
+        events = ak.with_field(events, alp_iso, "ALP_PhotonIso")
 
-        events = self.calculate_alp_photon_isolation(events, alp_cand, photons)
+        # 只打印非 0 的 ALP_PhotonIso（除錯）
+        if self.options.get("zgammas", {}).get("debug_alp_iso", False):
+            try:
+                iso_np = ak.to_numpy(alp_iso)
+                nz_idx = numpy.flatnonzero(iso_np > 0)
+                n_all = iso_np.shape[0]
+                n_nz = nz_idx.shape[0]
+                logger.info(f"[ALP ISO] nonzero_count={n_nz}/{n_all}")
+                K = int(min(self.options["zgammas"].get("debug_alp_iso_max_events", 20), n_nz))
+                for j in range(K):
+                    i = int(nz_idx[j])
+                    run = getattr(events, "run", None)
+                    ls  = getattr(events, "luminosityBlock", None)
+                    evt = getattr(events, "event", None)
+                    run_i = int(run[i]) if run is not None else -1
+                    ls_i  = int(ls[i])  if ls  is not None else -1
+                    evt_i = int(evt[i]) if evt is not None else -1
+                    logger.info(f"[ALP ISO][nonzero #{j}] idx={i} run/lumi/evt={run_i}/{ls_i}/{evt_i} iso={float(iso_np[i]):.3f}")
+            except Exception as e:
+                logger.debug(f"[ALP ISO] nonzero print failed: {e}")
+        # ------------------------------------------------------------
 
         # Add ALP-related fields
         for field in ["pt", "eta", "phi", "mass", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso"]:
@@ -1448,115 +1502,122 @@ class ZaTaggerRun3(Tagger):
 
         return all_cuts
 
-    # def calculate_alp_photon_isolation(self, events, alp_cand, photons, delta_r_cone=0.3, delta_r_self_match=0.08):
-    #     """
-    #     Calculate PF photon isolation for the ALP candidate (ALPCand).
-    #     Sums the pt of reconstructed photons within a cone of delta_r_cone around ALPCand,
-    #     excluding the lead and sublead photons that form the ALP candidate.
+    def _compute_alp_iso(self, all_photons, alp_cand, dr_cone=0.3):
+        """
+        使用 ALP 四動量與「所有未經過篩選的 photon（events.Photon）」計算隔離變量：
+          sum_{photons} pt，條件：
+            - ΔR(ALP, photon) < dr_cone
+            - 排除組成 ALP 的兩顆 photon（以原始索引 LeadOrigIndex/SubleadOrigIndex 排除）
+        對於沒有有效 ALP 的事件回傳 0。
+        """
+        n_all = ak.num(all_photons)
+        has_any_pho = n_all > 0
+        # 事件是否有 ALP 候選（gamma pair）
+        has_alp = ~ak.is_none(alp_cand) & ~ak.is_none(alp_cand.ALPCand)
+        valid = has_any_pho & has_alp
 
-    #     :param events: Input events array to add isolation field to
-    #     :type events: ak.highlevel.Array
-    #     :param alp_cand: ALP candidate with LeadPhoton, SubleadPhoton, and ALPCand fields
-    #     :type alp_cand: ak.highlevel.Array
-    #     :param photons: Reconstructed photons (events.Photon after selection)
-    #     :type photons: ak.highlevel.Array
-    #     :param delta_r_cone: Delta R cone size for isolation (default: 0.3)
-    #     :type delta_r_cone: float
-    #     :param delta_r_self_match: Delta R to identify lead/sublead photons (default: 0.08)
-    #     :type delta_r_self_match: float
-    #     :return: Events array with added isolation field
-    #     :rtype: ak.highlevel.Array
-    #     """
+        dbg = bool(self.options.get("zgammas", {}).get("debug_alp_iso", False))
+        if dbg:
+            try:
+                n_valid = int(ak.sum(valid))
+                logger.info(f"[ALP ISO] total_events={len(all_photons)}, valid_events={n_valid}, dr_cone={dr_cone}")
+            except Exception as e:
+                logger.info(f"[ALP ISO] debug summary failed: {e}")
 
-    #     # Initialize isolation array with zeros
-    #     iso_pt = ak.full_like(alp_cand["ALPCand"].pt, 0.0, dtype=float)
+        if not ak.any(valid):
+            return ak.zeros_like(n_all, dtype=float)
 
-    #     # Ensure arrays have Momentum4D behavior
-    #     alp_cand["ALPCand"] = ak.with_name(alp_cand["ALPCand"], "Momentum4D")
-    #     photons = ak.with_name(photons, "Momentum4D")
-    #     lead_photon = ak.with_name(alp_cand.LeadPhoton, "Momentum4D")
-    #     sublead_photon = ak.with_name(alp_cand.SubleadPhoton, "Momentum4D")
+        # 取出有效事件的物件
+        all_ph_v = all_photons[valid]
+        acand_v = alp_cand[valid]
 
-    #     print(len(photons), len(alp_cand))
+        # 轉為 Momentum4D
+        all_ph_v4 = to_momentum4d(all_ph_v)
+        alp_vec = ak.with_name(acand_v.ALPCand, "Momentum4D")
 
-    #     print(photons.type.show())
-    #     print(alp_cand["ALPCand"].type.show())
-    #     assert hasattr(photons, "delta_r")
-    #     assert hasattr(alp_cand["ALPCand"], "delta_r")
-
-    #     # Compute DeltaR between ALPCand and all photons
-    #     alp_broadcasted = ak.broadcast_arrays(alp_cand["ALPCand"], photons)[0]
-    #     dr = alp_broadcasted.delta_r(photons)
-
-    #     # Exclude lead and sublead photons by checking DeltaR with them
-    #     lead_photon_broadcasted = ak.broadcast_arrays(lead_photon, photons)[0]
-    #     lead_photon_vec_broadcasted = ak.with_name(lead_photon_broadcasted, "Momentum4D")
-    #     dr_lead = lead_photon_vec_broadcasted.delta_r(photons)
-
-    #     sublead_photon_broadcasted = ak.broadcast_arrays(sublead_photon, photons)[0]
-    #     sublead_photon_vec_broadcasted = ak.with_name(sublead_photon_broadcasted, "Momentum4D")
-    #     dr_sublead = sublead_photon_vec_broadcasted.delta_r(photons)
-    #     is_self_matched = (dr_lead < delta_r_self_match) | (dr_sublead < delta_r_self_match)
-
-    #     # Isolation cone condition (ΔR ≤ 0.3) and exclude self-matched photons
-    #     iso_mask = (dr <= delta_r_cone) & (~is_self_matched)
-
-    #     # Sum photon pt within the isolation cone
-    #     iso_pt = ak.sum(photons.pt[iso_mask], axis=-1)
-
-    #     # Fill None values with 0.0 for events with no photons in the cone
-    #     iso_pt = ak.fill_none(iso_pt, 0.0)
-
-    #     # Add isolation field to events
-    #     events = ak.with_field(events, iso_pt, "ALP_PhotonIso")
-
-    #     return events
-
-    def calculate_alp_photon_isolation(self, events, alp_cand, photons, delta_r_cone=0.3, delta_r_self_match=0.08):
-
-        # logger.debug(f"len(photons) = {len(photons)}, len(alp_cand) = {len(alp_cand)}")
-        # print(len(photons), len(alp_cand))
-        # photons_P4 = to_momentum4d(photons)
-        # print(f"photons_P4: {type(photons_P4)}, {ak.type(photons_P4)}")
-        # ph0 = photons_P4[0][0]
-        # print(ph0)  # 这应该是一个 Momentum4D object
-        # print(hasattr(ph0, "deltaR"))  # ✅ True！
-        # print(ph0.deltaR(ph0))         # ✅ 应该是 0.0
-        # print(photons.fields)
-        # print(f"photons: {type(photons)}, {ak.type(photons)}")
-        # print(hasattr(photons, "deltaR"))
-        # print(photons[0].deltaR(photons[0]))
-        # print(alp_b.fields)
-        # print(f"alp_b: {type(alp_b)}, {ak.type(alp_b)}")
-        # print(f"pho_b: {type(pho_b)}, {ak.type(pho_b)}")
-
-        # Ensure momentum behavior
-        photons = ak.with_name(photons, "Momentum4D")
-        lead = ak.with_name(alp_cand.LeadPhoton, "Momentum4D")
-        sublead = ak.with_name(alp_cand.SubleadPhoton, "Momentum4D")
-        alp_vec = ak.with_name(alp_cand.ALPCand, "Momentum4D")
-
-        # Broadcast to photons
-        alp_b, pho_b = ak.broadcast_arrays(alp_vec, photons)
+        # ΔR 計算（ALP 與所有 photon）
+        alp_b, pho_b = ak.broadcast_arrays(alp_vec, all_ph_v4)
         alp_b = ak.with_name(alp_b, "Momentum4D")
         pho_b = ak.with_name(pho_b, "Momentum4D")
-        
-        dr = alp_b.deltaR(pho_b)
+        dr = alp_b.deltaR(pho_b)  # (ev, n_ph)
 
-        # Exclude self photons (lead/sublead)
-        lead_b = ak.broadcast_arrays(lead, photons)[0]
-        sublead_b = ak.broadcast_arrays(sublead, photons)[0]
-        dr_lead = lead_b.deltaR(photons)
-        dr_sublead = sublead_b.deltaR(photons)
-        is_self = (dr_lead < delta_r_self_match) | (dr_sublead < delta_r_self_match)
+        # 事件內 photon 的原始索引，以及 ALP 兩顆 photon 在原始 Photon 陣列的索引
+        idx_all = ak.local_index(all_ph_v.pt, axis=1)              # (ev, n_ph)
+        lead_orig = ak.fill_none(acand_v.LeadOrigIndex, -1)        # (ev,)
+        sub_orig  = ak.fill_none(acand_v.SubleadOrigIndex, -1)     # (ev,)
 
-        # Mask and sum
-        iso_mask = (dr <= delta_r_cone) & (~is_self)
-        iso_pt = ak.sum(photons.pt[iso_mask], axis=-1)
-        iso_pt = ak.fill_none(iso_pt, 0.0)
+        # 顯式廣播至 (ev, n_ph)
+        lead_orig_b = lead_orig[:, None]
+        sub_orig_b  = sub_orig[:, None]
 
-        # Add to events
-        return ak.with_field(events, iso_pt, "ALP_PhotonIso")
+        # 排除 ALP 本身的兩顆 photon
+        not_parts = (idx_all != lead_orig_b) & (idx_all != sub_orig_b)
+
+        # cone 內且非 ALP 自身兩顆 photon
+        iso_mask = (dr < dr_cone) & not_parts
+
+        # 加總 pt
+        iso_valid = ak.sum(all_ph_v.pt[iso_mask], axis=1)
+        iso_valid = ak.fill_none(iso_valid, 0.0)
+
+        if dbg:
+            try:
+                # 統計 cone 內（不排除 ALP 兩顆）與排除後的數量
+                near_any = ak.sum(dr < dr_cone, axis=1)
+                near_after = ak.sum(iso_mask, axis=1)
+
+                n_valid = int(len(iso_valid))
+                frac_any = float(ak.sum(near_any > 0)) / max(n_valid, 1)
+                frac_after = float(ak.sum(near_after > 0)) / max(n_valid, 1)
+                logger.info(f"[ALP ISO] frac(any_in_cone)={frac_any:.3f}, frac(after_excl)={frac_after:.3f}")
+
+                K = int(min(self.options["zgammas"].get("debug_alp_iso_max_events", 5), n_valid))
+                for i in range(K):
+                    try:
+                        npho_i = int(ak.num(all_ph_v[i]))
+                        li = int(lead_orig[i])
+                        si = int(sub_orig[i])
+                        na = int(near_any[i])
+                        nb = int(near_after[i])
+                        iso_i = float(iso_valid[i])
+
+                        # 逐 event 檢查匹配，避免 axis 錯誤
+                        has_lead_match_i = False
+                        has_sub_match_i = False
+                        if npho_i > 0 and li >= 0 and li < npho_i:
+                            has_lead_match_i = True
+                        if npho_i > 0 and si >= 0 and si < npho_i:
+                            has_sub_match_i = True
+
+                        # 計算 dr(ALP, lead/sub)（若 index 合法）
+                        dr_lead = None
+                        dr_sub = None
+                        if has_lead_match_i:
+                            dr_lead = float(dr[i][li])
+                        if has_sub_match_i:
+                            dr_sub = float(dr[i][si])
+
+                        logger.info(f"[ALP ISO][ev#{i}] nPhoAll={npho_i} leadOrig={li} subOrig={si} "
+                                    f"nInCone={na} nInConeExcl={nb} iso={iso_i:.3f} "
+                                    f"hasLeadMatch={has_lead_match_i} hasSubMatch={has_sub_match_i} "
+                                    f"dr(ALP,lead)={dr_lead} dr(ALP,sub)={dr_sub}")
+
+                        # 印出最小的幾個 ΔR 幫助理解幾何關係（若 npho_i>0）
+                        if npho_i > 0:
+                            dr_sorted = ak.to_list(ak.sort(dr[i]))
+                            logger.debug(f"[ALP ISO][ev#{i}] minDRs={dr_sorted[:min(5, len(dr_sorted))]}")
+
+                    except Exception as ie:
+                        logger.debug(f"[ALP ISO][ev#{i}] debug print failed: {ie}")
+            except Exception as e:
+                logger.info(f"[ALP ISO] debug block failed: {e}")
+
+        # 回填到完整事件長度
+        valid_np = ak.to_numpy(valid)
+        iso_valid_np = ak.to_numpy(iso_valid)
+        iso_full_np = numpy.zeros(valid_np.shape[0], dtype=iso_valid_np.dtype)
+        iso_full_np[valid_np] = iso_valid_np
+        return ak.Array(iso_full_np)
 
     def select_FSRphotons(self, FSRphotons, electrons, muons, photons, options):
         
