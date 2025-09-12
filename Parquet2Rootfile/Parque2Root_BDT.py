@@ -21,13 +21,30 @@ from tqdm import tqdm
 import warnings
 from ROOT import Math, TVector2, TVector3, TLorentzVector
 
+from xgboost import XGBClassifier
+import pickle
+import re
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+# 內嵌模型檔路徑與 lazy cache
+MODEL_FILE = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_run3.pkl"
+_MODEL_CACHE = None
+def get_model():
+    global _MODEL_CACHE
+    if _MODEL_CACHE is None:
+        with open(MODEL_FILE, 'rb') as f:
+            _MODEL_CACHE = pickle.load(f)
+    return _MODEL_CACHE
 
 def getArgs():
     parser = ArgumentParser(description="Skim the input ntuples for Hmumu XGBoost analysis.")
     parser.add_argument('-i', '--input', action='store', default='inputs', help='Path to the input ntuple')
     parser.add_argument('-o', '--output', action='store', default='outputs', help='Path to the output ntuple')
-    parser.add_argument('--chunksize', type=int, default=500000, help='size to process at a time') 
+    parser.add_argument('-s', '--split', action='store_true', help='Split train and test branch')
+    # 修正: 使用正確型別與安全的預設值
+    parser.add_argument('--ma', type=str, default='ALP_M5', help='Searching ALP mass or True ALP mass (e.g. ALP_M5, M5, 5)')
+    parser.add_argument('--chunksize', type=int, default=500000000, help='size to process at a time') 
     return  parser.parse_args()
 
 def true_delta_phi(delta_phi):
@@ -432,8 +449,6 @@ def compute_Delta_R(x, min_jet=0):
 
         return Math.VectorUtil.DeltaR(jet, gamma)
 
-# default
-
 def compute_QG(x):
 
     if x.Jets_jetMultip >= 1 and (abs(x.Jets_Eta_Lead) > 2.1 or x.Jets_PT_Lead < 50):
@@ -471,6 +486,58 @@ def compute_dR_Z_g1(x):
 
     return Math.VectorUtil.DeltaR(Z, g1)
 
+def compute_delta_eta_g1Z(x):
+
+    return abs(x.ALP_lead_photon_eta-x.Z_eta)
+
+def compute_delta_phi_g1Z(x):
+
+    return true_delta_phi(abs(x.ALP_lead_photon_phi-x.Z_phi))
+
+def compute_MVA_Score(x, wanted_ma):
+    """
+    與 ALP_plot_param.py 一致的輸入變數順序，回傳 predict_proba 的正類機率。
+    """
+    # 取得模型（快取）
+    try:
+        model = get_model()
+    except Exception as e:
+        # 載入失敗時回傳 NaN
+        return np.nan
+
+    # 防呆：H_mass 為 0 或非有限
+    denom = x.H_mass if x.H_mass != 0 else np.nan
+    if not np.isfinite(denom) or denom == 0:
+        return np.nan
+
+    # param 定義
+    param = (x.ALP_mass - wanted_ma) / denom
+
+    # 特徵順序（v_1）
+    MVA_list = [
+        x.pho1Pt,
+        x.pho1R9,
+        x.pho1IetaIeta55,
+        x.pho1PIso_noCorr,
+        x.pho2Pt,
+        x.pho2R9,
+        x.pho2IetaIeta55,
+        x.pho2PIso_noCorr,
+        x.ALP_calculatedPhotonIso,
+        x.var_dR_Za,
+        x.var_dR_g1g2,
+        x.var_dR_g1Z,
+        x.var_PtaOverMh,
+        x.H_pt,
+        param
+    ]
+
+    try:
+        proba = model.predict_proba([MVA_list])[:, 1]
+        return float(proba[0])
+    except Exception:
+        return np.nan
+
 def preselect(data):
 
     #data.query('(Muons_Minv_MuMu_Paper >= 110) | (Event_Paper_Category >= 17)', inplace=True)
@@ -478,7 +545,7 @@ def preselect(data):
 
     return data
 
-def decorate(data):
+def decorate(data, wanted_ma_value):
 
     if data.shape[0] == 0: return data
 
@@ -496,21 +563,41 @@ def decorate(data):
     data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1) 
     data['var_dR_g1g2'] = data.apply(lambda x: compute_dR_g1_g2(x), axis=1) 
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 
+    
+    # 修正: 使用解析後的質量數值與已載入的模型；若模型不存在則回傳 NaN
+    data['MVA_Score'] = data.apply(lambda x: compute_MVA_Score(x, wanted_ma_value), axis=1)
 
     data['H_m'] = data.H_mass
     data['ALP_m'] = data.ALP_mass
+    data['Z_m'] = data.Z_mass
 
-    data['jet_pair_pt'] = data.apply(lambda x: compute_jet_pair_pt(x), axis=1)
-    data['system_pt'] = data.apply(lambda x: compute_system_pt(x), axis=1)
+    data['var_dEta_g1Z'] = data.apply(lambda x: compute_delta_eta_g1Z(x), axis=1) 
+    data['var_dPhi_g1Z'] = data.apply(lambda x: compute_delta_phi_g1Z(x), axis=1) 
+    data['var_PtaOverMa'] = data.ALP_pt / data.ALP_mass
+    data['var_Pta'] = data.ALP_pt
+    data['var_MhMa'] = data.H_mass + data.ALP_mass
+    data['var_MhMZ'] = data.H_mass + data.Z_mass
+
+    # data['weight'] = data.weight_central
+    data['weight'] = data.weight_central
+    data['factor'] = data.weight_central
+    data['is_center'] = data.apply(lambda x: compute_is_center(x), axis=1)
+
+    # data['H_ptt'] = data.apply(lambda x: compute_H_ptt(x), axis=1)
+    # data['H_al'] = data.apply(lambda x: compute_H_al(x), axis=1)
+    # data['H_bt'] = data.apply(lambda x: compute_H_bt(x), axis=1)
+    # data['Z_cos_theta'] = data.apply(lambda x:compute_Z_cosTheta(x), axis=1)
+    # data['lep_cos_theta'] = data.apply(lambda x: compute_l_costheta(x), axis=1)
+    # data['lep_phi'] = data.apply(lambda x: compute_l_phi(x), axis=1)
+    # data['l1g_deltaR'] = data.apply(lambda x: compute_dR1lg(x), axis=1) 
+    # data['l2g_deltaR'] = data.apply(lambda x: compute_dR2lg(x), axis=1)
+
     data['HZ_relM'] = data.H_mass / data.Z_mass
     data['H_relpt'] = data.H_pt / data.H_mass
     data['Z_relpt'] = data.Z_pt / data.H_mass
     data['Z_lead_lepton_relpt'] = data.Z_lead_lepton_pt / data.H_mass
     data['Z_sublead_lepton_relpt'] = data.Z_sublead_lepton_pt / data.H_mass
     data['gamma_relpt'] = data.gamma_pt / data.H_mass
-    data['jet_1_relpt'] = data.jet_1_pt / data.H_mass
-    data['jet_2_relpt'] = data.jet_2_pt / data.H_mass
-    data['MET_relpt'] = data.MET_pt / data.H_mass
     data['gamma_ptRelErr'] = data.apply(lambda x:compute_gamma_relEerror(x), axis=1)
     data['G_ECM'] = data.apply(lambda x:compute_G_ECM(x), axis=1)
     data['Z_ECM'] = data.apply(lambda x:compute_Z_ECM(x), axis=1)
@@ -519,36 +606,31 @@ def decorate(data):
     data['HZ_deltaRap'] = data.apply(lambda x:compute_HZ_deltaRap(x), axis=1)
     data['l_cosProdAngle'] = data.apply(lambda x:compute_l_prodAngle(x), axis=1)
     data['Z_cosProdAngle'] = data.apply(lambda x:compute_Z_prodAngle(x), axis=1)
+    # delta R (object, gamma)
     data['ll_deltaR'] = data.apply(lambda x:compute_ll_deltaR(x), axis=1)
     data['leadLG_deltaR'] = data.apply(lambda x:compute_leadLG_deltaR(x), axis=1)
     data['ZG_deltaR'] = data.apply(lambda x:compute_ZG_deltaR(x), axis=1)
     data['subleadLG_deltaR'] = data.apply(lambda x:compute_subleadLG_deltaR(x), axis=1)
+    # delta Phi (object, gamma)
     data['H_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'H_phi'), axis=1)
     data['Z_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'Z_phi'), axis=1)
     data['Z_lead_lepton_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'Z_lead_lepton_phi'), axis=1)
     data['Z_sublead_lepton_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'Z_sublead_lepton_phi'), axis=1)
-    for i in np.arange(1,5):
-        data['jet_%d_deltaphi' %i] = data.apply(lambda x: compute_Delta_Phi(x, "jet", min_jet=i), axis=1)
-        data['jet%dG_deltaR' %i] = data.apply(lambda x: compute_Delta_R(x, min_jet=i), axis=1)
-    data['max_jet_deltaR'] = data[['jet1G_deltaR', 'jet2G_deltaR']].max(axis=1)
-    data['min_jet_deltaR'] = data[['jet1G_deltaR', 'jet2G_deltaR']].min(axis=1)
-    data['additional_lepton_1_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'additional_lepton_1_phi', min_jet=0), axis=1)
-    data['additional_lepton_2_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'additional_lepton_2_phi', min_jet=0), axis=1) 
-    data['MET_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'MET_phi'), axis=1)
-    # data['weight'] = data.weight_central
-    data['weight'] = 2.0*data.weight_central
-    data['factor'] = 2.0*data.weight_central
-    data['mass_jj'] = data.apply(lambda x: compute_mass_jj(x), axis=1)
-    data['max_two_jet_btag'] = data.apply(lambda x: compute_max_two_jet_btag(x), axis=1)
-    data['jet_ptt'] = data.apply(lambda x: compute_jet_ptt(x), axis=1)
-    data['H_ptt'] = data.apply(lambda x: compute_H_ptt(x), axis=1)
-    data['H_al'] = data.apply(lambda x: compute_H_al(x), axis=1)
-    data['H_bt'] = data.apply(lambda x: compute_H_bt(x), axis=1)
-    data['Z_cos_theta'] = data.apply(lambda x:compute_Z_cosTheta(x), axis=1)
-    data['lep_cos_theta'] = data.apply(lambda x: compute_l_costheta(x), axis=1)
-    data['lep_phi'] = data.apply(lambda x: compute_l_phi(x), axis=1)
-    data['l1g_deltaR'] = data.apply(lambda x: compute_dR1lg(x), axis=1) 
-    data['l2g_deltaR'] = data.apply(lambda x: compute_dR2lg(x), axis=1)
+    # Jet 
+    # data['max_jet_deltaR'] = data[['jet1G_deltaR', 'jet2G_deltaR']].max(axis=1)
+    # data['min_jet_deltaR'] = data[['jet1G_deltaR', 'jet2G_deltaR']].min(axis=1)
+    # data['MET_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'MET_phi'), axis=1)
+    # data['MET_relpt'] = data.MET_pt / data.H_mass
+    # data['system_pt'] = data.apply(lambda x: compute_system_pt(x), axis=1)
+    # data['jet_pair_pt'] = data.apply(lambda x: compute_jet_pair_pt(x), axis=1)
+    # data['jet_1_relpt'] = data.jet_1_pt / data.H_mass
+    # data['jet_2_relpt'] = data.jet_2_pt / data.H_mass
+    # for i in np.arange(1,5):
+    #     data['jet_%d_deltaphi' %i] = data.apply(lambda x: compute_Delta_Phi(x, "jet", min_jet=i), axis=1)
+    #     data['jet%dG_deltaR' %i] = data.apply(lambda x: compute_Delta_R(x, min_jet=i), axis=1)
+    # data['mass_jj'] = data.apply(lambda x: compute_mass_jj(x), axis=1)
+    # data['max_two_jet_btag'] = data.apply(lambda x: compute_max_two_jet_btag(x), axis=1)
+    # data['jet_ptt'] = data.apply(lambda x: compute_jet_ptt(x), axis=1)
     # data['delta_eta_jj'] = data.apply(lambda x: compute_delta_eta_jj(x), axis=1)
     # data['delta_phi_jj'] = data.apply(lambda x: compute_delta_phi_jj(x), axis=1)
     # data['delta_phi_zgjj'] = data.apply(lambda x: compute_delta_phi_zg_jj(x), axis=1)
@@ -558,20 +640,34 @@ def decorate(data):
     # data['pt_balance'] = data.apply(lambda x: compute_pt_balance(x), axis=1)
     # data['pt_balance_0j'] = data.apply(lambda x: compute_pt_balance_0j(x), axis=1)
     # data['pt_balance_1j'] = data.apply(lambda x: compute_pt_balance_1j(x), axis=1)
-    data['is_center'] = data.apply(lambda x: compute_is_center(x), axis=1)
-    #data[['Jets_QGscore_Lead', 'Jets_QGflag_Lead', 'Jets_QGscore_Sub', 'Jets_QGflag_Sub']] = data.apply(lambda x: compute_QG(x), axis=1, result_type='expand')
-
-    #data.rename(columns={'Muons_Minv_MuMu_Paper': 'm_mumu', 'Muons_Minv_MuMu_VH': 'm_mumu_VH', 'EventInfo_EventNumber': 'eventNumber', 'Jets_jetMultip': 'n_j'}, inplace=True)
-    #data.drop(['PassesttHSelection', 'PassesVHSelection', 'GlobalWeight', 'SampleOverlapWeight', 'EventWeight_MCCleaning_5'], axis=1, inplace=True)
+    # data[['Jets_QGscore_Lead', 'Jets_QGflag_Lead', 'Jets_QGscore_Sub', 'Jets_QGflag_Sub']] = data.apply(lambda x: compute_QG(x), axis=1, result_type='expand')
+    # data.rename(columns={'Muons_Minv_MuMu_Paper': 'm_mumu', 'Muons_Minv_MuMu_VH': 'm_mumu_VH', 'EventInfo_EventNumber': 'eventNumber', 'Jets_jetMultip': 'n_j'}, inplace=True)
+    # data.drop(['PassesttHSelection', 'PassesVHSelection', 'GlobalWeight', 'SampleOverlapWeight', 'EventWeight_MCCleaning_5'], axis=1, inplace=True)
+    # Additioanl Lepton
+    # data['additional_lepton_1_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'additional_lepton_1_phi', min_jet=0), axis=1)
+    # data['additional_lepton_2_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'additional_lepton_2_phi', min_jet=0), axis=1) 
+    
     data = data.astype(float)
-    data = data.astype({'is_center': int, 'Z_lead_lepton_charge': int, 'Z_lead_lepton_id': int, 'Z_sublead_lepton_charge': int, 'Z_sublead_lepton_id': int, "n_jets": int, "n_b_jets": int, "n_leptons": int, "n_electrons": int, "n_muons": int, 'event': int})
+    data = data.astype({'is_center': int, 'Z_lead_lepton_charge': int, 'Z_lead_lepton_id': int, 'Z_sublead_lepton_charge': int, 'Z_sublead_lepton_id': int, "n_leptons": int, "n_electrons": int, "n_muons": int, 'event': int})
 
     return data
-    
+
+def parse_ma_to_float(ma_raw: str) -> float:
+    """
+    從 'ALP_M5'、'M5'、'5'、'15.0' 等字串解析出浮點數質量值。
+    """
+    if ma_raw is None:
+        return 5.0
+    # 抽取第一個數字（包含小數）
+    m = re.search(r'(\d+(\.\d+)?)', str(ma_raw))
+    return float(m.group(1)) if m else 5.0
 
 def main():
     
     args = getArgs()
+
+    # 解析目標 ALP 質量
+    wanted_ma_value = parse_ma_to_float(args.ma)
 
     variables = [
         'H_pt', 'H_eta', 'H_phi', 'H_mass',
@@ -604,28 +700,38 @@ def main():
     initial_events += data.shape[0]
     #data = preprocess(data)
     data = preselect(data) #TODO add cutflow
-    data = decorate(data)
+    # 修正: 傳入 wanted_ma_value 與 MODEL
+    data = decorate(data, wanted_ma_value)
     final_events += data.shape[0]
-    data_zero_jet = data.query("n_jets == 0 & n_leptons == 2 & MET_pt < 90")
-    data_one_jet = data.query("n_jets == 1 & n_leptons == 2 & MET_pt < 90")
-    data_two_jet = data.query("n_jets >= 2 & n_leptons == 2 & n_b_jets == 0")
-    data_zero_to_one_jet = data.query("n_jets <= 1 & n_leptons == 2 & MET_pt < 90")
-    data_VH_ttH = data[(data.n_leptons > 2) & (data.n_b_jets == 0)]
-    data_VH =  data.query("n_leptons >= 3 & n_b_jets == 0 & max_I_mini < 0.15 & H_relpt > 0.3 & MET_pt > 30 & Z_mass > 85 & Z_mass < 95")
-    data_ZH = data.query("n_leptons == 2 & n_jets <= 1 & MET_pt > 90 & H_relpt > 0.4 & Z_mass > 85 & Z_mass < 95") 
-    data_ttH_had = data.query("n_leptons == 2 & n_jets >= 5 & n_b_jets >= 1 & Z_mass > 85 & Z_mass < 95")
-    data_ttH_lep = data.query("((n_leptons == 3 & n_jets >= 3 & n_b_jets >= 1) | (n_leptons >= 4 & n_jets >= 1 & n_b_jets >= 1)) & (max_I_mini < 0.1 & Z_mass > 85 & Z_mass < 95)")
+
+    indices = np.arange(len(data))
+    train_mask = indices % 2 == 0
+    test_mask = indices % 2 == 1
+    data_train = data[train_mask]
+    data_test = data[test_mask]
+    # data_zero_jet = data.query("n_jets == 0 & n_leptons == 2 & MET_pt < 90")
+    # data_one_jet = data.query("n_jets == 1 & n_leptons == 2 & MET_pt < 90")
+    # data_two_jet = data.query("n_jets >= 2 & n_leptons == 2 & n_b_jets == 0")
+    # data_zero_to_one_jet = data.query("n_jets <= 1 & n_leptons == 2 & MET_pt < 90")
+    # data_VH_ttH = data[(data.n_leptons > 2) & (data.n_b_jets == 0)]
+    # data_VH =  data.query("n_leptons >= 3 & n_b_jets == 0 & max_I_mini < 0.15 & H_relpt > 0.3 & MET_pt > 30 & Z_mass > 85 & Z_mass < 95")
+    # data_ZH = data.query("n_leptons == 2 & n_jets <= 1 & MET_pt > 90 & H_relpt > 0.4 & Z_mass > 85 & Z_mass < 95") 
+    # data_ttH_had = data.query("n_leptons == 2 & n_jets >= 5 & n_b_jets >= 1 & Z_mass > 85 & Z_mass < 95")
+    # data_ttH_lep = data.query("((n_leptons == 3 & n_jets >= 3 & n_b_jets >= 1) | (n_leptons >= 4 & n_jets >= 1 & n_b_jets >= 1)) & (max_I_mini < 0.1 & Z_mass > 85 & Z_mass < 95)")
     with uproot.recreate(args.output) as f:
         f['inclusive'] = data
-        f['zero_jet'] = data_zero_jet
-        f['one_jet'] = data_one_jet
-        f['zero_to_one_jet'] = data_zero_to_one_jet
-        f['two_jet'] = data_two_jet
-        f['VH_ttH'] = data_VH_ttH
-        f['VH'] = data_VH
-        f['ZH'] = data_ZH
-        f['ttH_had'] = data_ttH_had
-        f['ttH_lep'] = data_ttH_lep
+        if args.split:
+            f['train'] = data_train
+            f['test'] = data_test
+        # f['zero_jet'] = data_zero_jet
+        # f['one_jet'] = data_one_jet
+        # f['zero_to_one_jet'] = data_zero_to_one_jet
+        # f['two_jet'] = data_two_jet
+        # f['VH_ttH'] = data_VH_ttH
+        # f['VH'] = data_VH
+        # f['ZH'] = data_ZH
+        # f['ttH_had'] = data_ttH_had
+        # f['ttH_lep'] = data_ttH_lep
     # data.to_root(args.output, key='inclusive', mode='a', index=False)
     # data_zero_jet.to_root(args.output, key='zero_jet', mode='a', index=False)
     # data_one_jet.to_root(args.output, key='one_jet', mode='a', index=False)

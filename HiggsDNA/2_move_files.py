@@ -25,7 +25,7 @@ DST_OUT  = "/afs/cern.ch/work/p/pelai/HZa/Output/cutflow_outfile/run3"
 RSYNC_FLAGS: List[str] = ["-a", "--info=progress2", "--partial", "--append-verify", "--timeout=600"]
 
 # SUBDIRS: List[str] = ["Bkg_MC", "Data", "Sig_MC"]
-SUBDIRS: List[str] = ["Bkg_MC"]
+SUBDIRS: List[str] = ["Sig_MC"]
 
 # 用 stdbuf 取消缓冲（几乎所有 Linux 都有）
 STDBUF_PREFIX: List[str] = ["stdbuf", "-oL", "-eL"]

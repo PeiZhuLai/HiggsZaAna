@@ -147,6 +147,28 @@
             }
         },
         "independent_collections": {
+            "FNUF": {
+                "method": "from_function",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "fnuf_unc"
+                }
+            },
+            "Material": {
+                "method": "from_function",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "material_unc"
+                }
+            },
             "Photon_scale": {
                 "method": "from_branch",
                 "branch_modified": [

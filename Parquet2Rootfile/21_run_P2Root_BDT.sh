@@ -9,7 +9,7 @@ echo "==============STARTED=============="
 
 # Run3
 input="/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/"
-target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
+target="/eos/home-p/pelai/HZa/Root_Dataset/run3_BDT/"
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
 # target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
@@ -25,8 +25,10 @@ target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
 years=(2022preEE)
 # years=(2022preEE 2022postEE)
 # years=(2023preBPix 2023postBPix)
-systs=("FNUF" "Material" "Scale" "Smearing" "JER" "JES" "MET_JES" "MET_Unclustered" "Muon_pt")
+systs=("FNUF" "Material" "Electron_scale" "Electron_smear" "Muon_pt_scale" "Muon_pt_smear" "Photon_scale" "Photon_smear")
 # systs=("FNUF" "Material" "Scale" "Smearing" "JER" "JES" "MET_JES" "MET_Unclustered" "Muon_pt")
+
+ma_list=(1 2 3 4 5 6 7 8 9 10 15 20 25 30)
 
 # 函数定义：执行命令并处理错误
 execute_command() {
@@ -50,29 +52,45 @@ execute_command() {
 process_sample() {
     local sample="$1"
     local type="$2"
-    if [ -z "$3" ]; then
-        local corr="nominal"
-    else
-        local corr="$3"
-    fi
+    # 原本用 if/else 設定 corr，改為更簡潔的預設值寫法
+    local corr="${3:-nominal}"
     
-    for year in "${years[@]}"; do
-        command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/skim_ntuples.py "
-        command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
-        if [ "$type" = "Data" ]; then
-            command+="-o ${target}Data/${year}.root"
-        else
-            command+="-o ${target}${sample}/${year}.root"
-        fi
-        
-        if [ "$type" = "Sig_MC" ]; then
-            command+=" --split"
-        fi
+    # 修正條件語法: 使用 || 並確保中括號空白
+    if [ "$type" = "Sig_MC" ] || [ "$type" = "Data" ]; then
+        for year in "${years[@]}"; do
+            command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
+            command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
+            if [ "$type" = "Data" ]; then
+                command+="-o ${target}Data/${year}.root"
+            else
+                command+="-o ${target}${sample}/${year}.root"
+            fi
+            
+            if [ "$type" = "Sig_MC" ]; then
+                # 從樣本名擷取質量值 (e.g. ALP_M5 -> 5)
+                ma_from_sample="${sample#*_M}"
+                command+=" --split"
+                command+=" --ma ${ma_from_sample}"
+            fi
 
-        # 使用函数执行命令
-        execute_command "$command" &
-        pid_list+=($!)
-    done
+            execute_command "$command" &
+            pid_list+=($!)
+        done
+    fi
+
+    if [ "$type" = "Bkg_MC" ]; then
+        for year in "${years[@]}"; do
+            for ma in "${ma_list[@]}"; do
+                command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
+                command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
+                command+="-o ${target}${sample}/${year}.root"
+                command+=" --ma ${ma}"
+
+                execute_command "$command" &
+                pid_list+=($!)
+            done
+        done
+    fi
 
     # 等待所有后台任务完成
     for pid in "${pid_list[@]}"; do
@@ -91,13 +109,25 @@ process_sample_syst() {
     
     for syst in "${systs[@]}"; do
         corr="${syst}_${uod}"
-        command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/skim_ntuples.py "
-        command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
-        command+="-o ${target}${sample}_${syst}_${uod}/${year}.root"
-        
-        # 使用函数执行命令
-        execute_command "$command" &
-        pid_list+=($!)
+        base_cmd="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
+        base_cmd+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
+        base_cmd+="-o ${target}${sample}_${syst}_${uod}/${year}.root"
+
+        if [ "$type" = "Sig_MC" ]; then
+            # 從樣本名擷取質量值
+            ma_from_sample="${sample#*_M}"
+            execute_command "$base_cmd --split --ma ${ma_from_sample}" &
+            pid_list+=($!)
+        elif [ "$type" = "Bkg_MC" ]; then
+            # 若未來啟用 Bkg_MC 系統誤差流程，逐一掃描 ma_list
+            for ma in "${ma_list[@]}"; do
+                execute_command "$base_cmd --ma ${ma}" &
+                pid_list+=($!)
+            done
+        else
+            execute_command "$base_cmd" &
+            pid_list+=($!)
+        fi
     done
 
     # 等待所有后台任务完成
@@ -125,22 +155,22 @@ for sample in "${samples[@]}"; do
     process_sample "$sample" "$type"
 done
 
-# samples=(ttH_M125) # ggH_M125 VBF_M125 WplusH_M125 WminusH_M125 ZH_M125 ttH_M125
-# type="Sig_MC_WI_Systematic"
-# for sample in "${samples[@]}"; do
-#     for sf in "down"; do #  "up" "down"
-#         for syst in "${systs[@]}"; do
-#             mkdir -p "$target${sample}_${syst}_${sf}"
-#         done
-#         for year in "${years[@]}"; do
-#             # 存储后台任务的进程ID列表
-#             pid_list=()
+samples=(ALP_M5 ALP_M15 ALP_M30)
+type="Sig_MC"
+for sample in "${samples[@]}"; do
+    for sf in "up" "down"; do #  "up" "down"
+        for syst in "${systs[@]}"; do
+            mkdir -p "$target${sample}_${syst}_${sf}"
+        done
+        for year in "${years[@]}"; do
+            # 存储后台任务的进程ID列表
+            pid_list=()
 
-#             # 调用函数处理样本数据
-#             process_sample_syst "$sample" "$type" "$year" "$sf"
-#         done
-#     done
-# done
+            # 调用函数处理样本数据
+            process_sample_syst "$sample" "$type" "$year" "$sf"
+        done
+    done
+done
 
 # ****************************
 # ********** Bkg *************
@@ -164,33 +194,33 @@ done
 
 # 处理 bkgmc 样本
 
-# samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
-# for i in {2..3};do
-#     if [ "$i" = "1" ]; then
-#         samples=(DYGto2LG_10to50 DYGto2LG_50to100)
-#         years=(2022preEE 2022postEE)
+samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
+for i in {1..3};do
+    if [ "$i" = "1" ]; then
+        samples=(DYGto2LG_10to50 DYGto2LG_50to100)
+        years=(2022preEE 2022postEE)
 
-#     elif [ "$i" = "2" ]; then
-#         samples=(DYGto2LG_10to100)
-#         years=(2023preBPix 2023postBPix)
+    elif [ "$i" = "2" ]; then
+        samples=(DYGto2LG_10to100)
+        years=(2023preBPix 2023postBPix)
 
-#     elif [ "$i" = "3" ]; then
-#         samples=(DYJetsToLL)
-#         years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
-#     fi
+    elif [ "$i" = "3" ]; then
+        samples=(DYJetsToLL)
+        years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+    fi
 
-#     # samples=(DYGto2LG_10to100)
-#     # samples=(DYJetsToLL)
-#     type="Bkg_MC"
-#     for sample in "${samples[@]}"; do
-#         mkdir -p "$target$sample"
-#         # 存储后台任务的进程ID列表
-#         pid_list=()
+    # samples=(DYGto2LG_10to100)
+    # samples=(DYJetsToLL)
+    type="Bkg_MC"
+    for sample in "${samples[@]}"; do
+        mkdir -p "$target$sample"
+        # 存储后台任务的进程ID列表
+        pid_list=()
 
-#         # 调用函数处理样本数据
-#         process_sample "$sample" "$type"
-#     done
-# done 
+        # 调用函数处理样本数据
+        process_sample "$sample" "$type"
+    done
+done 
 
 # samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
 # samples=(DYGto2LG_10to50 DYGto2LG_50to100)
@@ -211,6 +241,14 @@ done
 #         done
 #     done
 # done
+
+# ****************************
+# ********** Data ************
+# ****************************
+
+# ****************************
+# ********* Nomianl **********
+# ****************************
 
 # # 处理 data 样本
 

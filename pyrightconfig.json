@@ -1,0 +1,200 @@
+{
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.venv",
+    "build",
+    "dist",
+    "logs",
+    "data",
+    ".vscode",
+    "*/*.cc",
+    "*/*log*",
+    "*bin",
+    "*.eps",
+    "*.png",
+    "*.pdf",
+    "*.jpg",
+    "*.root",
+    "*.dat",
+    "*/outputs/",
+    "*/outdir*/",
+    "*/*ntuples*/",
+    "*/plots/",
+    "*/skimmed_ntuple",
+    "*/pic",
+    "*/models",
+    "*/eos*/",
+    "*/x509*",
+    "HiggsDNA/jiehan.cc",
+    "HiggsDNA/core*",
+    "SSTest/bkg*",
+    "*.__afs*",
+    "*/CMSSW*",
+    "*/log",
+    "*/model*",
+    "*/figs*",
+    "*/old*",
+    "ZConstrainRefit",
+
+    // Byte-compiled / optimized / DLL files
+    "*/__init__.py",
+    "*/__pycache__/",
+    "*.py[cod]",
+    "*$py.class",
+
+    // C extensions
+    "*.so",
+
+    // Distribution / packaging
+    ".Python",
+    "build/",
+    "develop-eggs/",
+    "dist/",
+    "downloads/",
+    "eggs/",
+    ".eggs/",
+    "lib64/",
+    "parts/",
+    "sdist/",
+    "var/",
+    "wheels/",
+    "share/python-wheels/",
+    "*.egg-info/",
+    ".installed.cfg",
+    "*.egg",
+    "MANIFEST",
+
+    // PyInstaller
+    "*.manifest",
+    "*.spec",
+
+    // Installer logs
+    "pip-log.txt",
+    "pip-delete-this-directory.txt",
+
+    // Unit test / coverage reports
+    "htmlcov/",
+    ".tox/",
+    ".nox/",
+    ".coverage",
+    ".coverage.*",
+    ".cache",
+    "nosetests.xml",
+    "coverage.xml",
+    "*.cover",
+    "*.py,cover",
+    ".hypothesis/",
+    ".pytest_cache/",
+    "cover/",
+
+    // Translations
+    "*.mo",
+    "*.pot",
+
+    // Django stuff:
+    "*.log",
+    "local_settings.py",
+    "db.sqlite3",
+    "db.sqlite3-journal",
+
+    // Flask stuff:
+    "instance/",
+    ".webassets-cache",
+
+    // Scrapy stuff:
+    ".scrapy",
+
+    // Sphinx documentation
+    "docs/_build/",
+
+    // PyBuilder
+    ".pybuilder/",
+    "target/",
+
+    // Jupyter Notebook
+    ".ipynb_checkpoints",
+
+    // IPython
+    "profile_default/",
+    "ipython_config.py",
+
+    // pyenv
+    // .python-version
+
+    // pipenv
+    // Pipfile.lock
+
+    // poetry
+    // poetry.lock
+
+    // pdm
+    ".pdm.toml",
+
+    // PEP 582
+    "__pypackages__/",
+
+    // Celery stuff
+    "celerybeat-schedule",
+    "celerybeat.pid",
+
+    // SageMath parsed files
+    "*.sage.py",
+
+    // Environments
+    ".env",
+    ".venv",
+    "env/",
+    "venv/",
+    "ENV/",
+    "env.bak/",
+    "venv.bak/",
+
+    // Spyder project settings
+    ".spyderproject",
+    ".spyproject",
+
+    // Rope project settings
+    ".ropeproject",
+
+    // mkdocs documentation
+    "/site",
+
+    // mypy
+    ".mypy_cache/",
+    ".dmypy.json",
+    "dmypy.json",
+
+    // Pyre type checker
+    ".pyre/",
+
+    // pytype static type analyzer
+    ".pytype/",
+
+    // Cython debug symbols
+    "cython_debug/",
+
+    // PyCharm
+    // .idea/
+
+    // HiggsDNA
+    "*.err",
+    "*.out",
+    "HiggsDNA/nanov9",
+    "HiggsDNA/eos",
+    "HiggsDNA/log",
+    "HiggsDNA/Parquet",
+    "final_fit/flashggFinalFit/c.txt",
+    "github_password",
+
+    // MVA
+    "/HZaMVA/train_MVA_Fig",
+    "*.db",
+
+    // Plot
+    "Plot/optimize_run2UL",
+    "Plot/plots_run2UL",
+    "Plot/log_file",
+    "*Plot*"
+  ]
+}
