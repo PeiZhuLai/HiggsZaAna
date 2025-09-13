@@ -10,6 +10,7 @@
 *.root
 *.dat
 */outputs/
+*/output/
 */outdir*/
 */*ntuples*/
 */plots/
@@ -210,8 +211,5 @@ Parquet2Rootfile/Condor/logs
 *.db
 
 #Plot 
-Plot/optimize_run2UL 
-Plot/plots_run2UL
-Plot/log_file
-*Plot*
-
+Plot/log_file/*
+Plot/plots/*
