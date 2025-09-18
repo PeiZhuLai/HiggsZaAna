@@ -153,12 +153,11 @@ def weighted_corr(x, y, w):
     return cov / np.sqrt(vx * vy)
 
 def ensure_outdir():
-    # 使用 pathlib.Path 以支援 mkdir 與 '/' 運算子
-    outdir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/BDT_ma_2D")
+    outdir = Path("../plots/BDT_ma_2D")
     outdir.mkdir(parents=True, exist_ok=True)
     return outdir
 
-def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", x_tick_masses=None):
+def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", x_tick_masses=None, corr_text=None, corr_loc="upper right"):
     H, xe, ye = np.histogram2d(x, y, bins=[x_edges, y_edges], weights=w)
     plt.figure(figsize=(8, 6))
     pcm = plt.pcolormesh(
@@ -168,7 +167,7 @@ def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", 
         cmap="viridis", shading="auto"
     )
     plt.colorbar(pcm, label="Events", pad=0.01)
-    plt.xlabel(r"$m_{a,\mathrm{hyp}}$ [GeV]")
+    plt.xlabel(r"$m_{a}$ [GeV]")
     plt.ylabel(y_label)
 
     # 只顯示指定的質量刻度（自動過濾超出邊界者）
@@ -182,8 +181,46 @@ def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", 
         xcenters = 0.5 * (x_edges[:-1] + x_edges[1:])
         plt.xticks(xcenters, [f"{int(round(c))}" for c in xcenters], rotation=0)
 
-    plt.title(title)
+    # 僅在 title 非空時使用標題（不再用標題顯示 correlation）
+    if title:
+        plt.title(title)
     plt.tight_layout()
+
+    # 新增：在圖框內標出 correlation，支援 upper/lower + left/center/right
+    if corr_text:
+        ax = plt.gca()
+        loc = (corr_loc or "upper right").lower()
+        # 預設右上
+        x, y_pos = 0.98, 0.98
+        ha, va = "right", "top"
+        if "lower" in loc:
+            y_pos = 0.02
+            va = "bottom"
+        if "left" in loc:
+            x = 0.02
+            ha = "left"
+        elif "center" in loc:
+            x = 0.5
+            ha = "center"
+        ax.text(
+            x, y_pos, corr_text,
+            ha=ha, va=va, transform=ax.transAxes,
+            fontsize=16,
+            bbox=dict(facecolor="white", edgecolor="white", alpha=0.75)
+        )
+
+    # 新增：左上角 CMS 粗體 + Preliminary，右上角亮度與能量
+    fig = plt.gcf()
+    x0, y0 = 0.13, 0.97
+    t_cms = fig.text(x0, y0, "CMS", ha="left", va="top", fontsize=19, fontweight="bold")
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    cms_bb = t_cms.get_window_extent(renderer=renderer)
+    dx = cms_bb.width / fig.bbox.width + 0.006
+    fig.text(x0 + dx, y0, "Preliminary", ha="left", va="top", fontsize=19)
+    fig.text(0.84, 0.965, r"$62.5\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
+    plt.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.92)
+
     plt.savefig(out_png, dpi=200, bbox_inches="tight", pad_inches=0.05)
     plt.savefig(out_png.with_suffix(".pdf"), bbox_inches="tight", pad_inches=0.05)
     plt.close()
@@ -254,10 +291,12 @@ def main():
         corr_bkg = weighted_corr(by, bx, bw)
         draw_hist2d(
             by, bx, bw, bkg_x_edges, bdt_edges,
-            title=f"Correlation = {corr_bkg:.3f}",
+            title=None,
             out_png=outdir / "BDT_vs_ma_background.png",
             y_label="Background BDT Score",
             x_tick_masses=ma_list,
+            corr_text=f"Correlation = {corr_bkg:.3f}",
+            corr_loc="upper right",
         )
         print(f"[bkg] saved -> {outdir/'BDT_vs_ma_background.png'} (corr={corr_bkg:.3f})")
     else:
@@ -271,10 +310,12 @@ def main():
         corr_sig = weighted_corr(sy, sx, sw)
         draw_hist2d(
             sy, sx, sw, sig_x_edges, bdt_edges,
-            title=f"Correlation = {corr_sig:.3f}",
+            title=None,
             out_png=outdir / "BDT_vs_ma_signal.png",
             y_label="Signal BDT Score",
             x_tick_masses=ma_list,  # 只顯示你提供的質量清單，超出邊界會自動過濾
+            corr_text=f"Correlation = {corr_sig:.3f}",
+            corr_loc="lower right",
         )
         print(f"[sig] saved -> {outdir/'BDT_vs_ma_signal.png'} (corr={corr_sig:.3f})")
     else:
