@@ -29,26 +29,26 @@ conda activate higgs-alp-ana
 
 #### job
 
-python plot_variable_dataVmc.py -y run3 --ln -b
+python ALP_plot_param.py -y run3 --ln -b
 
-python3 plot_variable_dataVmc.py -y run3 -m --ln
+python3 ALP_plot_param.py -y run3 -m --ln
 
-python3 plot_variable_dataVmc.py -y run3 -m --region 1 --ln
+python3 ALP_plot_param.py -y run3 -m --region 1 --ln
 
-python3 plot_variable_dataVmc.py -y run3 -m --region 2 --ln
+python3 ALP_plot_param.py -y run3 -m --region 2 --ln
 
 python3 ALP_Optimization.py -y run3 -o ./optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
 
-# python plot_variable_dataVmc.py --tune
+# python ALP_plot_param.py --tune
 
 ##########hep_sub runjob.sh -g cms -mem 8000 -wt mid -o job.out -e job.err
-# python plot_variable_dataVmc.py -m -y 2016 
+# python ALP_plot_param.py -m -y 2016 
 
 #python ALP_Optimization.py -y run2 -o ./optimize_run2 --doOpt -c 5
-#python plot_variable_dataVmc.py -y run2 -m --ln
+#python ALP_plot_param.py -y run2 -m --ln
 
-#python plot_variable_dataVmc.py -y run2 -m -S #--ln #--cut --mA M30
-#python plot_variable_dataVmc.py -y run2 -m 
+#python ALP_plot_param.py -y run2 -m -S #--ln #--cut --mA M30
+#python ALP_plot_param.py -y run2 -m 
 #python ALP_plot_bkgCorr.py -y run2 -m
 
 #parser.add_argument("--region", help="0 for full region, 1 for signal region, 2 for sideband region")
@@ -60,26 +60,26 @@ path_code='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot'
 export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
 
 if [ "$1" -eq 0 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run3 --ln
+    python3 $path_code/ALP_plot_param.py -y run3 --ln
 elif [ "$1" -eq 1 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m --ln
+    python3 $path_code/ALP_plot_param.py -y run2 -m --ln
 elif [ "$1" -eq 2 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m --region 1 --ln
+    python3 $path_code/ALP_plot_param.py -y run2 -m --region 1 --ln
 elif [ "$1" -eq 3 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m --region 2 --ln
+    python3 $path_code/ALP_plot_param.py -y run2 -m --region 2 --ln
 elif [ "$1" -eq 4 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m
+    python3 $path_code/ALP_plot_param.py -y run2 -m
 elif [ "$1" -eq 5 ]; then
     python3 $path_code/ALP_Optimization.py -y run2 -o $path_code/optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
 fi
 
 # Optional: Commented-out commands
-# python plot_variable_dataVmc.py -y run2 -m --mu -S 
-# python plot_variable_dataVmc.py -y run2 -m -S 
+# python ALP_plot_param.py -y run2 -m --mu -S 
+# python ALP_plot_param.py -y run2 -m -S 
 # elif [ "$1" -eq 6 ]; then
 #     #python ALP_
-#python plot_variable_dataVmc.py -y run2 -m --mu -S 
-#python plot_variable_dataVmc.py -y run2 -m -S 
+#python ALP_plot_param.py -y run2 -m --mu -S 
+#python ALP_plot_param.py -y run2 -m -S 
 # elif [ $1 -eq 6 ]; then
 #     #python ALP_Optimization.py -y run2 -o ./optimize_run2UL -p --sigVSscore -s --ele --doOpt -c 1
 #     python ALP_plot_bkgCorr.py -y run2 -m
@@ -99,9 +99,9 @@ fi
 #     python ALP_NormalizationSys_param.py -y $2 -m --ele
 #     #python ALP_BDTSys.py -y run2 --mu
 # elif [ $1 -eq 12 ]; then
-#     python plot_variable_dataVmc.py -y run2  -m --cut --mA M10 --ln
+#     python ALP_plot_param.py -y run2  -m --cut --mA M10 --ln
 # elif [ $1 -eq 13 ]; then
-#     python plot_variable_dataVmc.py -y run2  -m --cut --mA M20 --ln
+#     python ALP_plot_param.py -y run2  -m --cut --mA M20 --ln
 # elif [ $1 -eq 14 ]; then
-#     python plot_variable_dataVmc.py -y run2  -m --cut --mA M30 --ln
+#     python ALP_plot_param.py -y run2  -m --cut --mA M30 --ln
 # fi

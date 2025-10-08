@@ -62,10 +62,10 @@ prepare_dygto2lg() {
 #########################################################################
 # # Prepare annoying DYGto2LG
 #########################################################################
-DYGto2LG_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG
-DYGto2LG_10to50_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG_10to50
-DYGto2LG_50to100_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG_50to100
-DYGto2LG_10to100_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG_10to100
+DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG
+DYGto2LG_10to50_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG_10to50
+DYGto2LG_50to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG_50to100
+DYGto2LG_10to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG_10to100
 
 # 正規化路徑（移除 \r）
 DYGto2LG_path="$(strip_cr "$DYGto2LG_path")"
@@ -133,7 +133,7 @@ prepare_dyjets() {
 #########################################################################
 # # Prepare DYJetsToLL
 #########################################################################
-DYJetsToLL_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYJetsToLL
+DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYJetsToLL
 DYJetsToLL_path="$(strip_cr "$DYJetsToLL_path")"
 
 years=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
@@ -174,15 +174,15 @@ prepare_all_bkg() {
 # Add run3.root all background
 #########################################################################
 # 依賴檢查：需要前兩個模組已產生 run3.root
-if [ ! -s /eos/home-p/pelai/HZa/Root_Dataset/run3/DYJetsToLL/run3.root ] || \
-   [ ! -s /eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG/run3.root ]; then
+if [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3/DYJetsToLL/run3.root ] || \
+   [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG/run3.root ]; then
   echo "ERROR: 需要先完成模組 'dyjets' 與 'dygto2lg'，才可執行 'all-bkg'."
   exit 1
 fi
 
-DYJetsToLL_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYJetsToLL
-DYGto2LG_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/DYGto2LG
-Bkg_MC_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/All_Bkg
+DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYJetsToLL
+DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG
+Bkg_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3/All_Bkg
 if [ -d "$Bkg_MC_path" ]; then
     echo "Directory exists: $Bkg_MC_path — removing it."
     rm -rf "$Bkg_MC_path"
@@ -199,7 +199,7 @@ prepare_data() {
 #########################################################################
 # # Prepare Data
 #########################################################################
-Data_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/Data
+Data_path=/eos/home-p/pelai/HZa/root_P2Root/run3/Data
 Data_path="$(strip_cr "$Data_path")"
 
 years=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
@@ -239,7 +239,7 @@ prepare_sig() {
 #########################################################################
 # # Prepare Sig
 #########################################################################
-base_path=/eos/home-p/pelai/HZa/Root_Dataset/run3
+base_path=/eos/home-p/pelai/HZa/root_P2Root/run3
 massList=( M5 M15 M30 )
 years=( 2022preEE )
 
@@ -263,7 +263,7 @@ for mass in "${massList[@]}"; do
 done
 
 # Add run3.root in all ALP mass points
-Sig_MC_path=/eos/home-p/pelai/HZa/Root_Dataset/run3/All_Sig
+Sig_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3/All_Sig
 if [ -d "$Sig_MC_path" ]; then
     echo "Directory exists: $Sig_MC_path — removing it."
     rm -rf "$Sig_MC_path"

@@ -1,3 +1,4 @@
+
 import os
 from Plot_Helper import MakeStack
 import Plot_Configs as PC
@@ -16,19 +17,14 @@ class MuPair:
 def getMassSigma(ana_cfg):
     sigma_low = {}
     sigma_hig = {}
-    # 新增: run3 signal 路徑處理
-    if ana_cfg.year == 'run3' and hasattr(ana_cfg, 'sample_loc_run3_subyears'):
-        base_signal_path = ana_cfg.sample_loc_run3_subyears[ana_cfg.signal_run3_subyear]
-    else:
-        base_signal_path = ana_cfg.sample_loc
     for sample in ana_cfg.sig_names:
-        files = TFile(base_signal_path + '/ALP_%s/run3.root' % sample)
+        files = TFile(ana_cfg.sample_loc + '/ALP_%s/run3.root' %sample)
         filesTree = files.Get("test")
-        filesTree.Draw("{0}>>tree{0}".format("H_m"), "factor*({0})".format("H_m>-90&&H_m>115&&H_m<135"))
+        filesTree.Draw("{0}>>tree{0}".format("H_m"),"factor*({0})".format("H_m>-90&&H_m>115&&H_m<135"))
         Hist = gDirectory.Get("tree{0}".format("H_m"))
         sigma_bin = 0
         for i in range(int(Hist.GetNbinsX()/2)):
-            if Hist.Integral(50-i, 51+i)/Hist.Integral() > 0.683:
+            if Hist.Integral(50-i,51+i)/Hist.Integral()>0.683: 
                 sigma_bin = i
                 break
         sigma_low[sample] = Hist.GetBinCenter(50-sigma_bin)-125.0-Hist.GetBinWidth(50-sigma_bin)/2.0

@@ -9,14 +9,14 @@ echo "==============STARTED=============="
 
 # Run3
 input="/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/"
-target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
+target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
-# target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
+# target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
 
 # Run2
 # input="/eos/home-p/pelai/HZgamma/Parquet/NanoV9/run2/"
-# target="/eos/home-p/pelai/HZgamma/Root_Dataset/run2/NanoV9/"
+# target="/eos/home-p/pelai/HZgamma/root_P2Root/run2/NanoV9/"
 
 
 # years=(2016preVFP 2016postVFP 2017 2018 2022preEE 2022postEE 2023preBPix 2023postBPix)

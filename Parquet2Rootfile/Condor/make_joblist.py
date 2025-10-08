@@ -19,14 +19,14 @@ import os
 
 # ===== Base paths =====
 INPUT_BASE  = "/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/"
-OUTPUT_BASE = "/eos/home-p/pelai/HZa/Root_Dataset/run3_BDT/"
+OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
 
 # ===== Switches =====
-DO_SIGNAL_NOMINAL = True
-DO_SIGNAL_SYST    = True       # 先 False，稳定后再 True
-DO_BKG_NOMINAL    = True
+DO_SIGNAL_NOMINAL = False
+DO_SIGNAL_SYST    = False       # 先 False，稳定后再 True
+DO_BKG_NOMINAL    = False
 DO_BKG_SYST       = False       # 如后续需要也可 True
-DO_DATA_NOMINAL   = False       # 你目前注释掉 Data，可按需改 True
+DO_DATA_NOMINAL   = True       # 你目前注释掉 Data，可按需改 True
 
 # ===== Common config =====
 years_all = {
@@ -47,7 +47,8 @@ systs = ["FNUF","Material","Electron_scale","Electron_smear",
 updown = ["up","down"]
 
 # 扫描的 ma 列表（背景也按你的原脚本扫）
-ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
+# ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30] # MC
+ma_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] # Data
 
 # ===== Samples =====
 sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
