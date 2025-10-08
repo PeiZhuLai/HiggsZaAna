@@ -1,43 +1,43 @@
 #!/bin/bash
-/bin/hostname
-gcc -v
+# /bin/hostname
+# gcc -v
 pwd
 # export PATH=$PATH:/afs/ihep.ac.cn/soft/common/sysgroup/hep_job/bin/
-source /cvmfs/cms.cern.ch/cmsset_default.sh
+# source /cvmfs/cms.cern.ch/cmsset_default.sh
 
-export PATH=/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/bin:$PATH
-source /eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh
+# export PATH=/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/bin:$PATH
+# source /eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
-conda init
+# # >>> conda initialize >>>
+# # !! Contents within this block are managed by 'conda init' !!
+# __conda_setup="$('/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh" ]; then
+#         . "/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh"
+#     else
+#         export PATH="/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
+# # <<< conda initialize <<<
+# conda init
 
-conda activate higgs-alp-ana
+# conda activate higgs-alp-ana
 
 
 #### job
-
-python plot_variable_dataVmc.py -y run3 --ln -b
-
-python3 plot_variable_dataVmc.py -y run3 -m --ln
-
-python3 plot_variable_dataVmc.py -y run3 -m --region 1 --ln
-
-python3 plot_variable_dataVmc.py -y run3 -m --region 2 --ln
-
-python3 ALP_Optimization.py -y run3 -o ./optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
+#1
+python scripts/plot_variable_dataVmc.py -y run3 --ln -b
+#2
+# python3 scripts/plot_variable_dataVmc.py -y run3 -m --ln
+#3
+# python3 scripts/plot_variable_dataVmc.py -y run3 -m --region 1 --ln
+#4
+# python3 scripts/plot_variable_dataVmc.py -y run3 -m --region 2 --ln
+#5
+# python3 scripts/ALP_Optimization.py -y run3 -o ./optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
 
 # python plot_variable_dataVmc.py --tune
 
@@ -55,23 +55,23 @@ python3 ALP_Optimization.py -y run3 -o ./optimize_run3UL --region 0 -p --sigVSsc
 # 0 and 4 cannot run parallely
 
 # Modify your runjob.sh to include the following:
-path_code='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot'
+# path_code='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/scripts'
 
-export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
+# export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
 
-if [ "$1" -eq 0 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run3 --ln
-elif [ "$1" -eq 1 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m --ln
-elif [ "$1" -eq 2 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m --region 1 --ln
-elif [ "$1" -eq 3 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m --region 2 --ln
-elif [ "$1" -eq 4 ]; then
-    python3 $path_code/plot_variable_dataVmc.py -y run2 -m
-elif [ "$1" -eq 5 ]; then
-    python3 $path_code/ALP_Optimization.py -y run2 -o $path_code/optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
-fi
+# if [ "$1" -eq 0 ]; then
+#     python3 $path_code/plot_variable_dataVmc.py -y run3 --ln
+# elif [ "$1" -eq 1 ]; then
+#     python3 $path_code/plot_variable_dataVmc.py -y run2 -m --ln
+# elif [ "$1" -eq 2 ]; then
+#     python3 $path_code/plot_variable_dataVmc.py -y run2 -m --region 1 --ln
+# elif [ "$1" -eq 3 ]; then
+#     python3 $path_code/plot_variable_dataVmc.py -y run2 -m --region 2 --ln
+# elif [ "$1" -eq 4 ]; then
+#     python3 $path_code/plot_variable_dataVmc.py -y run2 -m
+# elif [ "$1" -eq 5 ]; then
+#     python3 $path_code/ALP_Optimization.py -y run2 -o $path_code/optimize_run3UL --region 0 -p --sigVSscore -s --doOpt -c 1
+# fi
 
 # Optional: Commented-out commands
 # python plot_variable_dataVmc.py -y run2 -m --mu -S 

@@ -11,52 +11,147 @@ from array import array
 import math
 #####################################################################
 
-def ScaleBkgToData(histos, ana_cfg):
+def ScaleBkgToData(histos, ana_cfg, syst_histos=None):
     """
-    Scale background histograms to match the total yield of the data histogram.
+    將背景總 yield scale 到 Data，並可選擇同步縮放系統變動直方圖。
     
-    Parameters:
-    - histos (dict): Dictionary of histograms for a given variable, keyed by sample name.
-    - ana_cfg (Analyzer_Config): Configuration object containing sample names, including bkg_names and data.
+    Parameters
+    ----------
+    histos : dict[str, TH1]
+        單一變數的 (sample -> TH1) 直方圖。
+    ana_cfg : Analyzer_Config
+    syst_histos : dict[str, dict[str, TH1]] | None
+        結構為 syst_histos[sample][sys]，若提供則一併套用相同 scale。
     
-    Returns:
-    - None: Modifies the histograms in place.
+    Returns
+    -------
+    float : 使用的縮放因子；若未縮放則為 1.0
     """
-    # Get the data histogram
     data_hist = histos.get('Data')
     if not data_hist:
         print("[ScaleBkgToData] Warning: No 'Data' histogram found. Skipping scaling.")
-        return
-    
-    # Calculate total data yield
+        return 1.0
+
     data_integral = data_hist.Integral()
     if data_integral <= 0:
-        print("[ScaleBkgToData] Warning: Data integral is zero or negative. Skipping scaling.")
-        return
-    
-    # Calculate total background yield
+        print("[ScaleBkgToData] Warning: Data integral <= 0. Skip.")
+        return 1.0
+
     bkg_integral = 0.0
     for sample in ana_cfg.bkg_names:
-        if sample in histos:
-            bkg_integral += histos[sample].Integral()
-    
+        h = histos.get(sample)
+        if h:
+            bkg_integral += h.Integral()
+
     if bkg_integral <= 0:
-        print("[ScaleBkgToData] Warning: Background integral is zero or negative. Skipping scaling.")
-        return
-    
-    # Compute scaling factor
+        print("[ScaleBkgToData] Warning: Background integral <= 0. Skip.")
+        return 1.0
+
     scale_factor = data_integral / bkg_integral
-    print(f"[ScaleBkgToData] Scaling factor: {scale_factor:.4f} (Data integral: {data_integral:.2f}, Bkg integral: {bkg_integral:.2f})")
-    
-    # Apply scaling factor to each background histogram
+    if abs(scale_factor - 1.0) < 1e-12:
+        print("[ScaleBkgToData] Scaling factor ~1. No action.")
+        return 1.0
+
+    print(f"[ScaleBkgToData] Scaling factor: {scale_factor:.4f} "
+          f"(Data: {data_integral:.2f}  Bkg: {bkg_integral:.2f})")
+
     for sample in ana_cfg.bkg_names:
         if sample in histos:
             histos[sample].Scale(scale_factor)
-            print(f"[ScaleBkgToData] Scaled histogram for {sample} by {scale_factor:.4f}")
+            # 同步縮放 syst
+            if syst_histos and sample in syst_histos:
+                for sys_name, hsys in syst_histos[sample].items():
+                    hsys.Scale(scale_factor)
 
+    return scale_factor
+
+
+# ==== New helpers for run3 multi-year chaining ====
+def _add_file_if_exists(chain, path):
+    if os.path.exists(path):
+        chain.Add(path)
+        return True
+    else:
+        print(f"[LoadNtuples][MISS] {path}")
+        return False
+
+def _run3_build_chain(sample, ana_cfg):
+    """
+    Build a TChain for run3 according to user rules:
+      - signal (M*) : only 2022preEE
+      - DYJetsToLL  : years_dyll
+      - DYGto2LG    : merge bkg_2022/years_22 and bkg_2023/years_23 sub-samples
+      - Data        : years_dyll (try /Data/ALP_M1/{year}.root then /Data/{year}.root)
+    """
+    # Decide tree name (keep previous convention)
+    tree_name = "test" if ("M" in sample and sample[0] == 'M') else "inclusive"
+    ch = TChain(tree_name, f"chain_{sample}")
+    base = ana_cfg.sample_loc  # /eos/.../run3_BDT
+    added = 0
+
+    # Signal samples like 'M5','M15','M30'
+    if sample in ana_cfg.sig_names:
+        year = "2022preEE"
+        path = os.path.join(base, f"ALP_{sample}", f"{year}.root")
+        if _add_file_if_exists(ch, path):
+            added += 1
+
+    elif sample == "DYJetsToLL":
+        for y in ana_cfg.years_dyll:
+            # pattern includes ALP_M1
+            path1 = os.path.join(base, "DYJetsToLL", "ALP_M1", f"{y}.root")
+            if _add_file_if_exists(ch, path1):
+                added += 1
+
+    elif sample == "DYGto2LG":
+        # Merge sub-samples
+        # 2022 group
+        for subs in getattr(ana_cfg, "bkg_2022", []):
+            for y in getattr(ana_cfg, "years_22", []):
+                path = os.path.join(base, subs, "ALP_M1", f"{y}.root")
+                if _add_file_if_exists(ch, path):
+                    added += 1
+        # 2023 group
+        for subs in getattr(ana_cfg, "bkg_2023", []):
+            for y in getattr(ana_cfg, "years_23", []):
+                path = os.path.join(base, subs, "ALP_M1", f"{y}.root")
+                if _add_file_if_exists(ch, path):
+                    added += 1
+
+    elif sample == "Data":
+        for y in getattr(ana_cfg, "years_dyll", []):
+            # Try with ALP_M1 subfolder first
+            p1 = os.path.join(base, "Data", "ALP_M1", f"{y}.root")
+            if _add_file_if_exists(ch, p1):
+                added += 1
+                continue
+            # Fallback: /Data/{year}.root
+            p2 = os.path.join(base, "Data", f"{y}.root")
+            if _add_file_if_exists(ch, p2):
+                added += 1
+
+    else:
+        # Fallback: keep old structure if any unexpected name
+        path = os.path.join(base, sample, "run3.root")
+        if _add_file_if_exists(ch, path):
+            added += 1
+
+    if added == 0:
+        print(f"[LoadNtuples][WARN] sample={sample} has no files added (chain empty).")
+    else:
+        print(f"[LoadNtuples] sample={sample} added files: {added}")
+    return ch
 
 def LoadNtuples(ana_cfg):
     ntuples = {}
+    # run3 special aggregation
+    if ana_cfg.year == 'run3':
+        for sample in ana_cfg.samp_names:
+            # Decide by sample type
+            ntuples[sample] = _run3_build_chain(sample, ana_cfg)
+        return ntuples
+
+    # ===== Original behavior for non-run3 (保持舊邏輯) =====
     for sample in ana_cfg.samp_names:
         if "M" in sample: 
             ntuples[sample] = TChain("test","chain_" + sample)
@@ -94,7 +189,7 @@ def MakeLumiLabel(lumi):
     tex = TLatex()
     tex.SetTextSize(0.035)
     tex.SetTextAlign(31)
-    tex.DrawLatexNDC(0.9, 0.91, '%s fb^{-1} (13.6 TeV)' %lumi)
+    tex.DrawLatexNDC(0.9, 0.91, f"{float(lumi):.2f} fb^{{-1}} (13.6 TeV)")
     return tex
 
 def MakeCMSDASLabel():
@@ -212,6 +307,66 @@ def Get_StatUnc(hist):
 
     return graph, graph_norm
 
+# ==== New helper: build systematics-only band (total^2 - stat^2) ====
+def BuildSysOnlyBand(total_graph, stat_graph, name_suffix="_sysOnly"):
+    """
+    從 (stat⊕sys) 與 stat band 推得純系統 band：
+      err_sys = sqrt( err_total^2 - err_stat^2 )
+    PyROOT 相容：不再使用 ROOT.Double，而直接用 GetX()/GetY() 緩衝陣列。
+    """
+    if not total_graph or not stat_graph:
+        print("[BuildSysOnlyBand] Missing graph(s).")
+        return None
+    n_tot  = total_graph.GetN()
+    n_stat = stat_graph.GetN()
+    if n_tot != n_stat:
+        print(f"[BuildSysOnlyBand] Point size mismatch (total={n_tot}, stat={n_stat}). Will use min.")
+    n = min(n_tot, n_stat)
+    if n == 0:
+        print("[BuildSysOnlyBand] No points.")
+        return None
+
+    xs_buf_tot = total_graph.GetX()
+    ys_buf_tot = total_graph.GetY()
+    xs_buf_stat = stat_graph.GetX()
+    # ys_buf_stat = stat_graph.GetY()  # y 其實不需獨立
+
+    xs   = []
+    ys   = []
+    exl  = []
+    exh  = []
+    eyl  = []
+    eyh  = []
+
+    for i in range(n):
+        # 中心值 (採用 total, 兩者應一致)
+        xs.append(float(xs_buf_tot[i]))
+        ys.append(float(ys_buf_tot[i]))
+
+        # X error
+        exl.append(total_graph.GetErrorXlow(i))
+        exh.append(total_graph.GetErrorXhigh(i))
+
+        # Y errors
+        t_up = total_graph.GetErrorYhigh(i)
+        t_dn = total_graph.GetErrorYlow(i)
+        s_up = stat_graph.GetErrorYhigh(i)
+        s_dn = stat_graph.GetErrorYlow(i)
+
+        add_up = math.sqrt(max(0.0, t_up * t_up - s_up * s_up))
+        add_dn = math.sqrt(max(0.0, t_dn * t_dn - s_dn * s_dn))
+
+        eyl.append(add_dn)
+        eyh.append(add_up)
+
+    g_sys = ROOT.TGraphAsymmErrors(
+        n,
+        np.array(xs), np.array(ys),
+        np.array(exl), np.array(exh),
+        np.array(eyl), np.array(eyh)
+    )
+    g_sys.SetName(total_graph.GetName() + name_suffix)
+    return g_sys
 
 def Get_SysUnc(hist, hist_up, hist_dn):
     TH1.Sumw2
@@ -350,20 +505,57 @@ def Total_Unc(hist_norm, hist_sys, analyzer_cfg):
 
     return [graph_Total, graph_norm_Total]
 
-def Draw_unc(graph, color):
-    graph.SetFillColor(color)
-    graph.SetFillStyle(3001)
-    graph.SetLineColor(color)
-    #graph.Draw("SAME2")
-    graph.Draw("SAME2")
+def Draw_unc(graph, color, alpha=0.1, draw_option="2 SAME", on_top=True, fill_style=None):
+    """
+    繪製不確定度 band。
+    修正：原實作在指定 fill_style 時不會呼叫 SetFillColorAlpha，導致 alpha 被忽略。
+    新邏輯：
+      1. 若物件支援 SetFillColorAlpha，先嘗試套用透明度。
+      2. 若指定 fill_style：
+         - 若為實心 (1001) 仍保留透明度。
+         - 若為陰影/斜線樣式 (>=3000) ROOT 不支援透明度，回退為不透明。
+      3. 若透明度設定失敗，回退到舊式 SetFillColor + 預設 / 指定 fill_style。
+    """
+    if not graph:
+        print("[Draw_unc] Warning: graph is None")
+        return
 
-# def Draw_unc(graph, color):
-#     # gStyle.SetHatchesSpacing(1)
-#     gStyle.SetHatchesLineWidth(2)
-#     graph.SetFillColor(1)
-#     graph.SetFillStyle(3004)
-#     graph.SetLineColor(0)
-#     graph.Draw("SAME2")
+    graph.SetMarkerStyle(0)
+    graph.SetLineColor(color)
+    graph.SetLineWidth(1)
+
+    alpha_applied = False
+
+    # 嘗試透明度 (僅在有 SetFillColorAlpha 時)
+    if hasattr(graph, "SetFillColorAlpha"):
+        try:
+            # 針對可見度：alpha 太小(例如 0.05) 會幾乎看不到，由使用者自行調整
+            graph.SetFillColorAlpha(color, alpha)
+            alpha_applied = True
+        except Exception:
+            alpha_applied = False
+
+    # 如果指定了 fill_style
+    if fill_style is not None:
+        # 針對陰影/斜線樣式透明度其實沒作用，必要時覆蓋顏色
+        if not alpha_applied or fill_style >= 3000:
+            graph.SetFillColor(color)
+        graph.SetFillStyle(fill_style)
+    else:
+        # 未指定 fill_style，若透明度失敗則回退預設樣式
+        if not alpha_applied:
+            graph.SetFillColor(color)
+            graph.SetFillStyle(3004)  # 舊預設
+        else:
+            graph.SetFillStyle(1001)  # 透明實心
+
+    opt = draw_option
+    if "SAME" not in opt:
+        opt += " SAME"
+    graph.Draw(opt)
+    if on_top:
+        gPad.Modified()
+        gPad.Update()
 
 def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY):
 
@@ -412,9 +604,9 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].GetYaxis().SetLabelSize(0.06)
     
     if var_name in ["H_m","ALP_m","Z_m"]:
-        histos['Data'].GetYaxis().SetTitle('Events / (%.2f GeV)' %histos['Data'].GetBinWidth(1))
+        histos['Data'].GetYaxis().SetTitle('Events / %.2f GeV' %histos['Data'].GetBinWidth(1))
     else:
-        histos['Data'].GetYaxis().SetTitle('Events')
+        histos['Data'].GetYaxis().SetTitle('Events / %.2f' %histos['Data'].GetBinWidth(1))
     histos['Data'].GetYaxis().SetTitleSize(0.07)
     histos['Data'].GetYaxis().SetTitleFont(42)
     histos['Data'].GetYaxis().SetTitleOffset(1.15)
@@ -440,49 +632,30 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     
     ### Draw the uncertainties
     global stat_err, stat_err_norm
-    stat_err,  stat_err_norm= Get_StatUnc(stacks['bkg'].GetStack().Last())
+    stat_err,  stat_err_norm = Get_StatUnc(stacks['bkg'].GetStack().Last())
 
-    # Draw_unc(total_unc[0], kGray+10)
-    # Draw_unc(stat_err, kRed-10)
-    # Draw_unc(total_unc[0], TColor.GetColor("#324376")) # Navy Blue 
-    Draw_unc(stat_err, TColor.GetColor("#F76C5E")) # orange
+    total_abs  = total_unc[0]   # (stat⊕syst)
+    total_norm = total_unc[1]
+
+    # 先畫總不確定度 (外層) 再畫統計 (內層)
+    Draw_unc(total_abs,  TColor.GetColor("#A0A0A0"), alpha=0.3, fill_style=1001)   # Total (stat⊕syst)
+    Draw_unc(stat_err,   TColor.GetColor("#404040"), alpha=0.90, fill_style=3354)   # Stat only
 
     histos['Data'].Draw('SAMEPE')
     histos['Data'].Draw("AXIS SAME")
 
     if var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names:
-        # legend.Clear()
-        # legend.AddEntry(histos["Data"], "Data", "PE")
-        # for sample_bkg in plt_cfg.ana_cfg.bkg_names:
-        #     legend.AddEntry(histos[sample_bkg], "Z \rightarrow \ell^{+}\ell^{-}", "f")
-        #     # legend.SetHeader("#splitline{Title on top line}{Title on second line}")
-
-        # legend.AddEntry(stat_err,"Stat. uncertainty","f")
-        # legend.AddEntry(total_unc[0],"Syst. uncertainty","f")
-        # legend.AddEntry(scaled_sig[var_name.split("_")[-1]], r"m_{a} = %s GeV" % (var_name.split("_")[-1].lstrip("M")), "l" )
-
-        # legend.SetBorderSize(0)
-        # legend.SetTextFont(42)
-        # legend.SetTextSize(0.045)
-        # legend.SetFillColor(0)
-        # legend.Draw()
-
-        legend_1 = TLegend(0.18, 0.64, 0.48, 0.88)
-
+        legend_1 = TLegend(0.22, 0.59, 0.48, 0.86)
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
-
-        legend_1.AddEntry(histos["DYJetsToLL"], r"Z + jets", "f")
-        legend_1.AddEntry(histos["DYGto2LG"], r"Z + \gamma", "f")
-
-        # for sample_bkg in plt_cfg.ana_cfg.bkg_names:
-        #     legend_1.AddEntry(histos[sample_bkg], r"Z + jets", "f")
+        bkg_labels = {"DYGto2LG": r"Z + \gamma",
+                    "DYJetsToLL": r"Z + jets"}    
         
-        # Statistic 
-        legend_1.AddEntry(stat_err,"Stat. Uncer.","f")
-        
-        # Total Uncertainty
-        # legend_1.AddEntry(total_unc[0],"Syst. Uncer.","f")
+        for sample_bkg in plt_cfg.ana_cfg.bkg_names:            
+            legend_1.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
+
+        legend_1.AddEntry(total_abs,"Total Unc.","f")
+        legend_1.AddEntry(stat_err,"Stat. Unc.","f")
 
         legend_2 = TLegend(0.43, 0.80, 0.73, 0.88)
         ROOT.SetOwnership(legend_2, False)
@@ -505,25 +678,23 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 
 
     else:
-        legend_1 = TLegend(0.18, 0.64, 0.48, 0.88)
+        legend_1 = TLegend(0.42, 0.59, 0.68, 0.86)
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
-        bkg_labels = {"DYJetsToLL": r"Z + jets",                    
-                      "DYGto2LG": r"Z + \gamma"}    
+        bkg_labels = {"DYGto2LG": r"Z + \gamma",
+                    "DYJetsToLL": r"Z + jets"}    
             
         for sample_bkg in plt_cfg.ana_cfg.bkg_names:            
             legend_1.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
             
-        legend_1.AddEntry(stat_err,"Stat. Uncer.","f")
-        # legend_1.AddEntry(total_unc[0],"Syst. Uncer.","f")
-        # legend_1.AddEntry(total_unc[0],"Uncertainty","f")
+        legend_1.AddEntry(total_abs,"Total Unc.","f")
+        legend_1.AddEntry(stat_err,"Stat. Unc.","f")
 
-        legend_2 = TLegend(0.53, 0.64, 0.83, 0.88)
+        legend_2 = TLegend(0.65, 0.58, 0.95, 0.80)
         ROOT.SetOwnership(legend_2, False)
         if bdtCut:
             legend_2.AddEntry(scaled_sig[mA], r"m_{a} = %s GeV" % (mA.lstrip("M")), "l")
         else:
-            # for s in ["M1","M10","M20","M30"]:
             for s in ["M5","M15","M30"]:
                 legend_2.AddEntry(scaled_sig[s], r"m_{a} = %s GeV" % (s.lstrip("M")), "l")
 
@@ -539,7 +710,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         legend_2.SetFillStyle(0)
         legend_2.SetFillColor(0)
         legend_2.SetTextFont(42)
-        legend_2.SetTextSize(0.05)
+        legend_2.SetTextSize(0.048)
         legend_2.Draw("SAME")
 
 
@@ -556,7 +727,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     CMS_lumi.CMSText_posX = -0.03
     CMS_lumi.outOfFrame = True
 
-    CMS_lumi.lumiText_posX = -0.010
+    CMS_lumi.lumiText_posX = -0.000 # 0.01 
     CMS_lumi.CMS_lumi(canv,5,0,plt_cfg.year)
 
     canv.cd()
@@ -579,11 +750,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     ratio_plot.GetXaxis().SetTitleOffset(1.0)
     ratio_plot.Draw("APZ SAME")
 
-    # Draw_unc(total_unc[1], kGray+10)
-    # Draw_unc(stat_err_norm, kRed-10)
-    # Draw_unc(total_unc[1], TColor.GetColor("#324376")) # Navy Blue
-    Draw_unc(stat_err_norm, TColor.GetColor("#F76C5E")) # orange
-
+    Draw_unc(total_norm, TColor.GetColor("#A0A0A0"), alpha=0.3, fill_style=1001)
+    Draw_unc(stat_err_norm, TColor.GetColor("#404040"), alpha=0.90, fill_style=3354)
     ratio_plot.Draw("SAMEPZ")
 
     

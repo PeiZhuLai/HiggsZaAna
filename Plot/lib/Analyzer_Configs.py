@@ -89,12 +89,19 @@ class Analyzer_Config:
                 # self.sig_names  = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M15', 'M20', 'M25', 'M30']
                 self.sig_names  = ['M5', 'M15', 'M30']
 
+            self.years_sig  = ["2022preEE"]  # 信号
+            self.years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
+            self.years_23   = ["2023preBPix","2023postBPix"]
+            self.years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
+            self.bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+            self.bkg_2023 = ["DYGto2LG_10to100"]
+            self.bkg_dyll = ["DYJetsToLL"]
+
             self.bkg_names  = ['DYJetsToLL', 'DYGto2LG']
             self.samp_names = self.bkg_names + self.sig_names + ['Data']
             self.plot_output_path = "{0}/plot_{1}".format(self.out_dir, self.out_region_name)
             # self.sys_names  = ['CMS_eff_g_up','CMS_eff_g_dn','CMS_pileup_up','CMS_pileup_dn','CMS_eff_lep_up','CMS_eff_lep_dn']
-            self.sys_names  = ['weight_electron_veto_sf_Photon_up','weight_electron_veto_sf_Photon_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down']
-            # self.sys_names  = ['weight_electron_veto_sf_Photon_up','weight_electron_veto_sf_Photon_down']
+            self.sys_names  = ['weight_hlt_sf_up','weight_hlt_sf_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_electron_iso_sf_SelectedElectron_up', 'weight_electron_iso_sf_SelectedElectron_down', 'weight_electron_reco_sf_SelectedElectron_up', 'weight_electron_reco_sf_SelectedElectron_down', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down', 'weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down', 'weight_muon_iso_sf_SelectedMuon_up', 'weight_muon_iso_sf_SelectedMuon_down', 'weight_muon_reco_sf_SelectedMuon_up', 'weight_muon_reco_sf_SelectedMuon_down', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down']
             # self.sys_names  = ['weight_pu_reweight_sf_up','weight_pu_reweight_sf_down'] # Too big
             # self.sys_names  = ['weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down']
             # self.sys_names  = ['weight_muon_looseid_sf_SelectedMuon_up','weight_muon_looseid_sf_SelectedMuon_down']

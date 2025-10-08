@@ -59,7 +59,7 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year ):
     elif year == '2023postBPix':
         lumi_sqrtS = "9.45 fb^{-1}"
     elif year == 'run3':
-        lumi_sqrtS = "62 fb^{-1}"
+        lumi_sqrtS = "61.89 fb^{-1}"
     else:
         print("do not include at 2016/2017/2018")
         exit(0)
@@ -105,7 +105,7 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year ):
         lumiText += " (13 TeV)"
     elif ( iPeriod==5 ):
         lumiText += lumi_sqrtS
-        lumiText += "(13.6 TeV)"
+        lumiText += " (13.6 TeV)"
     elif ( iPeriod==7 ):
         if( outOfFrame ):lumiText += "#scale[0.85]{"
         lumiText += lumi_13TeV

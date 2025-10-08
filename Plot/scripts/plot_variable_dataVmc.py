@@ -44,6 +44,70 @@ tdrstyle.setTDRStyle()
 # load the model from disk
 # model = pickle.load(open(BDT_filename, 'rb'))
 
+def SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115., signal_high=135.):
+    """
+    只針對 histos['H_m']：
+      將背景總和在 sideband (H_m < signal_low 或 H_m > signal_high) 的 yield
+      正規化到資料在同一 sideband 的 yield。
+    """
+    if 'H_m' not in histos:
+        print('[SideBandScale] H_m not found, skip.')
+        return 1.0
+
+    # 資料 sample key 可能大小寫不一致
+    data_key = None
+    for k in histos['H_m'].keys():
+        if k.lower() == 'data':
+            data_key = k
+            break
+    if data_key is None:
+        print('[SideBandScale] Data hist not found, skip.')
+        return 1.0
+
+    axis = histos['H_m'][data_key].GetXaxis()
+    nb = axis.GetNbins()
+    # 找到 signal window 所對應的 bin
+    sig_low_bin = axis.FindFixBin(signal_low)
+    sig_high_bin = axis.FindFixBin(signal_high)
+
+    def sideband_integral(h):
+        # 左側
+        left = 0.0
+        if sig_low_bin > 1:
+            left = h.Integral(1, sig_low_bin - 1)
+        # 右側
+        right = 0.0
+        if sig_high_bin < nb:
+            right = h.Integral(sig_high_bin + 1, nb)
+        return left + right
+
+    data_sb = sideband_integral(histos['H_m'][data_key])
+
+    bkg_samples = [
+        s for s in analyzer_cfg.samp_names
+        if (s.lower() != 'data') and (s not in analyzer_cfg.sig_names)
+    ]
+
+    bkg_sb = 0.0
+    for s in bkg_samples:
+        bkg_sb += sideband_integral(histos['H_m'][s])
+
+    if bkg_sb <= 0:
+        print('[SideBandScale] Background sideband yield = 0, skip scaling.')
+        return 1.0
+
+    scale_factor = data_sb / bkg_sb
+    # 套用縮放到背景 (包含 systematics)
+    for s in bkg_samples:
+        histos['H_m'][s].Scale(scale_factor)
+        if histos_sys and 'H_m' in histos_sys:
+            for sys_name in analyzer_cfg.sys_names:
+                histos_sys['H_m'][s][sys_name].Scale(scale_factor)
+
+    print(f'[SideBandScale] H_m sideband Data={data_sb:.3f}  Bkg(before)={bkg_sb:.3f}  Scale={scale_factor:.4f}')
+    return scale_factor
+
+
 def main():
 
     analyzer_cfg = AC.Analyzer_Config('inclusive', args.year, args.region, args.mva)
@@ -58,7 +122,6 @@ def main():
     model = pickle.load(open(analyzer_cfg.BDT_filename, 'rb'))
 
     
-
     if args.cut: 
         analyzer_cfg.sig_names = [args.mA]
         analyzer_cfg.samp_names = analyzer_cfg.bkg_names + analyzer_cfg.sig_names + ['data']
@@ -146,8 +209,6 @@ def main():
                 histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 10,  0., 1.0)
 
 
-   
-
     for var_name in var_names:
         histos_sys[var_name] = {}
         for sample in analyzer_cfg.samp_names:
@@ -166,7 +227,7 @@ def main():
         for iEvt in range( ntup.GetEntries() ):
     
             ntup.GetEvent(iEvt)
-            # if (iEvt == 1000): break
+            # if (iEvt == 100): break
 
 
             if (iEvt % 100000 == 1):
@@ -182,7 +243,7 @@ def main():
             
 
             # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
-            weight = ntup.factor
+            weight = ntup.weight
 
             if (ntup.H_m > -90):
                 #if ntup.dR_pho < 0.02: continue
@@ -212,14 +273,15 @@ def main():
 
                         if args.cut and ALP_mass != args.mA: continue
 
-                        param = (ntup.ALP_m - mass_list[ALP_mass])/ntup.H_m
+                        # param = (ntup.ALP_m - mass_list[ALP_mass])/ntup.H_m
 
                         # MVA_list = [ntup.pho1Pt, ntup.pho1R9, ntup.pho1IetaIeta55, ntup.pho1PIso_noCorr ,ntup.pho2Pt, ntup.pho2R9, ntup.pho2IetaIeta55,ntup.pho2PIso_noCorr, ntup.ALP_calculatedPhotonIso, ntup.var_dR_Za, ntup.var_dR_g1g2, ntup.var_dR_g1Z, ntup.var_PtaOverMh, ntup.H_pt] # v_1
-                        MVA_list = [ntup.pho1Pt, ntup.pho1R9, ntup.pho1IetaIeta55, ntup.pho1PIso_noCorr ,ntup.pho2Pt, ntup.pho2R9, ntup.pho2IetaIeta55,ntup.pho2PIso_noCorr, ntup.ALP_calculatedPhotonIso, ntup.var_dR_Za, ntup.var_dR_g1g2, ntup.var_dR_g1Z, ntup.var_PtaOverMh, ntup.H_pt, param] # v_1
+                        # MVA_list = [ntup.pho1Pt, ntup.pho1R9, ntup.pho1IetaIeta55, ntup.pho1PIso_noCorr ,ntup.pho2Pt, ntup.pho2R9, ntup.pho2IetaIeta55,ntup.pho2PIso_noCorr, ntup.ALP_calculatedPhotonIso, ntup.var_dR_Za, ntup.var_dR_g1g2, ntup.var_dR_g1Z, ntup.var_PtaOverMh, ntup.H_pt, param] # v_1
                         #MVA_list = [ntup.pho1Pt, ntup.pho1R9, ntup.pho1IetaIeta55, ntup.pho1PIso_noCorr ,ntup.pho2Pt, ntup.pho2R9, ntup.pho2IetaIeta55,ntup.pho2PIso_noCorr,ntup.ALP_calculatedPhotonIso, ntup.var_dR_Za, ntup.var_dR_g1g2, ntup.var_dR_g1Z, ntup.var_PtaOverMh, ntup.H_pt, ntup.l1_pt, ntup.l2_pt, ntup.Z_m, param] # v_2
                         #MVA_list = [ntup.pho1Pt, ntup.pho1R9, ntup.pho1IetaIeta55, ntup.pho1PIso_noCorr ,ntup.pho2Pt, ntup.pho2R9, ntup.pho2IetaIeta55,ntup.pho2PIso_noCorr,ntup.ALP_calculatedPhotonIso, ntup.var_dR_Za, ntup.var_dR_g1g2, ntup.var_dR_g1Z, ntup.var_PtaOverMh, ntup.H_pt, ntup.l1_pt, ntup.l2_pt, ntup.Z_m, param]
                         #MVA_list = [ntup.pho1Pt, ntup.pho1eta, ntup.pho1phi, ntup.pho1R9, ntup.pho1IetaIeta55, ntup.pho1PIso_noCorr ,ntup.pho2Pt, ntup.pho2eta, ntup.pho2phi, ntup.pho2R9, ntup.pho2IetaIeta55,ntup.pho2PIso_noCorr,ntup.ALP_calculatedPhotonIso, ntup.var_dR_Za, ntup.var_dR_g1g2, ntup.var_dR_g1Z, ntup.var_PtaOverMh, ntup.H_pt, param]
-                        MVA_value[ALP_mass] = model.predict_proba([MVA_list])[:, 1]
+                        # MVA_value[ALP_mass] = model.predict_proba([MVA_list])[:, 1]
+                        MVA_value[ALP_mass] = ntup.MVA_Score
 
 
                     if args.cut:
@@ -332,39 +394,51 @@ def main():
 
                 for sys_name in analyzer_cfg.sys_names:
                     if sample != "Data": 
-                        # Good Example, Pei-Zhu
-                        if sys_name =='CMS_eff_g_up':
-                            #weight = ntup.factor * (ntup.pho1SFs+ntup.pho1SFs_sys) * (ntup.pho2SFs+ntup.pho2SFs_sys)
-                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * (ntup.pho1SFs+ntup.pho1SFs_sys) * (ntup.pho2SFs+ntup.pho2SFs_sys)
-                        elif sys_name =='CMS_eff_g_dn':
-                            #weight = ntup.factor * (ntup.pho1SFs-ntup.pho1SFs_sys) * (ntup.pho2SFs-ntup.pho2SFs_sys)
-                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * (ntup.pho1SFs-ntup.pho1SFs_sys) * (ntup.pho2SFs-ntup.pho2SFs_sys)
-                        elif sys_name =='CMS_pileup_up':
-                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeightUp * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                        elif sys_name =='CMS_pileup_dn':
-                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeightDn * ntup.l1_dataMC * ntup.l2_dataMC * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                        elif sys_name =='CMS_eff_lep_up':
-                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * (ntup.l1_dataMC+ntup.l1_dataMCErr) * (ntup.l2_dataMC+ntup.l2_dataMCErr) * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                        elif sys_name =='CMS_eff_lep_dn':
-                            weight_sys = ntup.event_genWeight * ntup.event_pileupWeight * (ntup.l1_dataMC-ntup.l1_dataMCErr) * (ntup.l2_dataMC-ntup.l2_dataMCErr) * ntup.event_weight * ntup.pho1SFs * ntup.pho2SFs
-                        
-                        # Nominal_Weight = weight * weight_electron_veto_sf_Photon_central * weight_pu_reweight_sf_central * weight_electron_wplid_sf_SelectedElectron_central * weight_muon_looseid_sf_SelectedMuon_central
-                        elif sys_name =='weight_electron_veto_sf_Photon_up':
-                            weight_sys = ntup.weight_electron_veto_sf_Photon_up / ntup.weight_electron_veto_sf_Photon_central
-                        elif sys_name =='weight_electron_veto_sf_Photon_down':
-                            weight_sys = ntup.weight_electron_veto_sf_Photon_down / ntup.weight_electron_veto_sf_Photon_central
+                        # self.sys_names  = ['weight_hlt_sf_up','weight_hlt_sf_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_electron_iso_sf_SelectedElectron_up', 'weight_electron_iso_sf_SelectedElectron_down', 'weight_electron_reco_sf_SelectedElectron_up', 'weight_electron_reco_sf_SelectedElectron_down', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down', 'weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down', 'weight_muon_iso_sf_SelectedMuon_up', 'weight_muon_iso_sf_SelectedMuon_down', 'weight_muon_reco_sf_SelectedMuon_up', 'weight_muon_reco_sf_SelectedMuon_down', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down']
+                        if sys_name =='weight_hlt_sf_up':
+                            weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
+                        elif sys_name =='weight_hlt_sf_down':
+                            weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
                         elif sys_name =='weight_pu_reweight_sf_up':
-                            weight_sys = ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
+                            weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
                         elif sys_name =='weight_pu_reweight_sf_down':
-                            weight_sys = ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
+                            weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
+
                         elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
-                            weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
                         elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
-                            weight_sys = ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_iso_sf_SelectedElectron_up':
+                            weight_sys = weight * ntup.weight_electron_iso_sf_SelectedElectron_up / ntup.weight_electron_iso_sf_SelectedElectron_central                        
+                        elif sys_name =='weight_electron_iso_sf_SelectedElectron_down':
+                            weight_sys = weight * ntup.weight_electron_iso_sf_SelectedElectron_down / ntup.weight_electron_iso_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
+                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central                        
+                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
+                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
+                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
+
                         elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
-                            weight_sys = ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
                         elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
-                            weight_sys = ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_iso_sf_SelectedMuon_up':
+                            weight_sys = weight * ntup.weight_muon_iso_sf_SelectedMuon_up / ntup.weight_muon_iso_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_iso_sf_SelectedMuon_down':
+                            weight_sys = weight * ntup.weight_muon_iso_sf_SelectedMuon_down / ntup.weight_muon_iso_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
+                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
+                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
+                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
+
+
                         for var in var_names:
                             # print(f"weight_sys: {weight_sys}")
                             histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
@@ -407,15 +481,21 @@ def main():
 
     scaled_sig = {}
     for var_name in var_names:
-        stacks = MakeStack(histos[var_name], analyzer_cfg, var_name)
-        # 新增：將 bkg histograms scale 到 Data
-        ScaleBkgToData(histos[var_name], analyzer_cfg)
+        # 依變數選擇縮放策略：H_m 用 sideband，其他維持原本全區間的 ScaleBkgToData
+        if var_name == 'H_m':
+            scale_factor = SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115., signal_high=135.)
+        else:
+            scale_factor = ScaleBkgToData(histos[var_name], analyzer_cfg, histos_sys.get(var_name))
+        if scale_factor != 1.0:
+            print(f"[Info] Applied background scaling ({var_name}) = {scale_factor:.4f}")
+
         stacks = MakeStack(histos[var_name], analyzer_cfg, var_name)
         
         if stacks['all'].GetStack().GetEntries() == 0:
             stack_entry = stacks['all'].GetStack().GetEntries()
             print(f"stack_entry: {stack_entry}")
             print(f"[Warning] Stack for {var_name} is empty. Skipping drawing.")
+            continue  # 空 stack 直接跳過後續
 
         for sample in analyzer_cfg.sig_names:
             scaled_sig[sample] = ScaleSignal(plot_cfg, stacks[sample], histos[var_name][sample], var_name)

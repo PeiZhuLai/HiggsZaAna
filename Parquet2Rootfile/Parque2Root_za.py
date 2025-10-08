@@ -518,8 +518,8 @@ def decorate(data):
     data['var_MhMZ'] = data.H_mass + data.Z_mass
 
     # data['weight'] = data.weight_central
-    data['weight'] = 2.0*data.weight_central
-    data['factor'] = 2.0*data.weight_central
+    data['weight'] = data.weight_central
+    data['factor'] = data.weight_central
     data['is_center'] = data.apply(lambda x: compute_is_center(x), axis=1)
 
     # data['H_ptt'] = data.apply(lambda x: compute_H_ptt(x), axis=1)
