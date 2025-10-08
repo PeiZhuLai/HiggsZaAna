@@ -102,7 +102,6 @@ class Analyzer_Config:
             print("channel is invalid: channel = %s" %self.channel)
             sys.exit()
 
-
     def Print_Config(self):
         print('Running analysis in channel: %s' %self.channel)
         print('getting ntuples from: %s' %self.sample_loc)

@@ -56,41 +56,14 @@ def ScaleBkgToData(histos, ana_cfg):
 
 
 def LoadNtuples(ana_cfg):
-    """
-    建立每個 sample 對應的 TChain。
-    run3 情況:
-      - signal 只讀取 ana_cfg.signal_run3_subyear
-      - 背景與 Data 讀取所有 ana_cfg.run3_subyears 後合併
-    其它年份維持原狀。
-    """
     ntuples = {}
     for sample in ana_cfg.samp_names:
-        tree_name = "test" if "M" in sample else "inclusive"
-        ntuples[sample] = TChain(tree_name, "chain_" + sample)
-        # run3 合併模式
-        if ana_cfg.year == 'run3' and hasattr(ana_cfg, 'run3_subyears'):
-            if sample in ana_cfg.sig_names:
-                # 只加指定 signal 子年代
-                sub_year = ana_cfg.signal_run3_subyear
-                base_dir = ana_cfg.sample_loc_run3_subyears[sub_year]
-                if "M" in sample:
-                    ntuples[sample].Add(os.path.join(base_dir, f'ALP_{sample}', 'run3.root'))
-                else:
-                    ntuples[sample].Add(os.path.join(base_dir, sample, 'run3.root'))
-            else:
-                # Data + 背景: 四個 era 全部加進 chain
-                for sub_year in ana_cfg.run3_subyears:
-                    base_dir = ana_cfg.sample_loc_run3_subyears[sub_year]
-                    if "M" in sample:
-                        ntuples[sample].Add(os.path.join(base_dir, f'ALP_{sample}', 'run3.root'))
-                    else:
-                        ntuples[sample].Add(os.path.join(base_dir, sample, 'run3.root'))
-        else:
-            # 原本單一路徑
-            if "M" in sample:
-                ntuples[sample].Add(ana_cfg.sample_loc + '/ALP_%s/run3.root' % sample)
-            else:
-                ntuples[sample].Add(ana_cfg.sample_loc + '/%s/run3.root' % sample)
+        if "M" in sample: 
+            ntuples[sample] = TChain("test","chain_" + sample)
+            ntuples[sample].Add(ana_cfg.sample_loc + '/ALP_%s/run3.root' %sample)
+        else: 
+            ntuples[sample] = TChain("inclusive","chain_" + sample)
+            ntuples[sample].Add(ana_cfg.sample_loc + '/%s/run3.root' %sample)
     return ntuples
 
 
