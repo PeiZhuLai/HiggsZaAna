@@ -606,7 +606,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     if var_name in ["H_m","ALP_m","Z_m"]:
         histos['Data'].GetYaxis().SetTitle('Events / %.2f GeV' %histos['Data'].GetBinWidth(1))
     else:
-        histos['Data'].GetYaxis().SetTitle('Events / %.2f' %histos['Data'].GetBinWidth(1))
+        histos['Data'].GetYaxis().SetTitle('Events / %.3f' %histos['Data'].GetBinWidth(1))
     histos['Data'].GetYaxis().SetTitleSize(0.07)
     histos['Data'].GetYaxis().SetTitleFont(42)
     histos['Data'].GetYaxis().SetTitleOffset(1.15)

@@ -31,7 +31,7 @@ pwd
 #1
 python scripts/plot_variable_dataVmc.py -y run3 --ln -b
 #2
-# python3 scripts/plot_variable_dataVmc.py -y run3 -m --ln
+# python3 scripts/plot_variable_dataVmc.py -y run3 -m --ln -b
 #3
 # python3 scripts/plot_variable_dataVmc.py -y run3 -m --region 1 --ln
 #4
