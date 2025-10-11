@@ -87,7 +87,7 @@ elif options.year == 'run2':
         #name_SR = "ALP_plot_run2_UL_Ns_10_SR.root"
         #name_CR = "ALP_plot_run2_UL_Ns_10_CR.root"
 elif options.year == 'run3':
-    file_out = 'plots_run3UL'
+    file_out = 'plots/plots_run3UL'
     if options.ele:
         name_SR = "ALP_plot_run3_UL_SR_ele.root"
         name_CR = "ALP_plot_run3_UL_CR_ele.root"

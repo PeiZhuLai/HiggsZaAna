@@ -106,7 +106,7 @@ class Plot_Config:
         }
 
     def SetHistStyles(self, hist, sample):
-        if sample == 'data':
+        if sample == 'data' or sample == 'Data':
             hist.SetMarkerStyle(20)
         elif sample in self.ana_cfg.sig_names:
             hist.SetLineColor(self.colors[sample])
@@ -165,4 +165,3 @@ class Plot_Config:
         hzaStyle.SetTextFont(42)
         hzaStyle.SetTextSize(0.03)
         hzaStyle.cd()
-                

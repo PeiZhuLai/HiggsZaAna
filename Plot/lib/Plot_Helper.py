@@ -65,6 +65,86 @@ def ScaleBkgToData(histos, ana_cfg, syst_histos=None):
 
     return scale_factor
 
+def LoadNtuples_split_by_mass(ana_cfg):
+    """
+    为每个 mA in ana_cfg.sig_names 构建一组链：
+      ntuples_by_mass[mA][sample] = TChain(...)
+    规则（文件系统目录）：
+      - 信号 Mx ： base/ALP_Mx/<year>.root （年表用 ana_cfg.years_sig）
+      - DYJetsToLL： base/DYJetsToLL/ALP_Mx/<year>.root （年表用 ana_cfg.years_dyll）
+      - DYGto2LG ： base/<子样本>/ALP_Mx/<year>.root （2022/2023 各自子样本与年表）
+      - Data     ： 先试 base/Data/ALP_Mx/<year>.root；若不存在回退 base/Data/<year>.root
+    """
+    base = ana_cfg.sample_loc
+    ntuples_by_mass = {}  # dict[mA][sample] -> TChain
+
+    def _add_if_exists(ch, path):
+        if os.path.exists(path):
+            ch.Add(path)
+            return 1
+        else:
+            print(f"[LoadNtuples@{ch.GetName()}][MISS] {path}")
+            return 0
+
+    for mA in ana_cfg.sig_names:
+        mdir = f"ALP_{mA}"
+        group = {}
+
+        # --- 信号（Mx） ---
+        ch_sig = ROOT.TChain("test", f"chain_sig_{mA}")
+        added = 0
+        for y in getattr(ana_cfg, "years_sig", ["2022preEE"]):
+            p = os.path.join(base, f"ALP_{mA}", f"{y}.root")
+            added += _add_if_exists(ch_sig, p)
+        if added == 0:
+            print(f"[WARN] signal {mA} empty.")
+        group[mA] = ch_sig  # 用样本名=质量名保存
+
+        # --- DYJetsToLL（背景） ---
+        ch_dy = ROOT.TChain("inclusive", f"chain_DY_{mA}")
+        added = 0
+        for y in getattr(ana_cfg, "years_dyll", []):
+            p = os.path.join(base, "DYJetsToLL", mdir, f"{y}.root")
+            added += _add_if_exists(ch_dy, p)
+        if added == 0:
+            print(f"[WARN] DYJetsToLL@{mA} empty.")
+        group["DYJetsToLL"] = ch_dy
+
+        # --- DYGto2LG（背景，分 2022/2023 子样本） ---
+        ch_dyg = ROOT.TChain("inclusive", f"chain_DYG_{mA}")
+        added = 0
+        for subs in getattr(ana_cfg, "bkg_2022", []):
+            for y in getattr(ana_cfg, "years_22", []):
+                p = os.path.join(base, subs, mdir, f"{y}.root")
+                added += _add_if_exists(ch_dyg, p)
+        for subs in getattr(ana_cfg, "bkg_2023", []):
+            for y in getattr(ana_cfg, "years_23", []):
+                p = os.path.join(base, subs, mdir, f"{y}.root")
+                added += _add_if_exists(ch_dyg, p)
+        if added == 0:
+            print(f"[WARN] DYGto2LG@{mA} empty.")
+        group["DYGto2LG"] = ch_dyg
+
+        # --- Data ---
+        ch_data = ROOT.TChain("inclusive", f"chain_Data_{mA}")
+        added = 0
+        for y in getattr(ana_cfg, "years_dyll", []):
+            p1 = os.path.join(base, "Data", mdir, f"{y}.root")
+            added += _add_if_exists(ch_data, p1)
+            if added == 0:
+                p2 = os.path.join(base, "Data", f"{y}.root")
+                added += _add_if_exists(ch_data, p2)
+        if added == 0:
+            print(f"[WARN] Data@{mA} empty.")
+        group["Data"] = ch_data
+
+        ntuples_by_mass[mA] = group
+        print(f"[LoadNtuples_split_by_mass] built group for {mA}: "
+              f"sig={group[mA].GetEntries()}  "
+              f"DY={group['DYJetsToLL'].GetEntries()}  "
+              f"DYG={group['DYGto2LG'].GetEntries()}  "
+              f"Data={group['Data'].GetEntries()}")
+    return ntuples_by_mass
 
 # ==== New helpers for run3 multi-year chaining ====
 def _add_file_if_exists(chain, path):
@@ -81,13 +161,18 @@ def _run3_build_chain(sample, ana_cfg):
       - signal (M*) : only 2022preEE
       - DYJetsToLL  : years_dyll
       - DYGto2LG    : merge bkg_2022/years_22 and bkg_2023/years_23 sub-samples
-      - Data        : years_dyll (try /Data/ALP_M1/{year}.root then /Data/{year}.root)
+      - Data        : years_dyll (try /Data/ALP_{mass}/{year}.root then /Data/{year}.root)
     """
     # Decide tree name (keep previous convention)
     tree_name = "test" if ("M" in sample and sample[0] == 'M') else "inclusive"
     ch = TChain(tree_name, f"chain_{sample}")
     base = ana_cfg.sample_loc  # /eos/.../run3_BDT
     added = 0
+
+    # 依 mva 模式決定 ALP 子資料夾；預設 M1
+    use_mva = bool(getattr(ana_cfg, "mva", False))
+    mva_tag = str(getattr(ana_cfg, "mva_alp_mass", "M1")) if use_mva else "M1"
+    alp_folder = f"ALP_{mva_tag}"
 
     # Signal samples like 'M5','M15','M30'
     if sample in ana_cfg.sig_names:
@@ -98,8 +183,8 @@ def _run3_build_chain(sample, ana_cfg):
 
     elif sample == "DYJetsToLL":
         for y in ana_cfg.years_dyll:
-            # pattern includes ALP_M1
-            path1 = os.path.join(base, "DYJetsToLL", "ALP_M1", f"{y}.root")
+            # 改用 ALP_{mva_tag}
+            path1 = os.path.join(base, "DYJetsToLL", alp_folder, f"{y}.root")
             if _add_file_if_exists(ch, path1):
                 added += 1
 
@@ -108,24 +193,24 @@ def _run3_build_chain(sample, ana_cfg):
         # 2022 group
         for subs in getattr(ana_cfg, "bkg_2022", []):
             for y in getattr(ana_cfg, "years_22", []):
-                path = os.path.join(base, subs, "ALP_M1", f"{y}.root")
+                path = os.path.join(base, subs, alp_folder, f"{y}.root")
                 if _add_file_if_exists(ch, path):
                     added += 1
         # 2023 group
         for subs in getattr(ana_cfg, "bkg_2023", []):
             for y in getattr(ana_cfg, "years_23", []):
-                path = os.path.join(base, subs, "ALP_M1", f"{y}.root")
+                path = os.path.join(base, subs, alp_folder, f"{y}.root")
                 if _add_file_if_exists(ch, path):
                     added += 1
 
     elif sample == "Data":
         for y in getattr(ana_cfg, "years_dyll", []):
-            # Try with ALP_M1 subfolder first
-            p1 = os.path.join(base, "Data", "ALP_M1", f"{y}.root")
+            # 先嘗試 /Data/ALP_{mva_tag}/{year}.root
+            p1 = os.path.join(base, "Data", alp_folder, f"{y}.root")
             if _add_file_if_exists(ch, p1):
                 added += 1
                 continue
-            # Fallback: /Data/{year}.root
+            # 後備：/Data/{year}.root
             p2 = os.path.join(base, "Data", f"{y}.root")
             if _add_file_if_exists(ch, p2):
                 added += 1
@@ -645,7 +730,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].Draw("AXIS SAME")
 
     if var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names:
-        legend_1 = TLegend(0.22, 0.59, 0.48, 0.86)
+        legend_1 = TLegend(0.67, 0.59, 0.97, 0.86)
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
         bkg_labels = {"DYGto2LG": r"Z + \gamma",
@@ -657,7 +742,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         legend_1.AddEntry(total_abs,"Total Unc.","f")
         legend_1.AddEntry(stat_err,"Stat. Unc.","f")
 
-        legend_2 = TLegend(0.43, 0.80, 0.73, 0.88)
+        legend_2 = TLegend(0.40, 0.80, 0.66, 0.86)
         ROOT.SetOwnership(legend_2, False)
         legend_2.AddEntry(scaled_sig[var_name.split("_")[-1]], r"m_{a} = %s GeV" % (var_name.split("_")[-1].lstrip("M")), "l" )
 
