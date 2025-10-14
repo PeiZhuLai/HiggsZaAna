@@ -23,9 +23,9 @@ years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
 # 扫描的 ma 列表（背景也按你的原脚本扫）
 current_ma_list = [5,15,30]
 ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
-# interploate_ma_list = [11,12,13,14,16,17,18,19,21,22,23,24,26,27,28,29]
+interploate_ma_list = [11,12,13,14,16,17,18,19,21,22,23,24,26,27,28,29]
 # interploate_ma_list = [11,12]
-interploate_ma_list = [5,15,30]
+# interploate_ma_list = [5,15,30]
 # ===== Samples =====
 sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
 
@@ -601,12 +601,10 @@ def main():
 
         entry = {
             "mA": int(ma),
-            "MVAcut": round(float(cut_near), 3),
+            "MVAcut_nearest": round(float(cut_near), 3),
             "MVAcut_lower": round(float(cut_low), 3),
-            "MVAcut_upper": round(float(cut_up), 3),
-            "bkgYields": {},
-            # 改为单一群组 ALL（等于总背景先加总后平滑的最近邻 cut 积分）
-            "bkgGroupYields": {}
+            "MVAcut_upper": round(float(cut_up), 3)
+            # "bkgYields": {}
         }
 
         # 取得此 mA 的所有样本直方图
@@ -629,15 +627,13 @@ def main():
             g = alp_hist2graph(h, mva_low=0.01)
             h_smooth, _, _ = alp_smooth(g, h, mva_low=0.01)
             val_near = integral_above_cut(h_smooth, cut_near)
-            entry["bkgYields"][sample] = round(val_near, 3)
+            # entry["bkgYields"][sample] = round(val_near, 3)
 
         # 总量栏位：以「所有背景先加总后平滑」的结果为准
-        entry["bkgTotal"] = round(total_near, 3)
+        # entry["bkgTotal"] = round(total_near, 3)
         entry["bkgTotal_nearest"] = round(total_near, 3)
         entry["bkgTotal_lower"]   = round(total_low, 3)
         entry["bkgTotal_upper"]   = round(total_up, 3)
-        # 单一群组输出，与 bkgTotal_nearest 一致
-        entry["bkgGroupYields"]["ALL"] = round(total_near, 3)
 
         results.append(entry)
 
