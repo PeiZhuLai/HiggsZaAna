@@ -6,7 +6,6 @@ mAs = [5, 15, 30]
 cats = [1, 2]
 # 準備 JSON 輸出結構
 results = []
-output_json = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 # 新增：準備 LaTeX 表格輸出與彙整 cat1/2 significance 的對照表
 output_latex = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/latexTable_significanceVcat.txt"
 sig_map = {}
@@ -38,11 +37,6 @@ for cat in cats:
         # 新增：彙整 cat1/2 significance
         sig_map.setdefault(mA, {})[cat] = significance
 
-# 寫入單一 JSON 檔案
-os.makedirs(os.path.dirname(output_json), exist_ok=True)
-with open(output_json, 'w') as out:
-    json.dump({"results": results}, out, indent=2)
-
 # 新增：輸出 LaTeX 表格到 txt
 os.makedirs(os.path.dirname(output_latex), exist_ok=True)
 rows = []
@@ -63,13 +57,15 @@ latex_table = (
     "\\centering\n"
     "\\begin{tabular}{cccc}\n"
     "\\hline\n"
-    "$m_A$ [GeV] & 1 cat. & 2 cats. & Improvement \\\\\n"
+    "$m_a$ [GeV] & \multicolumn{2}{c}{Significance} & Improvement \\\ \n"
+    "\\cline{2-3}\n"
+    "& 1 cat. & 2 cats. &  \\\\\n"
     "\\hline\n"
     + ("\n".join(rows) if rows else "")
     + ("\n" if rows else "")
     + "\\hline\n"
     "\\end{tabular}\n"
-    "\\caption{\label{tab:widgets}Significance improvement from category splitting.}\n"
+    "\\caption{\label{tab:widgets} Approximate mean significance for different numbers of categories, and its improvement as a function of the number of categories.}\n"
     "\\end{table}"
 )
 

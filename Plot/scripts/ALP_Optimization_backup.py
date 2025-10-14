@@ -26,6 +26,7 @@ from matplotlib import pyplot as plt
 
 #import argparse
 from optparse import OptionParser
+import json
 
 #parser = argparse.ArgumentParser(description="A simple ttree plotter")
 #parser.add_argument("-y", "--Year", dest="year", default="2017", help="which year's datasetes")
@@ -452,7 +453,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                         partition_final = partition
 
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2,"1. --->",significance_final
-        print (' '.join(map(str,output)))
+        # print (' '.join(map(str,output)))
 
     #3 categories
     elif nCats == 3:
@@ -606,19 +607,57 @@ def main():
 
                 #print "nSig: ", 
 
-                out_file_name = options.outDir + '/categorize_' + r + '_' + sig + '.txt'
-
                 if not os.path.exists(options.outDir):
                     os.makedirs(options.outDir)
 
-                outfile = open(out_file_name, 'w')
-                outfile.write(str(output[r]))
+                # 準備 JSON 內容
+                def build_json_obj(partitions, sigf, smooth_idx):
+                    # boundaries 以各分類的左邊界表示（與原本輸出一致）
+                    boundaries = [
+                        float(hist_signal[r][sig].GetBinCenter(p[0]) - hist_signal[r][sig].GetBinWidth(p[0]) / 2.0)
+                        for p in partitions
+                    ]
+                    obj = {
+                        "nCats": int(nCats),
+                        "region": str(r),
+                        "mass": str(sig),
+                        "significance": round(float(sigf), 3) if sigf != -999. else -999.0,
+                        "boundaries": [round(b, 3) for b in boundaries]
+                    }
+                    # 僅在 1 類別時，補充詳細欄位（對照舊 txt 內容）
+                    if nCats == 1 and len(partitions) == 1 and partitions[0][0] >= 1:
+                        low_bin = partitions[0][0]
+                        signal_total = float(hist_signal[r][sig].Integral(1, nBins+1))
+                        events_total = int(hist_signal[r][sig].GetEntries())
+                        signal_cut = float(hist_signal[r][sig].Integral(low_bin, nBins))
+                        smoothed_background = float(hist_SR_smooth[r][sig][smooth_idx].Integral(low_bin, nBins))
+                        data_val = float(hist_CR[sig].Integral(low_bin, nBins))
+                        next_bin_smoothed_background = float(hist_SR_smooth[r][sig][smooth_idx].Integral(low_bin+1, nBins))
+                        next_bin_data = float(hist_CR[sig].Integral(low_bin+1, nBins))
+                        obj["details"] = {
+                            "signal_total": round(signal_total, 3),
+                            "events": events_total,
+                            "signal_cut": round(signal_cut, 3),
+                            "smoothed_background": round(smoothed_background, 3),
+                            "data": round(data_val, 3),
+                            "next_bin_smoothed_background": round(next_bin_smoothed_background, 3),
+                            "next_bin_data": round(next_bin_data, 3)
+                        }
+                    return obj
 
-                outfile_up = open(options.outDir + '/categorize_' + r + '_' + sig + '_up.txt', 'w')
-                outfile_up.write(str(output_up[r]))
+                # 正常、上偏、下偏三種 JSON
+                obj_nom = build_json_obj(partition_final[r],     significance_final[r],     0)
+                obj_up  = build_json_obj(partition_final_up[r],  significance_final_up[r],  1)
+                obj_dn  = build_json_obj(partition_final_dn[r],  significance_final_dn[r],  2)
 
-                outfile_dn = open(options.outDir + '/categorize_' + r + '_' + sig + '_dn.txt', 'w')
-                outfile_dn.write(str(output_dn[r]))
+                # 寫出 json 檔案（取代原本 .txt）
+                out_base = f"{options.outDir}/nCat{int(nCats)}_{r}_{sig}"
+                with open(out_base + ".json", "w") as f_nom:
+                    json.dump(obj_nom, f_nom, indent=2)
+                with open(out_base + "_up.json", "w") as f_up:
+                    json.dump(obj_up, f_up, indent=2)
+                with open(out_base + "_dn.json", "w") as f_dn:
+                    json.dump(obj_dn, f_dn, indent=2)
 
         if options.sigVSscore:
             
@@ -804,3 +843,4 @@ def main():
 
 
 main()
+

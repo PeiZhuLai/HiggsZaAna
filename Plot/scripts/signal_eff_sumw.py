@@ -16,13 +16,14 @@ try:
     _HAVE_SCIPY = True
 except Exception:
     _HAVE_SCIPY = False
+import json  # 新增：讀取 MVAcut 的 JSON
 
 # ===== Samples / 常數 (整合後唯一版本) =====
 years_sig  = ["2022preEE"]          # 信號年份
 ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
-INPUT_BASE = "/eos/home-p/pelai/HZa/Root_Dataset/run3_BDT/"
-optimized_BDT_Cut="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/BDT_cut_all_ma_run3.txt"
+INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT"
+optimized_BDT_Cut="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 
 YEAR = "2022preEE"
 XS_PB = 0.1
@@ -34,7 +35,7 @@ INPUT_BASE_TREE_NAME = "test"
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45,
-            'combined_run3':62.50 }
+            'combined_run3':61.89 }
 LUMI_FB = float(lumiMap[YEAR])
 
 # ==== Helpers ====
@@ -47,18 +48,115 @@ Y_MIN = 0.8
 Y_MAX = 3.5
 
 # ====== 解析 BDT 門檻 ======
+def _to_int(v) -> Optional[int]:
+    if v is None:
+        return None
+    if isinstance(v, (int, np.integer)):
+        return int(v)
+    if isinstance(v, float):
+        return int(round(v))
+    if isinstance(v, str):
+        m = re.search(r"-?\d+", v)
+        return int(m.group(0)) if m else None
+    return None
+
+def _to_float(v) -> Optional[float]:
+    if v is None:
+        return None
+    if isinstance(v, (int, float, np.integer, np.floating)):
+        return float(v)
+    if isinstance(v, str):
+        m = re.search(r"-?\d+(?:\.\d+)?", v)
+        return float(m.group(0)) if m else None
+    return None
+
 def _parse_mva_cuts(path: str) -> Dict[int,float]:
-    import re, ast
+    """
+    從 JSON 檔案讀取各 mA 的 MVAcut，容錯支援：
+    - dict: { "results": [ {mA/ma/mass: ..., MVAcut/mvaCut/cut: ...}, ... ] }
+    - list: [ { ... }, { ... } ]
+    - dict: { "ALP_M5": 0.975, "ALP_M15": 0.98, ... }
+    - dict: { "5": {"MVAcut": 0.975}, "15": {"cut": 0.98} }
+    - 字串型數值亦可，例如 "5 GeV", "0.975 +/- 0.01"
+    解析失敗時回傳 {}，並在主程式顯示錯誤訊息。
+    """
+    def _entry_to_pair(entry: dict) -> Tuple[Optional[int], Optional[float]]:
+        # 優先直接取數值欄位
+        mass_keys = ("mA", "ma", "mass", "massA")
+        cut_keys  = ("MVAcut", "mvaCut", "mva_cut", "cut", "bdtCut", "bdt_cut", "best_MVAcut")
+        ma = None
+        for k in mass_keys:
+            if k in entry:
+                ma = _to_int(entry[k]); break
+        # 從 sample/name 類欄位抽出，例如 "ALP_M5"
+        if ma is None:
+            for k in ("sample", "name", "label", "title"):
+                if k in entry and isinstance(entry[k], str):
+                    ma = _parse_ma(entry[k])
+                    if ma is not None:
+                        break
+        # cut
+        cut = None
+        for k in cut_keys:
+            if k in entry:
+                cut = _to_float(entry[k]); break
+        # 若 cut 在次層
+        if cut is None:
+            for k in ("best", "opt", "result", "payload"):
+                if k in entry and isinstance(entry[k], dict):
+                    for ck in cut_keys:
+                        if ck in entry[k]:
+                            cut = _to_float(entry[k][ck]); break
+                if cut is not None:
+                    break
+        return ma, cut
+
     try:
-        with open(path,"r") as f:
-            txt = f.read()
-        m = re.search(r"\{.*\}", txt, flags=re.S)
-        if not m:
-            return {}
-        raw = ast.literal_eval(m.group(0))
-        return {int(k):float(v) for k,v in raw.items()}
+        with open(path, "r") as f:
+            data = json.load(f)
     except Exception:
         return {}
+
+    out: Dict[int, float] = {}
+
+    # 1) list 形式
+    if isinstance(data, list):
+        for ent in data:
+            if not isinstance(ent, dict): continue
+            ma, cut = _entry_to_pair(ent)
+            if ma is not None and cut is not None:
+                out[ma] = cut
+
+    # 2) dict 且含 results/points/entries 清單
+    if not out and isinstance(data, dict):
+        for key in ("results", "points", "entries"):
+            arr = data.get(key)
+            if isinstance(arr, list):
+                for ent in arr:
+                    if not isinstance(ent, dict): continue
+                    ma, cut = _entry_to_pair(ent)
+                    if ma is not None and cut is not None:
+                        out[ma] = cut
+                if out:
+                    break
+
+    # 3) dict 的巢狀容器，例如 data["2022preEE"]["results"]
+    if not out and isinstance(data, dict):
+        for v in data.values():
+            if isinstance(v, dict):
+                for key in ("results", "points", "entries"):
+                    arr = v.get(key)
+                    if isinstance(arr, list):
+                        for ent in arr:
+                            if not isinstance(ent, dict): continue
+                            ma, cut = _entry_to_pair(ent)
+                            if ma is not None and cut is not None:
+                                out[ma] = cut
+                        if out:
+                            break
+            if out:
+                break
+    return out
 
 # ====== 樣本與質量對應 ======
 def _parse_ma(name: str) -> Optional[int]:
@@ -293,13 +391,19 @@ def _plot_line(x: List[int], y: List[float], channel_label: str, out_dir: Path) 
     # CMS Preliminary 與 13.6 TeV
     lat = ROOT.TLatex()
     lat.SetTextFont(42)
+    # 改：先留左側 CMS Preliminary 用左下對齊
     lat.SetTextAlign(11)
     lat.SetNDC()
     lat.SetTextSize(0.05)
     lat.DrawLatex(0.12 + OFFSET, 0.92, "#bf{CMS} #it{Preliminary}")
-    lat.DrawLatex(0.82 + OFFSET, 0.92, "13.6 TeV")
+    # 新：右上角亮度改用右上對齊，避免被右邊界裁切
+    lat.SetTextAlign(31)  # 3=Right, 1=Top
+    x_lumi = 1.0 - c.GetRightMargin() - 0.005
+    y_lumi = 0.92
+    lat.DrawLatexNDC(x_lumi, y_lumi, "61.89 fb^{-1} (13.6 TeV)")
 
     c.Update()
+    c.RedrawAxis()  # 確保標註與座標完整重繪
 
     # 輸出
     fname = f"sigEfficiencyVmA_{'muon' if channel_label.lower().startswith('muon') else 'ele'}"
@@ -311,6 +415,12 @@ def _plot_line(x: List[int], y: List[float], channel_label: str, out_dir: Path) 
 def main():
     # 1. 解析各質量 BDT cut
     mva_cuts = _parse_mva_cuts(optimized_BDT_Cut)
+    if not mva_cuts:
+        print(f"[錯誤] 從 JSON 讀不到任何 MVA cut：{optimized_BDT_Cut}，請檢查格式/鍵名。")
+        return
+    else:
+        print(f"[資訊] 成功載入 {len(mva_cuts)} 個 MVA cut：{sorted(mva_cuts.items())}")
+
     # 2. 建立 ma->sample 對應
     sample_map = _build_mass_map(sig_samples)
     out_dir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/signal_eff_sumw")
