@@ -5,6 +5,7 @@ NOMINAL_TAG = "nominal" # name of the nominal events (relevant when we have mult
 #pre-VFP  runs: 273150-278800 lumi: 19480.4566773 /pb
 #post-VFP runs: 278801-284044 lumi: 16755.0362868 /pb
 
+# 2024 without B
 LUMI = {
     "2016" : 36.31,
     "2016preVFP" : 19.51, 
@@ -16,7 +17,8 @@ LUMI = {
     "2022postEE": 26.67,
     "2023" : 27.14,
     "2023preBPix": 17.79,
-    "2023postBPix": 9.45
+    "2023postBPix": 9.45,
+    "2024": 108.95
 }
 
 GOLDEN_JSON = {
@@ -30,7 +32,8 @@ GOLDEN_JSON = {
     "2022postEE" : "metadata/golden_json/Cert_Collisions2022_355100_362760_Golden.json",
     "2023" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json",
     "2023preBPix" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json",
-    "2023postBPix" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json"
+    "2023postBPix" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json",
+    "2024" : "metadata/golden_json/Cert_Collisions2024_378981_386951_Golden.json"
 }
 
 # nanoAOD branches to always include
@@ -60,7 +63,7 @@ BRANCHES = {
         "2023preBPix" : [
             "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
         ],
-        "2023postBPix" : [
+        "2024" : [
             "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
         ],
         "any" : ["event", "run", "luminosityBlock"]
@@ -78,6 +81,7 @@ BRANCHES = {
         "2023" : [],
         "2023preBPix" : [],
         "2023postBPix" : [],
+        "2024" : [],
         "any" : ["event", "run", "luminosityBlock"]
     }
 }

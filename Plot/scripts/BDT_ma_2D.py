@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import uproot
 
-INPUT_BASE = "/eos/home-p/pelai/HZa/Root_Dataset/run3_BDT/"
+INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
 
 # 你之前实际使用的组合：
 years_sig  = ["2022preEE"]  # 信号
@@ -17,8 +17,19 @@ years_23   = ["2023preBPix","2023postBPix"]
 years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
 
 # 扫描的 ma 列表（背景也按你的原脚本扫）
-ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
+interpolate = True
 
+if not interpolate:
+    ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
+else:
+    ma_list = list(range(1, 31))
+
+tuneStyle = False # False # True: 只產生樣式預覽圖，不讀資料
+
+# sig_ma_ticks =  [1,2,3,4,5,6,7,8,9,10,15,20,25,30]  # x 軸只顯示這些質量刻度
+sig_ma_ticks =  [5,15,30]  # x 軸只顯示這些質量刻度
+# bkg_ma_ticks = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
+bkg_ma_ticks = [5,15,30]
 # ===== Samples =====
 sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
 
@@ -34,8 +45,7 @@ WEIGHT_CANDIDATES = ["weight", "event_weight", "wgt_nominal", "genWeight", "genw
 # ==== Helpers ====
 # 设置全局字体大小和图形样式
 plt.rcParams.update({
-    'figure.figsize': (8, 6),  # 图形大小
-
+    'figure.figsize': (10, 6),  # 图形大小
     'font.size': 14,
     'axes.titlesize': 17,  # 图标题，plt.title()
     'axes.labelsize': 18,  # 坐标轴标题/标签，plt.xlabel, plt.ylabel
@@ -43,10 +53,8 @@ plt.rcParams.update({
     'ytick.labelsize': 14,  # y 轴刻度“数字或文字”大小
     'legend.fontsize': 14,  # 图例文字大小 plt.legend()
     'figure.titlesize': 14,  # 整个 Figure 的总标题字体大小，用 plt.suptitle() 设定的顶层标题
-
     # 'patch.linewidth': 1.5 ,       # 直方图柱子的边框线宽
     # 'patch.edgecolor': 'blue',      # 直方图柱子的边框颜色
-
 })
 
 def mass_from_sig(sample: str) -> float:
@@ -157,17 +165,46 @@ def ensure_outdir():
     outdir.mkdir(parents=True, exist_ok=True)
     return outdir
 
-def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", x_tick_masses=None, corr_text=None, corr_loc="upper right"):
-    H, xe, ye = np.histogram2d(x, y, bins=[x_edges, y_edges], weights=w)
+def draw_hist2d(
+    x, y, w, x_edges, y_edges, title, out_png,
+    y_label="BDT Score", x_tick_masses=None,
+    corr_text=None, corr_loc="upper right", corr_pos=None,
+    xtick_labelsize=None, xlabel_size=None, style_only=False
+):
+    # 新增：style_only=True 時不根據輸入 (x,y,w) 計數，直接用假資料生成 2D 畫布
+    if not style_only:
+        H, xe, ye = np.histogram2d(x, y, bins=[x_edges, y_edges], weights=w)
+    else:
+        xe, ye = x_edges, y_edges
+        nx = len(xe) - 1
+        ny = len(ye) - 1
+        # 產生正值漸層 (避免 LogNorm 問題)
+        gx = np.linspace(0.3, 1.0, max(nx, 1))
+        gy = np.linspace(0.3, 1.0, max(ny, 1))
+        H = np.outer(gx[:nx], gy[:ny])
+        if H.size == 0:
+            # 邊界不足時用最小 1x1
+            H = np.array([[1.0]])
+
+    # 更健壯的 LogNorm 邊界處理，避免 vmin == vmax 或沒有正數時崩潰
+    if np.any(H > 0):
+        vmin = max(np.min(H[H > 0]), 1e-1)
+        vmax = float(np.max(H))
+    else:
+        vmin, vmax = 1e-1, 1.0
+    if not (vmax > vmin):
+        vmax = vmin * 10.0
+
     plt.figure(figsize=(8, 6))
     pcm = plt.pcolormesh(
         xe, ye, H.T,
-        norm=LogNorm(vmin=max(H[H>0].min() if np.any(H>0) else 1.0, 1e-1),
-                     vmax=H.max() if H.max()>0 else 1.0),
+        norm=LogNorm(vmin=vmin, vmax=vmax),
         cmap="viridis", shading="auto"
     )
     plt.colorbar(pcm, label="Events", pad=0.01)
     plt.xlabel(r"$m_{a}$ [GeV]")
+    if xlabel_size is not None:
+        plt.gca().xaxis.label.set_size(xlabel_size)
     plt.ylabel(y_label)
 
     # 只顯示指定的質量刻度（自動過濾超出邊界者）
@@ -177,39 +214,45 @@ def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", 
         ticks = [int(m) for m in x_tick_masses if (xmin_c <= float(m) <= xmax_c)]
         plt.xticks(ticks, [str(m) for m in ticks], rotation=0)
     else:
-        # x 軸質量中心（整數）作為刻度
         xcenters = 0.5 * (x_edges[:-1] + x_edges[1:])
         plt.xticks(xcenters, [f"{int(round(c))}" for c in xcenters], rotation=0)
 
-    # 僅在 title 非空時使用標題（不再用標題顯示 correlation）
+    if xtick_labelsize is not None:
+        plt.gca().tick_params(axis="x", labelsize=xtick_labelsize)
+
     if title:
         plt.title(title)
     plt.tight_layout()
 
-    # 新增：在圖框內標出 correlation，支援 upper/lower + left/center/right
+    # 圖框內 correlation 標示
     if corr_text:
         ax = plt.gca()
-        loc = (corr_loc or "upper right").lower()
-        # 預設右上
-        x, y_pos = 0.98, 0.98
-        ha, va = "right", "top"
-        if "lower" in loc:
-            y_pos = 0.02
-            va = "bottom"
-        if "left" in loc:
-            x = 0.02
-            ha = "left"
-        elif "center" in loc:
-            x = 0.5
-            ha = "center"
+        if corr_pos is not None:
+            # 新增：corr_pos 使用 axes fraction (0~1) 直接指定文字位置，會覆蓋 corr_loc
+            x_pos, y_pos = corr_pos
+            ha, va = "left", "bottom"
+        else:
+            loc = (corr_loc or "upper right").lower()
+            x_pos, y_pos = 0.98, 0.98
+            ha, va = "right", "top"
+            if "lower" in loc:
+                y_pos = 0.02
+                va = "bottom"
+            if "left" in loc:
+                x_pos = 0.02
+                ha = "left"
+            elif "center" in loc:
+                x_pos = 0.5
+                ha = "center"
         ax.text(
-            x, y_pos, corr_text,
+            x_pos, y_pos, corr_text,
             ha=ha, va=va, transform=ax.transAxes,
             fontsize=16,
+            fontweight='bold',
             bbox=dict(facecolor="white", edgecolor="white", alpha=0.75)
         )
 
-    # 新增：左上角 CMS 粗體 + Preliminary，右上角亮度與能量
+    # 左上角 CMS + Preliminary，右上角亮度與能量
     fig = plt.gcf()
     x0, y0 = 0.13, 0.97
     t_cms = fig.text(x0, y0, "CMS", ha="left", va="top", fontsize=19, fontweight="bold")
@@ -218,12 +261,50 @@ def draw_hist2d(x, y, w, x_edges, y_edges, title, out_png, y_label="BDT Score", 
     cms_bb = t_cms.get_window_extent(renderer=renderer)
     dx = cms_bb.width / fig.bbox.width + 0.006
     fig.text(x0 + dx, y0, "Preliminary", ha="left", va="top", fontsize=19)
-    fig.text(0.84, 0.965, r"$62.5\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
+    fig.text(0.84, 0.965, r"$61.89\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
     plt.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.92)
 
     plt.savefig(out_png, dpi=200, bbox_inches="tight", pad_inches=0.05)
     plt.savefig(out_png.with_suffix(".pdf"), bbox_inches="tight", pad_inches=0.05)
     plt.close()
+
+# 新增：樣式預覽（不讀取資料）
+def make_style_previews(outdir):
+    # y 軸（BDT）bin：0~1 共 100 bin
+    bdt_edges = np.linspace(0.0, 1.0, 101)
+
+    # 背景樣式預覽
+    bkg_x_edges = build_uniform_mass_edges(ma_list, step=1.0)
+    draw_hist2d(
+        x=None, y=None, w=None,
+        x_edges=bkg_x_edges, y_edges=bdt_edges,
+        title=None,
+        out_png=outdir / "BDT_vs_ma_background_style.png",
+        y_label="Background BDT Score",
+        x_tick_masses=ma_list,
+        corr_text="Correlation = 0.000",
+        corr_loc="upper right",
+        xtick_labelsize=(10 if interpolate else None),
+        style_only=True
+    )
+    print(f"[style] saved -> {outdir/'BDT_vs_ma_background_style.png'}")
+
+    # 訊號樣式預覽
+    sig_masses = [mass_from_sig(s) for s in sig_samples]
+    sig_x_edges = build_uniform_mass_edges(sig_masses, step=1.0)
+    draw_hist2d(
+        x=None, y=None, w=None,
+        x_edges=sig_x_edges, y_edges=bdt_edges,
+        title=None,
+        out_png=outdir / "BDT_vs_ma_signal_style.png",
+        y_label="Signal BDT Score",
+        x_tick_masses=ma_list,
+        corr_text="Correlation = 0.000",
+        corr_loc="lower right",
+        xtick_labelsize=(10 if interpolate else None),
+        style_only=True
+    )
+    print(f"[style] saved -> {outdir/'BDT_vs_ma_signal_style.png'}")
 
 # ==== Collectors ====
 def collect_background_xyw():
@@ -281,6 +362,11 @@ def collect_signal_xyw():
 def main():
     outdir = ensure_outdir()
 
+    # 新增：樣式調整模式，完全不讀資料，直接產出預覽圖後結束
+    if tuneStyle:
+        make_style_previews(outdir)
+        return
+
     # y 軸（BDT）bin：0~1 共 100 bin；如需 -1~1 可改成 np.linspace(-1,1,101)
     bdt_edges = np.linspace(0.0, 1.0, 101)
 
@@ -294,9 +380,11 @@ def main():
             title=None,
             out_png=outdir / "BDT_vs_ma_background.png",
             y_label="Background BDT Score",
-            x_tick_masses=ma_list,
+            x_tick_masses=bkg_ma_ticks,
             corr_text=f"Correlation = {corr_bkg:.3f}",
-            corr_loc="upper right",
+            corr_pos=(0.53, 0.5),  
+            xtick_labelsize=(14 if interpolate else None)  # interpolate=True 時縮小 x 刻度字體
+            # 如需同時調整 x 標籤大小可加：xlabel_size=(16 if interpolate else None)
         )
         print(f"[bkg] saved -> {outdir/'BDT_vs_ma_background.png'} (corr={corr_bkg:.3f})")
     else:
@@ -305,17 +393,23 @@ def main():
     # ---- 訊號：x=ma, y=BDT ----
     sx, sy, sw = collect_signal_xyw()  # 目前 sx=mva, sy=ma
     if sx.size > 0:
-        sig_masses = [mass_from_sig(s) for s in sig_samples]
-        sig_x_edges = build_uniform_mass_edges(sig_masses, step=1.0)
+        # extract ma from sig_samples
+        # sig_masses = [mass_from_sig(s) for s in sig_samples]
+        # sig_x_edges = build_uniform_mass_edges(sig_masses, step=1.0)
+        # -------------------------------
+        # extract ma from ma_list
+        sig_x_edges = build_uniform_mass_edges(ma_list, step=1.0)
         corr_sig = weighted_corr(sy, sx, sw)
         draw_hist2d(
             sy, sx, sw, sig_x_edges, bdt_edges,
             title=None,
             out_png=outdir / "BDT_vs_ma_signal.png",
             y_label="Signal BDT Score",
-            x_tick_masses=ma_list,  # 只顯示你提供的質量清單，超出邊界會自動過濾
+            x_tick_masses=sig_ma_ticks,  # 只顯示你提供的質量清單，超出邊界會自動過濾
             corr_text=f"Correlation = {corr_sig:.3f}",
-            corr_loc="lower right",
+            corr_pos=(0.53, 0.5),
+            xtick_labelsize=(14 if interpolate else None)
+            # 如需同時調整 x 標籤大小可加：xlabel_size=(16 if interpolate else None)
         )
         print(f"[sig] saved -> {outdir/'BDT_vs_ma_signal.png'} (corr={corr_sig:.3f})")
     else:

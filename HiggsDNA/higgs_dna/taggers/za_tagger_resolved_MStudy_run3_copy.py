@@ -81,39 +81,39 @@ DEFAULT_OPTIONS = {
         ],
         "mvaID_barrel" : -0.4,
         "mvaID_endcap" : -0.58,
-        # Loose
-        # "hoe_barrel": 0.129991,
-        # "hoe_endcap": 0.153428,
-        # "PFChIso_barrel": 1.88518,
-        # "PFChIso_endcap": 1.65396,
-        # "PFHCalIso_barrel": [6.34397,   0.0100547, 5.78332e-05],
-        # "PFHCalIso_endcap": [1.85881,   0.0116989, 7.47603-05],
-        # "sieie_barrel": 0.0114521,
-        # "sieie_endcap": 0.0276744,
-        # "PFECalIso_barrel": [0.703789, 0.000652035],
-        # "PFECalIso_endcap": [6.61585, 0.000195486],
+        # # Loose
+        "loose_hoe_barrel": 0.129991,
+        "loose_hoe_endcap": 0.153428,
+        "loose_PFChIso_barrel": 1.88518,
+        "loose_PFChIso_endcap": 1.65396,
+        "loose_PFHCalIso_barrel": [6.34397,   0.0100547, 5.78332e-05],
+        "loose_PFHCalIso_endcap": [1.85881,   0.0116989, 7.47603e-05],
+        "loose_sieie_barrel": 0.0114521,
+        "loose_sieie_endcap": 0.0276744,
+        "loose_PFECalIso_barrel": [0.703789, 0.000652035],
+        "loose_PFECalIso_endcap": [6.61585, 0.000195486],
         # # Medium
-        # "hoe_barrel": 0.0583054,
-        # "hoe_endcap": 0.00518075,
-        # "PFChIso_barrel": 0.939289,
-        # "PFChIso_endcap": 0.970286,
-        # "PFHCalIso_barrel": [2.18903,   0.0100547, 5.78332e-05],
-        # "PFHCalIso_endcap": [0.0336699, 0.0116989, 7.47603e-05],
-        # "sieie_barrel": 0.0100086,
-        # "sieie_endcap": 0.0268736,
-        # "PFECalIso_barrel": [0.227697, 0.000652035],
-        # "PFECalIso_endcap": [1.124, 0.000195486],
+        "medium_hoe_barrel": 0.0583054,
+        "medium_hoe_endcap": 0.00518075,
+        "medium_PFChIso_barrel": 0.939289,
+        "medium_PFChIso_endcap": 0.970286,
+        "medium_PFHCalIso_barrel": [2.18903,   0.0100547, 5.78332e-05],
+        "medium_PFHCalIso_endcap": [0.0336699, 0.0116989, 7.47603e-05],
+        "medium_sieie_barrel": 0.0100086,
+        "medium_sieie_endcap": 0.0268736,
+        "medium_PFECalIso_barrel": [0.227697, 0.000652035],
+        "medium_PFECalIso_endcap": [1.124, 0.000195486],
         # # Tight
-        "hoe_barrel": 0.0417588,
-        "hoe_endcap": 0.00254267,
-        "PFChIso_barrel": 0.316306,
-        "PFChIso_endcap": 0.292664,
-        "PFHCalIso_barrel": [0.39057,   0.0100547, 5.78332e-05],
-        "PFHCalIso_endcap": [0.0292617, 0.0116989, 7.47603e-05],
-        "sieie_barrel": 0.00999299,
-        "sieie_endcap": 0.0268702,
-        "PFECalIso_barrel": [0.14189, 0.000652035],
-        "PFECalIso_endcap": [1.04269, 0.000195486],
+        "tight_hoe_barrel": 0.0417588,
+        "tight_hoe_endcap": 0.00254267,
+        "tight_PFChIso_barrel": 0.316306,
+        "tight_PFChIso_endcap": 0.292664,
+        "tight_PFHCalIso_barrel": [0.39057,   0.0100547, 5.78332e-05],
+        "tight_PFHCalIso_endcap": [0.0292617, 0.0116989, 7.47603e-05],
+        "tight_sieie_barrel": 0.00999299,
+        "tight_sieie_endcap": 0.0268702,
+        "tight_PFECalIso_barrel": [0.14189, 0.000652035],
+        "tight_PFECalIso_endcap": [1.04269, 0.000195486],
         #------------------------------------------
         "PFHCalIso_EA_EB_1": [0.17005,  -0.000835],
         "PFHCalIso_EA_EB_2": [0.208571, -0.000905],
@@ -135,7 +135,10 @@ DEFAULT_OPTIONS = {
         "relative_pt_gamma" : 15.0/110.,
         "mass_h" : [95., 180.],
         "mass_sum" : 185,
-        "select_highest_pt_sum" : True
+        "select_highest_pt_sum" : True,
+        # 新增：ALP isolation 除錯開關與最多印出的事件數
+        "debug_alp_iso": False,
+        "debug_alp_iso_max_events": 10,
     },
     "single_muon_trigger":{
         "2016":["HLT_IsoMu24", "HLT_IsoTkMu24"],
@@ -165,14 +168,6 @@ DEFAULT_OPTIONS = {
         "2022":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
         "2023":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"]
     },
-    # "trigger" : {
-    #     "2016" : ["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ", "HLT_IsoMu20", "HLT_IsoMu24", "HLT_IsoMu27", "HLT_Mu50", "HLT_Mu55", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL", "HLT_Ele27_WPTight_Gsf"],
-    #     "2016UL_preVFP" : ["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ", "HLT_IsoMu20", "HLT_IsoMu24", "HLT_IsoMu27", "HLT_Mu50", "HLT_Mu55", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL", "HLT_Ele27_WPTight_Gsf"],
-    #     "2016UL_postVFP" : ["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ", "HLT_IsoMu20", "HLT_IsoMu24", "HLT_IsoMu27", "HLT_Mu50", "HLT_Mu55", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL", "HLT_Ele27_WPTight_Gsf"],
-    #     "2017" : ["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8", "HLT_Ele27_WPTight_Gsf", "HLT_Ele32_WPTight_Gsf_L1DoubleEG", "HLT_Ele35_WPTight_Gsf", "HLT_IsoMu20", "HLT_IsoMu24", "HLT_IsoMu27", "HLT_Mu50", "HLT_IsoMu24_eta2p1"],
-    #     "2018" : ["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8", "HLT_Mu37_TkMu27", "HLT_IsoMu20", "HLT_IsoMu24", "HLT_IsoMu27", "HLT_Mu50", "HLT_Mu55", "HLT_IsoMu24_eta2p1", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ", "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL", "HLT_DoubleEle25_CaloIdL_MW", "HLT_Ele27_WPTight_Gsf", "HLT_Ele32_WPTight_Gsf", "HLT_Ele32_WPTight_Gsf_L1DoubleEG", "HLT_Ele35_WPTight_Gsf", "HLT_Ele20_WPLoose_Gsf"],
-    #     "2022" : ["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8", "HLT_Ele30_WPTight_Gsf", "HLT_Ele32_WPTight_Gsf", "HLT_Ele35_WPTight_Gsf", "HLT_IsoMu24", "HLT_IsoMu27", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ",  "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL"]
-    # }, 
     "electrons" : {
         "pt" : 7.0
     },
@@ -407,54 +402,40 @@ class ZaTaggerRun3(Tagger):
             )
 
         # Photons
-        photon_selection = self.select_photons(
-                photons = events.Photon,
-                options = self.options["photons"],
-                electrons = electrons,
-                rho = rho,
-                year = self.year[:4]
+        photon_mask = self.select_photons(
+            photons = events.Photon,
+            options = self.options["photons"],
+            electrons = electrons,
+            rho = rho,
+            year = self.year[:4]
         )
-        photons = events.Photon[photon_selection]
-        
+
+        # NEW: 存下「所有 photons（未篩選）」但帶有各種 flag，方便你後面做 photon ID study
+        # 注意：這裡不 slicing，保留 nPhoton 原始長度
+        awkward_utils.add_field(
+            events=events,
+            name="PhotonWithFlags",
+            data=events.Photon
+        )
+        awkward_utils.add_field(
+            events=events,
+            name="Photon_preselection_mask",
+            data=photon_mask,
+            overwrite=True
+        )
+
+        # downstream 的重建仍只用通過 preselection 的 photons（行為與你原本一致）
+        photons = events.Photon[photon_mask]
+
         # lepton-photon overlap removal 
         clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
-        # object_selections.delta_R(photons, muons, 0.3) & object_selections.delta_R(photons, electrons, 0.3)
         photons = photons[clean_photon_mask]
         photons = ak.with_field(photons, ak.ones_like(photons.pt) * 0.0, "mass")
 
-        # photons = awkward_utils.add_field(
-        #     events = events,
-        #     name = "SelectedPhoton",
-        #     data = photons[:, :2]
-        # )
+        # 加入在原始 events.Photon 中的索引，方便稍後做全體 photon 的排除
+        pho_orig_idx = ak.local_index(events.Photon.pt, axis=1)
+        photons = ak.with_field(photons, pho_orig_idx[photon_mask][clean_photon_mask], "origIndex")
 
-        # # Jets
-        # jet_cut = jet_selections.select_jets(
-        #     jets = events.Jet,
-        #     options = self.options["jets"],
-        #     clean = {
-        #         "photons" : {
-        #             "objects" : photons,
-        #             "min_dr" : self.options["jets"]["dr_photons"]
-        #         },
-        #         "electrons" : {
-        #             "objects" : electrons,
-        #             "min_dr" : self.options["jets"]["dr_electrons"]
-        #         },
-        #         "muons" : {
-        #             "objects" : muons,
-        #             "min_dr" : self.options["jets"]["dr_muons"]
-        #         }
-        #     },
-        #     year = self.year,
-        #     name = "SelectedJet",
-        #     tagger = self
-        # )
-        # jets = awkward_utils.add_field(
-        #     events = events,
-        #     name = "SelectedJet",
-        #     data = events.Jet[jet_cut]
-        # )
 
         FSRphoton_selection = self.select_FSRphotons(
                 FSRphotons = events.FsrPhoton,
@@ -469,13 +450,6 @@ class ZaTaggerRun3(Tagger):
             data = events.FsrPhoton[FSRphoton_selection]
         )
         FSRphotons = ak.with_field(FSRphotons, ak.ones_like(FSRphotons.pt) * 0.0, "mass")
-
-        # if "2017" in self.year or "2018" in self.year:
-        #     year = self.year[:4]
-        #     b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][year]
-        # else:
-        #     b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][self.year]
-        # jets = ak.with_field(jets, b_jet_cut, "is_med_bjet") 
 
         # Add object fields to events array
         for objects, name in zip([electrons, muons], ["electron", "muon"]):
@@ -502,13 +476,6 @@ class ZaTaggerRun3(Tagger):
         n_leptons = n_electrons + n_muons
         # N_e_mu_cut = N_e_cut | N_mu_cut
         awkward_utils.add_field(events, "n_leptons", n_leptons, overwrite=True)
-
-        # n_jets = ak.num(jets)
-        # # logger.debug(f"Number of jets(tagger): {n_jets[:10]}")
-        # awkward_utils.add_field(events, "n_jets", n_jets, overwrite=True)
-
-        # n_b_jets = ak.sum(b_jet_cut, axis=1)
-        # awkward_utils.add_field(events, "n_b_jets", n_b_jets, overwrite=True)
 
         n_photons = ak.num(photons)
         logger.debug(f"Number of photons(tagger): {n_photons[:10]}")
@@ -625,99 +592,7 @@ class ZaTaggerRun3(Tagger):
         trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut | single_mu_trigger_cut  | double_mu_trigger_cut
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
         mu_trigger_cut = single_mu_trigger_cut  | double_mu_trigger_cut
-        # HLT lepton status: [FIXME]
-        # 0: failed all triggers ->  double_ele_trigger_cut = False, single_ele_trigger_cut = False
-        # 1: passed lower dilepton trigger -> double_ele_trigger_cut = False, single_ele_trigger_cut = True
-        # 2: passed upper dilepton trigger -> double_ele_trigger_cut = True, single_ele_trigger_cut = False
-        # 3: passed single lepton trigger ->  single_ele_trigger_cut = True
-        # HLT_ele_cat0 = (~double_ele_trigger_cut) & (~single_ele_trigger_cut) 
-        # HLT_mu_cat0 = (~double_mu_trigger_cut) & (~single_mu_trigger_cut)
-        # HLT_ele_cat1 = (~double_ele_trigger_cut) & single_ele_trigger_cut
-        # HLT_mu_cat1 = (~double_mu_trigger_cut) & single_mu_trigger_cut
-        # HLT_ele_cat2 = double_ele_trigger_cut & (~single_ele_trigger_cut)
-        # HLT_mu_cat2 = double_mu_trigger_cut & (~single_mu_trigger_cut)
-        # HLT_ele_cat3 = single_ele_trigger_cut
-        # HLT_mu_cat3 = single_mu_trigger_cut
-        # def GetLeptonProbability(lepton_pt, lepton_eta, is_data, is_electron, trigger_leg) :
-        #     if (is_electron):
-        #         if (trigger_leg == pass_lowerdilep):
-        #             if is_data:
-        #                 prob_map = diele12_correction_data
-        #                 unc_map = diele12_uncertainty_data
-        #             else :
-        #                 prob_map = diele12_correction_mc
-        #                 unc_map = diele12_uncertainty_mc
-        #         elif (trigger_leg == pass_upperdilep):
-        #             if is_data:
-        #                 prob_map = diele23_correction_data
-        #                 unc_map = diele23_uncertainty_data
-        #             else :
-        #                 prob_map = diele23_correction_mc
-        #                 unc_map = diele23_uncertainty_mc
-        #         else :  
-        #             if is_data:
-        #                 prob_map = singleele_correction_data
-        #                 unc_map = singleele_uncertainty_data
-        #             else :
-        #                 prob_map = singleele_correction_mc
-        #                 unc_map = singleele_uncertainty_mc
-        #     else:
-        #         if (trigger_leg == pass_lowerdilep):
-        #             if is_data:
-        #                 prob_map = dimu12_correction_data
-        #                 unc_map = dimu12_uncertainty_data
-        #             else :
-        #                 prob_map = dimu12_correction_mc
-        #                 unc_map = dimu12_uncertainty_mc
-        #         elif (trigger_leg == pass_upperdilep):
-        #             if is_data:
-        #                 prob_map = dimu23_correction_data
-        #                 unc_map = dimu23_uncertainty_data
-        #             else :
-        #                 prob_map = dimu23_correction_mc
-        #                 unc_map = dimu23_uncertainty_mc
-        #         else :  
-        #             if is_data:
-        #                 prob_map = singlemu_correction_data
-        #                 unc_map = singlemu_uncertainty_data
-        #             else :
-        #                 prob_map = singlemu_correction_mc
-        #                 unc_map = singlemu_uncertainty_mc
-        #     prob = prob_map
-        #     uncr = unc_map
-        #     return prob, uncr
-
-        # def GetFlavorProbability(lepton_pt, lepton_eta, pass_singlelep, pass_dilep, is_data, is_electron):
-        #     n_pass_lower = ak.num(1*HLT_ele_cat1[1*HLT_ele_cat1>0])+ak.num(1*HLT_mu_cat1[1*HLT_mu_cat1>0])
-        #     n_pass_upper = ak.num(1*HLT_ele_cat2[1*HLT_ele_cat2>0])+ak.num(1*HLT_mu_cat2[1*HLT_mu_cat2>0])
-        #     n_pass_single = ak.num(1*HLT_ele_cat3[1*HLT_ele_cat3>0])+ak.num(1*HLT_mu_cat3[1*HLT_mu_cat3>0])
-        #     relevant_cat = ak.ones_like(lepton_pt) * True
-        #     relevant_cat = ak.where(((n_pass_single>0)!=pass_singlelep), ak.ones_like(relevant_cat) * False, relevant_cat)
-        #     relevant_cat = ak.where((((n_pass_upper>0)&(n_pass_lower>1))!=pass_dilep), ak.ones_like(relevant_cat) * False, relevant_cat)
-        #     lep_prob = ak.zero_like(lepton_pt) 
-        #     lep_unc = ak.zero_like(lepton_pt)
-
-        # def GetTotalProbability(electron_pt,muon_pt, electron_eta,muon_eta, pass_singleel,pass_singlemu,pass_diel,pass_dimu, is_data):
-        #     electron_prob = GetFlavorProbability(electron_pt, electron_eta,pass_singleel, pass_diel, is_data, True)
-        #     muon_prob = GetFlavorProbability(muon_pt, muon_eta,pass_singlemu, pass_dimu, is_data, False)
         
-        # mc_prob = GetTotalProbability(electron_pt, muon_pt, electron_eta, muon_eta, pass_singleel, pass_singlemu, pass_diel, pass_dimu, False)
-
-
-        # 0: lep_prob = 1 - probability(1), lep_unc = uncertainty(1)
-        # 1: lep_prob = prob(1) - prob(2), lep_unc = sqrt(uncertainty(1)**2 + uncertainty(2)**2)
-        # 2: lep_prob = prob(2) - prob(3), lep_unc = sqrt(uncertainty(2)**2 + uncertainty(3)**2)
-        # 3: lep_prob = prob(3), lep_unc = uncertainty(3)
-        
-        #if mc_prob < 0.001: mc_prob = 0.
-        # sf = 1.0;
-        # unc = 0.0;
-        # propagate_uncertainty_ratio(data_prob, data_unc, mc_prob, mc_unc, sf, unc);
-        # sf,unc=1
-        # if mc_prob !=0: sf = data_prob/mc_prob; unc = sqrt((data_unc/mc_prob)**2 + ((mc_unc*data_prob)/(mc_prob*mc*prob))**2)
-        # elif mc_prob == 0 sf = 1; unc = 0
-        #[FIXME]
-        # a trick that give 0 to the empty array    
         if self.year is not None:
             year = self.year[:4]
             e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_ele_pt"][year]
@@ -741,62 +616,6 @@ class ZaTaggerRun3(Tagger):
         mass_cut = z_cands.ZCand.mass > 50.
         z_cands = z_cands[mass_cut] # OSSF lepton pairs with m_ll > 50.
         z_cands_noFSR = z_cands_noFSR[mass_cut]
-
-        # # HEM cut
-        # if self.year=="2018" and self.is_data:
-        #     hem_run=events.run > 319077        
-        #     # checked 65.15623538907509% events in data could pass this run cut
-        #     hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-        #     hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
-        #     hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))        
-        # elif self.year=="2018" and not self.is_data:
-        #     #random number generator from 0 to 1
-        #     fraction=0.6515623538907509
-        #     events['random'] = numpy.random.rand(len(events))
-        #     hem_run=events.random < fraction
-        #     hem_jet=ak.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-        #     hem_fatjet=ak.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
-        #     hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))
-        # else:
-        #     hem_cut=ak.num(events.Photon) >= 0 
-        # events = events[hem_cut]
-        
-        # # Construct di-electron/di-muon pairs
-        # ee_pairs = ak.combinations(electrons, 2, fields = ["LeadLepton", "SubleadLepton"])
-        # if self.year is not None:
-        #     year = self.year[:4]
-        #     e_cut = ee_pairs.LeadLepton.pt > self.options["lead_ele_pt"][year]
-        # else:
-        #     e_cut = ee_pairs.LeadLepton.pt > 25
-        # ee_cut = (ee_pairs.LeadLepton.pt > 25) & (ee_pairs.SubleadLepton.pt > 15)
-        # ee_pairs = ak.concatenate([ee_pairs[double_ele_trigger_cut & ee_cut], ee_pairs[single_ele_trigger_cut & e_cut]], axis = 1)
-        # ele_pair_cut = ak.num(ee_pairs) >= 1
-
-        # mm_pairs = ak.combinations(muons, 2, fields = ["LeadLepton", "SubleadLepton"])
-        # if self.year is not None:
-        #     year = self.year[:4]
-        #     m_cut = mm_pairs.LeadLepton.pt > self.options["lead_mu_pt"][year]
-        # else:
-        #     m_cut = mm_pairs.LeadLepton.pt > 20
-        # mm_cut = (mm_pairs.LeadLepton.pt > 20) & (mm_pairs.SubleadLepton.pt > 10)
-        # mm_pairs = ak.concatenate([mm_pairs[double_mu_trigger_cut & mm_cut], mm_pairs[single_mu_trigger_cut & m_cut]], axis = 1)
-        # muon_pair_cut = ak.num(mm_pairs) >= 1
-
-        # # Concatenate these together
-        # z_cands = ak.concatenate([ee_pairs, mm_pairs], axis = 1)
-
-        # # Make Z candidate-level cuts
-        # # print('!!!!charge of lead lepton{}, charge of sublead lepton {}, flavour of lepton {}'.format(ak.flatten(z_cands[os_cut]).LeadLepton.charge, ak.flatten(z_cands[os_cut]).SubleadLepton.charge, ak.flatten(z_cands[os_cut]).LeadLepton.id))
-        # os_cut = (z_cands.LeadLepton.charge * z_cands.SubleadLepton.charge) == -1
-        # z_cands = z_cands[os_cut]
-        # os_cut = ak.num(z_cands) >= 1
-
-        # z_cands["ZCand"] = z_cands.LeadLepton + z_cands.SubleadLepton # these add as 4-vectors since we registered them as "Momentum4D" objects
-        # mass_cut = (z_cands.ZCand.mass > 80.) & (z_cands.ZCand.mass < 100.)
-        # # mass_cut = (z_cands.ZCand.mass > 50.)
-        # z_cands = z_cands[mass_cut] # OSSF lepton pairs with m_ll > 50.
-
-        # z_cands = z_cands[ak.argsort(abs(z_cands.ZCand.mass - 91.1876), axis = 1)] # take the one with mass closest to mZ
 
         has_z_cand = ak.num(z_cands) >= 1
         z_cand = ak.firsts(z_cands)
@@ -841,18 +660,66 @@ class ZaTaggerRun3(Tagger):
         # Make gamma candidate-level cuts
         has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
 
-        gamma_pairs = ak.combinations(photons, 2, fields=["LeadPhoton", "SubleadPhoton"])
-        gamma_pairs = gamma_pairs[ak.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
-        
-        gamma_pairs["LeadPhoton"] = ak.with_name(gamma_pairs.LeadPhoton, "Momentum4D")
-        gamma_pairs["SubleadPhoton"] = ak.with_name(gamma_pairs.SubleadPhoton, "Momentum4D")
+        # ------------------------------------------------------------
+        # 重新以 index 方式構建 gamma pairs（保留原本邏輯但加入索引）
+        # ------------------------------------------------------------
+        idx_photons = ak.local_index(photons.pt, axis=1)
+        pairs_idx = ak.combinations(idx_photons, 2, fields=["i1", "i2"])
+        lead_idx = ak.where(photons.pt[pairs_idx.i1] >= photons.pt[pairs_idx.i2], pairs_idx.i1, pairs_idx.i2)
+        sub_idx  = ak.where(photons.pt[pairs_idx.i1] >= photons.pt[pairs_idx.i2], pairs_idx.i2, pairs_idx.i1)
 
+        lead_ph = photons[lead_idx]
+        sub_ph  = photons[sub_idx]
+
+        # 同時保存原始 Photon 索引，後續隔離時用來排除 ALP 的兩顆 photon
+        lead_orig = photons.origIndex[lead_idx]
+        sub_orig  = photons.origIndex[sub_idx]
+
+        gamma_pairs = ak.zip({
+            "LeadPhoton": lead_ph,
+            "SubleadPhoton": sub_ph,
+            "LeadIndex": lead_idx,
+            "SubleadIndex": sub_idx,
+            "LeadOrigIndex": lead_orig,
+            "SubleadOrigIndex": sub_orig
+        })
+
+        # 依照 leadPhoton pt 排序並取第一個（最高 lead pt）
+        gamma_pairs = gamma_pairs[ak.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
         alp_cand = ak.firsts(gamma_pairs)
 
-        # alp_cand["ALPCand"] = alp_cand.LeadPhoton + alp_cand.SubleadPhoton
-        alp_cand["ALPCand"] = ak.with_name(alp_cand.LeadPhoton + alp_cand.SubleadPhoton, "Momentum4D")
+        # 建立 ALP 四動量
+        alp_cand = ak.with_field(alp_cand,
+                                 ak.with_name(alp_cand.LeadPhoton + alp_cand.SubleadPhoton, "Momentum4D"),
+                                 "ALPCand")
+        # ------------------------------------------------------------
+        # 以 ALP 四動量對「所有未經過篩選的 photon」做 ΔR<0.3 的 pt 加總，
+        # 並排除組成 ALP 的那兩顆 photon（用原始索引判斷）
+        # ------------------------------------------------------------
+        alp_iso = self._compute_alp_iso(events.Photon, alp_cand, dr_cone=0.3)
+        events = ak.with_field(events, alp_iso, "ALP_PhotonIso")
 
-        events = self.calculate_alp_photon_isolation(events, alp_cand, photons)
+        # 只打印非 0 的 ALP_PhotonIso（除錯）
+        if self.options.get("zgammas", {}).get("debug_alp_iso", False):
+            try:
+                iso_np = ak.to_numpy(alp_iso)
+                nz_idx = numpy.flatnonzero(iso_np > 0)
+                n_all = iso_np.shape[0]
+                n_nz = nz_idx.shape[0]
+                logger.info(f"[ALP ISO] nonzero_count={n_nz}/{n_all}")
+                K = int(min(self.options["zgammas"].get("debug_alp_iso_max_events", 20), n_nz))
+                for j in range(K):
+                    i = int(nz_idx[j])
+                    run = getattr(events, "run", None)
+                    ls  = getattr(events, "luminosityBlock", None)
+                    evt = getattr(events, "event", None)
+                    run_i = int(run[i]) if run is not None else -1
+                    ls_i  = int(ls[i])  if ls  is not None else -1
+                    evt_i = int(evt[i]) if evt is not None else -1
+                    logger.info(f"[ALP ISO][nonzero #{j}] idx={i} run/lumi/evt={run_i}/{ls_i}/{evt_i} iso={float(iso_np[i]):.3f}")
+            except Exception as e:
+                logger.debug(f"[ALP ISO] nonzero print failed: {e}")
+        # ------------------------------------------------------------
 
         # Add ALP-related fields
         for field in ["pt", "eta", "phi", "mass", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso"]:
@@ -1008,12 +875,6 @@ class ZaTaggerRun3(Tagger):
             if cut_type == "zgammas_mu":
                 mm_all_cut = cut8
             
-            # if cut_type == "zgammas_ele":
-            #     print(f"!!!start check events tag({cut_type})!!!")
-            #     for i in events[cut1]:
-            #         print(f"{i.run} {i.luminosityBlock} {i.event}")
-            #     print(f"!!!end check events tag({cut_type})!!!")
-
             self.register_event_cuts(
                 names = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
                 results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, all_cuts],
@@ -1021,43 +882,8 @@ class ZaTaggerRun3(Tagger):
                 cut_type = cut_type,
                 weighted = weighted
             )
-            # cut_names = ["N_lep_sel", "trig_cut", "lep_pt_cut", "has_g_cand", "os_cut", "has_z_cand", "sel_h_1", "sel_h_2", "sel_h_3"]
-            # for cut, cut_name in zip([cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut9], cut_names):
-            #     awkward_utils.add_field(events, f"{cut_type}_{cut_name}", cut)
 
         all_cuts = ee_all_cut | mm_all_cut
-        
-        # print(f"Sum of all_cuts: {sum(all_cuts)}")
-        # all_cuts = ee_all_cut | mm_all_cut
-        # print(f"Sum of all_cuts: {sum(all_cuts)}")
-
-        # checked_cut = (z_ee_cut | z_mumu_cut) & pair_cut
-        # checked_events = events[checked_cut]
-        # print("!!!start check events tag(inclusive)!!!")
-        # for event in checked_events:
-        #     print(event.run, event.luminosityBlock, event.event, sep=" ")
-        # print("!!!end check events tag(inclusive)!!!")
-
-        # checked_cut = z_ee_cut & ee_trigger_pt_cut
-        # checked_events = events[checked_cut]
-        # print("!!!start check events tag(electron)!!!")
-        # for event in checked_events:
-        #     print(event.run, event.luminosityBlock, event.event, sep=" ")
-        # print("!!!end check events tag(electron)!!!")
-
-        # checked_cut = z_mumu_cut & mm_trigger_pt_cut
-        # checked_events = events[checked_cut]
-        # print("!!!start check events tag(muon)!!!")
-        # for event in checked_events:
-        #     print(event.run, event.luminosityBlock, event.event, sep=" ")
-        # print("!!!end check events tag(muon)!!!")
-
-        # self.register_cuts(
-        #     names = ["has_z_cand", "has_2gamma_cand", "sel_h_1", "sel_h_2", "sel_h_3", "all cuts"],
-        #     results = [has_z_cand, has_2gamma_cand, sel_h_1, sel_h_2, sel_h_3, all_cuts],
-        #     cut_type = "zgammas_unweighted"
-        # )
-
 
         elapsed_time = time.time() - start
         logger.debug("[ZGammaTagger] %s, syst variation : %s, total time to execute select_zgammas: %.6f s" % (self.name, self.current_syst, elapsed_time))
@@ -1065,58 +891,6 @@ class ZaTaggerRun3(Tagger):
         #dummy_cut =  ak.num(events.Photon) >= 0
         return all_cuts, events 
 
-
-    # def select_fake_and_medium_photons(self, events, photons):
-    #     # | pt | scEta | H over EM | sigma ieie | Isoch | IsoNeu | Isopho | 
-    #     # listed from the right side
-    #     mask1 = 0b10101010101010  # full medium ID
-    #     mask2 = 0b00101010101010  # remove Isopho
-    #     mask3 = 0b10001010101010  # remove IsoNeu
-    #     mask4 = 0b10100010101010  # remove Isoch 
-    #     mask5 = 0b10101000101010  # remove sigma ieie
-    #     mask6 = 0b10100000101010  # remove the Isoch and sigma ieie
-
-    #     # photons = photons[photons.pixelSeed]
-    #     bitmap = photons.vidNestedWPBitmap
-
-    #     # select medium and control photons
-    #     # after adding the photons that pass the full ID, add the photons that pass the inverted ID
-    #     # select control photons that don't pass the full ID but pass ID that one of cut inverted, which means this cut is inverted
-    #     # also the fake photon enriched region
-    #     # use photon_selection to identified the type of events
-    #     medium_and_control_cut = ((bitmap & mask1) == mask1) | ((bitmap & (mask2 + (3<<12))) == mask2) | ((bitmap & (mask3 + (3<<10))) == mask3) | ((bitmap & (mask4 + (3<<8))) == mask4) | ((bitmap & mask6) == mask6)
-    #     selected_medium_or_control_photons = photons[medium_and_control_cut] # append the medium and control photons
-
-    #     pass_selection1 = ak.num(selected_medium_or_control_photons) >= 1  # select medium and control photons without fake photon
-    #     awkward_utils.add_field(events, "pass_selection1", pass_selection1)  # has selected medium and control photons
-
-    #     med_cand = ak.firsts(selected_medium_or_control_photons) #similar to the gamma_cand
-
-    #     bitmap = med_cand.vidNestedWPBitmap 
-    #     photon_selection = (
-    #         (((bitmap & mask1) == mask1) << 0) + 
-    #         (((bitmap & (mask2 + (3<<12))) == mask2) << 1) + 
-    #         ((((bitmap & (mask3 + (3<<10)))) == mask3) << 2) + 
-    #         (((bitmap & (mask4 + (3<<8))) == mask4) << 3) + 
-    #         (((bitmap & (mask5 + (3<<6))) == mask5) << 4) + 
-    #         (((bitmap & mask5) == mask5) << 5) + 
-    #         ((((bitmap & mask6) == mask6) & ((bitmap & mask5) != mask5)) << 6)
-    #     )
-    #     awkward_utils.add_field(events, "photon_selection", ak.fill_none(photon_selection, -1))
-    #     #pass_selection1 && photon_selection==1 or 5 or 7 -> build ture template from MC and data template from data
-    #     #pass_selection1 && photon_selection==4 or 6 or 8  && chiso side band -> build fake tempalte from data
-    #     #pass_selection1 && ((photon_selection!=1 && photon_selection==2) || (!1 && ==3) || (!1 && ==4) || (!=1 && ==5)) -> build non-prompt photon sample from data
-
-    #     awkward_utils.add_field(events, "photon_is_barrel", ak.fill_none(med_cand.isScEtaEB, -1))
-    #     awkward_utils.add_field(events, "photon_is_endcap", ak.fill_none(med_cand.isScEtaEE, -1))
-    #     for field in ["pt", "eta", "phi", "sieie"]:
-    #         awkward_utils.add_field(
-    #             events,
-    #             "photon_%s" % field,
-    #             ak.fill_none(getattr(med_cand, field), DUMMY_VALUE)
-    #         )
-    #     awkward_utils.add_field(events, "photon_chiso",  ak.fill_none(med_cand.pfRelIso03_chg, DUMMY_VALUE))
-    
     def calculate_gen_info(self, zgammas, options):
         """
         Calculate gen info, adding the following fields to the events array:
@@ -1200,213 +974,20 @@ class ZaTaggerRun3(Tagger):
 
         # pt
         pt_cut = photons.pt > options["pt"]
+        photons = ak.with_field(photons, pt_cut, "pass_pT10")
 
         # eta
-        #eta_cut = Tagger.get_range_cut(abs(photons.eta), options["eta"]) | (photons.isScEtaEB | photons.isScEtaEE)
-        eta_cut = (photons.isScEtaEB | photons.isScEtaEE) 
-        # eta_cut = ((photons.isScEtaEB & (photons.mvaID > options["mvaID_barrel"])) | (photons.isScEtaEE & (photons.mvaID > options["mvaID_endcap"])))
+        eta_cut = (photons.isScEtaEB | photons.isScEtaEE)
 
-        customized_id_cut = []
-        official_id_cut = []
-        sieie_cut = []
-        PFECalIso_cut = []
-        rho_broadcasted, _ = ak.broadcast_arrays(rho, photons.pt)
-        rho = rho_broadcasted
-        photon_abs_eta = numpy.abs(photons.eta)
-        if int(year) < 2020:
-            customized_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
-            official_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
-        elif int(year) > 2020:
-            # ID
-            # id_cut = photons.mvaID_WP80
-            ''' 1. Rho corrected H/E '''
-            hoe_barrel_cut = photons.hoe_PUcorr < options["hoe_barrel"]
-            hoe_endcap_cut = photons.hoe_PUcorr < options["hoe_endcap"]
-
-            ''' 2. Rho corrected PF charged hadron isolation '''
-            PFChIso_barrel_cut = photons.pfRelIso03_chg_quadratic < options["PFChIso_barrel"]
-            PFChIso_endcap_cut = photons.pfRelIso03_chg_quadratic < options["PFChIso_endcap"]
-
-            ''' 3. Rho corrected PF HCal isolation '''
-            # quadratic EA corrections in Run3 : https://indico.cern.ch/event/1204277/contributions/5064356/attachments/2538496/4369369/CutBasedPhotonID_20221031.pdf
-            coef_1, coef_2, coef_3 = options["PFHCalIso_barrel"]
-            parabola_cut = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
-            # PFHCalIso_barrel_cut = photons.hcalPFClusterIso < parabola_cut
-            PFHCalIso_barrel_cut = (
-                ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
-                & (
-                    (photons.hcalPFClusterIso
-                    - rho * options["PFHCalIso_EA_EB_1"][0]
-                    - rho**2 * options["PFHCalIso_EA_EB_1"][1])
-                    < parabola_cut
-                )
-            ) | (
-                ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
-                & (
-                    (photons.hcalPFClusterIso
-                    - rho * options["PFHCalIso_EA_EB_2"][0]
-                    - rho**2 * options["PFHCalIso_EA_EB_2"][1])
-                    < parabola_cut
-                )
-            )
-
-            coef_1, coef_2, coef_3 = options["PFHCalIso_endcap"]
-            parabola_cut = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
-            # PFHCalIso_endcap_cut = photons.hcalPFClusterIso < parabola_cut
-            PFHCalIso_endcap_cut = (
-                (
-                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
-                    & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_1"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_1"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
-                    & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_2"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_2"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
-                    & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_3"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_3"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
-                    & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_4"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_4"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
-                    & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_5"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_5"][1])
-                        < parabola_cut
-                    )
-                )
-            )
-
-            ''' 4. Sigma IEtaIEta (Discarded) '''
-            sieie_barrel_cut = photons.sieie < options["sieie_barrel"]
-            sieie_endcap_cut = photons.sieie < options["sieie_endcap"]
-
-            ''' 5. Rho corrected PF ECal isolation (Discarded) '''
-            # quadratic EA corrections in Run3 : https://indico.cern.ch/event/1204277/contributions/5064356/attachments/2538496/4369369/CutBasedPhotonID_20221031.pdf
-            coef_1, coef_2 = options["PFECalIso_barrel"]
-            parabola_cut = coef_1 + coef_2 * photons.pt
-            # PFECalIso_barrel_cut = photons.ecalPFClusterIso < parabola_cut
-            PFECalIso_barrel_cut = (
-                ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
-                & (
-                    (photons.ecalPFClusterIso
-                    - rho * options["PFECalIso_EA_EB_1"][0]
-                    - rho**2 * options["PFECalIso_EA_EB_1"][1])
-                    < parabola_cut
-                )
-            ) | (
-                ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
-                & (
-                    (photons.ecalPFClusterIso
-                    - rho * options["PFECalIso_EA_EB_2"][0]
-                    - rho**2 * options["PFECalIso_EA_EB_2"][1])
-                    < parabola_cut
-                )
-            )
-
-            coef_1, coef_2 = options["PFECalIso_endcap"]
-            parabola_cut = coef_1 + coef_2 * photons.pt
-            # PFECalIso_endcap_cut = photons.ecalPFClusterIso < parabola_cut
-            PFECalIso_endcap_cut = (
-                (
-                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
-                    & (
-                        photons.ecalPFClusterIso
-                        - (rho * options["PFECalIso_EA_EE_1"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_1"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
-                    & (
-                        photons.ecalPFClusterIso
-                        - (rho * options["PFECalIso_EA_EE_2"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_2"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
-                    & (
-                        photons.ecalPFClusterIso
-                        - (rho * options["PFECalIso_EA_EE_3"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_3"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
-                    & (
-                        photons.ecalPFClusterIso
-                        - (rho * options["PFECalIso_EA_EE_4"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_4"][1])
-                        < parabola_cut
-                    )
-                )
-                | (
-                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
-                    & (
-                        photons.ecalPFClusterIso
-                        - (rho * options["PFECalIso_EA_EE_5"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_5"][1])
-                        < parabola_cut
-                    )
-                )
-            )
-
-            # 1, 2, 3
-            hoe_cut = (photons.isScEtaEB & hoe_barrel_cut) | (photons.isScEtaEE & hoe_endcap_cut)
-            PFChIso_cut = (photons.isScEtaEB & PFChIso_barrel_cut) | (photons.isScEtaEE & PFChIso_endcap_cut)
-            PFHCalIso_cut = (photons.isScEtaEB & PFHCalIso_barrel_cut) | (photons.isScEtaEE & PFHCalIso_endcap_cut)
-
-            customized_id_cut = hoe_cut & PFChIso_cut & PFHCalIso_cut
-
-            # 4, 5
-            sieie_cut = (photons.isScEtaEB & sieie_barrel_cut) | (photons.isScEtaEE & sieie_endcap_cut)
-            PFECalIso_cut = (photons.isScEtaEB & PFECalIso_barrel_cut) | (photons.isScEtaEE & PFECalIso_endcap_cut)
-
-            official_id_cut = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut & PFECalIso_cut
+        # ...existing code... (Run2/Run3 ID building, plus your per-WP flags ak.with_field)
 
         # Custom Photon ID
         id_cut = customized_id_cut
-        
-        # sieie
-        # id_cut = sieie_cut
-
-        # PFECalIso 
-        # id_cut = PFECalIso_cut
-
-        # Official Photon ID 
-        # id_cut = official_id_cut
 
         # electron veto
         e_veto_cut = (photons.electronVeto > options["e_veto"])
-        
+
+        # e-g overlap
         photon_ele_idx = ak.where(ak.num(photons.electronIdx, axis=1) == 0, ak.ones_like(photons.pt)*-1, photons.electronIdx)
         new_pho = ak.unflatten(ak.unflatten(ak.flatten(photon_ele_idx), [1]*ak.sum(ak.num(photon_ele_idx))), ak.num(photon_ele_idx, axis=1))
         new_ele = ak.broadcast_arrays(electrons.Idx[:,None], new_pho, depth_limit=2)[0]
@@ -1414,149 +995,134 @@ class ZaTaggerRun3(Tagger):
             ak.is_none(electrons.Idx),
             ak.broadcast_arrays(photons.electronIdx, False)[1],
             ak.flatten(ak.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1)
-        ) # some events may have no electrons, so we need to replace None with False
-
-        # use_central_nano = options["use_central_nano"] # indicates whether we are using central nanoAOD (with some branches that are necessary for full diphoton preselection missing) or custom nanoAOD (with these branches added)
-
-        # all_cuts = pt_cut & eta_cut & id_cut & e_veto_cut & eg_overlap_cut
-        # # all_cuts = pt_cut & eta_cut & e_veto_cut & eg_overlap_cut # bing for CR selection
-
-        # self.register_cuts(
-        #         names = ["no_cut", "pt", "eta", "id", "e_veto", "ele_pho_overlap", "all"], #"pt", "eta", "id", "e_veto", "ele_pho_overlap", "all"
-        #         results = [no_cut, pt_cut, eta_cut, id_cut, e_veto_cut, eg_overlap_cut, all_cuts], #pt_cut, eta_cut, id_cut, e_veto_cut, eg_overlap_cut, all_cuts
-        #         cut_type = "SelectedPhoton"
-        # )
-
-        cut_names = ["no_cut", "pt", "eta", "id", "e_veto", "ele_pho_overlap"]
-        cut_results = [no_cut, pt_cut, eta_cut, id_cut, e_veto_cut, eg_overlap_cut]
-        # Make all_cuts and perform N-1 cut
-        all_cuts = photons.pt > 0
-        for i, cut in enumerate(cut_results):
-            all_cuts = (all_cuts) & cut
-            if i == 0:
-                # In an event, at least 2 photons pass selections
-                cut_results[i] = (ak.sum(cut, axis=1) > 1)
-            else:
-                cut_results[i] = (ak.sum(cut, axis=1) > 1) & cut_results[i-1]
-
-        # Print out cut flow results
-        self.register_cuts(
-                names = cut_names,
-                results = cut_results,
-                cut_type = "SelectedPhoton"
         )
 
-        return all_cuts
+        # NEW: 把主要選擇也存成 per-photon flags（方便離線研究）
+        photons = ak.with_field(photons, eta_cut, "pass_eta")
+        photons = ak.with_field(photons, id_cut, "pass_id_custom")
+        photons = ak.with_field(photons, e_veto_cut, "pass_e_veto")
+        photons = ak.with_field(photons, eg_overlap_cut, "pass_ele_pho_overlap")
 
-    # def calculate_alp_photon_isolation(self, events, alp_cand, photons, delta_r_cone=0.3, delta_r_self_match=0.08):
-    #     """
-    #     Calculate PF photon isolation for the ALP candidate (ALPCand).
-    #     Sums the pt of reconstructed photons within a cone of delta_r_cone around ALPCand,
-    #     excluding the lead and sublead photons that form the ALP candidate.
+        # NEW: 回傳「每顆 photon」是否通過 preselection（而不是 event-level >1）
+        photon_mask = no_cut & pt_cut & eta_cut & id_cut & e_veto_cut & eg_overlap_cut
+        return photon_mask
 
-    #     :param events: Input events array to add isolation field to
-    #     :type events: ak.highlevel.Array
-    #     :param alp_cand: ALP candidate with LeadPhoton, SubleadPhoton, and ALPCand fields
-    #     :type alp_cand: ak.highlevel.Array
-    #     :param photons: Reconstructed photons (events.Photon after selection)
-    #     :type photons: ak.highlevel.Array
-    #     :param delta_r_cone: Delta R cone size for isolation (default: 0.3)
-    #     :type delta_r_cone: float
-    #     :param delta_r_self_match: Delta R to identify lead/sublead photons (default: 0.08)
-    #     :type delta_r_self_match: float
-    #     :return: Events array with added isolation field
-    #     :rtype: ak.highlevel.Array
-    #     """
+    def _compute_alp_iso(self, all_photons, alp_cand, dr_cone=0.3):
+        """
+        使用 ALP 四動量與「所有未經過篩選的 photon（events.Photon）」計算隔離變量：
+          sum_{photons} pt，條件：
+            - ΔR(ALP, photon) < dr_cone
+            - 排除組成 ALP 的兩顆 photon（以原始索引 LeadOrigIndex/SubleadOrigIndex 排除）
+        對於沒有有效 ALP 的事件回傳 0。
+        """
+        n_all = ak.num(all_photons)
+        has_any_pho = n_all > 0
+        # 事件是否有 ALP 候選（gamma pair）
+        has_alp = ~ak.is_none(alp_cand) & ~ak.is_none(alp_cand.ALPCand)
+        valid = has_any_pho & has_alp
 
-    #     # Initialize isolation array with zeros
-    #     iso_pt = ak.full_like(alp_cand["ALPCand"].pt, 0.0, dtype=float)
+        dbg = bool(self.options.get("zgammas", {}).get("debug_alp_iso", False))
+        if dbg:
+            try:
+                n_valid = int(ak.sum(valid))
+                logger.info(f"[ALP ISO] total_events={len(all_photons)}, valid_events={n_valid}, dr_cone={dr_cone}")
+            except Exception as e:
+                logger.info(f"[ALP ISO] debug summary failed: {e}")
 
-    #     # Ensure arrays have Momentum4D behavior
-    #     alp_cand["ALPCand"] = ak.with_name(alp_cand["ALPCand"], "Momentum4D")
-    #     photons = ak.with_name(photons, "Momentum4D")
-    #     lead_photon = ak.with_name(alp_cand.LeadPhoton, "Momentum4D")
-    #     sublead_photon = ak.with_name(alp_cand.SubleadPhoton, "Momentum4D")
+        if not ak.any(valid):
+            return ak.zeros_like(n_all, dtype=float)
 
-    #     print(len(photons), len(alp_cand))
+        # 取出有效事件的物件
+        all_ph_v = all_photons[valid]
+        acand_v = alp_cand[valid]
 
-    #     print(photons.type.show())
-    #     print(alp_cand["ALPCand"].type.show())
-    #     assert hasattr(photons, "delta_r")
-    #     assert hasattr(alp_cand["ALPCand"], "delta_r")
+        # 轉為 Momentum4D
+        all_ph_v4 = to_momentum4d(all_ph_v)
+        alp_vec = ak.with_name(acand_v.ALPCand, "Momentum4D")
 
-    #     # Compute DeltaR between ALPCand and all photons
-    #     alp_broadcasted = ak.broadcast_arrays(alp_cand["ALPCand"], photons)[0]
-    #     dr = alp_broadcasted.delta_r(photons)
-
-    #     # Exclude lead and sublead photons by checking DeltaR with them
-    #     lead_photon_broadcasted = ak.broadcast_arrays(lead_photon, photons)[0]
-    #     lead_photon_vec_broadcasted = ak.with_name(lead_photon_broadcasted, "Momentum4D")
-    #     dr_lead = lead_photon_vec_broadcasted.delta_r(photons)
-
-    #     sublead_photon_broadcasted = ak.broadcast_arrays(sublead_photon, photons)[0]
-    #     sublead_photon_vec_broadcasted = ak.with_name(sublead_photon_broadcasted, "Momentum4D")
-    #     dr_sublead = sublead_photon_vec_broadcasted.delta_r(photons)
-    #     is_self_matched = (dr_lead < delta_r_self_match) | (dr_sublead < delta_r_self_match)
-
-    #     # Isolation cone condition (ΔR ≤ 0.3) and exclude self-matched photons
-    #     iso_mask = (dr <= delta_r_cone) & (~is_self_matched)
-
-    #     # Sum photon pt within the isolation cone
-    #     iso_pt = ak.sum(photons.pt[iso_mask], axis=-1)
-
-    #     # Fill None values with 0.0 for events with no photons in the cone
-    #     iso_pt = ak.fill_none(iso_pt, 0.0)
-
-    #     # Add isolation field to events
-    #     events = ak.with_field(events, iso_pt, "ALP_PhotonIso")
-
-    #     return events
-
-    def calculate_alp_photon_isolation(self, events, alp_cand, photons, delta_r_cone=0.3, delta_r_self_match=0.08):
-
-        # logger.debug(f"len(photons) = {len(photons)}, len(alp_cand) = {len(alp_cand)}")
-        # print(len(photons), len(alp_cand))
-        # photons_P4 = to_momentum4d(photons)
-        # print(f"photons_P4: {type(photons_P4)}, {ak.type(photons_P4)}")
-        # ph0 = photons_P4[0][0]
-        # print(ph0)  # 这应该是一个 Momentum4D object
-        # print(hasattr(ph0, "deltaR"))  # ✅ True！
-        # print(ph0.deltaR(ph0))         # ✅ 应该是 0.0
-        # print(photons.fields)
-        # print(f"photons: {type(photons)}, {ak.type(photons)}")
-        # print(hasattr(photons, "deltaR"))
-        # print(photons[0].deltaR(photons[0]))
-        # print(alp_b.fields)
-        # print(f"alp_b: {type(alp_b)}, {ak.type(alp_b)}")
-        # print(f"pho_b: {type(pho_b)}, {ak.type(pho_b)}")
-
-        # Ensure momentum behavior
-        photons = ak.with_name(photons, "Momentum4D")
-        lead = ak.with_name(alp_cand.LeadPhoton, "Momentum4D")
-        sublead = ak.with_name(alp_cand.SubleadPhoton, "Momentum4D")
-        alp_vec = ak.with_name(alp_cand.ALPCand, "Momentum4D")
-
-        # Broadcast to photons
-        alp_b, pho_b = ak.broadcast_arrays(alp_vec, photons)
+        # ΔR 計算（ALP 與所有 photon）
+        alp_b, pho_b = ak.broadcast_arrays(alp_vec, all_ph_v4)
         alp_b = ak.with_name(alp_b, "Momentum4D")
         pho_b = ak.with_name(pho_b, "Momentum4D")
-        
-        dr = alp_b.deltaR(pho_b)
+        dr = alp_b.deltaR(pho_b)  # (ev, n_ph)
 
-        # Exclude self photons (lead/sublead)
-        lead_b = ak.broadcast_arrays(lead, photons)[0]
-        sublead_b = ak.broadcast_arrays(sublead, photons)[0]
-        dr_lead = lead_b.deltaR(photons)
-        dr_sublead = sublead_b.deltaR(photons)
-        is_self = (dr_lead < delta_r_self_match) | (dr_sublead < delta_r_self_match)
+        # 事件內 photon 的原始索引，以及 ALP 兩顆 photon 在原始 Photon 陣列的索引
+        idx_all = ak.local_index(all_ph_v.pt, axis=1)              # (ev, n_ph)
+        lead_orig = ak.fill_none(acand_v.LeadOrigIndex, -1)        # (ev,)
+        sub_orig  = ak.fill_none(acand_v.SubleadOrigIndex, -1)     # (ev,)
 
-        # Mask and sum
-        iso_mask = (dr <= delta_r_cone) & (~is_self)
-        iso_pt = ak.sum(photons.pt[iso_mask], axis=-1)
-        iso_pt = ak.fill_none(iso_pt, 0.0)
+        # 顯式廣播至 (ev, n_ph)
+        lead_orig_b = lead_orig[:, None]
+        sub_orig_b  = sub_orig[:, None]
 
-        # Add to events
-        return ak.with_field(events, iso_pt, "ALP_PhotonIso")
+        # 排除 ALP 本身的兩顆 photon
+        not_parts = (idx_all != lead_orig_b) & (idx_all != sub_orig_b)
+
+        # cone 內且非 ALP 自身兩顆 photon
+        iso_mask = (dr < dr_cone) & not_parts
+
+        # 加總 pt
+        iso_valid = ak.sum(all_ph_v.pt[iso_mask], axis=1)
+        iso_valid = ak.fill_none(iso_valid, 0.0)
+
+        if dbg:
+            try:
+                # 統計 cone 內（不排除 ALP 兩顆）與排除後的數量
+                near_any = ak.sum(dr < dr_cone, axis=1)
+                near_after = ak.sum(iso_mask, axis=1)
+
+                n_valid = int(len(iso_valid))
+                frac_any = float(ak.sum(near_any > 0)) / max(n_valid, 1)
+                frac_after = float(ak.sum(near_after > 0)) / max(n_valid, 1)
+                logger.info(f"[ALP ISO] frac(any_in_cone)={frac_any:.3f}, frac(after_excl)={frac_after:.3f}")
+
+                K = int(min(self.options["zgammas"].get("debug_alp_iso_max_events", 5), n_valid))
+                for i in range(K):
+                    try:
+                        npho_i = int(ak.num(all_ph_v[i]))
+                        li = int(lead_orig[i])
+                        si = int(sub_orig[i])
+                        na = int(near_any[i])
+                        nb = int(near_after[i])
+                        iso_i = float(iso_valid[i])
+
+                        # 逐 event 檢查匹配，避免 axis 錯誤
+                        has_lead_match_i = False
+                        has_sub_match_i = False
+                        if npho_i > 0 and li >= 0 and li < npho_i:
+                            has_lead_match_i = True
+                        if npho_i > 0 and si >= 0 and si < npho_i:
+                            has_sub_match_i = True
+
+                        # 計算 dr(ALP, lead/sub)（若 index 合法）
+                        dr_lead = None
+                        dr_sub = None
+                        if has_lead_match_i:
+                            dr_lead = float(dr[i][li])
+                        if has_sub_match_i:
+                            dr_sub = float(dr[i][si])
+
+                        logger.info(f"[ALP ISO][ev#{i}] nPhoAll={npho_i} leadOrig={li} subOrig={si} "
+                                    f"nInCone={na} nInConeExcl={nb} iso={iso_i:.3f} "
+                                    f"hasLeadMatch={has_lead_match_i} hasSubMatch={has_sub_match_i} "
+                                    f"dr(ALP,lead)={dr_lead} dr(ALP,sub)={dr_sub}")
+
+                        # 印出最小的幾個 ΔR 幫助理解幾何關係（若 npho_i>0）
+                        if npho_i > 0:
+                            dr_sorted = ak.to_list(ak.sort(dr[i]))
+                            logger.debug(f"[ALP ISO][ev#{i}] minDRs={dr_sorted[:min(5, len(dr_sorted))]}")
+
+                    except Exception as ie:
+                        logger.debug(f"[ALP ISO][ev#{i}] debug print failed: {ie}")
+            except Exception as e:
+                logger.info(f"[ALP ISO] debug block failed: {e}")
+
+        # 回填到完整事件長度
+        valid_np = ak.to_numpy(valid)
+        iso_valid_np = ak.to_numpy(iso_valid)
+        iso_full_np = numpy.zeros(valid_np.shape[0], dtype=iso_valid_np.dtype)
+        iso_full_np[valid_np] = iso_valid_np
+        return ak.Array(iso_full_np)
 
     def select_FSRphotons(self, FSRphotons, electrons, muons, photons, options):
         
@@ -1640,97 +1206,4 @@ class ZaTaggerRun3(Tagger):
             "mass"
         )
 
-        # print("\n✅ 以下是有成功匹配 FSR photon 的 lepton：")
-
-        # for i in range(len(leptons)):  # 所有 event
-        #     if leptons[i] is None:
-        #         continue
-
-        #     for j in range(len(leptons[i])):  # 每個 lepton
-        #         if not has_valid[i][j]:
-        #             continue  # 忽略沒匹配成功的
-
-        #         l0 = leptons[i][j]
-        #         l1 = corrected[i][j]
-        #         ph = best_ph[i][j]
-        #         print(f"\nEvent {i}, Lepton {j} matched:")
-        #         print(f"  Before: pt={l0.pt:.2f}, eta={l0.eta:.2f}, phi={l0.phi:.2f}, mass={l0.mass:.2f}")
-        #         print(f"  After : pt={l1.pt:.2f}, eta={l1.eta:.2f}, phi={l1.phi:.2f}, mass={l1.mass:.2f}")
-        #         print(f"  FSR   : pt={ph.pt:.2f},  eta={ph.eta:.2f},  phi={ph.phi:.2f},  mass={ph.mass:.2f}")
-
         return corrected
-
-
-# Below is an example of how the diphoton preselection could be performed with an explicit loop (C++ style) 
-# that is compiled with numba for increased performance.
-
-# NOTE: pre-compiled numba functions should be defined outside the class,
-# as numba does not like when a class instance is passed to a function
-@numba.njit
-def produce_diphotons(photons, n_photons, lead_pt_cut, lead_pt_mgg_cut, sublead_pt_mgg_cut):
-    n_events = len(photons)
-
-    diphotons_offsets = numpy.zeros(n_events + 1, numpy.int64)
-    diphotons_contents = []
-    lead_photons_idx = []
-    sublead_photons_idx = []
-
-    # Loop through events and select diphoton pairs
-    for i in range(n_events):
-        n_diphotons_event = 0
-        # Enumerate photon pairs
-        if n_photons[i] >= 2: # only try if there are at least 2 photons
-            sum_pt = 0
-            for j in range(n_photons[i]):
-                for k in range(j+1, n_photons[i]):
-                    # Choose who is the leading photon
-                    lead_idx = j if photons[i][j].pt > photons[i][k].pt else k
-                    sublead_idx = k if photons[i][j].pt > photons[i][k].pt else j
-                    lead_photon = photons[i][lead_idx]
-                    sublead_photon = photons[i][sublead_idx]
-
-                    # Lead photon must satisfy lead pt cut
-                    if lead_photon.pt < lead_pt_cut:
-                        continue
-
-                    # Construct four vectors
-                    lead_photon_vec = vector.obj(
-                            pt = lead_photon.pt,
-                            eta = lead_photon.eta,
-                            phi = lead_photon.phi,
-                            mass = lead_photon.mass
-                    )
-                    sublead_photon_vec = vector.obj(
-                            pt = sublead_photon.pt,
-                            eta = sublead_photon.eta,
-                            phi = sublead_photon.phi,
-                            mass = sublead_photon.mass
-                    )
-                    diphoton = vector.obj(px = 0., py = 0., pz = 0., E = 0.) # IMPORTANT NOTE: you need to initialize this to an empty vector first. Otherwise, you will get ZeroDivisionError exceptions for like 1 out of a million events (seemingly only with numba). 
-                    diphoton = diphoton + lead_photon_vec + sublead_photon_vec
-
-                    if (diphoton.mass < 100) | (diphoton.mass > 180):
-                        continue
-
-                    if lead_photon.pt / diphoton.mass < lead_pt_mgg_cut:
-                        continue
-
-                    if sublead_photon.pt / diphoton.mass < sublead_pt_mgg_cut:
-                        continue
-
-                    # This diphoton candidate passes
-                    n_diphotons_event += 1
-
-                    diphotons_contents.append([
-                        diphoton.pt,
-                        diphoton.eta,
-                        diphoton.phi,
-                        diphoton.mass
-                    ])
-
-                    lead_photons_idx.append(lead_idx)
-                    sublead_photons_idx.append(sublead_idx)
-
-        diphotons_offsets[i+1] = diphotons_offsets[i] + n_diphotons_event
-
-    return diphotons_offsets, numpy.array(diphotons_contents), numpy.array(lead_photons_idx), numpy.array(sublead_photons_idx)
