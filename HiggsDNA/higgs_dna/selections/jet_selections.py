@@ -26,7 +26,7 @@ DEFAULT_JETS = {
     "looseID" : True
 }
 
-def select_jets(jets, options, clean, year, name = "none", tagger = None):
+def select_jets(jets, options, clean, year, name = "none", tagger = None, event_runs = None):
     """
 
     """
@@ -42,16 +42,15 @@ def select_jets(jets, options, clean, year, name = "none", tagger = None):
 
     # Pei-Zhu, Jet Horn 
     jets_horn_year = {"2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"}
+    horn_cut = jets.pt > 0 # default: keep all
     if year in jets_horn_year and "jets_horn" in options:
         horn_eta_min, horn_eta_max = options["jets_horn"]["eta"]
         horn_pt_threshold = options["jets_horn"]["pt"]
         # Identify jets to exclude: 2.5 < |eta| < 3.0 and pt < 40.0
-        horn_exclusion = (abs(jets.eta) > horn_eta_min) & (abs(jets.eta) < horn_eta_max) & (jets.pt < horn_pt_threshold)
-        # Apply the exclusion by inverting it
-        standard_cuts = standard_cuts & ~horn_exclusion
+        horn_cut = ~((abs(jets.eta) > horn_eta_min) & (abs(jets.eta) < horn_eta_max) & (jets.pt < horn_pt_threshold))
         logger.info(f"Excluding jets with {horn_eta_min} < |eta| < {horn_eta_max} and pt < {horn_pt_threshold} "
                     f"for era {year}")
-
+    
     # TODO: jet ID
     if options["looseID"]:
         id_cut = jets.jetId >= 1 # jetID stored bitwise for loose/tight/tightLepVeto
@@ -98,17 +97,50 @@ def select_jets(jets, options, clean, year, name = "none", tagger = None):
     )
     jet_veto_cut = awkward.unflatten(jet_veto_sf, n_jets)
 
-    all_cuts = standard_cuts & id_cut & photon_veto_cut & jet_veto_cut
-    standard_cuts = awkward.sum(standard_cuts, axis=1) > 0
-    id_cut = awkward.sum(standard_cuts & id_cut, axis=1) > 0
-    photon_veto_cut = awkward.sum(standard_cuts & id_cut & photon_veto_cut, axis=1) > 0
-    jet_veto_cut = awkward.sum(standard_cuts & id_cut & photon_veto_cut & jet_veto_cut, axis=1) > 0
+    # ---- 2018 HEM jet-level cleaning (moved from event-level) ----
+    hem_mask = jets.pt > 0  # default: keep all
+    if year == "2018":
+        if tagger is not None and event_runs is not None:
+            # broadcast event-level info to jet dimension
+            if len(jets) == len(event_runs):
+                print("Min and Max of event_runs:", numpy.min(event_runs), " , ", numpy.max(event_runs))
+                run_broadcast = awkward.broadcast_arrays(event_runs, jets.pt)[0]
+                region = ((jets.phi > -1.57) & (jets.phi < -0.87) &
+                          (jets.eta > -3.0) & (jets.eta < -1.3))
+                if tagger.is_data:
+                    print("Data detected: removing all jets in HEM region for affected runs.")
+                    run_region = (run_broadcast > 319077)
+                    hem_mask = ~(region & run_region)
+                else:
+                    print("MC detected: applying probabilistic HEM jet removal for affected runs.")
+                    fraction = 0.6515623538907509
+                    # 產生一次 per-event 隨機數 (可重複執行時保持非決定性；若需可加種子)
+                    rand = numpy.random.random(len(event_runs))
+                    hem_run = rand < fraction
+                    hem_run_broadcast = awkward.broadcast_arrays(hem_run, jets.pt)[0]
+                    hem_mask = ~(region & hem_run_broadcast)
+                if awkward.any(~hem_mask):
+                    logger.debug(f"[HEM] Removed jets: {awkward.sum(~hem_mask, axis=1)[:10]}")
+            else:
+                logger.warning("[HEM] event_runs length mismatch; skip HEM cleaning.")
+
+    all_cuts = standard_cuts & horn_cut & id_cut & photon_veto_cut & jet_veto_cut & hem_mask
+
+    jet_veto = jet_veto_cut & hem_mask
+
+    standard_cuts = awkward.flatten(standard_cuts)
+    id_cut = standard_cuts & awkward.flatten(id_cut)
+    horn_cut = id_cut & awkward.flatten(horn_cut)
+    photon_veto_cut = horn_cut & awkward.flatten(photon_veto_cut)
+    jet_veto_cut = photon_veto_cut & awkward.flatten(jet_veto_cut)
+    hem_event_cut = jet_veto_cut & awkward.flatten(hem_mask)
+    all_record_cut = hem_event_cut
 
     if tagger is not None:
         tagger.register_cuts(
-            names = ["std cuts", "id cut", "photon veto cut", "jet veto cut", "all cuts"],
-            results = [standard_cuts, id_cut, photon_veto_cut, jet_veto_cut, all_cuts],
+            names = ["std cuts", "id cut", "horn cut", "photon veto cut", "jet veto cut", "hem cut", "all cuts"],
+            results = [standard_cuts, id_cut, horn_cut, photon_veto_cut, jet_veto_cut, hem_event_cut, all_record_cut],
             cut_type = name
         )
 
-    return all_cuts
+    return all_cuts, jet_veto

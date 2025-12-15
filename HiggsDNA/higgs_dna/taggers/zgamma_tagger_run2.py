@@ -263,19 +263,28 @@ class ZGammaTaggerRun2(Tagger):
                 options = self.options["photons"]
         )
 
+        # Apply photon selection and lepton-photon overlap removal
         photons = events.Photon[photon_selection]
-        
-        # lepton-photon overlap removal 
-        clean_photon_mask = awkward.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & awkward.fill_none(object_selections.delta_R(photons, electrons, 0.3), True) # FIXME: 0.4 -> 0.3(baseline)
-        # object_selections.delta_R(photons, muons, 0.3) & object_selections.delta_R(photons, electrons, 0.3)
+        clean_photon_mask = (
+            awkward.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & 
+            awkward.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
+        )
         photons = photons[clean_photon_mask]
         
-        # Calculate photon energy from four-momentum (pt, eta, phi, mass)
-        photons["ptErrRel"] = photons.energyErr/photons.pt/numpy.cosh(photons.eta)
-        # print(f"ptErrRel of Photon: {photons.ptErrRel[:10]}")
+        # Sort by pt and add photon properties
+        photons = photons[awkward.argsort(photons.pt, ascending=False, axis=1)]
+        photons = awkward.with_field(photons, photons.energyErr / photons.pt / numpy.cosh(photons.eta), "ptErrRel")
+        photons = awkward.with_field(photons, awkward.zeros_like(photons.pt), "mass")
+        
+        # Select highest pt photon and add to events
+        photons = awkward_utils.add_field(
+            events=events,
+            name="SelectedPhoton",
+            data=photons[:, :1]
+        )
         
         # Jets
-        jet_cut = jet_selections.select_jets(
+        jet_cut, jet_veto = jet_selections.select_jets(
             jets = events.Jet,
             options = self.options["jets"],
             clean = {
@@ -295,7 +304,8 @@ class ZGammaTaggerRun2(Tagger):
             },
             year = self.year,
             name = "SelectedJet",
-            tagger = self
+            tagger = self,
+            event_runs = events.run
         )
 
         jets = awkward_utils.add_field(
@@ -304,11 +314,14 @@ class ZGammaTaggerRun2(Tagger):
             data = events.Jet[jet_cut]
         )
 
-        photon = awkward_utils.add_field(
-                events = events,
-                name = "Photon",
-                data = events.Photon[photon_selection],
+        MET_pt = awkward.where(
+            awkward.sum(~jet_veto, axis=1) > 0,
+            awkward.zeros_like(events.run, dtype=float),
+            events["MET_pt"]
         )
+        awkward_utils.add_field(events, "MET_pt", MET_pt, overwrite=True)
+        logger.debug(f"[ZGammaTagger] jet veto from events: {awkward.sum(~jet_veto, axis=1)[awkward.sum(~jet_veto, axis=1) > 0]}")
+        logger.debug(f'[ZGammaTagger] MET_pt from events: {events[awkward.sum(~jet_veto, axis=1) > 0]["MET_pt"]}')
 
         b_jet_cut = jets.btagDeepFlavB > self.options["btag_med"][self.year]
         jets = awkward.with_field(jets, b_jet_cut, "is_med_bjet") 
@@ -361,7 +374,6 @@ class ZGammaTaggerRun2(Tagger):
         awkward_utils.add_field(events, "n_leptons", n_leptons, overwrite=True)
 
         n_jets = awkward.num(jets)
-        logger.debug(f"Number of jets(tagger): {n_jets[:10]}")
         awkward_utils.add_field(events, "n_jets", n_jets, overwrite=True)
 
         n_b_jets = awkward.sum(b_jet_cut, axis=1)
@@ -409,11 +421,8 @@ class ZGammaTaggerRun2(Tagger):
                         )
 
         # Sort objects by pt
-        photons = photons[awkward.argsort(photons.pt, ascending=False, axis=1)]
         electrons = electrons[awkward.argsort(electrons.pt, ascending=False, axis=1)]
         muons = muons[awkward.argsort(muons.pt, ascending=False, axis=1)]
-
-        # self.select_fake_and_medium_photons(events=events, photons=photons)
 
         # Register as `vector.Momentum4D` objects so we can do four-vector operations with them
         photons = awkward.Array(photons, with_name = "Momentum4D")
@@ -507,46 +516,6 @@ class ZGammaTaggerRun2(Tagger):
         mass_cut = (z_cands.ZCand.mass > 80.) & (z_cands.ZCand.mass < 100.)
         # mass_cut = z_cands.ZCand.mass > 50.
         z_cands = z_cands[mass_cut] # OSSF lepton pairs with m_ll > 50.
-        
-        # ==========================================================
-        # HEM cut
-        if self.year=="2018" and self.is_data:
-            hem_run=events.run > 319077        
-            # checked 65.15623538907509% events in data could pass this run cut
-            hem_jet=awkward.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-            if "FatJet" in events.fields:
-                hem_fatjet=awkward.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
-            else:
-                hem_fatjet = awkward.num(events.Photon) < 0 # dummy all false
-            hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))        
-        elif self.year=="2018" and not self.is_data:
-            #random number generator from 0 to 1
-            fraction=0.6515623538907509
-            events['random'] = numpy.random.rand(len(events))
-            hem_run=events.random < fraction
-            hem_jet=awkward.num(events.Jet[(events.Jet.phi>-1.57) & (events.Jet.phi<-0.87) & (events.Jet.eta>-3) & (events.Jet.eta<-1.3)])>0
-            if "FatJet" in events.fields:
-                hem_fatjet=awkward.num(events.FatJet[(events.FatJet.phi>-1.57) & (events.FatJet.phi<-0.87) & (events.FatJet.eta>-3) & (events.FatJet.eta<-1.3)])>0
-            else:
-                hem_fatjet = awkward.num(events.Photon) < 0 # dummy all false
-            hem_cut=~((hem_run & hem_jet) | (hem_run & hem_fatjet))
-        else:
-            hem_cut=awkward.num(events.Photon) >= 0 
-        events = events[hem_cut]
-        z_cands = z_cands[hem_cut]
-        electrons = electrons[hem_cut]
-        photons = photons[hem_cut]
-        muons = muons[hem_cut]
-        jets = jets[hem_cut]
-        z_ee_cut = z_ee_cut[hem_cut]
-        z_mumu_cut = z_mumu_cut[hem_cut]
-        trigger_pt_cut = trigger_pt_cut[hem_cut]
-        ele_trigger_pt_cut = ele_trigger_pt_cut[hem_cut]
-        mu_trigger_pt_cut = mu_trigger_pt_cut[hem_cut]
-        ele_trigger_cut = ele_trigger_cut[hem_cut]
-        mu_trigger_cut = mu_trigger_cut[hem_cut]
-        trigger_cut = trigger_cut[hem_cut]
-        # ==========================================================
 
         has_z_cand = awkward.num(z_cands) >= 1
         z_cand = awkward.firsts(z_cands)
@@ -595,18 +564,9 @@ class ZGammaTaggerRun2(Tagger):
         logger.debug(f"Number of FSR photons: {awkward.num(FSRphotons)}")
         logger.debug(f"Total number of FSR photons: {sum(awkward.num(FSRphotons)>0)}")
 
-        
-        awkward_utils.add_field(photons, "mass", awkward.ones_like(photons.pt) * 0) #TODO: run3 BUG
-
         # Make gamma candidate-level cuts
         has_gamma_cand = (awkward.num(photons) >= 1) #& (events.n_iso_photons == 0) # only for dy samples
         
-        awkward_utils.add_field(
-                events = events,
-                name = "SelectedPhoton",
-                data = photons[:, :1]
-        )
-        print(f"ptErrRel of SelectedPhoton: {awkward.fill_none(awkward.firsts(photons).ptErrRel, 0)[:10]}")
         gamma_cand = awkward.firsts(photons)
         gamma_mvaID_WPL = ((gamma_cand.isScEtaEB & (gamma_cand.mvaID > self.options["photons"]["mvaID_barrel"])) | (gamma_cand.isScEtaEE & (gamma_cand.mvaID > self.options["photons"]["mvaID_endcap"])))
         gamma_e_veto = gamma_cand.electronVeto > self.options["photons"]["e_veto"]
@@ -755,6 +715,8 @@ class ZGammaTaggerRun2(Tagger):
         if not self.is_data:
             gen_hzg = gen_selections.select_x_to_yz(events.GenPart, 25, 23, 22)
             events["GenHzgHiggs"] = gen_hzg.GenParent
+            for i, name in enumerate(["ISR_up", "FSR_up", "ISR_down", "FSR_down"]):
+                awkward_utils.add_field(events, f"PSWeight_{name}", events.PSWeight[:, i], overwrite=True)
 
         elapsed_time = time.time() - start
         logger.debug("[ZGammaTagger] %s, syst variation : %s, total time to execute select_zgammas: %.6f s" % (self.name, self.current_syst, elapsed_time))

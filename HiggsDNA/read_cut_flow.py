@@ -7,17 +7,18 @@ import time
 
 start_time = time.time()
 
-eos_path = '/eos/home-j/jiehan/parquet/nanov9/'
-# log_path = '/eos/user/j/jiehan/eos_log_20250808/'
-log_path = '/eos/user/j/jiehan/parquet/nanov9/'
+eos_path = '/eos/home-j/jiehan/parquet/nanov12/'
+# log_path = '/afs/cern.ch/user/j/jiehan/private/HiggsZGammaAna/HiggsDNA/eos_logs/'
+log_path = '/eos/user/j/jiehan/eos_log_20251008/'
+# log_path = '/eos/user/j/jiehan/parquet/nanov9/'
 
-# dataset_type = 'data'
-# dataset_names = ["Data"]
-# dataset_years = ["2016preVFP", "2016postVFP", "2017", "2018"] #"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+dataset_type = 'data'
+dataset_names = ["Data"]
+dataset_years = ["2023postBPix"] #"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
 
-dataset_type = 'signal'
-dataset_names = ["ggH_M125"] #"ggH", "VBF", "ZH", "ttH", "WplusH", "WminusH" "ggH_M125", "VBFH_M125", "ZH_M125", "ttH_M125", "WplusH_M125", "WminusH_M125"
-dataset_years = ["2018"]#"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
+# dataset_type = 'signal_test'
+# dataset_names = ["ggH_M125"] #"ggH", "VBF", "ZH", "ttH", "WplusH", "WminusH" "ggH_M125", "VBFH_M125", "ZH_M125", "ttH_M125", "WplusH_M125", "WminusH_M125"
+# dataset_years = ["2018"]#"2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
 
 # dataset_type = 'bkgmc'
 # dataset_names = ["ZGToLLG"] # "DYJetsToLL", "EWKZ2J", "ZG2JToG2L2J" "ZGToLLG" "Data_SingleMuon", "Data_DoubleMuon", "Data_SingleElectron", "Data_DoubleEG" "DYGto2LG_10to100" "DYGto2LG_10to50", "DYGto2LG_50to100"
@@ -29,7 +30,7 @@ cut_type = ['all', 'N_lep_sel','trig_cut','lep_pt_cut','has_g_cand', 'has_z_cand
 cut_name = {
     'zgammas':['No selction', r'$N_{l}\geq2$', r'e, ee trigger || $\mu$, $\mu\mu$ trigger', r'lepton trigger $p_{T}$ cut', r'$N_{\gamma}\geq1$', r'80GeV<m_{ll}<100GeV', r'p_{T}^{\gamma}/m_{ll\gamma}>15./110.', r'm_{ll}+m_{ll\gamma}<185GeV', r'100GeV<m_{ll\gamma}<180GeV', 'event_filter'], 
     'zgammas_ele':['No selction', r'$N_{e}\geq2$', 'e, ee trigger', r'e trigger $p_{T}$ cut', r'$N_{\gamma}\geq1$', r'80GeV<$m_{ee}$<100GeV', r'$p_{T}^{\gamma}/m_{ll\gamma}$>15./110.', r'$m_{ee}+m_{ee\gamma}$<185GeV', r'100GeV<$m_{ee\gamma}$<180GeV', 'event_filter'],
-    'zgammas_mu':['No selction', r'$N_{\mu}\geq2$', r'$\mu$, $\mu\mu$ trigger', r'$\mu$ trigger $p_{T}$ cut', r'$N_{\gamma}\geq1$', r'80GeV<$m_{\mu\mu}$<100GeV', r'$p_{T}^{\gamma}/m_{ll\gamma}$>15./110.', r'$m_{\mu\mu}+m_{\mu\mu\gamma}$<185GeV', r'100GeV<$m_{\mu\mu\gamma}$<180GeV', 'event_filter'], 
+    'zgammas_mu':['No selction', r'$N_{\mu}\geq2$', r'$\mu$, $\mu\mu$ trigger', r'$\mu$ trigger $p_{T} cut', r'$N_{\gamma}\geq1$', r'80GeV<$m_{\mu\mu}$<100GeV', r'$p_{T}^{\gamma}/m_{ll\gamma}$>15./110.', r'$m_{\mu\mu}+m_{\mu\mu\gamma}$<185GeV', r'100GeV<$m_{\mu\mu\gamma}$<180GeV', 'event_filter'], 
     'zgammas_w':['No selction', r'$N_{l}\geq2$', r'e, ee trigger || $\mu$, $\mu\mu$ trigger', r'lepton trigger $p_{T}$ cut', r'$N_{\gamma}\geq1$', r'80GeV<m_{ll}<100GeV', r'p_{T}^{\gamma}/m_{ll\gamma}>15./110.', r'm_{ll}+m_{ll\gamma}<185GeV', r'100GeV<m_{ll\gamma}<180GeV', 'event_filter'],  
     'zgammas_ele_w':['No selction', r'$N_{e}\geq2$', 'e, ee trigger', r'e trigger $p_{T}$ cut', r'$N_{\gamma}\geq1$', r'80GeV<$m_{ee}$<100GeV', r'$p_{T}^{\gamma}/m_{ll\gamma}$>15./110.', r'$m_{ee}+m_{ee\gamma}$<185GeV', r'100GeV<$m_{ee\gamma}$<180GeV', 'event_filter'],
     'zgammas_mu_w':['No selction', r'$N_{\mu}\geq2$', r'$\mu$, $\mu\mu$ trigger', r'$\mu$ trigger $p_{T}$ cut', r'$N_{\gamma}\geq1$', r'80GeV<$m_{\mu\mu}$<100GeV', r'$p_{T}^{\gamma}/m_{ll\gamma}$>15./110.', r'$m_{\mu\mu}+m_{\mu\mu\gamma}$<185GeV', r'100GeV<$m_{\mu\mu\gamma}$<180GeV', 'event_filter']
@@ -60,6 +61,8 @@ for dataset in dataset_names:
         if not os.path.isdir("{}{}/{}_{}".format(log_path, dataset_type, dataset, year)):
             continue      
         for log_dir in os.listdir("{}{}/{}_{}".format(log_path, dataset_type, dataset, year)):
+            # if int(log_dir.split("_")[1]) < 449 or int(log_dir.split("_")[1]) > 1000:
+            #     continue
             flag = 1
             log_dir = "{}{}/{}_{}/{}".format(log_path, dataset_type, dataset, year, log_dir)
             # print(log_dir)
@@ -68,8 +71,8 @@ for dataset in dataset_names:
                 continue
             for log_file in os.listdir(log_dir): 
                 typei, cuti = 0, 0
-                if '.log' not in log_file:
-                # if '.out' not in log_file:
+                # if '.log' not in log_file:
+                if '.out' not in log_file:
                     continue
                 f = open("{}/{}".format(log_dir, log_file), 'r')
                 lines = f.read().split("DEBUG")

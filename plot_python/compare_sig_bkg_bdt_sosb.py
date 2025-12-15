@@ -29,11 +29,11 @@ path = f"/eos/home-j/jiehan/root/outputs/{folder}/"
 channel = args.channel
 tree = channel
 boundaries_path = f"/eos/home-j/jiehan/root/outputs/test/significances/bin_boundaries_1D_{channel}.txt"
-var = "bdt_score_t"
+var = "bdt_score"
 bins = 50
-x_range = (-0, 1)
+x_range = (-0.1, 1.1)
 blind_range = (120, 130)
-x_title = "Transformed BDT score"
+x_title = "BDT score"
 y_title = "Events/{:.2f}".format((x_range[1]-x_range[0])/bins)
 sub_y_title = "Significance"
 selections = ["H_mass>120", "H_mass<130"]
@@ -173,7 +173,7 @@ plot.Set(h_stack, Minimum=0.00005)
 # line.DrawLine(x1, 0, x1, 0.5*pads[0].GetFrame().GetY2())
 # line.DrawLine(x2, 0, x2, 0.5*pads[0].GetFrame().GetY2())
 
-plot.Set(pads[0], Logy=1)
+# plot.Set(pads[0], Logy=1)
 pads[0].Update()
 
 legend = plot.PositionedLegend(0.75, 0.15, 3, 0.015)

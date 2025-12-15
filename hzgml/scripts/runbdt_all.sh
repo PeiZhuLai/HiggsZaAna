@@ -29,27 +29,36 @@ echo "Shielded parameter is: $S . Added variables is: $A ."
 
 # # cp models/optuna_two_jet/*0.* models/optuna_two_jet_nosyst_sqrt_base/
 
-# # 01jet category
-# python scripts/train_bdt.py -r zero_to_one_jet --optuna --n-calls 60 --continue-optuna 0 --optuna_metric 'sqrt_eval_auc_minus_train_auc' --oneHyperparameter --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new"
-# python scripts/train_bdt.py -r zero_to_one_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --save --hyperparams_path "models/optuna_zero_to_one_jet" --oneHyperparameter
-
+# ------- 01jet category -------
+# Tune 1 set of hyperparameter
+# python scripts/train_bdt.py -r zero_to_one_jet --optuna --n-calls 35 --continue-optuna 1 --optuna_metric 'sqrt_eval_auc_minus_train_auc' --oneHyperparameter --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new"
+# # Train with 1 set of hyperparameter
+# python scripts/train_bdt.py -r zero_to_one_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --save --hyperparams_path "models/optuna_zero_to_one_jet_0922" --oneHyperparameter
+# # 4 fold training with each hyperparameters ( skip )
 # python scripts/train_bdt.py -r zero_to_one_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --save --hyperparams_path "models/optuna_zero_to_one_jet_0725"
-
-# python scripts/apply_bdt.py -r zero_to_one_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --outputFolder "/eos/home-j/jiehan/root/outputs/test" --ultra-low-memory
-# python scripts/categorization_1D.py -r zero_to_one_jet -n 120 --score_max 1.1 --score_min -0.1 -b 4 --minSB 20 --minN 4 -es "fullSimrw" --input "/eos/home-j/jiehan/root/outputs" #--floatB
+# Apply
+# python scripts/apply_bdt.py -r zero_to_one_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --outputFolder "/eos/home-j/jiehan/root/outputs/test"
+# Nominal Score (purity)
+python scripts/categorization_1D.py -r zero_to_one_jet -n 120 --score_max 1.1 --score_min -0.1 -b 4 --minSB 20 --minN 4 -es "fullSimrw" --input "/eos/home-j/jiehan/root/outputs" #--floatB
+# Transform BDT (skip)
 # python scripts/categorization_1D.py -r zero_to_one_jet -n 100 -t True -b 4 --minSB 20 --minN 4 -es "fullSimrw" --input "/eos/home-j/jiehan/root/outputs" #--floatB
 
-# # # two_Jet category
+# ------- two_Jet category -------
+# #Tune 4 sets of Hyperparameter (skip)
 # for fold in {0..3};do #{0..3};do
 # python scripts/train_bdt.py -r two_jet --optuna --n-calls 60 --continue-optuna 1 --optuna_metric 'sqrt_eval_auc_minus_train_auc' --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --fold $fold
 # done
+# # Tune 4 sets of hypers (skip)
 # python scripts/train_bdt.py -r two_jet --save --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --hyperparams_path "models/optuna_two_jet_0602"
-
+# Tune 1 set of hyperparameter
 # python scripts/train_bdt.py -r two_jet --optuna --n-calls 60 --continue-optuna 0 --optuna_metric 'sqrt_eval_auc_minus_train_auc' --oneHyperparameter --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new"
+# # Train with 1 set of hyperparameter
 # python scripts/train_bdt.py -r two_jet --save --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --hyperparams_path "models/optuna_two_jet" --oneHyperparameter
-
-# python scripts/apply_bdt.py -r two_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --outputFolder "/eos/home-j/jiehan/root/outputs/test" --memory-efficient --batch-size 5
-# python scripts/categorization_1D.py -r two_jet -b 4 --minSB 20 -n 120 --score_max 1.1 --score_min -0.1 --minN 4 -es "fullSimrw" --input "/eos/home-j/jiehan/root/outputs" #--floatB
+# # Apply
+# python scripts/apply_bdt.py -r two_jet --inputFolder "/eos/home-j/jiehan/root/skimmed_ntuples_rui_new" --outputFolder "/eos/home-j/jiehan/root/outputs/test"
+# # Nonimal Score
+python scripts/categorization_1D.py -r two_jet -b 4 --minSB 20 -n 120 --score_max 1.1 --score_min -0.1 --minN 4 -es "fullSimrw" --input "/eos/home-j/jiehan/root/outputs" #--floatB
+# # Transform BDT
 # python scripts/categorization_1D.py -r two_jet -b 4 --minSB 20 -n 100 -t True --minN 4 -es "fullSimrw" --input "/eos/home-j/jiehan/root/outputs" #--floatB
 
 # # 012jet category
@@ -73,17 +82,17 @@ echo "Shielded parameter is: $S . Added variables is: $A ."
 # Plotting the BDT results
 #===========================================
 # python scripts/calculate_fold_significance.py
-# python scripts/calculate_fold_significance.py --region zero_to_one_jet --input test/significances/0_0_zero_to_one_jet_1D_4.json
+python scripts/calculate_fold_significance.py --region zero_to_one_jet --input test/significances/0_0_zero_to_one_jet_1D_4.json
 # # for chan in two_jet zero_to_one_jet all_jet;do
 # #     python ../plot_python/compare_data_bkg_bdt_sideband.py --channel $chan
 # # done
-# python ../plot_python/plot_cats_hmass_dis.py --channel "two_jet"
-# python ../plot_python/plot_cats_hmass_dis.py --channel "zero_to_one_jet"
+python ../plot_python/plot_cats_hmass_dis.py --channel "two_jet"
+python ../plot_python/plot_cats_hmass_dis.py --channel "zero_to_one_jet"
 # # # python ../plot_python/plot_cats_hmass_dis.py --channel "all_jet"
-# python ../plot_python/compare_sig_bkg_bdt_sosb.py
-# python ../plot_python/compare_sig_bkg_bdt_sosb.py --channel zero_to_one_jet
-# python ../plot_python/compare_data_bkg_bdt_sideband.py
-# python ../plot_python/compare_data_bkg_bdt_sideband.py --channel two_jet
+python ../plot_python/compare_sig_bkg_bdt_sosb.py
+python ../plot_python/compare_sig_bkg_bdt_sosb.py --channel zero_to_one_jet
+python ../plot_python/compare_data_bkg_bdt_sideband.py
+python ../plot_python/compare_data_bkg_bdt_sideband.py --channel two_jet
 # bash ../plot_python/run.sh
 
 # # vbf category
@@ -136,7 +145,8 @@ echo "Shielded parameter is: $S . Added variables is: $A ."
 
 # python ../SSTest/Generate_template.py
 # python scripts/Generate_fake_photon_template.py -r two_jet
-# python ../plot_python/make_data_driven_two_jet.py 
+# python ../plot_python/make_data_driven_two_jet.py
+# python ../plot_python/compare_bkg_data_train_var.py
 # python ../plot_python/compare_sig_bkg_bdt_sosb.py
 # python ../SSTest/Generate_fake_photon_template_2J.py
 # rm ../plot_python/pic/2J/*
