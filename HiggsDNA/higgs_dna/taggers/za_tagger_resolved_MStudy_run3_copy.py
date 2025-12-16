@@ -169,7 +169,7 @@ DEFAULT_OPTIONS = {
         "2023":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"]
     },
     "electrons" : {
-        "pt" : 7.0
+        "pt" : 7.0,
     },
     "muons" : {
         "pt" : 5.0
@@ -275,6 +275,9 @@ class ZaTaggerRun3(Tagger):
         else:
             rho = ak.ones_like(events.Photon)
 
+        # NEW: 存 rho 到 events（event-level），方便後續 write_events 輸出
+        awkward_utils.add_field(events, "rho", ak.fill_none(rho, 0.0), overwrite=True)
+
         if not self.is_data:
             self.overlap_removal(events=events)
 
@@ -348,7 +351,10 @@ class ZaTaggerRun3(Tagger):
             name = "SelectedElectron",
             data = events.Electron[electron_cut]
         )
-        
+
+        pass_electron_ip3d = ( events.Electron["ip3d"] < 4)
+        awkward_utils.add_field(events, "pass_ele_ip3d", ak.fill_none(pass_electron_ip3d, False), overwrite=True)
+
         # generate the index in the original array and add to electrons
         arr = ak.local_index(events.Electron["pt"], axis=1)[electron_cut]
         electron_idx = ak.mask(arr, ak.num(arr) > 0)
@@ -402,30 +408,54 @@ class ZaTaggerRun3(Tagger):
             )
 
         # Photons
-        photon_mask = self.select_photons(
-            photons = events.Photon,
-            options = self.options["photons"],
-            electrons = electrons,
-            rho = rho,
-            year = self.year[:4]
+        photon_selection, photons_with_flags = self.select_photons(
+                photons = events.Photon,
+                options = self.options["photons"],
+                electrons = electrons,
+                rho = rho,
+                year = self.year[:4]
         )
 
-        # NEW: 存下「所有 photons（未篩選）」但帶有各種 flag，方便你後面做 photon ID study
-        # 注意：這裡不 slicing，保留 nPhoton 原始長度
+        # 重要：把 pass_* flags 存回 events（保留「所有 photon」的 flags，方便後續研究）
         awkward_utils.add_field(
             events=events,
-            name="PhotonWithFlags",
-            data=events.Photon
-        )
-        awkward_utils.add_field(
-            events=events,
-            name="Photon_preselection_mask",
-            data=photon_mask,
+            name="Photon",
+            data=photons_with_flags,
             overwrite=True
         )
 
-        # downstream 的重建仍只用通過 preselection 的 photons（行為與你原本一致）
-        photons = events.Photon[photon_mask]
+        # NEW: 將 photon-level flags 彙總成 event-level branches，供 AnalysisManager.write_events 直接寫出
+        #      規則：每個事件只要「任一顆」Photon 該 flag=True -> event-level True
+        #      若該欄位不存在（例如某些年份/流程），就跳過不加。
+        for _flag in (
+            "pass_photon_pT10",
+            "pass_photon_e_veto",
+            "pass_tight_hoe",
+            "pass_tight_PFChIso",
+            "pass_tight_PFHCalIso",
+            "pass_tight_sieie",
+            "pass_tight_PFECalIso",
+            "pass_medium_hoe",
+            "pass_medium_PFChIso",
+            "pass_medium_PFHCalIso",
+            "pass_medium_sieie",
+            "pass_medium_PFECalIso",
+            "pass_loose_hoe",
+            "pass_loose_PFChIso",
+            "pass_loose_PFHCalIso",
+            "pass_loose_sieie",
+            "pass_loose_PFECalIso",
+        ):
+            if _flag in events.Photon.fields:
+                awkward_utils.add_field(
+                    events,
+                    _flag,
+                    ak.fill_none(ak.any(events.Photon[_flag], axis=1), False),
+                    overwrite=True,
+                )
+
+        # 後續真正用來組 ALP / 做分析的 photons，才套用 selection mask
+        photons = events.Photon[photon_selection]
 
         # lepton-photon overlap removal 
         clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, muons, 0.3), True) & ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
@@ -434,7 +464,7 @@ class ZaTaggerRun3(Tagger):
 
         # 加入在原始 events.Photon 中的索引，方便稍後做全體 photon 的排除
         pho_orig_idx = ak.local_index(events.Photon.pt, axis=1)
-        photons = ak.with_field(photons, pho_orig_idx[photon_mask][clean_photon_mask], "origIndex")
+        photons = ak.with_field(photons, pho_orig_idx[photon_selection][clean_photon_mask], "origIndex")
 
 
         FSRphoton_selection = self.select_FSRphotons(
@@ -592,7 +622,11 @@ class ZaTaggerRun3(Tagger):
         trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut | single_mu_trigger_cut  | double_mu_trigger_cut
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
         mu_trigger_cut = single_mu_trigger_cut  | double_mu_trigger_cut
+        awkward_utils.add_field(events, "pass_OR_trigger", ak.fill_none(trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_single_ele_trigger", ak.fill_none(single_ele_trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_single_mu_trigger", ak.fill_none(single_mu_trigger_cut, False), overwrite=True)
         
+
         if self.year is not None:
             year = self.year[:4]
             e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_ele_pt"][year]
@@ -618,6 +652,8 @@ class ZaTaggerRun3(Tagger):
         z_cands_noFSR = z_cands_noFSR[mass_cut]
 
         has_z_cand = ak.num(z_cands) >= 1
+        awkward_utils.add_field(events, "pass_1_Zcand", ak.fill_none(has_z_cand, False), overwrite=True)
+
         z_cand = ak.firsts(z_cands)
         z_cand_noFSR = ak.firsts(z_cands_noFSR)
 
@@ -659,6 +695,7 @@ class ZaTaggerRun3(Tagger):
 
         # Make gamma candidate-level cuts
         has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
+        awkward_utils.add_field(events, "pass_1_ALP", ak.fill_none(has_2gamma_cand, False), overwrite=True)
 
         # ------------------------------------------------------------
         # 重新以 index 方式構建 gamma pairs（保留原本邏輯但加入索引）
@@ -722,8 +759,8 @@ class ZaTaggerRun3(Tagger):
         # ------------------------------------------------------------
 
         # Add ALP-related fields
-        for field in ["pt", "eta", "phi", "mass", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso"]:
-            if not field in ["energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso"]:
+        for field in ["pt", "eta", "phi", "mass", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "energyErr"]:
+            if not field in ["energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "energyErr"]:
                 awkward_utils.add_field(
                     events,
                     "ALP_%s" % field,
@@ -782,6 +819,8 @@ class ZaTaggerRun3(Tagger):
         sel_h_2 = (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1])
         sel_h_1 = ak.fill_none(sel_h_1, value = False)
         sel_h_2 = ak.fill_none(sel_h_2, value = False)
+        awkward_utils.add_field(events, "pass_1_Higgs", ak.fill_none(sel_h_2, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_ZHmass_sum", ak.fill_none(sel_h_1, False), overwrite=True)
         
         # Use No FSR Z boson 
         h_cand_noFSR = z_cand_noFSR.ZCand + alp_cand.ALPCand
@@ -974,20 +1013,340 @@ class ZaTaggerRun3(Tagger):
 
         # pt
         pt_cut = photons.pt > options["pt"]
-        photons = ak.with_field(photons, pt_cut, "pass_pT10")
+        photons = ak.with_field(photons, pt_cut, "pass_photon_pT10")
 
         # eta
-        eta_cut = (photons.isScEtaEB | photons.isScEtaEE)
+        #eta_cut = Tagger.get_range_cut(abs(photons.eta), options["eta"]) | (photons.isScEtaEB | photons.isScEtaEE)
+        eta_cut = (photons.isScEtaEB | photons.isScEtaEE) 
+        # eta_cut = ((photons.isScEtaEB & (photons.mvaID > options["mvaID_barrel"])) | (photons.isScEtaEE & (photons.mvaID > options["mvaID_endcap"])))
 
-        # ...existing code... (Run2/Run3 ID building, plus your per-WP flags ak.with_field)
+        customized_id_cut = []
+        official_id_cut = []
+        sieie_cut = []
+        PFECalIso_cut = []
+        rho_broadcasted, _ = ak.broadcast_arrays(rho, photons.pt)
+        rho = rho_broadcasted
+        photon_abs_eta = numpy.abs(photons.eta)
+        if int(year) < 2020:
+            customized_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
+            official_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
+        elif int(year) > 2020:
+            # ID
+            # id_cut = photons.mvaID_WP80
+            ''' 1. Rho corrected H/E '''
+            hoe_barrel_cut = photons.hoe_PUcorr < options["tight_hoe_barrel"]
+            hoe_endcap_cut = photons.hoe_PUcorr < options["tight_hoe_endcap"]
+
+            ''' 2. Rho corrected PF charged hadron isolation '''
+            PFChIso_barrel_cut = photons.pfRelIso03_chg_quadratic < options["tight_PFChIso_barrel"]
+            PFChIso_endcap_cut = photons.pfRelIso03_chg_quadratic < options["tight_PFChIso_endcap"]
+
+            ''' 3. Rho corrected PF HCal isolation '''
+            # quadratic EA corrections in Run3 : https://indico.cern.ch/event/1204277/contributions/5064356/attachments/2538496/4369369/CutBasedPhotonID_20221031.pdf
+            coef_1, coef_2, coef_3 = options["tight_PFHCalIso_barrel"]
+            parabola_cut = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
+            # PFHCalIso_barrel_cut = photons.hcalPFClusterIso < parabola_cut
+            PFHCalIso_barrel_cut = (
+                ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
+                & (
+                    (photons.hcalPFClusterIso
+                    - rho * options["PFHCalIso_EA_EB_1"][0]
+                    - rho**2 * options["PFHCalIso_EA_EB_1"][1])
+                    < parabola_cut
+                )
+            ) | (
+                ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
+                & (
+                    (photons.hcalPFClusterIso
+                    - rho * options["PFHCalIso_EA_EB_2"][0]
+                    - rho**2 * options["PFHCalIso_EA_EB_2"][1])
+                    < parabola_cut
+                )
+            )
+
+            coef_1, coef_2, coef_3 = options["tight_PFHCalIso_endcap"]
+            parabola_cut = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
+            # PFHCalIso_endcap_cut = photons.hcalPFClusterIso < parabola_cut
+            PFHCalIso_endcap_cut = (
+                (
+                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
+                    & (
+                        photons.hcalPFClusterIso
+                        - (rho * options["PFHCalIso_EA_EE_1"][0])
+                        - (rho**2 * options["PFHCalIso_EA_EE_1"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
+                    & (
+                        photons.hcalPFClusterIso
+                        - (rho * options["PFHCalIso_EA_EE_2"][0])
+                        - (rho**2 * options["PFHCalIso_EA_EE_2"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
+                    & (
+                        photons.hcalPFClusterIso
+                        - (rho * options["PFHCalIso_EA_EE_3"][0])
+                        - (rho**2 * options["PFHCalIso_EA_EE_3"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
+                    & (
+                        photons.hcalPFClusterIso
+                        - (rho * options["PFHCalIso_EA_EE_4"][0])
+                        - (rho**2 * options["PFHCalIso_EA_EE_4"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
+                    & (
+                        photons.hcalPFClusterIso
+                        - (rho * options["PFHCalIso_EA_EE_5"][0])
+                        - (rho**2 * options["PFHCalIso_EA_EE_5"][1])
+                        < parabola_cut
+                    )
+                )
+            )
+
+            ''' 4. Sigma IEtaIEta (Discarded) '''
+            sieie_barrel_cut = photons.sieie < options["tight_sieie_barrel"]
+            sieie_endcap_cut = photons.sieie < options["tight_sieie_endcap"]
+
+            ''' 5. Rho corrected PF ECal isolation (Discarded) '''
+            # quadratic EA corrections in Run3 : https://indico.cern.ch/event/1204277/contributions/5064356/attachments/2538496/4369369/CutBasedPhotonID_20221031.pdf
+            coef_1, coef_2 = options["tight_PFECalIso_barrel"]
+            parabola_cut = coef_1 + coef_2 * photons.pt
+            # PFECalIso_barrel_cut = photons.ecalPFClusterIso < parabola_cut
+            PFECalIso_barrel_cut = (
+                ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
+                & (
+                    (photons.ecalPFClusterIso
+                    - rho * options["PFECalIso_EA_EB_1"][0]
+                    - rho**2 * options["PFECalIso_EA_EB_1"][1])
+                    < parabola_cut
+                )
+            ) | (
+                ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
+                & (
+                    (photons.ecalPFClusterIso
+                    - rho * options["PFECalIso_EA_EB_2"][0]
+                    - rho**2 * options["PFECalIso_EA_EB_2"][1])
+                    < parabola_cut
+                )
+            )
+
+            coef_1, coef_2 = options["tight_PFECalIso_endcap"]
+            parabola_cut = coef_1 + coef_2 * photons.pt
+            # PFECalIso_endcap_cut = photons.ecalPFClusterIso < parabola_cut
+            PFECalIso_endcap_cut = (
+                (
+                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
+                    & (
+                        photons.ecalPFClusterIso
+                        - (rho * options["PFECalIso_EA_EE_1"][0])
+                        - (rho**2 * options["PFECalIso_EA_EE_1"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
+                    & (
+                        photons.ecalPFClusterIso
+                        - (rho * options["PFECalIso_EA_EE_2"][0])
+                        - (rho**2 * options["PFECalIso_EA_EE_2"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
+                    & (
+                        photons.ecalPFClusterIso
+                        - (rho * options["PFECalIso_EA_EE_3"][0])
+                        - (rho**2 * options["PFECalIso_EA_EE_3"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
+                    & (
+                        photons.ecalPFClusterIso
+                        - (rho * options["PFECalIso_EA_EE_4"][0])
+                        - (rho**2 * options["PFECalIso_EA_EE_4"][1])
+                        < parabola_cut
+                    )
+                )
+                | (
+                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
+                    & (
+                        photons.ecalPFClusterIso
+                        - (rho * options["PFECalIso_EA_EE_5"][0])
+                        - (rho**2 * options["PFECalIso_EA_EE_5"][1])
+                        < parabola_cut
+                    )
+                )
+            )
+
+            # 1, 2, 3
+            hoe_cut = (photons.isScEtaEB & hoe_barrel_cut) | (photons.isScEtaEE & hoe_endcap_cut)
+            PFChIso_cut = (photons.isScEtaEB & PFChIso_barrel_cut) | (photons.isScEtaEE & PFChIso_endcap_cut)
+            PFHCalIso_cut = (photons.isScEtaEB & PFHCalIso_barrel_cut) | (photons.isScEtaEE & PFHCalIso_endcap_cut)
+
+            customized_id_cut = hoe_cut & PFChIso_cut & PFHCalIso_cut
+
+            # 4, 5
+            sieie_cut = (photons.isScEtaEB & sieie_barrel_cut) | (photons.isScEtaEE & sieie_endcap_cut)
+            PFECalIso_cut = (photons.isScEtaEB & PFECalIso_barrel_cut) | (photons.isScEtaEE & PFECalIso_endcap_cut)
+
+            official_id_cut = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut & PFECalIso_cut
+
+            # ------------------------------------------------------------
+            # NEW: per-photon cut-based ID flags for (tight/medium/loose) x (5 vars)
+            #      PFHCalIso / PFECalIso use the same EA(rho, rho^2) corrections as below.
+            # ------------------------------------------------------------
+            def _wp_cuts(prefix: str):
+                # H/E (PU-corrected hoe_PUcorr, no EA)
+                hoe_barrel_cut = photons.hoe_PUcorr < options[f"{prefix}hoe_barrel"]
+                hoe_endcap_cut = photons.hoe_PUcorr < options[f"{prefix}hoe_endcap"]
+                pass_hoe = (photons.isScEtaEB & hoe_barrel_cut) | (photons.isScEtaEE & hoe_endcap_cut)
+
+                # PF charged hadron iso (quadratic, no EA)
+                PFChIso_barrel_cut = photons.pfRelIso03_chg_quadratic < options[f"{prefix}PFChIso_barrel"]
+                PFChIso_endcap_cut = photons.pfRelIso03_chg_quadratic < options[f"{prefix}PFChIso_endcap"]
+                pass_PFChIso = (photons.isScEtaEB & PFChIso_barrel_cut) | (photons.isScEtaEE & PFChIso_endcap_cut)
+
+                # PF HCal iso (EA rho + rho^2, plus quadratic pt-dependent cut)
+                coef_1, coef_2, coef_3 = options[f"{prefix}PFHCalIso_barrel"]
+                parabola_cut_EB = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
+                EB_1 = (
+                    ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EB_1"][0]
+                      - rho**2 * options["PFHCalIso_EA_EB_1"][1]) < parabola_cut_EB)
+                )
+                EB_2 = (
+                    ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EB_2"][0]
+                      - rho**2 * options["PFHCalIso_EA_EB_2"][1]) < parabola_cut_EB)
+                )
+                pass_PFHCalIso_EB = EB_1 | EB_2
+
+                coef_1, coef_2, coef_3 = options[f"{prefix}PFHCalIso_endcap"]
+                parabola_cut_EE = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
+                EE_1 = (
+                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EE_1"][0]
+                      - rho**2 * options["PFHCalIso_EA_EE_1"][1]) < parabola_cut_EE)
+                )
+                EE_2 = (
+                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EE_2"][0]
+                      - rho**2 * options["PFHCalIso_EA_EE_2"][1]) < parabola_cut_EE)
+                )
+                EE_3 = (
+                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EE_3"][0]
+                      - rho**2 * options["PFHCalIso_EA_EE_3"][1]) < parabola_cut_EE)
+                )
+                EE_4 = (
+                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EE_4"][0]
+                      - rho**2 * options["PFHCalIso_EA_EE_4"][1]) < parabola_cut_EE)
+                )
+                EE_5 = (
+                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5)) &
+                    ((photons.hcalPFClusterIso
+                      - rho * options["PFHCalIso_EA_EE_5"][0]
+                      - rho**2 * options["PFHCalIso_EA_EE_5"][1]) < parabola_cut_EE)
+                )
+                pass_PFHCalIso_EE = EE_1 | EE_2 | EE_3 | EE_4 | EE_5
+                pass_PFHCalIso = (photons.isScEtaEB & pass_PFHCalIso_EB) | (photons.isScEtaEE & pass_PFHCalIso_EE)
+
+                # sieie (no EA)
+                sieie_barrel_cut = photons.sieie < options[f"{prefix}sieie_barrel"]
+                sieie_endcap_cut = photons.sieie < options[f"{prefix}sieie_endcap"]
+                pass_sieie = (photons.isScEtaEB & sieie_barrel_cut) | (photons.isScEtaEE & sieie_endcap_cut)
+
+                # PF ECal iso (EA rho + rho^2, plus linear pt-dependent cut)
+                coef_1, coef_2 = options[f"{prefix}PFECalIso_barrel"]
+                line_cut_EB = coef_1 + coef_2 * photons.pt
+                EB_1 = (
+                    ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EB_1"][0]
+                      - rho**2 * options["PFECalIso_EA_EB_1"][1]) < line_cut_EB)
+                )
+                EB_2 = (
+                    ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EB_2"][0]
+                      - rho**2 * options["PFECalIso_EA_EB_2"][1]) < line_cut_EB)
+                )
+                pass_PFECalIso_EB = EB_1 | EB_2
+
+                coef_1, coef_2 = options[f"{prefix}PFECalIso_endcap"]
+                line_cut_EE = coef_1 + coef_2 * photons.pt
+                EE_1 = (
+                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EE_1"][0]
+                      - rho**2 * options["PFECalIso_EA_EE_1"][1]) < line_cut_EE)
+                )
+                EE_2 = (
+                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EE_2"][0]
+                      - rho**2 * options["PFECalIso_EA_EE_2"][1]) < line_cut_EE)
+                )
+                EE_3 = (
+                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EE_3"][0]
+                      - rho**2 * options["PFECalIso_EA_EE_3"][1]) < line_cut_EE)
+                )
+                EE_4 = (
+                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EE_4"][0]
+                      - rho**2 * options["PFECalIso_EA_EE_4"][1]) < line_cut_EE)
+                )
+                EE_5 = (
+                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5)) &
+                    ((photons.ecalPFClusterIso
+                      - rho * options["PFECalIso_EA_EE_5"][0]
+                      - rho**2 * options["PFECalIso_EA_EE_5"][1]) < line_cut_EE)
+                )
+                pass_PFECalIso_EE = EE_1 | EE_2 | EE_3 | EE_4 | EE_5
+                pass_PFECalIso = (photons.isScEtaEB & pass_PFECalIso_EB) | (photons.isScEtaEE & pass_PFECalIso_EE)
+
+                return pass_hoe, pass_PFChIso, pass_PFHCalIso, pass_sieie, pass_PFECalIso
+
+            for _wp in ("tight", "medium", "loose"):
+                p_hoe, p_ch, p_hcal, p_sieie, p_ecal = _wp_cuts(f"{_wp}_")
+                photons = ak.with_field(photons, p_hoe,   f"pass_{_wp}_hoe")
+                photons = ak.with_field(photons, p_ch,    f"pass_{_wp}_PFChIso")
+                photons = ak.with_field(photons, p_hcal,  f"pass_{_wp}_PFHCalIso")
+                photons = ak.with_field(photons, p_sieie, f"pass_{_wp}_sieie")
+                photons = ak.with_field(photons, p_ecal,  f"pass_{_wp}_PFECalIso")
 
         # Custom Photon ID
         id_cut = customized_id_cut
 
         # electron veto
         e_veto_cut = (photons.electronVeto > options["e_veto"])
+        photons = ak.with_field(photons, e_veto_cut, "pass_photon_e_veto")
 
-        # e-g overlap
         photon_ele_idx = ak.where(ak.num(photons.electronIdx, axis=1) == 0, ak.ones_like(photons.pt)*-1, photons.electronIdx)
         new_pho = ak.unflatten(ak.unflatten(ak.flatten(photon_ele_idx), [1]*ak.sum(ak.num(photon_ele_idx))), ak.num(photon_ele_idx, axis=1))
         new_ele = ak.broadcast_arrays(electrons.Idx[:,None], new_pho, depth_limit=2)[0]
@@ -995,17 +1354,22 @@ class ZaTaggerRun3(Tagger):
             ak.is_none(electrons.Idx),
             ak.broadcast_arrays(photons.electronIdx, False)[1],
             ak.flatten(ak.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1)
-        )
+        ) # some events may have no electrons, so we need to replace None with False
 
-        # NEW: 把主要選擇也存成 per-photon flags（方便離線研究）
-        photons = ak.with_field(photons, eta_cut, "pass_eta")
-        photons = ak.with_field(photons, id_cut, "pass_id_custom")
-        photons = ak.with_field(photons, e_veto_cut, "pass_e_veto")
-        photons = ak.with_field(photons, eg_overlap_cut, "pass_ele_pho_overlap")
+        cut_names = ["no_cut", "pt", "eta", "id", "e_veto", "ele_pho_overlap"]
+        cut_results = [no_cut, pt_cut, eta_cut, id_cut, e_veto_cut, eg_overlap_cut]
+        # Make all_cuts and perform N-1 cut
+        all_cuts = photons.pt > 0
+        for i, cut in enumerate(cut_results):
+            all_cuts = (all_cuts) & cut
+            if i == 0:
+                # In an event, at least 2 photons pass selections
+                cut_results[i] = (ak.sum(cut, axis=1) > 1)
+            else:
+                cut_results[i] = (ak.sum(cut, axis=1) > 1) & cut_results[i-1]
 
-        # NEW: 回傳「每顆 photon」是否通過 preselection（而不是 event-level >1）
-        photon_mask = no_cut & pt_cut & eta_cut & id_cut & e_veto_cut & eg_overlap_cut
-        return photon_mask
+        # 回傳：最終 selection mask + 帶 flags 的 photons
+        return all_cuts, photons
 
     def _compute_alp_iso(self, all_photons, alp_cand, dr_cone=0.3):
         """

@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+#
+#
+#
+#  Created by Jay Chan
+#
+#  8.21.2019
+#
+#
+#
+#
 import os
 import math
 from argparse import ArgumentParser
@@ -527,7 +537,7 @@ def decorate(data):
     data['Z_lead_lepton_relpt'] = data.Z_lead_lepton_pt / data.H_mass
     data['Z_sublead_lepton_relpt'] = data.Z_sublead_lepton_pt / data.H_mass
     data['gamma_relpt'] = data.gamma_pt / data.H_mass
-    # data['gamma_ptRelErr'] = data.apply(lambda x:compute_gamma_relEerror(x), axis=1)
+    data['gamma_ptRelErr'] = data.apply(lambda x:compute_gamma_relEerror(x), axis=1)
     data['G_ECM'] = data.apply(lambda x:compute_G_ECM(x), axis=1)
     data['Z_ECM'] = data.apply(lambda x:compute_Z_ECM(x), axis=1)
     data['Z_rapCM'] = data.apply(lambda x:compute_Z_rapCM(x), axis=1)
@@ -576,37 +586,8 @@ def decorate(data):
     # data['additional_lepton_1_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'additional_lepton_1_phi', min_jet=0), axis=1)
     # data['additional_lepton_2_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'additional_lepton_2_phi', min_jet=0), axis=1) 
     
-    # --- robust dtype handling (avoid "setting an array element with a sequence") ---
-    # Some parquet columns can be jagged/list-like => DataFrame-wide astype(float) will crash.
-    def _is_sequence_cell(v):
-        return isinstance(v, (list, tuple, np.ndarray))
-
-    # Identify object columns that contain sequences (jagged)
-    seq_cols = []
-    obj_cols = data.select_dtypes(include=["object"]).columns
-    for c in obj_cols:
-        s = data[c]
-        if s.shape[0] == 0:
-            continue
-        sample = s.dropna().head(50)
-        if sample.map(_is_sequence_cell).any():
-            seq_cols.append(c)
-
-    # Convert all non-sequence columns to numeric where possible
-    cols_to_numeric = [c for c in data.columns if c not in seq_cols]
-    data[cols_to_numeric] = data[cols_to_numeric].apply(pd.to_numeric, errors="coerce")
-
-    # Enforce integer-like columns (fill NaN to keep astype stable)
-    int_cols = [
-        "is_center",
-        "Z_lead_lepton_charge", "Z_lead_lepton_id",
-        "Z_sublead_lepton_charge", "Z_sublead_lepton_id",
-        "n_leptons", "n_electrons", "n_muons",
-        "event",
-    ]
-    present_int_cols = [c for c in int_cols if c in data.columns]
-    if present_int_cols:
-        data[present_int_cols] = data[present_int_cols].fillna(0).astype("int64")
+    data = data.astype(float)
+    data = data.astype({'is_center': int, 'Z_lead_lepton_charge': int, 'Z_lead_lepton_id': int, 'Z_sublead_lepton_charge': int, 'Z_sublead_lepton_id': int, "n_leptons": int, "n_electrons": int, "n_muons": int, 'event': int})
 
     return data
     

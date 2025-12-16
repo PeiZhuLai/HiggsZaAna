@@ -15,84 +15,76 @@ import logging
 from higgs_dna.utils.logger_utils import simple_logger
 logger = simple_logger(__name__)
 
-import awkward as ak
-
-def select_objects(objects, cuts={}, clean={}, name="none", tagger=None):
-    """
-    Object selection with consistent cutflow accounting.
-
-    Key fix:
-    - Register object-level cutflow under a dedicated cut_type: f"{name}_obj"
-      to avoid mixing with any event-level 'all cuts' registered elsewhere.
+def select_objects(objects, cuts = {}, clean = {}, name = "none", tagger = None):
     """
 
-    # event -> #objects (for unflatten)
-    counts = ak.num(objects, axis=1)
+    """
 
-    # object-level flattened view
-    obj = ak.flatten(objects)
+    tagger_name = "none" if tagger is None else tagger.name
+
+    if cuts:
+        logger.debug("[select_objects] : Tagger '%s', selecting objects '%s', with the following requirements:" % (tagger_name, name))
+        for cut, value in cuts.items():
+            logger.debug("\t '%s' : %s" % (cut, str(value)))
+
+    if clean:
+        logger.debug("[select_objects] : Tagger '%s', cross-cleaning objects '%s' with respect to the following sets of objects:" % (tagger_name, name))
+        for other_objects, info in clean.items():
+            logger.debug("\t '%s', dR > %.2f" % (other_objects, info["min_dr"]))
 
     cut_names = []
-    cut_masks = []
-
-    # -------------------------
-    # basic cuts (object-level)
-    # -------------------------
+    cut_results = []
     for cut, value in cuts.items():
-        mask = None
-
+        cut_ = None
         if cut == "pt":
-            mask = obj.pt > value
-            cut_names.append(f"pt > {value:.2f}")
+            cut_ = objects.pt > value
+            cut_names.append("pt > %.2f" % value)
+        if cut in ["eta", "dxy", "dz"]:
+            cut_ = abs(objects[cut]) <= value
+            cut_names.append("|%s| <= %.2f" % (cut, value))
+        if cut in ["etasc"]:
+            cut_ = abs(objects.eta + objects.deltaEtaSC) <= value
+            cut_names.append("|%s| <= %.2f" % (cut, value))
+        if cut in ["pfRelIso03_all", "pfRelIso03_chg", "sip3d"]:
+            cut_ = objects[cut] < value
+            cut_names.append("%s < %.2f" % (cut, value))
 
-        elif cut in ["eta", "dxy", "dz"]:
-            mask = abs(obj[cut]) <= value
-            cut_names.append(f"|{cut}| <= {value:.2f}")
+        if cut_ is not None:
+            cut_results.append(cut_)
+            
+    if "Jet" in name:
+        new_jet = awkward.flatten(objects)[:, None]
+        num_jet = awkward.num(objects)
 
-        elif cut == "etasc":
-            mask = abs(obj.eta + obj.deltaEtaSC) <= value
-            cut_names.append(f"|{cut}| <= {value:.2f}")
-
-        elif cut in ["pfRelIso03_all", "pfRelIso03_chg", "sip3d"]:
-            mask = obj[cut] < value
-            cut_names.append(f"{cut} < {value:.2f}")
-
-        if mask is not None:
-            cut_masks.append(ak.fill_none(mask, False))
-
-    # -------------------------
-    # cleaning cuts (jagged -> flat)
-    # -------------------------
     for other_objects, info in clean.items():
-        cut_jagged = delta_R(objects, info["objects"], info["min_dr"])
-        cut_flat = ak.flatten(ak.fill_none(cut_jagged, False))
+        if "Jet" in name and other_objects in ["muons", "electrons"]:
+            unflatten_jet = awkward.unflatten(objects.pt, [1]*sum(num_jet), axis=-1)
+            new_obj = awkward.flatten(awkward.broadcast_arrays(awkward.unflatten(awkward.flatten(info["objects"]), [1]*awkward.fill_none(awkward.num(info["objects"]), 0))[:,None], objects.pt)[0])
+            mask = awkward.flatten(abs(new_jet.pt[:, :, None]-new_obj.pt), axis=-1) < new_obj.pt
+            cut_ = awkward.unflatten(awkward.flatten(delta_R(new_jet, new_obj[mask], info["min_dr"])), num_jet)
+        else:
+            cut_ = delta_R(objects, info["objects"], info["min_dr"])
+        cut_names.append("dR with '%s' > %.2f" % (other_objects, info["min_dr"]))
+        cut_results.append(cut_)
+        
+    # awkward.where(awkward.is_none(base_array), [] ,awkward.unflatten(awkward.unflatten(awkward.flatten(base_array), [1]*awkward.sum(awkward.num(base_array))), awkward.num(base_array, axis=1)))
 
-        cut_names.append(f"dR with '{other_objects}' > {info['min_dr']:.2f}")
-        cut_masks.append(cut_flat)
+    all_cuts = objects.pt > 0
+    for i, cut in enumerate(cut_results):
+        all_cuts = (all_cuts) & cut
+        if i == 0:
+            cut_results[i] = awkward.flatten(cut)
+        else:
+             cut_results[i] = awkward.flatten(cut) & cut_results[i-1]
 
-    # -------------------------
-    # cumulative AND (flat)
-    # -------------------------
-    cumulative_masks = []
-    all_mask = ak.ones_like(obj.pt, dtype=bool)
-
-    for m in cut_masks:
-        all_mask = all_mask & m
-        cumulative_masks.append(all_mask)
-
-    # -------------------------
-    # register cutflow (object-level ONLY)
-    # -------------------------
-    if tagger is not None and cut_names:
+    if tagger is not None:
         tagger.register_cuts(
-            names=cut_names,
-            results=cumulative_masks,
-            cut_type=name   # <<< critical fix
+                names = cut_names,
+                results = cut_results,
+                cut_type = name
         )
 
-    # return event-level jagged mask for downstream selection
-    return ak.unflatten(all_mask, counts)
-
+    return all_cuts
 
 
 def mass_veto(objects1, objects2, mass_range):

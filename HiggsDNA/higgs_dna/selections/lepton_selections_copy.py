@@ -68,7 +68,7 @@ def select_electrons(electrons, options, clean, name = "none", tagger = None, ye
     else:
         transition_cut = electrons.pt > 0.
 
-    # all_cuts = standard_cuts & id_cut & transition_cut
+    all_cuts = standard_cuts & id_cut & transition_cut
     # print(points)
     # print(electrons.pt > 10)
     # print(((abs(etasc) < 0.8) & (electrons.mvaHZZIso > points[0])))
@@ -76,17 +76,14 @@ def select_electrons(electrons, options, clean, name = "none", tagger = None, ye
     # print(((abs(etasc) > 1.479) & (electrons.mvaHZZIso > points[2])))
     # print(((electrons.pt > 10) & ((abs(etasc) < 0.8) & (electrons.mvaHZZIso > points[0])) | ((abs(etasc) < 1.479) & (abs(etasc) > 0.8) & (electrons.mvaHZZIso > points[1])) | ((abs(etasc) > 1.479) & (electrons.mvaHZZIso > points[2]))))
     # print(f"Electron: pt = {electrons.pt}, etasc = {electrons.eta + electrons.deltaEtaSC}, mvaHZZIso = {electrons.mvaHZZIso}, standard_cuts = {standard_cuts}, id_cut = {id_cut}, transition_cut = {transition_cut}, all_cuts = {all_cuts}")
-    # standard_cuts = awkward.sum(standard_cuts, axis=1) > 0
-    # id_cut = awkward.sum(standard_cuts & id_cut, axis=1) > 0
-    # transition_cut = awkward.sum(id_cut & transition_cut, axis=1) > 0
-    id_obj_cut = standard_cuts & id_cut
-    transition_obj_cut = id_obj_cut & transition_cut
-    all_cuts = transition_obj_cut
+    standard_cuts = awkward.sum(standard_cuts, axis=1) > 0
+    id_cut = awkward.sum(standard_cuts & id_cut, axis=1) > 0
+    transition_cut = awkward.sum(id_cut & transition_cut, axis=1) > 0
 
     if tagger is not None:
         tagger.register_cuts(
                 names = ["standard object cuts", "id cut", "ee-eb transition", "all cuts"],
-                results = [standard_cuts, id_obj_cut, transition_obj_cut, all_cuts],
+                results = [standard_cuts, id_cut, transition_cut, all_cuts],
                 cut_type = name
         )
 
@@ -133,18 +130,15 @@ def select_muons(muons, options, clean, name = "none", tagger = None):
     else:
         global_cut = muons.pt > 0
 
-    # all_cuts = standard_cuts & id_cut & global_cut
-    # standard_cuts = awkward.sum(standard_cuts, axis=1) > 0
-    # id_cut = awkward.sum(standard_cuts & id_cut, axis=1) > 0
-    # global_cut = awkward.sum(id_cut & global_cut, axis=1) > 0
-    id_obj_cut = standard_cuts & id_cut
-    global_obj_cut = id_obj_cut & global_cut
-    all_cuts = global_obj_cut
+    all_cuts = standard_cuts & id_cut & global_cut
+    standard_cuts = awkward.sum(standard_cuts, axis=1) > 0
+    id_cut = awkward.sum(standard_cuts & id_cut, axis=1) > 0
+    global_cut = awkward.sum(id_cut & global_cut, axis=1) > 0
 
     if tagger is not None:
         tagger.register_cuts(
                 names = ["standard object cuts", "id cut", "global_muon cut", "all cuts"],
-                results = [standard_cuts, id_obj_cut, global_obj_cut, all_cuts],
+                results = [standard_cuts, id_cut, global_cut, all_cuts],
                 cut_type = name
         )
 

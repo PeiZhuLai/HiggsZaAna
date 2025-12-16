@@ -169,7 +169,7 @@ DEFAULT_OPTIONS = {
         "2023":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"]
     },
     "electrons" : {
-        "pt" : 7.0
+        "pt" : 7.0,
     },
     "muons" : {
         "pt" : 5.0
@@ -275,6 +275,9 @@ class ZaTaggerRun3(Tagger):
         else:
             rho = ak.ones_like(events.Photon)
 
+        # NEW: 存 rho 到 events（event-level），方便後續 write_events 輸出
+        awkward_utils.add_field(events, "fixedGridRhoAll", ak.fill_none(rho, 0.0), overwrite=True)
+
         if not self.is_data:
             self.overlap_removal(events=events)
 
@@ -336,8 +339,7 @@ class ZaTaggerRun3(Tagger):
         electron_cut = lepton_selections.select_electrons(
             electrons = events.Electron,
             options = self.options["electrons"],
-            clean = {
-            },
+            clean = {},
             name = "SelectedElectron",
             tagger = self,
             year = self.year[:4]
@@ -348,7 +350,10 @@ class ZaTaggerRun3(Tagger):
             name = "SelectedElectron",
             data = events.Electron[electron_cut]
         )
-        
+
+        pass_electron_ip3d = ( events.Electron["ip3d"] < 4)
+        awkward_utils.add_field(events, "pass_ele_ip3d", ak.fill_none(pass_electron_ip3d, False), overwrite=True)
+
         # generate the index in the original array and add to electrons
         arr = ak.local_index(events.Electron["pt"], axis=1)[electron_cut]
         electron_idx = ak.mask(arr, ak.num(arr) > 0)
@@ -358,8 +363,7 @@ class ZaTaggerRun3(Tagger):
         muon_cut = lepton_selections.select_muons(
             muons = events.Muon,
             options = self.options["muons"],
-            clean = {
-            },
+            clean = {},
             name = "SelectedMuon",
             tagger = self
         )
@@ -616,7 +620,11 @@ class ZaTaggerRun3(Tagger):
         trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut | single_mu_trigger_cut  | double_mu_trigger_cut
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
         mu_trigger_cut = single_mu_trigger_cut  | double_mu_trigger_cut
+        awkward_utils.add_field(events, "pass_OR_trigger", ak.fill_none(trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_single_ele_trigger", ak.fill_none(single_ele_trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_single_mu_trigger", ak.fill_none(single_mu_trigger_cut, False), overwrite=True)
         
+
         if self.year is not None:
             year = self.year[:4]
             e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_ele_pt"][year]
@@ -642,6 +650,8 @@ class ZaTaggerRun3(Tagger):
         z_cands_noFSR = z_cands_noFSR[mass_cut]
 
         has_z_cand = ak.num(z_cands) >= 1
+        awkward_utils.add_field(events, "pass_1_Zcand", ak.fill_none(has_z_cand, False), overwrite=True)
+
         z_cand = ak.firsts(z_cands)
         z_cand_noFSR = ak.firsts(z_cands_noFSR)
 
@@ -683,6 +693,7 @@ class ZaTaggerRun3(Tagger):
 
         # Make gamma candidate-level cuts
         has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
+        awkward_utils.add_field(events, "pass_1_ALP", ak.fill_none(has_2gamma_cand, False), overwrite=True)
 
         # ------------------------------------------------------------
         # 重新以 index 方式構建 gamma pairs（保留原本邏輯但加入索引）
@@ -746,8 +757,8 @@ class ZaTaggerRun3(Tagger):
         # ------------------------------------------------------------
 
         # Add ALP-related fields
-        for field in ["pt", "eta", "phi", "mass", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso"]:
-            if not field in ["energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso"]:
+        for field in ["pt", "eta", "phi", "mass", "electronVeto", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "energyErr"]:
+            if not field in ["electronVeto", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "energyErr"]:
                 awkward_utils.add_field(
                     events,
                     "ALP_%s" % field,
@@ -806,6 +817,8 @@ class ZaTaggerRun3(Tagger):
         sel_h_2 = (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1])
         sel_h_1 = ak.fill_none(sel_h_1, value = False)
         sel_h_2 = ak.fill_none(sel_h_2, value = False)
+        awkward_utils.add_field(events, "pass_1_Higgs", ak.fill_none(sel_h_2, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_ZHmass_sum", ak.fill_none(sel_h_1, False), overwrite=True)
         
         # Use No FSR Z boson 
         h_cand_noFSR = z_cand_noFSR.ZCand + alp_cand.ALPCand
@@ -901,7 +914,7 @@ class ZaTaggerRun3(Tagger):
             
             self.register_event_cuts(
                 names = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
-                results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, all_cuts],
+                results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut8],
                 events = events,
                 cut_type = cut_type,
                 weighted = weighted
@@ -912,8 +925,13 @@ class ZaTaggerRun3(Tagger):
         elapsed_time = time.time() - start
         logger.debug("[ZGammaTagger] %s, syst variation : %s, total time to execute select_zgammas: %.6f s" % (self.name, self.current_syst, elapsed_time))
 
-        #dummy_cut =  ak.num(events.Photon) >= 0
-        return all_cuts, events 
+        # Nominal
+        # return all_cuts, events
+
+        # Motive Study
+        keep_all = ak.num(events.Photon) >= 0
+        return keep_all, events
+
 
     def calculate_gen_info(self, zgammas, options):
         """
@@ -1327,6 +1345,10 @@ class ZaTaggerRun3(Tagger):
 
         # Custom Photon ID
         id_cut = customized_id_cut
+
+        # Motive Study
+        true_mask = photons.pt > -999  # 任何比較都會回傳 bool
+        id_cut = true_mask
 
         # electron veto
         e_veto_cut = (photons.electronVeto > options["e_veto"])

@@ -606,14 +606,15 @@ class AnalysisManager():
                 events_file = photon_scale_smear_run3(events_file, year, is_data)
                 events_file = electron_scale_smear_run3(events_file, year, is_data)
                 events_file = muon_scale_run3(events_file, year, is_data)
-                if is_data:
-                    if "2022postEE" in year:
-                        period = re.search(r"Run2022([A-Z]+)", file).group(1)
-                        events_file = pt_correction_data(events_file, year, period)
-                    else:
-                        events_file = pt_correction_data(events_file, year)
-                else:
-                    events_file = pt_correction_mc(events_file, year)
+                # jet pt correction
+                # if is_data:
+                #     if "2022postEE" in year:
+                #         period = re.search(r"Run2022([A-Z]+)", file).group(1)
+                #         events_file = pt_correction_data(events_file, year, period)
+                #     else:
+                #         events_file = pt_correction_data(events_file, year)
+                # else:
+                #     events_file = pt_correction_mc(events_file, year)
 
             f.close()
             

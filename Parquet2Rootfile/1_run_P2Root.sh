@@ -8,8 +8,8 @@ echo "==============STARTED=============="
 # target="./"
 
 # Run3
-input="/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/"
-target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
+input="/eos/home-p/pelai/HZa/parquet_MStudy_DNA/"
+target="/eos/home-p/pelai/HZa/root_MStudy_DNA/"
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
 # target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
@@ -112,13 +112,12 @@ process_sample_syst() {
     echo "Sample $sample completed successfully."
 }
 
-
+#---------------------------------------------------------------------------------------
 # 处理 signal 样本
 
 # samples=(ggH_M125 VBF_M125 WplusH_M125 WminusH_M125 ZH_M125 ttH_M125 ggH_M120 VBFH_M120 WplusH_M120 WminusH_M120 ZH_M120 ttH_M120 ggH_M130 VBFH_M130 WplusH_M130 WminusH_M130 ZH_M130 ttH_M130 ggH_mix VBF_mix ggH VBF WplusH WminusH ZH ttH)
-# samples=(ALP_M5 ALP_M15 ALP_M30)
 
-samples=(ALP_M5 ALP_M15 ALP_M30)
+samples=(mA_M5)
 type="Sig_MC"
 for sample in "${samples[@]}"; do
     mkdir -p "$target${sample}/"
@@ -129,22 +128,22 @@ for sample in "${samples[@]}"; do
     process_sample "$sample" "$type"
 done
 
-samples=(ALP_M5 ALP_M15 ALP_M30)
-type="Sig_MC"
-for sample in "${samples[@]}"; do
-    for sf in "up" "down"; do #  "up" "down"
-        for syst in "${systs[@]}"; do
-            mkdir -p "$target${sample}_${syst}_${sf}"
-        done
-        for year in "${years[@]}"; do
-            # 存储后台任务的进程ID列表
-            pid_list=()
+# samples=(mA_M5)
+# type="Sig_MC"
+# for sample in "${samples[@]}"; do
+#     for sf in "up" "down"; do #  "up" "down"
+#         for syst in "${systs[@]}"; do
+#             mkdir -p "$target${sample}_${syst}_${sf}"
+#         done
+#         for year in "${years[@]}"; do
+#             # 存储后台任务的进程ID列表
+#             pid_list=()
 
-            # 调用函数处理样本数据
-            process_sample_syst "$sample" "$type" "$year" "$sf"
-        done
-    done
-done
+#             # 调用函数处理样本数据
+#             process_sample_syst "$sample" "$type" "$year" "$sf"
+#         done
+#     done
+# done
 
 # ****************************
 # ********** Bkg *************
