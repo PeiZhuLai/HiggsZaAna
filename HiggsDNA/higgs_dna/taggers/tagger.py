@@ -7,7 +7,7 @@ from higgs_dna.utils.logger_utils import simple_logger
 # logger = logging.getLogger(__name__)
 logger = simple_logger(__name__)
 import json
-
+import re  # <-- NEW
 
 from higgs_dna.utils import misc_utils
 
@@ -39,6 +39,24 @@ class Tagger():
         self.cutflow_order = {}   # cut_type -> [cut1, cut2, ...]
         self.cutflow_yields = {}  # cut_type -> {cut: yields}
 
+        # NEW: cutflow 輸出控制（只影響印出，不影響計數/儲存）
+        cfopt = (self.options or {}).get("cutflow", {})
+        self.cutflow_dump_enable = bool(cfopt.get("dump_enable", True))
+        # allow list：若非空，只 dump 這些 cut_type
+        self.cutflow_dump_allow = set(cfopt.get("dump_allow", []))
+        # deny list：永遠不 dump 這些 cut_type
+        self.cutflow_dump_deny = set(cfopt.get("dump_deny", []))
+        # prefix deny：cut_type 以這些前綴開頭就不 dump（適合 trigeff_*）
+        self.cutflow_dump_deny_prefix = tuple(cfopt.get("dump_deny_prefix", []))
+
+        # NEW: dump 風格控制
+        # style: "table"（逐行）或 "one_line"（單行摘要）
+        self.cutflow_dump_style = str(cfopt.get("dump_style", "table"))
+        # 這些前綴的 cut_type 強制用 one_line（預設 trigeff_）
+        self.cutflow_dump_one_line_prefix = tuple(cfopt.get("dump_one_line_prefix", ["trigeff_"]))
+
+        # NEW: one_line JSON (pt-binned trigeff aggregation) 去重：每個 prefix 印一次
+        self._trigeff_json_dumped = set()
 
     def select(self, events):
         """
@@ -79,13 +97,87 @@ class Tagger():
             logger.debug("[Tagger] %s : event set : %s : %d (%d) events before (after) selection" % (self.name, syst_tag, len(selection), awkward.sum(selection)))
         
         
-        for cut_type in self.cutflow_order:
-            self.dump_cutflow(cut_type, style="table")
-            
-        # 或者用 json 更利于你后处理脚本
-        # self.dump_cutflow("zgammas", style="json")
+        # NEW: 依照配置決定哪些 cut_type 要 dump，避免 trigger study 洗版
+        if self.cutflow_dump_enable:
+            for cut_type in self.cutflow_order:
+                if not self._should_dump_cut_type(cut_type):
+                    continue
+                style = self.cutflow_dump_style
+                if self.cutflow_dump_one_line_prefix and cut_type.startswith(self.cutflow_dump_one_line_prefix):
+                    style = "one_line"
+                self.dump_cutflow(cut_type, style=style)
 
         return selection, events
+
+    def _should_dump_cut_type(self, cut_type: str) -> bool:
+        if cut_type in self.cutflow_dump_deny:
+            return False
+        if self.cutflow_dump_deny_prefix and cut_type.startswith(self.cutflow_dump_deny_prefix):
+            return False
+        if self.cutflow_dump_allow:
+            return cut_type in self.cutflow_dump_allow
+        return True
+
+    def _trigeff_parse_cut_type(self, cut_type: str):
+        """
+        trigeff_{lep}_{ord}_{trig}_{ptXtoY}
+        trig 允許包含底線，例如 double_ele / OR_ele
+        """
+        m = re.match(
+            r"^trigeff_(?P<lep>[^_]+)_(?P<ord>[^_]+)_(?P<trig>.+?)_(?P<ptbin>pt\d+to(?:\d+|Inf))$",
+            cut_type,
+        )
+        return m.groupdict() if m else None
+
+    def _trigeff_build_summary_json(self, prefix_key: str):
+        """
+        prefix_key: "trigeff_ele_lead_double_ele" 之類
+        回傳 dict：包含每個 pt bin 的 in_bin/pass/eff，與 overall。
+        """
+        bins = []
+        overall_in = 0.0
+        overall_pass = 0.0
+
+        for ct in self.cutflow_order.keys():
+            if not ct.startswith(prefix_key + "_"):
+                continue
+            meta = self._trigeff_parse_cut_type(ct)
+            if not meta:
+                continue
+
+            ymap = self.cutflow_yields.get(ct, {})
+            in_y = float(ymap.get("in_bin", 0.0))
+            pass_y = float(ymap.get("pass_trigger", 0.0))
+            eff = (pass_y / in_y) if in_y > 0 else 0.0
+
+            bins.append({
+                "ptbin": meta["ptbin"],
+                "in_bin": in_y,
+                "pass_trigger": pass_y,
+                "eff": round(eff, 3),
+            })
+            overall_in += in_y
+            overall_pass += pass_y
+
+        # sort by low edge number
+        def _low_edge(b):
+            m = re.match(r"^pt(?P<lo>\d+)to", b["ptbin"])
+            return int(m.group("lo")) if m else 10**9
+
+        bins.sort(key=_low_edge)
+
+        out = {
+            "tagger": self.name,
+            "syst": self.current_syst,
+            "cut_type_prefix": prefix_key,
+            "bins": bins,
+            "overall": {
+                "in_bin": overall_in,
+                "pass_trigger": overall_pass,
+                "eff": round((overall_pass / overall_in), 3) if overall_in > 0 else 0.0,
+            }
+        }
+        return out
 
     def set_selection(self, selection):
         """
@@ -259,6 +351,9 @@ class Tagger():
     def dump_cutflow(self, cut_type, style="table"):
         if cut_type not in self.cutflow_order:
             return
+        # NEW: 保險起見，即使外部直接呼叫 dump_cutflow 也會套用過濾
+        if hasattr(self, "_should_dump_cut_type") and not self._should_dump_cut_type(cut_type):
+            return
 
         order = self.cutflow_order[cut_type]
         ymap  = self.cutflow_yields[cut_type]
@@ -266,38 +361,58 @@ class Tagger():
         if not order:
             return
 
-        # 自动定义该 cut_type 的最终值（等于最后一步），避免串台
-        last_cut = order[-1]
-        final_y  = ymap.get(last_cut, 0.0)
+        first_cut = order[0]
+        last_cut = "all cuts" if "all cuts" in ymap else order[-1]
+        all_y = float(ymap.get(first_cut, 0.0))
+        final_y = float(ymap.get(last_cut, 0.0))
+        eff = (final_y / all_y) if all_y > 0 else 0.0
 
-        if style == "table":
-            logger.debug("[TaggerCutflow] %s | %s | %s", self.name, self.current_syst, cut_type)
-            logger.debug("-" * 60)
+        # --- one-line summary (for trigger studies etc.) ---
+        if style == "one_line":
+            logger.debug(
+                "[CutFlow] tagger=%s syst=%s cut_type=%s final=%s %.3f / all %.3f (=%.4f)",
+                self.name, self.current_syst, cut_type, last_cut, final_y, all_y, eff
+            )
 
-            prev = None
-            for cut in order:
-                y = ymap.get(cut, 0.0)
-                if prev is None:
-                    logger.debug(f"{cut:<22} : {y:>8.0f}")
-                else:
-                    step = (y / prev * 100.0) if prev > 0 else 0.0
-                    logger.debug(f"{cut:<22} : {y:>8.0f}   ({step:>6.1f}%)")
-                prev = y
+            # NEW: one_line 也輸出 JSON（針對 trigeff_* 匯總所有 pt bins；每個 prefix 印一次）
+            if isinstance(cut_type, str) and cut_type.startswith("trigeff_"):
+                meta = self._trigeff_parse_cut_type(cut_type)
+                if meta:
+                    prefix = f"trigeff_{meta['lep']}_{meta['ord']}_{meta['trig']}"
+                    if prefix not in self._trigeff_json_dumped:
+                        payload = self._trigeff_build_summary_json(prefix)
+                        logger.debug("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
+                        self._trigeff_json_dumped.add(prefix)
 
-            # 只在最后一步不是 all cuts 时补一行 all cuts
-            if last_cut != "all cuts":
-                logger.debug(f"{'all cuts':<22} : {final_y:>8.0f}")
+            return
 
-            logger.debug("-" * 60)
+        # --- table style (legacy) ---
+        logger.debug("-" * 80)
+        logger.debug("[CutFlow] tagger=%s syst=%s cut_type=%s", self.name, self.current_syst, cut_type)
+        prev = None
+        for cut in order:
+            y = float(ymap.get(cut, 0.0))
+            cum = (y / all_y * 100.0) if all_y > 0 else 0.0
+            if prev is None:
+                step = None
+            else:
+                step = (y / prev * 100.0) if prev > 0 else 0.0
 
-        elif style == "json":
-            payload = {
-                "tagger": self.name,
-                "syst": self.current_syst,
-                "cut_type": cut_type,
-                "cuts": {k: ymap.get(k, 0.0) for k in order},
-            }
-            logger.debug("[TaggerCutflow] %s", json.dumps(payload, separators=(",", ":")))
+            if step is None:
+                logger.debug(f"{cut:<22} : {y:>10.3f}   (all: {cum:>6.1f}%)   (step: {'-':>6})")
+            else:
+                logger.debug(f"{cut:<22} : {y:>10.3f}   (all: {cum:>6.1f}%)   (step: {step:>6.1f}%)")
+            prev = y
+
+        # JSON output（保留）
+        payload = {
+            "tagger": self.name,
+            "syst": self.current_syst,
+            "cut_type": cut_type,
+            "cuts": {k: float(ymap.get(k, 0.0)) for k in order},
+        }
+        logger.debug("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
+        logger.debug("-" * 80)
 
 
     def get_summary(self):

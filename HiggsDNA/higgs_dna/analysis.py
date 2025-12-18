@@ -30,7 +30,7 @@ from higgs_dna.utils.metis_utils import do_cmd
 from higgs_dna.taggers.duplicated_samples_tagger import DuplicatedSamplesTagger
 from higgs_dna.taggers.mc_overlap_tagger import MCOverlapTagger
 from higgs_dna.systematics.photon_systematics import photon_scale_smear_run3
-from higgs_dna.systematics.lepton_systematics import electron_scale_smear_run3, muon_scale_run3
+from higgs_dna.systematics.lepton_systematics import electron_scale_smear_run3, muon_scale_run3, muon_scale_smear_run3
 from higgs_dna.systematics.jet_systematics import pt_correction_data, pt_correction_mc
 
 condor=False
@@ -605,7 +605,12 @@ class AnalysisManager():
             if int(year[:4]) > 2020:
                 events_file = photon_scale_smear_run3(events_file, year, is_data)
                 events_file = electron_scale_smear_run3(events_file, year, is_data)
-                events_file = muon_scale_run3(events_file, year, is_data)
+                events_file = muon_scale_smear_run3(events_file, year, is_data)
+
+                # events_file = muon_scale_smear_run3(events_file, year, is_data)
+                logger.info("Muon fields after MuonScaRe: %s", events_file["Muon"].fields)
+
+                # events_file = muon_scale_run3(events_file, year, is_data)
                 # jet pt correction
                 # if is_data:
                 #     if "2022postEE" in year:

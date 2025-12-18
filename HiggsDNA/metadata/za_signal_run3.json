@@ -239,7 +239,7 @@
                 },
                 "additive": true
             },
-            "Muon_pt_scale": {
+            "Muon_scale": {
                 "method": "from_branch",
                 "branch_modified": [
                     "Muon",
@@ -256,7 +256,7 @@
                     ]
                 }
             },
-            "Muon_pt_smear": {
+            "Muon_smear": {
                 "method": "from_branch",
                 "branch_modified": [
                     "Muon",
@@ -271,20 +271,22 @@
                         "Muon",
                         "smearDown_pt"
                     ]
-                }
+                },
+                "additive": true
             }
         }
     },
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "ALP_M5", "ALP_M15", "ALP_M30"
+            "mA_M5"
         ],
         "years": [
             "2022preEE"
         ]
     },
     "variables_of_interest": [
+        "fixedGridRhoAll",
         "dZ",
         "H_pt",
         "H_eta",
@@ -346,6 +348,18 @@
         "ALP_lead_photon_ecalPFClusterIso",
         "ALP_lead_photon_chiso",
         "ALP_lead_photon_alliso",
+        "ALP_lead_photon_sieip",
+        "ALP_lead_photon_etaWidth",
+        "ALP_lead_photon_phiWidth",
+        "ALP_lead_photon_s4",
+        "ALP_lead_photon_trkSumPtHollowConeDR03",
+        "ALP_lead_photon_trkSumPtSolidConeDR04",
+        "ALP_lead_photon_pfChargedIso",
+        "ALP_lead_photon_pfChargedIsoWorstVtx",
+        "ALP_lead_photon_esEffSigmaRR",
+        "ALP_lead_photon_esEnergyOverRawE",
+        "ALP_lead_photon_esEnergyOverRawE",
+        "ALP_lead_photon_electronVeto",
         "ALP_sublead_photon_pt",
         "ALP_sublead_photon_eta",
         "ALP_sublead_photon_phi",
@@ -358,11 +372,19 @@
         "ALP_sublead_photon_ecalPFClusterIso",
         "ALP_sublead_photon_chiso",
         "ALP_sublead_photon_alliso",
+        "ALP_sublead_photon_sieip",
+        "ALP_sublead_photon_etaWidth",
+        "ALP_sublead_photon_phiWidth",
+        "ALP_sublead_photon_s4",
+        "ALP_sublead_photon_trkSumPtHollowConeDR03",
+        "ALP_sublead_photon_trkSumPtSolidConeDR04",
+        "ALP_sublead_photon_pfChargedIso",
+        "ALP_sublead_photon_pfChargedIsoWorstVtx",
+        "ALP_sublead_photon_esEffSigmaRR",
+        "ALP_sublead_photon_esEnergyOverRawE",
+        "ALP_sublead_photon_esEnergyOverRawE",
+        "ALP_sublead_photon_electronVeto",
         "ALP_PhotonIso",
-        "electron_1_energyErr",
-        "electron_2_energyErr",
-        "electron_3_energyErr",
-        "electron_4_energyErr",
         "muon_1_ptErr",
         "muon_2_ptErr",
         "muon_3_ptErr",
@@ -475,6 +497,8 @@
         "Photon_electronIdx",
         "Photon_genPartIdx",
         "Photon_jetIdx",
+        "Photon_s4",
+        "Photon_sieip",
         "Photon_sieie",
         "Photon_energyErr",
         "Photon_r9",
@@ -488,7 +512,14 @@
         "Photon_pfRelIso03_all",
         "Photon_isScEtaEB",
         "Photon_isScEtaEE",
+        "Photon_etaWidth",
+        "Photon_phiWidth",
         "Photon_trkSumPtHollowConeDR03",
+        "Photon_trkSumPtSolidConeDR04",
+        "Photon_pfChargedIso",
+        "Photon_pfChargedIsoWorstVtx",
+        "Photon_esEffSigmaRR",
+        "Photon_esEnergyOverRawE",
         "Photon_photonIso",
         "Photon_chargedHadronIso",
         "Photon_genPartFlav",
@@ -527,6 +558,7 @@
         "Muon_highPtId",
         "Muon_ptErr",
         "Muon_genPartIdx",
+        "Muon_nTrackerLayers",
         "Electron_pt",
         "Electron_eta",
         "Electron_deltaEtaSC",
@@ -539,6 +571,7 @@
         "Electron_pfRelIso03_all",
         "Electron_dxy",
         "Electron_dz",
+        "Electron_ip3d",
         "Electron_mvaHZZIso",
         "Electron_mvaIso_WP90",
         "Electron_mvaIso_WP80",
@@ -573,9 +606,6 @@
         "luminosityBlock",
         "fixedGridRhoAll",
         "Pileup_nTrueInt",
-        "Muon_corrected_pt",
-        "Muon_correctedUp_pt",
-        "Muon_correctedDown_pt",
         "LHEScaleWeight_Zero",
         "Photon_dEsigmaDown",
         "Photon_dEsigmaUp",

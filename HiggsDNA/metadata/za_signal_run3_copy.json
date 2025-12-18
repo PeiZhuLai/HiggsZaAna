@@ -6,7 +6,7 @@
     },
     "tag_sequence": [
         {
-            "module_name": "higgs_dna.taggers.za_tagger_resolved_MStudy_run3",
+            "module_name": "higgs_dna.taggers.za_tagger_resolved_run3",
             "tagger": "ZaTaggerRun3",
             "kwargs": {
                 "name": "za_tagger_resolved_run3",
@@ -147,6 +147,133 @@
             }
         },
         "independent_collections": {
+            "FNUF": {
+                "method": "from_function",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "fnuf_unc"
+                }
+            },
+            "Material": {
+                "method": "from_function",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "material_unc"
+                }
+            },
+            "Photon_scale": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Photon",
+                        "pt_ScaleUp"
+                    ],
+                    "down": [
+                        "Photon",
+                        "pt_ScaleDown"
+                    ]
+                }
+            },
+            "Photon_smear": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Photon",
+                        "dEsigmaUp"
+                    ],
+                    "down": [
+                        "Photon",
+                        "dEsigmaDown"
+                    ]
+                },
+                "additive": true
+            },
+            "Electron_scale": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Electron",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Electron",
+                        "dEscaleUp"
+                    ],
+                    "down": [
+                        "Electron",
+                        "dEscaleDown"
+                    ]
+                }
+            },
+            "Electron_smear": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Electron",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Electron",
+                        "dEsigmaUp"
+                    ],
+                    "down": [
+                        "Electron",
+                        "dEsigmaDown"
+                    ]
+                },
+                "additive": true
+            },
+            "Muon_scale": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Muon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Muon",
+                        "scaleUp_pt"
+                    ],
+                    "down": [
+                        "Muon",
+                        "scaleDown_pt"
+                    ]
+                }
+            },
+            "Muon_smear": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Muon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Muon",
+                        "smearUp_pt"
+                    ],
+                    "down": [
+                        "Muon",
+                        "smearDown_pt"
+                    ]
+                },
+                "additive": true
+            }
         }
     },
     "samples": {
@@ -518,7 +645,48 @@
         "TrigObj_filterBits"
     ],
     "branch_map": {
-        "mc": [],
+        "mc": [
+            [
+                [
+                    "Muon",
+                    "pt"
+                ],
+                [
+                    "Muon",
+                    "corrected_pt"
+                ]
+            ],
+            [
+                [
+                    "Muon",
+                    "ptErr"
+                ],
+                [
+                    "Muon",
+                    "bsConstrainedPtErr"
+                ]
+            ],
+            [
+                [
+                    "Electron",
+                    "pt"
+                ],
+                [
+                    "Electron",
+                    "corrected_pt"
+                ]
+            ],
+            [
+                [
+                    "Photon",
+                    "pt"
+                ],
+                [
+                    "Photon",
+                    "corrected_pt"
+                ]
+            ]
+        ],
         "data": []
     }
 }

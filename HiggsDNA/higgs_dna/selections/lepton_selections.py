@@ -15,7 +15,9 @@ DEFAULT_ELECTRONS = {
         "dz" : 1.0,
         "id" : "WPL",
         #"dr_photons" : 0.2,
-        "veto_transition" : False
+        "veto_transition" : False,
+        # NEW: optional impact parameter cut (None/0 => disabled)
+        "ip3d_max": None,
 }
 
 def select_electrons(electrons, options, clean, name = "none", tagger = None, year = "2022"):
@@ -68,25 +70,25 @@ def select_electrons(electrons, options, clean, name = "none", tagger = None, ye
     else:
         transition_cut = electrons.pt > 0.
 
-    # all_cuts = standard_cuts & id_cut & transition_cut
-    # print(points)
-    # print(electrons.pt > 10)
-    # print(((abs(etasc) < 0.8) & (electrons.mvaHZZIso > points[0])))
-    # print(((abs(etasc) < 1.479) & (abs(etasc) > 0.8) & (electrons.mvaHZZIso > points[1])))
-    # print(((abs(etasc) > 1.479) & (electrons.mvaHZZIso > points[2])))
-    # print(((electrons.pt > 10) & ((abs(etasc) < 0.8) & (electrons.mvaHZZIso > points[0])) | ((abs(etasc) < 1.479) & (abs(etasc) > 0.8) & (electrons.mvaHZZIso > points[1])) | ((abs(etasc) > 1.479) & (electrons.mvaHZZIso > points[2]))))
-    # print(f"Electron: pt = {electrons.pt}, etasc = {electrons.eta + electrons.deltaEtaSC}, mvaHZZIso = {electrons.mvaHZZIso}, standard_cuts = {standard_cuts}, id_cut = {id_cut}, transition_cut = {transition_cut}, all_cuts = {all_cuts}")
-    # standard_cuts = awkward.sum(standard_cuts, axis=1) > 0
-    # id_cut = awkward.sum(standard_cuts & id_cut, axis=1) > 0
-    # transition_cut = awkward.sum(id_cut & transition_cut, axis=1) > 0
+    # NEW: optional ip3d cut (kept separate so you can study it)
+    ip3d_max = options.get("ip3d_max", None)
+    if ip3d_max is None or ip3d_max == 0:
+        ip3d_cut = electrons.pt > 0.
+    else:
+        if "ip3d" in electrons.fields:
+            ip3d_cut = electrons.ip3d < float(ip3d_max)
+        else:
+            logger.warning("[select_electrons] : 'ip3d' not found in electrons fields, not applying ip3d cut.")
+            ip3d_cut = electrons.pt > 0.
+
     id_obj_cut = standard_cuts & id_cut
     transition_obj_cut = id_obj_cut & transition_cut
-    all_cuts = transition_obj_cut
+    all_cuts = transition_obj_cut & ip3d_cut
 
     if tagger is not None:
         tagger.register_cuts(
-                names = ["standard object cuts", "id cut", "ee-eb transition", "all cuts"],
-                results = [standard_cuts, id_obj_cut, transition_obj_cut, all_cuts],
+                names = ["standard object cuts", "id cut", "ee-eb transition", "ip3d cut", "all cuts"],
+                results = [standard_cuts, id_obj_cut, transition_obj_cut, transition_obj_cut & ip3d_cut, all_cuts],
                 cut_type = name
         )
 

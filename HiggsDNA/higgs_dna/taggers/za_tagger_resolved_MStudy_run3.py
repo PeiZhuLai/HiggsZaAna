@@ -139,6 +139,20 @@ DEFAULT_OPTIONS = {
         # 新增：ALP isolation 除錯開關與最多印出的事件數
         "debug_alp_iso": False,
         "debug_alp_iso_max_events": 10,
+        # NEW: 啟用 15 種 photonID 情境 cutflow
+        "study_photon_id_scenarios": True,
+        # （可選）若只想跑子集就填 list；None=全跑
+        # 例如: ["phid_custom_tight", "phid_official_medium", ...]
+        "study_photon_id_scenarios_subset": None,
+
+        # NEW: electron ip3d scenario study
+        "study_ele_ip3d_scenarios": True,
+
+        # NEW: lepton pT-binned trigger efficiency study (phid-like)
+        "study_lep_trigger_eff_ptbins": True,
+        # bins: [low0, low1, ..., last_low, +inf)
+        "ele_trigger_eff_ptbins": list(range(8, 102, 2)),
+        "mu_trigger_eff_ptbins":  list(range(8, 102, 2)),
     },
     "single_muon_trigger":{
         "2016":["HLT_IsoMu24", "HLT_IsoTkMu24"],
@@ -170,6 +184,8 @@ DEFAULT_OPTIONS = {
     },
     "electrons" : {
         "pt" : 7.0,
+        # NOTE: keep nominal behavior unchanged by default
+        # "ip3d_max": 4.0,  # enable only if you want nominal electron selection to include it
     },
     "muons" : {
         "pt" : 5.0
@@ -237,8 +253,7 @@ def to_momentum4d(obj):
         "phi": obj.phi,
         "mass": obj.mass if "mass" in obj.fields else ak.zeros_like(obj.pt),
     }, with_name="Momentum4D")
-    # 强制 materialize layout 以触发行为绑定
-    out = ak.Array(out.layout)  # 👈 核心所在
+    out = ak.Array(out.layout) 
     return out
 
 class ZaTaggerRun3(Tagger):
@@ -351,8 +366,13 @@ class ZaTaggerRun3(Tagger):
             data = events.Electron[electron_cut]
         )
 
-        pass_electron_ip3d = ( events.Electron["ip3d"] < 4)
-        awkward_utils.add_field(events, "pass_ele_ip3d", ak.fill_none(pass_electron_ip3d, False), overwrite=True)
+        # NEW: event-level flag: 是否「選到的 electrons」全都通過 ip3d<4（或至少無 electron 時視為 True）
+        # rule: 若事件沒有 selected electron -> True；否則 selected electrons 需全部 ip3d<4
+        if "ip3d" in electrons.fields:
+            pass_sel_ele_ip3d = ak.fill_none(ak.all(electrons.ip3d < 4, axis=1), True)
+        else:
+            pass_sel_ele_ip3d = ak.ones_like(ak.num(events.Photon) >= 0)
+        awkward_utils.add_field(events, "pass_sel_ele_ip3d", ak.fill_none(pass_sel_ele_ip3d, False), overwrite=True)
 
         # generate the index in the original array and add to electrons
         arr = ak.local_index(events.Electron["pt"], axis=1)[electron_cut]
@@ -421,36 +441,6 @@ class ZaTaggerRun3(Tagger):
             data=photons_with_flags,
             overwrite=True
         )
-
-        # NEW: 將 photon-level flags 彙總成 event-level branches，供 AnalysisManager.write_events 直接寫出
-        #      規則：每個事件只要「任一顆」Photon 該 flag=True -> event-level True
-        #      若該欄位不存在（例如某些年份/流程），就跳過不加。
-        for _flag in (
-            "pass_photon_pT10",
-            "pass_photon_e_veto",
-            "pass_tight_hoe",
-            "pass_tight_PFChIso",
-            "pass_tight_PFHCalIso",
-            "pass_tight_sieie",
-            "pass_tight_PFECalIso",
-            "pass_medium_hoe",
-            "pass_medium_PFChIso",
-            "pass_medium_PFHCalIso",
-            "pass_medium_sieie",
-            "pass_medium_PFECalIso",
-            "pass_loose_hoe",
-            "pass_loose_PFChIso",
-            "pass_loose_PFHCalIso",
-            "pass_loose_sieie",
-            "pass_loose_PFECalIso",
-        ):
-            if _flag in events.Photon.fields:
-                awkward_utils.add_field(
-                    events,
-                    _flag,
-                    ak.fill_none(ak.any(events.Photon[_flag], axis=1), False),
-                    overwrite=True,
-                )
 
         # 後續真正用來組 ALP / 做分析的 photons，才套用 selection mask
         photons = events.Photon[photon_selection]
@@ -620,10 +610,59 @@ class ZaTaggerRun3(Tagger):
         trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut | single_mu_trigger_cut  | double_mu_trigger_cut
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
         mu_trigger_cut = single_mu_trigger_cut  | double_mu_trigger_cut
-        awkward_utils.add_field(events, "pass_OR_trigger", ak.fill_none(trigger_cut, False), overwrite=True)
-        awkward_utils.add_field(events, "pass_single_ele_trigger", ak.fill_none(single_ele_trigger_cut, False), overwrite=True)
-        awkward_utils.add_field(events, "pass_single_mu_trigger", ak.fill_none(single_mu_trigger_cut, False), overwrite=True)
-        
+
+        # NEW: lepton pT-binned trigger efficiency study (phid-like cutflows)
+        if self.options.get("zgammas", {}).get("study_lep_trigger_eff_ptbins", False):
+            # 事件層級：leading lepton pT（無 lepton -> 0）
+            lead_ele_pt = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0.0)
+            lead_mu_pt  = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0.0)
+
+            # NEW: 同時取 subleading lepton pT（無 sublead -> 0）
+            sublead_ele_pt = ak.fill_none(ak.pad_none(electrons.pt, 2, axis=1)[:, 1], 0.0)
+            sublead_mu_pt  = ak.fill_none(ak.pad_none(muons.pt, 2, axis=1)[:, 1], 0.0)
+
+            # 4 種 trigger 定義（你指定要研究的）
+            trig_defs = {
+                "double_ele": double_ele_trigger_cut,
+                "double_mu":  double_mu_trigger_cut,
+                "OR_ele":     (single_ele_trigger_cut | double_ele_trigger_cut),
+                "OR_mu":      (single_mu_trigger_cut  | double_mu_trigger_cut),
+            }
+
+            def _register_ptbins(lep: str, ptvals, bins, trig_key: str, trig_mask, ord_label: str):
+                # bins: list of lows; auto add +inf as last high
+                lows = list(bins)
+                highs = lows[1:] + [numpy.inf]
+
+                for lo, hi in zip(lows, highs):
+                    in_bin = (ptvals >= lo) & (ptvals < hi)
+                    passed = in_bin & ak.fill_none(trig_mask, False)
+
+                    bin_label = f"pt{int(lo)}to{('Inf' if hi == numpy.inf else int(hi))}"
+                    cut_type = f"trigeff_{lep}_{ord_label}_{trig_key}_{bin_label}"
+
+                    self.register_event_cuts(
+                        names=["in_bin", "pass_trigger"],
+                        results=[ak.fill_none(in_bin, False), ak.fill_none(passed, False)],
+                        events=events,
+                        cut_type=cut_type,
+                        weighted=False,
+                    )
+
+            ele_bins = self.options.get("zgammas", {}).get("ele_trigger_eff_ptbins", list(range(8, 102, 2)))
+            mu_bins  = self.options.get("zgammas", {}).get("mu_trigger_eff_ptbins",  list(range(8, 102, 2)))
+
+            # electron: lead/sublead 各研究 double_ele 與 OR_ele
+            _register_ptbins("ele", lead_ele_pt,    ele_bins, "double_ele", trig_defs["double_ele"], "lead")
+            _register_ptbins("ele", lead_ele_pt,    ele_bins, "OR_ele",     trig_defs["OR_ele"],     "lead")
+            _register_ptbins("ele", sublead_ele_pt, ele_bins, "double_ele", trig_defs["double_ele"], "sublead")
+            _register_ptbins("ele", sublead_ele_pt, ele_bins, "OR_ele",     trig_defs["OR_ele"],     "sublead")
+
+            # muon: lead/sublead 各研究 double_mu 與 OR_mu
+            _register_ptbins("mu", lead_mu_pt,    mu_bins, "double_mu", trig_defs["double_mu"], "lead")
+            _register_ptbins("mu", lead_mu_pt,    mu_bins, "OR_mu",     trig_defs["OR_mu"],     "lead")
+            _register_ptbins("mu", sublead_mu_pt, mu_bins, "double_mu", trig_defs["double_mu"], "sublead")
+            _register_ptbins("mu", sublead_mu_pt, mu_bins, "OR_mu",     trig_defs["OR_mu"],     "sublead")
 
         if self.year is not None:
             year = self.year[:4]
@@ -650,7 +689,7 @@ class ZaTaggerRun3(Tagger):
         z_cands_noFSR = z_cands_noFSR[mass_cut]
 
         has_z_cand = ak.num(z_cands) >= 1
-        awkward_utils.add_field(events, "pass_1_Zcand", ak.fill_none(has_z_cand, False), overwrite=True)
+        # awkward_utils.add_field(events, "pass_1_Zcand", ak.fill_none(has_z_cand, False), overwrite=True)
 
         z_cand = ak.firsts(z_cands)
         z_cand_noFSR = ak.firsts(z_cands_noFSR)
@@ -693,7 +732,7 @@ class ZaTaggerRun3(Tagger):
 
         # Make gamma candidate-level cuts
         has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
-        awkward_utils.add_field(events, "pass_1_ALP", ak.fill_none(has_2gamma_cand, False), overwrite=True)
+        # awkward_utils.add_field(events, "pass_1_ALP", ak.fill_none(has_2gamma_cand, False), overwrite=True)
 
         # ------------------------------------------------------------
         # 重新以 index 方式構建 gamma pairs（保留原本邏輯但加入索引）
@@ -817,8 +856,8 @@ class ZaTaggerRun3(Tagger):
         sel_h_2 = (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1])
         sel_h_1 = ak.fill_none(sel_h_1, value = False)
         sel_h_2 = ak.fill_none(sel_h_2, value = False)
-        awkward_utils.add_field(events, "pass_1_Higgs", ak.fill_none(sel_h_2, False), overwrite=True)
-        awkward_utils.add_field(events, "pass_ZHmass_sum", ak.fill_none(sel_h_1, False), overwrite=True)
+        # awkward_utils.add_field(events, "pass_1_Higgs", ak.fill_none(sel_h_2, False), overwrite=True)
+        # awkward_utils.add_field(events, "pass_ZHmass_sum", ak.fill_none(sel_h_1, False), overwrite=True)
         
         # Use No FSR Z boson 
         h_cand_noFSR = z_cand_noFSR.ZCand + alp_cand.ALPCand
@@ -920,17 +959,110 @@ class ZaTaggerRun3(Tagger):
                 weighted = weighted
             )
 
+        # NEW: electron ip3d scenario cutflow（像 phid 一樣額外註冊）
+        if self.options.get("zgammas", {}).get("study_ele_ip3d_scenarios", False):
+            # 注意：這裡只研究「加上 ip3d 對事件 cutflow 的影響」，不改 nominal objects
+            # 你可以把它作為 cut2.5/cut3.5 插在你想觀察的位置（這裡放在 N_lep_sel 後面）
+            for weighted in (False, True):
+                if weighted and not hasattr(events, "Generator_weight"):
+                    continue
+
+                cut0 = ak.num(events.Photon) >= 0
+                cut1 = z_ee_cut | z_mumu_cut
+                cut1b = cut1 & ak.fill_none(events.pass_sel_ele_ip3d, False)  # <-- ip3d scenario
+                cut2 = cut1b & trigger_cut
+                cut3 = cut2 & trigger_pt_cut
+                cut4 = cut3 & has_z_cand
+                cut5 = cut4 & has_2gamma_cand
+                cut6 = cut5 & sel_h_1
+                cut7 = cut6 & sel_h_2
+                cut8 = cut7 & event_filter
+
+                self.register_event_cuts(
+                    names = ["all", "N_lep_sel", "ele_ip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                    results = [cut0, cut1, cut1b, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut8],
+                    events = events,
+                    cut_type = "zgammas_eleip3d_w" if weighted else "zgammas_eleip3d",
+                    weighted = weighted
+                )
+
+                awkward_utils.add_field(events, "pass_allcuts_eleip3d", ak.fill_none(cut8, False), overwrite=True)
+
+        # --- NEW: 一次註冊 15 種 photon ID 情境對 cutflow("all cuts") 的影響 ---
+        def _scenario_has_2gamma(events_, id_key: str):
+            """
+            以「所有 photon」上的 pass_phid_* flag 定義該情境的 has_2gamma_cand。
+            注意：這裡避免重跑 ALP build；目標是研究 photonID 對 cutflow 的影響（尤其 all cuts）
+            """
+            flag_name = f"pass_{id_key}"
+            if flag_name not in events_.Photon.fields:
+                return ak.fill_none(ak.num(events_.Photon) < 0, False)  # all False
+            return ak.fill_none(ak.sum(events_.Photon[flag_name], axis=1) >= 2, False)
+
+        g_kin_cut = ak.fill_none(ak.sum(events.Photon["pass_ph_kinematic"], axis=1) >= 2, False)
+
+        if self.options.get("zgammas", {}).get("study_photon_id_scenarios", False):
+            scenario_keys = [
+                # tight
+                "phid_custom_tight",
+                "phid_custom_extend_tight",
+                "phid_sieie_tight",
+                "phid_PFECalIso_tight",
+                "phid_official_tight",
+                # medium
+                "phid_custom_medium",
+                "phid_custom_extend_medium",
+                "phid_sieie_medium",
+                "phid_PFECalIso_medium",
+                "phid_official_medium",
+                # loose
+                "phid_custom_loose",
+                "phid_custom_extend_loose",
+                "phid_sieie_loose",
+                "phid_PFECalIso_loose",
+                "phid_official_loose",
+            ]
+            subset = self.options.get("zgammas", {}).get("study_photon_id_scenarios_subset", None)
+            if subset:
+                scenario_keys = [k for k in scenario_keys if k in set(subset)]
+
+            # 共用既有 cut 定義，只替換 has_2gamma_cand
+            for id_key in scenario_keys:
+                has_2g_s = _scenario_has_2gamma(events, id_key)
+
+                cut0 = ak.num(events.Photon) >= 0
+                cut1 = z_ee_cut | z_mumu_cut
+                cut2 = cut1 & trigger_cut
+                cut3 = cut2 & trigger_pt_cut
+                cut4 = cut3 & has_z_cand
+                cut5 = cut4 & g_kin_cut
+                cut6 = cut5 & has_2g_s
+                cut7 = cut6 & sel_h_1
+                cut8 = cut7 & sel_h_2
+                cut9 = cut8 & event_filter
+
+                self.register_event_cuts(
+                    names   = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "g_kin_cut", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                    results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut9, cut9],
+                    events  = events,
+                    cut_type= f"zgammas_{id_key}",
+                    weighted= True,
+                )
+
+                # （可選）把每個 scenario 的最終 allcuts 存成 event-level branch
+                awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut8, False), overwrite=True)
+
         all_cuts = ee_all_cut | mm_all_cut
 
         elapsed_time = time.time() - start
         logger.debug("[ZGammaTagger] %s, syst variation : %s, total time to execute select_zgammas: %.6f s" % (self.name, self.current_syst, elapsed_time))
 
         # Nominal
-        # return all_cuts, events
+        return all_cuts, events
 
         # Motive Study
-        keep_all = ak.num(events.Photon) >= 0
-        return keep_all, events
+        # keep_all = ak.num(events.Photon) >= 0
+        # return keep_all, events
 
 
     def calculate_gen_info(self, zgammas, options):
@@ -1016,23 +1148,54 @@ class ZaTaggerRun3(Tagger):
 
         # pt
         pt_cut = photons.pt > options["pt"]
-        photons = ak.with_field(photons, pt_cut, "pass_photon_pT10")
 
         # eta
         #eta_cut = Tagger.get_range_cut(abs(photons.eta), options["eta"]) | (photons.isScEtaEB | photons.isScEtaEE)
         eta_cut = (photons.isScEtaEB | photons.isScEtaEE) 
         # eta_cut = ((photons.isScEtaEB & (photons.mvaID > options["mvaID_barrel"])) | (photons.isScEtaEE & (photons.mvaID > options["mvaID_endcap"])))
 
-        customized_id_cut = []
-        official_id_cut = []
-        sieie_cut = []
-        PFECalIso_cut = []
+        ph_kinemtaic = pt_cut & eta_cut
+        photons = ak.with_field(photons, ph_kinemtaic, "pass_ph_kinematic")
+
+        # photon ID
+        phid_custom_tight = []
+        phid_custom_extend_tight = []
+        phid_sieie_tight = []
+        phid_PFECalIso_tight = []
+        phid_official_tight = []
+
+        phid_custom_mediate = []
+        phid_custom_extend_mediate = []
+        phid_sieie_mediate = []
+        phid_PFECalIso_mediate = []
+        phid_official_mediate = []
+
+        phid_custom_loose = []
+        phid_custom_extend_loose = []
+        phid_sieie_loose = []
+        phid_PFECalIso_loose = []
+        phid_official_loose = []
+
         rho_broadcasted, _ = ak.broadcast_arrays(rho, photons.pt)
         rho = rho_broadcasted
         photon_abs_eta = numpy.abs(photons.eta)
         if int(year) < 2020:
-            customized_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
-            official_id_cut = ak.ones_like(photons.pt) # all true, dummy TODO
+            phid_custom_tight = ak.ones_like(photons.pt) # all true, dummy TODO
+            phid_official_tight = ak.ones_like(photons.pt) # all true, dummy TODO
+
+            # NEW: 補齊 medium/loose（Run2 先 dummy all-true，避免欄位缺失）
+            phid_custom_mediate = ak.ones_like(photons.pt)
+            phid_custom_extend_mediate = ak.ones_like(photons.pt)
+            phid_sieie_mediate = ak.ones_like(photons.pt)
+            phid_PFECalIso_mediate = ak.ones_like(photons.pt)
+            phid_official_mediate = ak.ones_like(photons.pt)
+
+            phid_custom_loose = ak.ones_like(photons.pt)
+            phid_custom_extend_loose = ak.ones_like(photons.pt)
+            phid_sieie_loose = ak.ones_like(photons.pt)
+            phid_PFECalIso_loose = ak.ones_like(photons.pt)
+            phid_official_loose = ak.ones_like(photons.pt)
+
         elif int(year) > 2020:
             # ID
             # id_cut = photons.mvaID_WP80
@@ -1200,159 +1363,146 @@ class ZaTaggerRun3(Tagger):
             hoe_cut = (photons.isScEtaEB & hoe_barrel_cut) | (photons.isScEtaEE & hoe_endcap_cut)
             PFChIso_cut = (photons.isScEtaEB & PFChIso_barrel_cut) | (photons.isScEtaEE & PFChIso_endcap_cut)
             PFHCalIso_cut = (photons.isScEtaEB & PFHCalIso_barrel_cut) | (photons.isScEtaEE & PFHCalIso_endcap_cut)
-
-            customized_id_cut = hoe_cut & PFChIso_cut & PFHCalIso_cut
-
             # 4, 5
             sieie_cut = (photons.isScEtaEB & sieie_barrel_cut) | (photons.isScEtaEE & sieie_endcap_cut)
             PFECalIso_cut = (photons.isScEtaEB & PFECalIso_barrel_cut) | (photons.isScEtaEE & PFECalIso_endcap_cut)
 
-            official_id_cut = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut & PFECalIso_cut
+            phid_custom_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut
+            phid_custom_extend_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut
+            phid_sieie_tight = sieie_cut
+            phid_PFECalIso_tight = PFECalIso_cut
+            phid_official_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut & PFECalIso_cut
 
-            # ------------------------------------------------------------
-            # NEW: per-photon cut-based ID flags for (tight/medium/loose) x (5 vars)
-            #      PFHCalIso / PFECalIso use the same EA(rho, rho^2) corrections as below.
-            # ------------------------------------------------------------
-            def _wp_cuts(prefix: str):
-                # H/E (PU-corrected hoe_PUcorr, no EA)
-                hoe_barrel_cut = photons.hoe_PUcorr < options[f"{prefix}hoe_barrel"]
-                hoe_endcap_cut = photons.hoe_PUcorr < options[f"{prefix}hoe_endcap"]
-                pass_hoe = (photons.isScEtaEB & hoe_barrel_cut) | (photons.isScEtaEE & hoe_endcap_cut)
+            # NEW: 依樣畫葫蘆算 medium / loose（用 options["medium_*"] / ["loose_*"]）
+            def _calc_wp(wp: str):
+                # H/E
+                hoe_barrel = photons.hoe_PUcorr < options[f"{wp}_hoe_barrel"]
+                hoe_endcap = photons.hoe_PUcorr < options[f"{wp}_hoe_endcap"]
 
-                # PF charged hadron iso (quadratic, no EA)
-                PFChIso_barrel_cut = photons.pfRelIso03_chg_quadratic < options[f"{prefix}PFChIso_barrel"]
-                PFChIso_endcap_cut = photons.pfRelIso03_chg_quadratic < options[f"{prefix}PFChIso_endcap"]
-                pass_PFChIso = (photons.isScEtaEB & PFChIso_barrel_cut) | (photons.isScEtaEE & PFChIso_endcap_cut)
+                # PFChIso
+                ch_barrel = photons.pfRelIso03_chg_quadratic < options[f"{wp}_PFChIso_barrel"]
+                ch_endcap = photons.pfRelIso03_chg_quadratic < options[f"{wp}_PFChIso_endcap"]
 
-                # PF HCal iso (EA rho + rho^2, plus quadratic pt-dependent cut)
-                coef_1, coef_2, coef_3 = options[f"{prefix}PFHCalIso_barrel"]
-                parabola_cut_EB = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
-                EB_1 = (
-                    ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EB_1"][0]
-                      - rho**2 * options["PFHCalIso_EA_EB_1"][1]) < parabola_cut_EB)
+                # PFHCalIso (quadratic threshold + EA corrections)
+                c1, c2, c3 = options[f"{wp}_PFHCalIso_barrel"]
+                thr_b = c1 + c2 * photons.pt + c3 * photons.pt**2
+                pfh_b = (
+                    ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EB_1"][0] - rho**2 * options["PFHCalIso_EA_EB_1"][1]) < thr_b)
+                ) | (
+                    ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EB_2"][0] - rho**2 * options["PFHCalIso_EA_EB_2"][1]) < thr_b)
                 )
-                EB_2 = (
-                    ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EB_2"][0]
-                      - rho**2 * options["PFHCalIso_EA_EB_2"][1]) < parabola_cut_EB)
-                )
-                pass_PFHCalIso_EB = EB_1 | EB_2
 
-                coef_1, coef_2, coef_3 = options[f"{prefix}PFHCalIso_endcap"]
-                parabola_cut_EE = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt ** 2
-                EE_1 = (
-                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EE_1"][0]
-                      - rho**2 * options["PFHCalIso_EA_EE_1"][1]) < parabola_cut_EE)
+                c1, c2, c3 = options[f"{wp}_PFHCalIso_endcap"]
+                thr_e = c1 + c2 * photons.pt + c3 * photons.pt**2
+                pfh_e = (
+                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_1"][0] - rho**2 * options["PFHCalIso_EA_EE_1"][1]) < thr_e)
+                ) | (
+                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_2"][0] - rho**2 * options["PFHCalIso_EA_EE_2"][1]) < thr_e)
+                ) | (
+                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_3"][0] - rho**2 * options["PFHCalIso_EA_EE_3"][1]) < thr_e)
+                ) | (
+                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_4"][0] - rho**2 * options["PFHCalIso_EA_EE_4"][1]) < thr_e)
+                ) | (
+                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
+                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_5"][0] - rho**2 * options["PFHCalIso_EA_EE_5"][1]) < thr_e)
                 )
-                EE_2 = (
-                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EE_2"][0]
-                      - rho**2 * options["PFHCalIso_EA_EE_2"][1]) < parabola_cut_EE)
-                )
-                EE_3 = (
-                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EE_3"][0]
-                      - rho**2 * options["PFHCalIso_EA_EE_3"][1]) < parabola_cut_EE)
-                )
-                EE_4 = (
-                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EE_4"][0]
-                      - rho**2 * options["PFHCalIso_EA_EE_4"][1]) < parabola_cut_EE)
-                )
-                EE_5 = (
-                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5)) &
-                    ((photons.hcalPFClusterIso
-                      - rho * options["PFHCalIso_EA_EE_5"][0]
-                      - rho**2 * options["PFHCalIso_EA_EE_5"][1]) < parabola_cut_EE)
-                )
-                pass_PFHCalIso_EE = EE_1 | EE_2 | EE_3 | EE_4 | EE_5
-                pass_PFHCalIso = (photons.isScEtaEB & pass_PFHCalIso_EB) | (photons.isScEtaEE & pass_PFHCalIso_EE)
 
-                # sieie (no EA)
-                sieie_barrel_cut = photons.sieie < options[f"{prefix}sieie_barrel"]
-                sieie_endcap_cut = photons.sieie < options[f"{prefix}sieie_endcap"]
-                pass_sieie = (photons.isScEtaEB & sieie_barrel_cut) | (photons.isScEtaEE & sieie_endcap_cut)
+                # sieie
+                sie_b = photons.sieie < options[f"{wp}_sieie_barrel"]
+                sie_e = photons.sieie < options[f"{wp}_sieie_endcap"]
 
-                # PF ECal iso (EA rho + rho^2, plus linear pt-dependent cut)
-                coef_1, coef_2 = options[f"{prefix}PFECalIso_barrel"]
-                line_cut_EB = coef_1 + coef_2 * photons.pt
-                EB_1 = (
-                    ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EB_1"][0]
-                      - rho**2 * options["PFECalIso_EA_EB_1"][1]) < line_cut_EB)
+                # PFECalIso (linear threshold + EA corrections)
+                c1, c2 = options[f"{wp}_PFECalIso_barrel"]
+                thr_ec_b = c1 + c2 * photons.pt
+                pfe_b = (
+                    ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EB_1"][0] - rho**2 * options["PFECalIso_EA_EB_1"][1]) < thr_ec_b)
+                ) | (
+                    ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EB_2"][0] - rho**2 * options["PFECalIso_EA_EB_2"][1]) < thr_ec_b)
                 )
-                EB_2 = (
-                    ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EB_2"][0]
-                      - rho**2 * options["PFECalIso_EA_EB_2"][1]) < line_cut_EB)
-                )
-                pass_PFECalIso_EB = EB_1 | EB_2
 
-                coef_1, coef_2 = options[f"{prefix}PFECalIso_endcap"]
-                line_cut_EE = coef_1 + coef_2 * photons.pt
-                EE_1 = (
-                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EE_1"][0]
-                      - rho**2 * options["PFECalIso_EA_EE_1"][1]) < line_cut_EE)
+                c1, c2 = options[f"{wp}_PFECalIso_endcap"]
+                thr_ec_e = c1 + c2 * photons.pt
+                pfe_e = (
+                    ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_1"][0] - rho**2 * options["PFECalIso_EA_EE_1"][1]) < thr_ec_e)
+                ) | (
+                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_2"][0] - rho**2 * options["PFECalIso_EA_EE_2"][1]) < thr_ec_e)
+                ) | (
+                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_3"][0] - rho**2 * options["PFECalIso_EA_EE_3"][1]) < thr_ec_e)
+                ) | (
+                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_4"][0] - rho**2 * options["PFECalIso_EA_EE_4"][1]) < thr_ec_e)
+                ) | (
+                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
+                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_5"][0] - rho**2 * options["PFECalIso_EA_EE_5"][1]) < thr_ec_e)
                 )
-                EE_2 = (
-                    ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EE_2"][0]
-                      - rho**2 * options["PFECalIso_EA_EE_2"][1]) < line_cut_EE)
-                )
-                EE_3 = (
-                    ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EE_3"][0]
-                      - rho**2 * options["PFECalIso_EA_EE_3"][1]) < line_cut_EE)
-                )
-                EE_4 = (
-                    ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EE_4"][0]
-                      - rho**2 * options["PFECalIso_EA_EE_4"][1]) < line_cut_EE)
-                )
-                EE_5 = (
-                    ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5)) &
-                    ((photons.ecalPFClusterIso
-                      - rho * options["PFECalIso_EA_EE_5"][0]
-                      - rho**2 * options["PFECalIso_EA_EE_5"][1]) < line_cut_EE)
-                )
-                pass_PFECalIso_EE = EE_1 | EE_2 | EE_3 | EE_4 | EE_5
-                pass_PFECalIso = (photons.isScEtaEB & pass_PFECalIso_EB) | (photons.isScEtaEE & pass_PFECalIso_EE)
 
-                return pass_hoe, pass_PFChIso, pass_PFHCalIso, pass_sieie, pass_PFECalIso
+                hoe = (photons.isScEtaEB & hoe_barrel) | (photons.isScEtaEE & hoe_endcap)
+                ch  = (photons.isScEtaEB & ch_barrel) | (photons.isScEtaEE & ch_endcap)
+                pfh = (photons.isScEtaEB & pfh_b) | (photons.isScEtaEE & pfh_e)
+                sie = (photons.isScEtaEB & sie_b) | (photons.isScEtaEE & sie_e)
+                pfe = (photons.isScEtaEB & pfe_b) | (photons.isScEtaEE & pfe_e)
 
-            for _wp in ("tight", "medium", "loose"):
-                p_hoe, p_ch, p_hcal, p_sieie, p_ecal = _wp_cuts(f"{_wp}_")
-                photons = ak.with_field(photons, p_hoe,   f"pass_{_wp}_hoe")
-                photons = ak.with_field(photons, p_ch,    f"pass_{_wp}_PFChIso")
-                photons = ak.with_field(photons, p_hcal,  f"pass_{_wp}_PFHCalIso")
-                photons = ak.with_field(photons, p_sieie, f"pass_{_wp}_sieie")
-                photons = ak.with_field(photons, p_ecal,  f"pass_{_wp}_PFECalIso")
+                return {
+                    f"phid_custom_{wp}": hoe & ch & pfh,
+                    f"phid_custom_extend_{wp}": hoe & ch & pfh & sie,
+                    f"phid_sieie_{wp}": sie,
+                    f"phid_PFECalIso_{wp}": pfe,
+                    f"phid_official_{wp}": hoe & ch & pfh & sie & pfe,
+                }
 
-        # Custom Photon ID
-        id_cut = customized_id_cut
+            # 產生 medium/loose
+            m = _calc_wp("medium")
+            l = _calc_wp("loose")
 
-        # Motive Study
-        true_mask = photons.pt > -999  # 任何比較都會回傳 bool
-        id_cut = true_mask
+            phid_custom_mediate = m["phid_custom_medium"]
+            phid_custom_extend_mediate = m["phid_custom_extend_medium"]
+            phid_sieie_mediate = m["phid_sieie_medium"]
+            phid_PFECalIso_mediate = m["phid_PFECalIso_medium"]
+            phid_official_mediate = m["phid_official_medium"]
+
+            phid_custom_loose = l["phid_custom_loose"]
+            phid_custom_extend_loose = l["phid_custom_extend_loose"]
+            phid_sieie_loose = l["phid_sieie_loose"]
+            phid_PFECalIso_loose = l["phid_PFECalIso_loose"]
+            phid_official_loose = l["phid_official_loose"]
+
+        # NEW: 把 15 種 photon-ID 結果存成 photon-level flags（供上游 scenario study 使用）
+        photons = ak.with_field(photons, phid_custom_tight, "pass_phid_custom_tight")
+        photons = ak.with_field(photons, phid_custom_extend_tight, "pass_phid_custom_extend_tight")
+        photons = ak.with_field(photons, phid_sieie_tight, "pass_phid_sieie_tight")
+        photons = ak.with_field(photons, phid_PFECalIso_tight, "pass_phid_PFECalIso_tight")
+        photons = ak.with_field(photons, phid_official_tight, "pass_phid_official_tight")
+
+        photons = ak.with_field(photons, phid_custom_mediate, "pass_phid_custom_medium")
+        photons = ak.with_field(photons, phid_custom_extend_mediate, "pass_phid_custom_extend_medium")
+        photons = ak.with_field(photons, phid_sieie_mediate, "pass_phid_sieie_medium")
+        photons = ak.with_field(photons, phid_PFECalIso_mediate, "pass_phid_PFECalIso_medium")
+        photons = ak.with_field(photons, phid_official_mediate, "pass_phid_official_medium")
+
+        photons = ak.with_field(photons, phid_custom_loose, "pass_phid_custom_loose")
+        photons = ak.with_field(photons, phid_custom_extend_loose, "pass_phid_custom_extend_loose")
+        photons = ak.with_field(photons, phid_sieie_loose, "pass_phid_sieie_loose")
+        photons = ak.with_field(photons, phid_PFECalIso_loose, "pass_phid_PFECalIso_loose")
+        photons = ak.with_field(photons, phid_official_loose, "pass_phid_official_loose")
+
+        # Custom Photon ID（nominal 用哪個，仍照你現在的策略；study 用 flags 另外算）
+        id_cut = phid_custom_tight
+
 
         # electron veto
         e_veto_cut = (photons.electronVeto > options["e_veto"])
-        photons = ak.with_field(photons, e_veto_cut, "pass_photon_e_veto")
+        # photons = ak.with_field(photons, e_veto_cut, "pass_photon_e_veto")
 
         photon_ele_idx = ak.where(ak.num(photons.electronIdx, axis=1) == 0, ak.ones_like(photons.pt)*-1, photons.electronIdx)
         new_pho = ak.unflatten(ak.unflatten(ak.flatten(photon_ele_idx), [1]*ak.sum(ak.num(photon_ele_idx))), ak.num(photon_ele_idx, axis=1))

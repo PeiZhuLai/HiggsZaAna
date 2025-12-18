@@ -26,6 +26,7 @@ PHOTON_ID_SF_FILE = {
     "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/photon.json", "higgs_dna/systematics/data/2022postEE_UL/hzg_phidvalidate_2022EE_scalefactors.json"],
     "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/photon.json"],
     "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/photon.json"],
+    "2024" : ["higgs_dna/systematics/data/2023postBPix_UL/photon.json"], # FIXME
 }
 
 PHOTON_ID_SF = {
@@ -37,7 +38,8 @@ PHOTON_ID_SF = {
     "2022preEE" : "2022Re-recoBCD",
     "2022postEE" : "2022Re-recoE+PromptFG",
     "2023preBPix" : "2023PromptC",
-    "2023postBPix" : "2023PromptD"
+    "2023postBPix" : "2023PromptD",
+    "2024" : "2023PromptD" # FIXME
 }
 
 PHOTON_ID_EVAL = {
@@ -49,7 +51,8 @@ PHOTON_ID_EVAL = {
     "2022preEE" : "Photon-ID-SF",
     "2022postEE" : "Photon-ID-SF",
     "2023preBPix" : "Photon-ID-SF",
-    "2023postBPix" : "Photon-ID-SF"
+    "2023postBPix" : "Photon-ID-SF",
+    "2024" : "Photon-ID-SF" # FIXME
 }
 
 def photon_id_sf(events, year, central_only, input_collection, working_point = "wp80"):
@@ -249,7 +252,8 @@ PHOTON_CSEV_EVAL = {
     "2022preEE" : "Photon-CSEV-SF",
     "2022postEE" : "Photon-CSEV-SF",
     "2023preBPix" : "Photon-CSEV-SF",
-    "2023postBPix" : "Photon-CSEV-SF"
+    "2023postBPix" : "Photon-CSEV-SF",
+    "2024" : "Photon-CSEV-SF"
 }
 
 def photon_CSEV_sf(events, year, central_only, input_collection, working_point = "MVA"):
@@ -563,6 +567,7 @@ fnuf_bins = {
     "2022postEE" : FNUF_2018,
     "2023preBPix" : FNUF_2018,
     "2023postBPix" : FNUF_2018,
+    "2024" : FNUF_2018,
 }
 
 def fnuf_unc(events, year, nominal_only, modify_nominal, loc = "all"):
@@ -617,7 +622,8 @@ material_bins = {
     "2022preEE" : MATERIAL_2018,
     "2022postEE" : MATERIAL_2018,
     "2023preBPix" : MATERIAL_2018,
-    "2023postBPix" : MATERIAL_2018
+    "2023postBPix" : MATERIAL_2018,
+    "2024" : MATERIAL_2018
 }
 
 def material_unc(events, year, nominal_only, modify_nominal, loc = "all"):

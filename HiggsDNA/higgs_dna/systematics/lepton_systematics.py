@@ -10,6 +10,7 @@ logger = simple_logger(__name__)
 
 from higgs_dna.utils import awkward_utils, misc_utils
 from higgs_dna.systematics.utils import systematic_from_bins
+from higgs_dna.systematics.MuonScaRe import pt_resol, pt_scale, pt_resol_var, pt_scale_var 
 
 MUON_ID_SF_FILE = {
     "2016" : "higgs_dna/systematics/data/2016postVFP_UL/muid_2016_2016APV.json",
@@ -1063,4 +1064,108 @@ def muon_scale_run3(events, year, is_data):
     logger.info("[Lepton Systematics] Muon pt before scale correction (data): mean = %.2f", awkward.mean(muons.pt))
     logger.info("[Lepton Systematics] Muon pt after scale correction (data): mean = %.2f", awkward.mean(events["Muon", "corrected_pt"]))
 
+    return events
+
+
+def muon_scale_smear_run3(events, year, is_data):
+    """Apply Run-3 muon momentum scale (data & MC) and resolution smearing (MC).
+
+    This mirrors the official Muon POG MuonScaRe reference implementation:
+      - Data: apply scale only
+      - MC  : apply scale + resolution smearing
+
+    The correction JSON is expected to be in correctionlib format and contain the
+    keys used by MuonScaRe (e.g. a_data/m_data, a_mc/m_mc, cb_params, ...).
+
+    Notes:
+      - For MC smearing, we prefer to use event/lumi numbers for deterministic smearing.
+        If they are missing, we fall back to sequential indices (still deterministic
+        within one pass, but not stable across different skims).
+    """
+    logger.info("[Lepton Systematics] Applying muon scale+smear (Run3) for year %s", year)
+
+    required_fields = [("Muon", "pt"), ("Muon", "eta"), ("Muon", "phi"), ("Muon", "charge"), ("Muon", "nTrackerLayers")]
+    if not is_data:
+        # Needed for deterministic smearing
+        required_fields += [("Muon","nTrackerLayers"), "event", "luminosityBlock"]
+
+    missing_fields = awkward_utils.missing_fields(events, required_fields)
+    if missing_fields:
+        logger.warning(
+            "[Lepton Systematics] Muon scale+smear (Run3) skipped because the following fields are missing: %s",
+            str(missing_fields),
+        )
+        return events
+
+
+    # Load correction set
+    cset_path = misc_utils.expand_path(MUON_SCALE_FILE.get(year, MUON_SCALE_FILE.get(str(year), "")))
+    if not cset_path:
+        logger.error("[Lepton Systematics] No MUON_SCALE_FILE entry for year=%s", year)
+        return events
+
+    try:
+        cset = correctionlib.CorrectionSet.from_file(cset_path)
+    except Exception as e:
+        logger.error("[Lepton Systematics] Failed to load muon corrections from %s: %s", cset_path, str(e))
+        return events
+
+    muons = events["Muon"]
+    n_muons = awkward.num(muons)
+    mu_flat = awkward.flatten(muons)
+
+    pt  = awkward.to_numpy(mu_flat.pt)
+    eta = awkward.to_numpy(mu_flat.eta)
+    phi = awkward.to_numpy(mu_flat.phi)
+    q   = awkward.to_numpy(mu_flat.charge)
+    nL  = awkward.to_numpy(mu_flat.nTrackerLayers)
+
+    # ---- Scale (data & MC) ----
+    pt_scale_nom = pt_scale(is_data, pt, eta, phi, q, cset, nested=False)
+
+    # Scale systematics (Up/Down) — meaningful for both data and MC in MuonScaRe
+    try:
+        pt_scale_up = pt_scale_var(pt, eta, phi, q, "up", cset, nested=False)
+        pt_scale_dn = pt_scale_var(pt, eta, phi, q, "dn", cset, nested=False)
+    except Exception:
+        # If the JSON doesn't provide scale variations, set to nominal
+        pt_scale_up = pt_scale_nom
+        pt_scale_dn = pt_scale_nom
+
+    if is_data:
+        # Data: scale only
+        events["Muon", "corrected_pt"] = awkward.unflatten(pt_scale_nom, n_muons)
+        events["Muon", "scaleUp_pt"]    = awkward.unflatten(pt_scale_up - pt_scale_nom, n_muons)
+        events["Muon", "scaleDown_pt"]  = awkward.unflatten(pt_scale_dn - pt_scale_nom, n_muons)
+        events["Muon", "smearUp_pt"]    = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
+        events["Muon", "smearDown_pt"]  = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
+
+        logger.info("[Lepton Systematics] Muon scale applied (data).")
+        return events
+
+    # ---- Resolution smearing (MC only) ----
+    # event/lumi are per-event, broadcast to muons
+    evt = awkward.to_numpy(awkward.flatten(awkward.broadcast_arrays(muons.pt, events["event"])[1]))
+    lumi = awkward.to_numpy(awkward.flatten(awkward.broadcast_arrays(muons.pt, events["luminosityBlock"])[1]))
+
+    # Nominal smeared pt (scale + resol)
+    pt_corr = pt_resol(pt_scale_nom, eta, phi, nL, evt, lumi, cset, nested=False)
+
+    # Resolution systematics (Up/Down)
+    try:
+        pt_corr_resup = pt_resol_var(pt_scale_nom, pt_corr, eta, "up", cset, nested=False)
+        pt_corr_resdn = pt_resol_var(pt_scale_nom, pt_corr, eta, "dn", cset, nested=False)
+    except Exception:
+        pt_corr_resup = pt_corr
+        pt_corr_resdn = pt_corr
+
+    events["Muon", "corrected_pt"] = awkward.unflatten(pt_corr, n_muons)
+
+
+    events["Muon", "scaleUp_pt"]   = awkward.unflatten(pt_scale_up - pt_scale_nom, n_muons)
+    events["Muon", "scaleDown_pt"] = awkward.unflatten(pt_scale_dn - pt_scale_nom, n_muons)
+    events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup - pt_corr, n_muons)
+    events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn - pt_corr, n_muons)
+
+    logger.info("[Lepton Systematics] Muon scale+smear applied (MC).")
     return events
