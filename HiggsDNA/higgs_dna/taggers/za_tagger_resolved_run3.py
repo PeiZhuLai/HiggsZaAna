@@ -810,16 +810,25 @@ class ZaTaggerRun3(Tagger):
                     "ALP_%s" % field,
                     ak.fill_none(getattr(alp_cand.ALPCand, field), DUMMY_VALUE)
                 )
-            awkward_utils.add_field(
-                events,
-                "ALP_lead_photon_%s" % field,
-                ak.fill_none(alp_cand.LeadPhoton[field], DUMMY_VALUE)
-            )
-            awkward_utils.add_field(
-                events,
-                "ALP_sublead_photon_%s" % field,
-                ak.fill_none(alp_cand.SubleadPhoton[field], DUMMY_VALUE)
-            )
+            # awkward_utils.add_field(
+            #     events,
+            #     "ALP_lead_photon_%s" % field,
+            #     ak.fill_none(alp_cand.LeadPhoton[field], DUMMY_VALUE)
+            # )
+            # awkward_utils.add_field(
+            #     events,
+            #     "ALP_sublead_photon_%s" % field,
+            #     ak.fill_none(alp_cand.SubleadPhoton[field], DUMMY_VALUE)
+            # )
+            name = f"ALP_lead_photon_{field}"
+            if name not in events.fields:
+                awkward_utils.add_field(events, name, ak.fill_none(alp_cand.LeadPhoton[field], DUMMY_VALUE))
+
+            name = f"ALP_sublead_photon_{field}"
+            if name not in events.fields:
+                awkward_utils.add_field(events, name, ak.fill_none(alp_cand.SubleadPhoton[field], DUMMY_VALUE))
+
+
         if int(self.year[:4]) < 2020:
             awkward_utils.add_field(events, "ALP_lead_photon_chiso",  alp_cand.LeadPhoton.pfRelIso03_chg) #run2
             awkward_utils.add_field(events, "ALP_lead_photon_alliso", alp_cand.LeadPhoton.pfRelIso03_all) #run2
@@ -836,7 +845,9 @@ class ZaTaggerRun3(Tagger):
         gamma_mvaID_WPL = ((gamma_cand.isScEtaEB & (gamma_cand.mvaID > self.options["photons"]["mvaID_barrel"])) | (gamma_cand.isScEtaEE & (gamma_cand.mvaID > self.options["photons"]["mvaID_endcap"])))
         gamma_e_veto = gamma_cand.electronVeto > self.options["photons"]["e_veto"]
 
-        awkward_utils.add_field(gamma_cand, "mass", ak.ones_like(gamma_cand.pt) * 0) #TODO: run3 BUG
+        # awkward_utils.add_field(gamma_cand, "mass", ak.ones_like(gamma_cand.pt) * 0) #TODO: run3 BUG
+        if "mass" not in gamma_cand.fields:
+            awkward_utils.add_field(gamma_cand, "mass", ak.zeros_like(gamma_cand.pt))
 
         # Add gamma-related fields to array
         for field in ["pt", "eta", "phi", "mass", "mvaID", "energyErr", "sieie", "hoe", "r9", "mvaID_WP80", "mvaID_WP90"]:
@@ -1035,26 +1046,31 @@ class ZaTaggerRun3(Tagger):
 
             # 共用既有 cut 定義，只替換 has_2gamma_cand
             for id_key in scenario_keys:
-                has_2g_s = _scenario_has_2gamma(events, id_key)
+                
+                for weighted in (False, True):
+                    if weighted and not hasattr(events, "Generator_weight"):
+                        continue
 
-                cut0 = ak.num(events.Photon) >= 0
-                cut1 = z_ee_cut | z_mumu_cut
-                cut2 = cut1 & trigger_cut
-                cut3 = cut2 & trigger_pt_cut
-                cut4 = cut3 & has_z_cand
-                cut5 = cut4 & g_kin_cut
-                cut6 = cut5 & has_2g_s
-                cut7 = cut6 & sel_h_1
-                cut8 = cut7 & sel_h_2
-                cut9 = cut8 & event_filter
+                    has_2g_s = _scenario_has_2gamma(events, id_key)
 
-                self.register_event_cuts(
-                    names   = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "g_kin_cut", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
-                    results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut9, cut9],
-                    events  = events,
-                    cut_type= f"zgammas_{id_key}",
-                    weighted= True,
-                )
+                    cut0 = ak.num(events.Photon) >= 0
+                    cut1 = z_ee_cut | z_mumu_cut
+                    cut2 = cut1 & trigger_cut
+                    cut3 = cut2 & trigger_pt_cut
+                    cut4 = cut3 & has_z_cand
+                    cut5 = cut4 & g_kin_cut
+                    cut6 = cut5 & has_2g_s
+                    cut7 = cut6 & sel_h_1
+                    cut8 = cut7 & sel_h_2
+                    cut9 = cut8 & event_filter
+                    
+                    self.register_event_cuts(
+                        names   = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "g_kin_cut", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                        results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut9, cut9],
+                        events  = events,
+                        cut_type= f"zgammas_{id_key}",
+                        weighted= weighted,
+                    )
 
                 # （可選）把每個 scenario 的最終 allcuts 存成 event-level branch
                 awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut8, False), overwrite=True)
@@ -1186,6 +1202,56 @@ class ZaTaggerRun3(Tagger):
         rho_broadcasted, _ = ak.broadcast_arrays(rho, photons.pt)
         rho = rho_broadcasted
         photon_abs_eta = numpy.abs(photons.eta)
+
+        # NEW: 若兩個 photon dR < 0.3，計算 PFECalIso 時從 ecalPFClusterIso 扣掉彼此 pt
+        # 只修正 ecalPFClusterIso（因為需求點名它），且只在 Run3 ID 計算中使用
+        ecalPFClusterIso_forID = photons.ecalPFClusterIso
+        if int(year) > 2020:
+            try:
+                pho_v4 = to_momentum4d(photons)
+                pairs = ak.combinations(pho_v4, 2, fields=["p1", "p2"])
+                dr12 = pairs.p1.deltaR(pairs.p2)
+                close = dr12 < 0.3
+
+                # 對每一對 (i,j)，若 close，則 i 扣 j.pt、j 扣 i.pt
+                pt_other_to_p1 = ak.where(close, pairs.p2.pt, 0.0)
+                pt_other_to_p2 = ak.where(close, pairs.p1.pt, 0.0)
+
+                # 聚合回每顆 photon：sum(pt of other photons within cone)
+                # 對 ak.combinations 的輸出，用 local_index 重新定位回原本 photon index
+                idx = ak.local_index(photons.pt, axis=1)
+                idx_pairs = ak.combinations(idx, 2, fields=["i1", "i2"])
+
+                npho = ak.num(photons.pt, axis=1)
+                sum_other = ak.zeros_like(photons.pt, dtype=float)
+
+                # scatter-add: 將 pt_other_to_p1 加到 i1；pt_other_to_p2 加到 i2
+                sum_other = ak.where(sum_other >= 0, sum_other, 0.0)  # keep shape, no-op guard
+                sum_other = ak.flatten(sum_other, axis=None)  # flatten for add-at
+                i1_flat = ak.to_numpy(ak.flatten(idx_pairs.i1))
+                i2_flat = ak.to_numpy(ak.flatten(idx_pairs.i2))
+                add1 = ak.to_numpy(ak.flatten(pt_other_to_p1))
+                add2 = ak.to_numpy(ak.flatten(pt_other_to_p2))
+
+                # event-wise offset for flattened indexing
+                counts = ak.to_numpy(npho)
+                offsets = numpy.zeros_like(counts)
+                offsets[1:] = numpy.cumsum(counts[:-1])
+                off_rep = numpy.repeat(offsets, ak.to_numpy(ak.num(idx_pairs.i1)))
+
+                numpy.add.at(sum_other, off_rep + i1_flat, add1)
+                numpy.add.at(sum_other, off_rep + i2_flat, add2)
+
+                sum_other = ak.unflatten(sum_other, counts)
+                ecalPFClusterIso_forID = ak.where(
+                    ecalPFClusterIso_forID - sum_other > 0,
+                    ecalPFClusterIso_forID - sum_other,
+                    0.0,
+                )
+            except Exception as _e:
+                # 回退：不修正，避免因少數奇怪 event 造成整體崩潰
+                ecalPFClusterIso_forID = photons.ecalPFClusterIso
+
         if int(year) < 2020:
             phid_custom_tight = ak.ones_like(photons.pt) # all true, dummy TODO
             phid_official_tight = ak.ones_like(photons.pt) # all true, dummy TODO
@@ -1300,7 +1366,7 @@ class ZaTaggerRun3(Tagger):
             PFECalIso_barrel_cut = (
                 ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
                 & (
-                    (photons.ecalPFClusterIso
+                    (ecalPFClusterIso_forID
                     - rho * options["PFECalIso_EA_EB_1"][0]
                     - rho**2 * options["PFECalIso_EA_EB_1"][1])
                     < parabola_cut
@@ -1308,7 +1374,7 @@ class ZaTaggerRun3(Tagger):
             ) | (
                 ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
                 & (
-                    (photons.ecalPFClusterIso
+                    (ecalPFClusterIso_forID
                     - rho * options["PFECalIso_EA_EB_2"][0]
                     - rho**2 * options["PFECalIso_EA_EB_2"][1])
                     < parabola_cut
@@ -1322,7 +1388,7 @@ class ZaTaggerRun3(Tagger):
                 (
                     ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
                     & (
-                        photons.ecalPFClusterIso
+                        ecalPFClusterIso_forID
                         - (rho * options["PFECalIso_EA_EE_1"][0])
                         - (rho**2 * options["PFECalIso_EA_EE_1"][1])
                         < parabola_cut
@@ -1331,7 +1397,7 @@ class ZaTaggerRun3(Tagger):
                 | (
                     ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
                     & (
-                        photons.ecalPFClusterIso
+                        ecalPFClusterIso_forID
                         - (rho * options["PFECalIso_EA_EE_2"][0])
                         - (rho**2 * options["PFECalIso_EA_EE_2"][1])
                         < parabola_cut
@@ -1340,7 +1406,7 @@ class ZaTaggerRun3(Tagger):
                 | (
                     ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
                     & (
-                        photons.ecalPFClusterIso
+                        ecalPFClusterIso_forID
                         - (rho * options["PFECalIso_EA_EE_3"][0])
                         - (rho**2 * options["PFECalIso_EA_EE_3"][1])
                         < parabola_cut
@@ -1349,7 +1415,7 @@ class ZaTaggerRun3(Tagger):
                 | (
                     ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
                     & (
-                        photons.ecalPFClusterIso
+                        ecalPFClusterIso_forID
                         - (rho * options["PFECalIso_EA_EE_4"][0])
                         - (rho**2 * options["PFECalIso_EA_EE_4"][1])
                         < parabola_cut
@@ -1358,7 +1424,7 @@ class ZaTaggerRun3(Tagger):
                 | (
                     ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
                     & (
-                        photons.ecalPFClusterIso
+                        ecalPFClusterIso_forID
                         - (rho * options["PFECalIso_EA_EE_5"][0])
                         - (rho**2 * options["PFECalIso_EA_EE_5"][1])
                         < parabola_cut
