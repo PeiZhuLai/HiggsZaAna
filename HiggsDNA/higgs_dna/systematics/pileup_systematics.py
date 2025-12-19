@@ -16,7 +16,8 @@ PU_REWEIGHTING_FILE = {
     "2022preEE" : "jsonpog-integration/POG/LUM/2022_Summer22/puWeights.json",
     "2022postEE" : "jsonpog-integration/POG/LUM/2022_Summer22EE/puWeights.json",
     "2023preBPix" : "jsonpog-integration/POG/LUM/2023_Summer23/puWeights.json",
-    "2023postBPix" : "jsonpog-integration/POG/LUM/2023_Summer23BPix/puWeights.json"
+    "2023postBPix" : "jsonpog-integration/POG/LUM/2023_Summer23BPix/puWeights.json",
+    "2024" : "higgs_dna/systematics/data/2024_UL/puWeights_BCDEFGHI.json",
 }
 
 PU_CAMPAIGN = {
@@ -28,6 +29,7 @@ PU_CAMPAIGN = {
     "2022postEE" : "Collisions2022_359022_362760_eraEFG_GoldenJson",
     "2023preBPix" : "Collisions2023_366403_369802_eraBC_GoldenJson",
     "2023postBPix" : "Collisions2023_369803_370790_eraD_GoldenJson",
+    "2024" : "Collisions24_BCDEFGHI_goldenJSON",
 }
 
 def pu_reweight_sf(events, year, central_only):

@@ -608,7 +608,7 @@ class AnalysisManager():
                 events_file = muon_scale_smear_run3(events_file, year, is_data)
 
                 # events_file = muon_scale_smear_run3(events_file, year, is_data)
-                logger.info("Muon fields after MuonScaRe: %s", events_file["Muon"].fields)
+                # logger.info("Muon fields after MuonScaRe: %s", events_file["Muon"].fields)
 
                 # events_file = muon_scale_run3(events_file, year, is_data)
                 # jet pt correction

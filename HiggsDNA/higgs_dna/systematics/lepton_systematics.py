@@ -21,7 +21,8 @@ MUON_ID_SF_FILE = {
     "2022preEE" : "higgs_dna/systematics/data/2022preEE_UL/muid_2022.json",
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/muid_2022EE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_muid_2023_scalefactors.json",
-    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_muid_2023BPix_scalefactors.json"
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_muid_2023BPix_scalefactors.json",
+    "2024" : "higgs_dna/systematics/data/2024_UL/hzg_muid_2023BPix_scalefactors.json" #FIXME
 }
 
 def muon_LooseID_sf(events, year, central_only, input_collection):
@@ -234,7 +235,8 @@ MUON_RECO_SF_FILE = {
     "2022preEE" : "higgs_dna/systematics/data/2022preEE_UL/muon_highpT_recoSF2022preEE.json",
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/muon_highpT_recoSF2022postEE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/muon_highpT_recoSF2023preBPix.json",
-    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/muon_highpT_recoSF2023postBPix.json"
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/muon_highpT_recoSF2023postBPix.json",
+    "2024" : "higgs_dna/systematics/data/2024_UL/muon_highpT_recoSF2024.json"
 }
 
 def get_run2_reco_sf_from_json(sf_dict, eta, pt, syst):
@@ -307,7 +309,7 @@ def muon_reco_sf(events, year, central_only, input_collection):
     n_muons = awkward.num(muons)
     muons_flattened = awkward.flatten(muons)
 
-    is_run2 = not (year.startswith("2022") or year.startswith("2023"))
+    is_run2 = not (year.startswith("2022") or year.startswith("2023") or year.startswith("2024"))
 
     if is_run2:
         with open(misc_utils.expand_path(MUON_RECO_SF_FILE[year][0])) as f:
@@ -421,7 +423,7 @@ ELECTRON_ID_SF_FILE = {
     "2022preEE" : "higgs_dna/systematics/data/2022preEE_UL/hzg_elid_2022_scalefactors.json",
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/hzg_elid_2022EE_scalefactors.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_elid_2023_scalefactors.json",
-    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_elid_2023BPix_scalefactors.json"
+    "2024" : "higgs_dna/systematics/data/2024_UL/hzg_elid_2023BPix_scalefactors.json" #FIXME
 }
 
 ELECTRON_ID_SF_FILE_HOLE = {
@@ -812,7 +814,8 @@ ELECTRON_RECO_SF_FILE = {
     "2022preEE" : "higgs_dna/systematics/data/2022preEE_UL/electron_recoSF2022.json",
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/electron_recoSF2022EE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/electron_recoSF2023.json",
-    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/electron_recoSF2023BPix.json"
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/electron_recoSF2023BPix.json",
+    "2024" : "higgs_dna/systematics/data/2024_UL/electron_recoSF2023BPix.json" #FIXME
 }
 
 def electron_reco_sf(events, year, central_only, input_collection):
@@ -883,21 +886,25 @@ electron_scale_FILE = {
     "2022preEE" : "jsonpog-integration/POG/EGM/2022_Summer22/electronSS_EtDependent.json",
     "2022postEE" : "jsonpog-integration/POG/EGM/2022_Summer22EE/electronSS_EtDependent.json",
     "2023preBPix" : "jsonpog-integration/POG/EGM/2023_Summer23/electronSS_EtDependent.json",
-    "2023postBPix" : "jsonpog-integration/POG/EGM/2023_Summer23BPix/electronSS_EtDependent.json"
+    "2023postBPix" : "jsonpog-integration/POG/EGM/2023_Summer23BPix/electronSS_EtDependent.json",
+    "2024" : "jsonpog-integration/POG/EGM/2024_Summer24/electronSS_EtDependent.json"
 }
 
 electron_smear_names = {
     "2022preEE" : "EGMSmearAndSyst_ElePTsplit_2022preEE",
     "2022postEE" : "EGMSmearAndSyst_ElePTsplit_2022postEE",
-    "2023preBPix" : "EGMSmearAndSyst_ElePTsplit_2023preBPIX", 
-    "2023postBPix" : "EGMSmearAndSyst_ElePTsplit_2023postBPIX"
+    "2023preBPix" : "EGMSmearAndSyst_ElePTsplit_2023preBPIX",
+    "2023postBPix" : "EGMSmearAndSyst_ElePTsplit_2023postBPIX",
+    "2024" : "EGMSmearAndSyst_ElePT_2024"
+    
 }
 
 electron_scale_names = {
     "2022preEE": "EGMScale_Compound_Ele_2022preEE",
     "2022postEE": "EGMScale_Compound_Ele_2022postEE",
     "2023preBPix": "EGMScale_Compound_Ele_2023preBPIX",
-    "2023postBPix": "EGMScale_Compound_Ele_2023postBPIX"
+    "2023postBPix": "EGMScale_Compound_Ele_2023postBPIX",
+    "2024": "EGMScale_ElePTsplit_2024"
 }
 
 def electron_scale_smear_run3(events, year, is_data):
@@ -1000,7 +1007,8 @@ MUON_SCALE_FILE = {
     "2022preEE" : "higgs_dna/systematics/data/2022preEE_UL/muon_scale_2022preEE.json",
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/muon_scale_2022postEE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/muon_scale_2023preBPix.json",
-    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/muon_scale_2023postBPix.json"
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/muon_scale_2023postBPix.json",
+    "2024" : "higgs_dna/systematics/data/2024_UL/muon_scale_2024.json"
 }
 
 def muon_scale_run3(events, year, is_data):

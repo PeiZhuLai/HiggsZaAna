@@ -159,28 +159,32 @@ DEFAULT_OPTIONS = {
         "2017":["HLT_IsoMu27"],
         "2018":["HLT_IsoMu24"],
         "2022":["HLT_IsoMu24"],
-        "2023":["HLT_IsoMu24"]
+        "2023":["HLT_IsoMu24"],
+        "2024":["HLT_IsoMu24"]
     },
     "single_ele_trigger":{
         "2016":["HLT_Ele27_WPTight_Gsf"],
         "2017":["HLT_Ele32_WPTight_Gsf_L1DoubleEG"],
         "2018":["HLT_Ele32_WPTight_Gsf"],
         "2022":["HLT_Ele30_WPTight_Gsf"],
-        "2023":["HLT_Ele30_WPTight_Gsf"]
+        "2023":["HLT_Ele30_WPTight_Gsf"],
+        "2024":["HLT_Ele30_WPTight_Gsf"]
     },
     "double_muon_trigger":{
         "2016":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ", "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ"],
         "2017":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8", "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8"],
         "2018":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
         "2022":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
-        "2023":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"]
+        "2023":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
+        "2024":["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"]
     },
     "double_ele_trigger":{
         "2016":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"],
         "2017":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
         "2018":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
         "2022":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
-        "2023":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"]
+        "2023":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
+        "2024":["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"]
     },
     "electrons" : {
         "pt" : 7.0,
@@ -195,14 +199,16 @@ DEFAULT_OPTIONS = {
         "2017": 35,
         "2018": 35,
         "2022": 35,
-        "2023": 35
+        "2023": 35,
+        "2024": 35
     },
     "lead_mu_pt":{
         "2016": 25,
         "2017": 28,
         "2018": 25,
         "2022": 25,
-        "2023": 25
+        "2023": 25,
+        "2024": 25
     },
     "jets" : {
         "pt" : 30.0,
@@ -224,7 +230,8 @@ DEFAULT_OPTIONS = {
         "2022preEE": 0.3086,
         "2022postEE": 0.3196,
         "2023preBPix": 0.2431,
-        "2023postBPix": 0.2435
+        "2023postBPix": 0.2435,
+        "2024": 0.2435
     },
     "FSRphotons" : {
         "iso" : 1.8,

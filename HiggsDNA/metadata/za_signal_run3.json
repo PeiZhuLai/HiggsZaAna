@@ -54,19 +54,6 @@
                     "SelectedElectron"
                 ]
             },
-            "electron_iso_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "electron_ISO_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Electron",
-                "target_collections": [
-                    "SelectedElectron"
-                ]
-            },
             "electron_reco_sf": {
                 "type": "object",
                 "method": "from_function",
@@ -119,19 +106,6 @@
                     "SelectedGenNoRecoMuon"
                 ]
             },
-            "muon_iso_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "muon_ISO_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Muon",
-                "target_collections": [
-                    "SelectedMuon"
-                ]
-            },
             "muon_reco_sf": {
                 "type": "object",
                 "method": "from_function",
@@ -143,6 +117,21 @@
                 "input_collection": "Muon",
                 "target_collections": [
                     "SelectedMuon"
+                ]
+            },
+            "photon_id_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "photon_zaid_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedPhoton",
+                "target_collections": [
+                    [
+                        "SelectedPhoton"
+                    ]
                 ]
             }
         },
@@ -279,10 +268,10 @@
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "mA_M5"
+            "mA_M1", "mA_M2", "mA_M3", "mA_M4", "mA_M5", "mA_M6", "mA_M7", "mA_M8", "mA_M9", "mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"
         ],
         "years": [
-            "2022preEE"
+            "2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"
         ]
     },
     "variables_of_interest": [

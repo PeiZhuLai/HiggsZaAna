@@ -240,6 +240,130 @@ def photon_id_sf(events, year, central_only, input_collection, working_point = "
 
     return variations
 
+
+############################
+##### HZa Photon ID SF #####
+############################
+
+PHOTON_ID_SF_FILE = {
+    "2022preEE" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2022preEE_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2022preEE_sf.json"],
+    "2022postEE" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2022postEE_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2022postEE_sf.json"],
+    "2023preBPix" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023preBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023preBPix_sf.json"],
+    "2023postBPix" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023postBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023postBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023postBPixHole_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023postBPixHole_sf.json"],
+    "2024" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2024_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2024_sf.json"],
+}
+
+
+def photon_zaid_sf(events, year, central_only, input_collection):
+    """
+    See:
+        - https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/EGM_electron_Run2_UL/EGM_electron_2017_UL.html
+        - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
+    """
+
+    required_fields = [
+        (input_collection, "eta"), (input_collection, "pt"), (input_collection, "phi")
+    ]
+
+    missing_fields = awkward_utils.missing_fields(events, required_fields)
+
+    evaluators = []
+    for file in PHOTON_ID_SF_FILE[year]:
+        evaluators.append(_core.CorrectionSet.from_file(misc_utils.expand_path(file)))
+
+    photons = events[input_collection]
+
+    n_photons = awkward.num(photons)
+    photons_flattened = awkward.flatten(photons)
+
+    # NOTE:
+    # evaluators indexing for HZa photon ID SFs (per your PHOTON_ID_SF_FILE):
+    #   - [0] lowpt (pt < 20)
+    #   - [1] nominal (pt >= 20)
+    #   - [2] lowptHole (only for 2023postBPix, special eta/phi region)
+    #   - [3] Hole     (only for 2023postBPix, special eta/phi region)
+    if len(evaluators) < 2:
+        raise ValueError(f"[photon_zaid_sf] Expect at least 2 correction files for year={year}, got {len(evaluators)}")
+
+    # Common inputs
+    pho_eta = numpy.clip(
+        awkward.to_numpy(photons_flattened.eta),
+        -2.49999,
+        2.49999,
+    )
+    pho_pt_orig = awkward.to_numpy(photons_flattened.pt)
+    pho_phi = numpy.clip(
+        awkward.to_numpy(photons_flattened.phi),
+        -999.0,
+        999.0,
+    )
+
+    # Masks
+    pt_below_20_mask = pho_pt_orig < 20.0
+
+    # Clip pt for each regime (match JSON binning/validity)
+    pho_pt_low = numpy.clip(pho_pt_orig, 15.0, 19.999)
+    pho_pt_high = numpy.clip(pho_pt_orig, 20.0, 499.999)
+
+    # 2023postBPix special (eta,phi) "hole" region:
+    # TODO: set these to the real boundaries you want
+    HOLE_ABS_ETA_MAX = 1.566
+    HOLE_ABS_ETA_MIN = 1.444
+    HOLE_ABS_PHI_MAX = 0.0  # placeholder
+    HOLE_ABS_PHI_MIN = 0.0  # placeholder
+
+    abs_eta = numpy.abs(pho_eta)
+    abs_phi = numpy.abs(pho_phi)
+    is_hole_region = (
+        (year == "2023postBPix")
+        & (len(evaluators) >= 4)
+        & (abs_eta >= HOLE_ABS_ETA_MIN)
+        & (abs_eta < HOLE_ABS_ETA_MAX)
+        & (abs_phi >= HOLE_ABS_PHI_MIN)
+        & (abs_phi < HOLE_ABS_PHI_MAX)
+    )
+
+    def _eval_pass(evaluator, var, pt_arr):
+        # HZa JSONs shown use "sf_pass"/"unc_pass" with (pt, eta) ordering in code below
+        if var == "central":
+            return evaluator["sf_pass"].evalv(pt_arr, pho_eta)
+        if var == "up":
+            sf0 = evaluator["sf_pass"].evalv(pt_arr, pho_eta)
+            unc = evaluator["unc_pass"].evalv(pt_arr, pho_eta)
+            return sf0 + unc
+        if var == "down":
+            sf0 = evaluator["sf_pass"].evalv(pt_arr, pho_eta)
+            unc = evaluator["unc_pass"].evalv(pt_arr, pho_eta)
+            return sf0 - unc
+        raise ValueError(f"Unknown var={var}")
+
+    variations = {}
+    for var in (["central"] if central_only else ["central", "up", "down"]):
+        # Default evaluators (non-hole)
+        lowpt_val = _eval_pass(evaluators[0], var, pho_pt_low)
+        highpt_val = _eval_pass(evaluators[1], var, pho_pt_high)
+
+        sf = numpy.where(pt_below_20_mask, lowpt_val, highpt_val)
+
+        # Hole override for 2023postBPix (if provided)
+        if (year == "2023postBPix") and (len(evaluators) >= 4):
+            lowpt_hole_val = _eval_pass(evaluators[2], var, pho_pt_low)
+            highpt_hole_val = _eval_pass(evaluators[3], var, pho_pt_high)
+            sf_hole = numpy.where(pt_below_20_mask, lowpt_hole_val, highpt_hole_val)
+            sf = numpy.where(is_hole_region, sf_hole, sf)
+
+        variations[var] = awkward.unflatten(sf, n_photons)
+
+    # Keep your original acceptance sanitization: set SF=1 outside validity/acceptance
+    for var in variations.keys():
+        variations[var] = awkward.where(
+            (photons.pt < 15.0) | (photons.pt >= 500.0) | (abs(photons.eta) >= 2.5),
+            awkward.ones_like(variations[var], dtype=float),
+            variations[var],
+        )
+
+    return variations
+
 ########################
 #### Photon CSEV SF ####
 ########################
@@ -735,24 +859,28 @@ def photon_mc_smear(events, r9, loc):
 
     return variations
 
-photon_scale_FILE = {"2022preEE" : "jsonpog-integration/POG/EGM/2022_Summer22/photonSS_EtDependent.json",
+photon_scale_FILE = {
+    "2022preEE" : "jsonpog-integration/POG/EGM/2022_Summer22/photonSS_EtDependent.json",
     "2022postEE" : "jsonpog-integration/POG/EGM/2022_Summer22EE/photonSS_EtDependent.json",
     "2023preBPix" : "jsonpog-integration/POG/EGM/2023_Summer23/photonSS_EtDependent.json",
-    "2023postBPix" : "jsonpog-integration/POG/EGM/2023_Summer23BPix/photonSS_EtDependent.json"
+    "2023postBPix" : "jsonpog-integration/POG/EGM/2023_Summer23BPix/photonSS_EtDependent.json",
+    "2024" : "jsonpog-integration/POG/EGM/2024_Summer24/photonSS_EtDependent.json"
 }
 
 smear_names = {
     "2022preEE" : "EGMSmearAndSyst_PhoPTsplit_2022preEE",
     "2022postEE" : "EGMSmearAndSyst_PhoPTsplit_2022postEE",
     "2023preBPix" : "EGMSmearAndSyst_PhoPTsplit_2023preBPIX",
-    "2023postBPix" : "EGMSmearAndSyst_PhoPTsplit_2023postBPIX"
+    "2023postBPix" : "EGMSmearAndSyst_PhoPTsplit_2023postBPIX",
+    "2024" : "EGMSmearAndSyst_PhoPT_2024"
 }
 
 scale_names = {
     "2022preEE" : "EGMScale_Compound_Pho_2022preEE",
     "2022postEE" : "EGMScale_Compound_Pho_2022postEE",
     "2023preBPix" : "EGMScale_Compound_Pho_2023preBPIX",
-    "2023postBPix" : "EGMScale_Compound_Pho_2023postBPIX"
+    "2023postBPix" : "EGMScale_Compound_Pho_2023postBPIX",
+    "2024" : "EGMScale_PhoPTsplit_2024"
 }
 
 def photon_scale_smear_run3(events, year, is_data):
@@ -868,3 +996,4 @@ def photon_scale_smear_run3(events, year, is_data):
     print("Photon pt Smear Down:", events["Photon", "dEsigmaDown"])
 
     return events
+
