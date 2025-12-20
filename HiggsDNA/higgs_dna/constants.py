@@ -63,6 +63,9 @@ BRANCHES = {
         "2023preBPix" : [
             "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
         ],
+        "2023postBPix" : [
+            "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
+        ],
         "2024" : [
             "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
         ],

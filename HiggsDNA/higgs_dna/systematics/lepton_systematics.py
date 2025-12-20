@@ -423,6 +423,7 @@ ELECTRON_ID_SF_FILE = {
     "2022preEE" : "higgs_dna/systematics/data/2022preEE_UL/hzg_elid_2022_scalefactors.json",
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/hzg_elid_2022EE_scalefactors.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_elid_2023_scalefactors.json",
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_elid_2023BPix_scalefactors.json",
     "2024" : "higgs_dna/systematics/data/2024_UL/hzg_elid_2023BPix_scalefactors.json" #FIXME
 }
 
