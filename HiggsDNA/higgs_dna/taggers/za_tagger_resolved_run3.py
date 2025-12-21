@@ -1073,7 +1073,7 @@ class ZaTaggerRun3(Tagger):
                     )
 
                 # （可選）把每個 scenario 的最終 allcuts 存成 event-level branch
-                awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut8, False), overwrite=True)
+                awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut9, False), overwrite=True)
 
         all_cuts = ee_all_cut | mm_all_cut
 
@@ -1495,29 +1495,29 @@ class ZaTaggerRun3(Tagger):
                 thr_ec_b = c1 + c2 * photons.pt
                 pfe_b = (
                     ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EB_1"][0] - rho**2 * options["PFECalIso_EA_EB_1"][1]) < thr_ec_b)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EB_1"][0] - rho**2 * options["PFECalIso_EA_EB_1"][1]) < thr_ec_b)
                 ) | (
                     ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EB_2"][0] - rho**2 * options["PFECalIso_EA_EB_2"][1]) < thr_ec_b)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EB_2"][0] - rho**2 * options["PFECalIso_EA_EB_2"][1]) < thr_ec_b)
                 )
 
                 c1, c2 = options[f"{wp}_PFECalIso_endcap"]
                 thr_ec_e = c1 + c2 * photons.pt
                 pfe_e = (
                     ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_1"][0] - rho**2 * options["PFECalIso_EA_EE_1"][1]) < thr_ec_e)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_1"][0] - rho**2 * options["PFECalIso_EA_EE_1"][1]) < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_2"][0] - rho**2 * options["PFECalIso_EA_EE_2"][1]) < thr_ec_e)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_2"][0] - rho**2 * options["PFECalIso_EA_EE_2"][1]) < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_3"][0] - rho**2 * options["PFECalIso_EA_EE_3"][1]) < thr_ec_e)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_3"][0] - rho**2 * options["PFECalIso_EA_EE_3"][1]) < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_4"][0] - rho**2 * options["PFECalIso_EA_EE_4"][1]) < thr_ec_e)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_4"][0] - rho**2 * options["PFECalIso_EA_EE_4"][1]) < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
-                    & ((photons.ecalPFClusterIso - rho * options["PFECalIso_EA_EE_5"][0] - rho**2 * options["PFECalIso_EA_EE_5"][1]) < thr_ec_e)
+                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_5"][0] - rho**2 * options["PFECalIso_EA_EE_5"][1]) < thr_ec_e)
                 )
 
                 hoe = (photons.isScEtaEB & hoe_barrel) | (photons.isScEtaEE & hoe_endcap)
