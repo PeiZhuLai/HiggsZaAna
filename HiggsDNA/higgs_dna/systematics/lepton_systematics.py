@@ -905,7 +905,7 @@ electron_scale_names = {
     "2022postEE": "EGMScale_Compound_Ele_2022postEE",
     "2023preBPix": "EGMScale_Compound_Ele_2023preBPIX",
     "2023postBPix": "EGMScale_Compound_Ele_2023postBPIX",
-    "2024": "EGMScale_ElePTsplit_2024"
+    "2024": "Scale"
 }
 
 def electron_scale_smear_run3(events, year, is_data):
@@ -945,10 +945,28 @@ def electron_scale_smear_run3(events, year, is_data):
     electrons_r9 = awkward.to_numpy(electrons_flattened.r9)
     if is_data:
         electrons_seedGain = awkward.to_numpy(electrons_flattened.seedGain)
-        run_arr_flattened = numpy.repeat(awkward.to_numpy(events["run"]), n_electrons)
+        if year == "2024":
+            # FIX: broadcast per-event run to per-electron, then flatten
+            run_arr_flattened = awkward.to_numpy(
+                awkward.flatten(awkward.broadcast_arrays(electrons.pt, events["run"])[1])
+            )
+        else:
+            run_arr_flattened = numpy.repeat(awkward.to_numpy(events["run"]), n_electrons)
 
     if is_data:
-        scale = evaluator.compound[electron_scale_names[year]].evaluate("scale", run_arr_flattened, electrons_scEta, electrons_r9, electrons_AbsScEta, electrons_pt, electrons_seedGain)
+        if year == "2024":
+            # FIX: compound "Scale" expects 6 inputs: syst, run, ScEta, r9, pt, seedGain
+            scale = evaluator.compound[electron_scale_names[year]].evaluate(
+                "scale",  # syst
+                run_arr_flattened,
+                electrons_scEta,
+                electrons_r9,
+                electrons_pt,
+                electrons_seedGain,
+            )
+        else:
+            scale = evaluator.compound[electron_scale_names[year]].evaluate("scale", run_arr_flattened, electrons_scEta, electrons_r9, electrons_AbsScEta, electrons_pt, electrons_seedGain)
+
         scale = awkward.where(
             (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
             awkward.ones_like(electrons_pt, dtype=float),

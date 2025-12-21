@@ -44,7 +44,7 @@ baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs"
 
 dataType = ["Data", "Bkg_MC", "Sig_MC"]
 
-outputDir = "cutflow_list"
+outputDir = "../cutflow_list"
 
 # Year of Signal
 year_sig_2022 = ["2022preEE", "2022postEE"]
@@ -72,7 +72,7 @@ name_DYG_2023 = ["DYGto2LG_10to100"]
 name_DYG_2024 = ["DYGto2LG_10to100"]
 name_DYJet_2022 = ["DYJetsToLL"]
 name_DYJet_2023 = ["DYJetsToLL"]
-name_DYJet_2024 = ["DYJetsToLL"]
+name_DYJet_2024 = ["DYJetsTo2E","DYJetsTo2Mu","DYJetsTo2Tau"]
 # Name of Data Sample
 name_Data_2022 = ["DYJetsToLL"]
 name_Data_2023 = ["DYJetsToLL"]
@@ -237,10 +237,12 @@ def _extract_braced(text: str, start: int) -> Tuple[Optional[str], int]:
     return None, start + 1
 
 
-def iter_cutflow_payloads_from_text(text: str) -> Iterator[Dict]:
+def iter_cutflow_payloads_from_text(text: str, syst: Optional[str] = None) -> Iterator[Dict]:
     """
     Yield dict payloads for each 'CutFlow JSON {..}' (or raw '{..}' with 'tagger' key).
     Handles wrapped JSON via _dewrap_json.
+
+    If syst is not None, only yield payloads with payload["syst"] == syst.
     """
     idx = 0
     # Prefer the explicit prefix
@@ -260,9 +262,9 @@ def iter_cutflow_payloads_from_text(text: str) -> Iterator[Dict]:
         cleaned = _dewrap_json(obj)
         try:
             payload = json.loads(cleaned)
-            yield payload
+            if (syst is None) or (payload.get("syst") == syst):
+                yield payload
         except Exception:
-            # If this fails, it's likely not a cutflow JSON; skip it
             pass
         idx = end
 
@@ -279,7 +281,8 @@ def iter_cutflow_payloads_from_text(text: str) -> Iterator[Dict]:
         cleaned = _dewrap_json(obj)
         try:
             payload = json.loads(cleaned)
-            yield payload
+            if (syst is None) or (payload.get("syst") == syst):
+                yield payload
         except Exception:
             pass
         idx = end
@@ -338,6 +341,7 @@ class CutflowResult:
     cutflows: Dict[str, "OrderedDict[str, float]"]
     n_jobs_used: int
     out_files_used: List[str]
+    per_file_all: Dict[str, Dict[str, float]]  # file -> {cut_type -> all}
 
 
 def collect_cutflows(
@@ -352,6 +356,94 @@ def collect_cutflows(
 
     accum: Dict[str, OrderedDict] = defaultdict(OrderedDict)
     used_files: List[str] = []
+    per_file_all: Dict[str, Dict[str, float]] = OrderedDict()
+    n_jobs = 0
+
+    for fp in out_files:
+        try:
+            text = open(fp, "r", errors="ignore").read()
+        except Exception:
+            continue
+
+        used_files.append(fp)
+        n_jobs += 1
+        per_file_all.setdefault(fp, OrderedDict())
+
+        # NEW: collect last payload per cut_type in this file to avoid double counting
+        last_cuts_by_ct: Dict[str, OrderedDict] = {}
+
+        for payload in iter_cutflow_payloads_from_text(text, syst=syst):
+            ct = payload.get("cut_type")
+            if ct not in wanted:
+                continue
+            cuts = payload.get("cuts")
+            if not isinstance(cuts, dict):
+                continue
+
+            fixed_cuts = OrderedDict()
+            for k, v in cuts.items():
+                kk = "all cuts" if k == "allcuts" else k
+                fixed_cuts[kk] = float(v)
+
+            # record per-file "all"
+            if "all" in fixed_cuts:
+                per_file_all[fp][ct] = float(fixed_cuts["all"])
+            elif "all cuts" in fixed_cuts:
+                per_file_all[fp][ct] = float(fixed_cuts["all cuts"])
+
+            # keep only the last one per cut_type for this file
+            last_cuts_by_ct[ct] = fixed_cuts
+
+        # NEW: apply once per (file, cut_type)
+        for ct, fixed_cuts in last_cuts_by_ct.items():
+            if not accum[ct]:
+                for k in fixed_cuts.keys():
+                    accum[ct][k] = 0.0
+            else:
+                for k in fixed_cuts.keys():
+                    if k not in accum[ct]:
+                        accum[ct][k] = 0.0
+            for k, v in fixed_cuts.items():
+                accum[ct][k] += v
+
+    return CutflowResult(
+        cutflows=dict(accum),
+        n_jobs_used=n_jobs,
+        out_files_used=used_files,
+        per_file_all=per_file_all,
+    )
+
+
+# -----------------------------
+# Trigger-eff (cut_type_prefix) collection
+# -----------------------------
+@dataclass
+class TrigEffResult:
+    by_prefix: Dict[str, Dict]   # prefix -> {"bins": OrderedDict[ptbin]->dict, "overall": dict}
+    n_jobs_used: int
+    out_files_used: List[str]
+
+
+def _safe_float(x, default: float = 0.0) -> float:
+    try:
+        return float(x)
+    except Exception:
+        return default
+
+
+def collect_trigeff(
+    out_files: Iterable[str],
+    syst: str = "nominal",
+) -> TrigEffResult:
+    """
+    Collect payloads like:
+      {"syst":"nominal","cut_type_prefix":"...","bins":[{ptbin,in_bin,pass_trigger,eff},...],
+       "overall":{"in_bin":...,"pass_trigger":...,"eff":...}}
+
+    We sum in_bin/pass_trigger across jobs and recompute eff = pass/in.
+    """
+    acc: Dict[str, Dict] = {}
+    used_files: List[str] = []
     n_jobs = 0
 
     for fp in out_files:
@@ -363,35 +455,79 @@ def collect_cutflows(
         used_files.append(fp)
         n_jobs += 1
 
-        for payload in iter_cutflow_payloads_from_text(text):
-            if payload.get("syst") != syst:
-                continue
-            ct = payload.get("cut_type")
-            if ct not in wanted:
-                continue
-            cuts = payload.get("cuts")
-            if not isinstance(cuts, dict):
+        for payload in iter_cutflow_payloads_from_text(text, syst=syst):
+            prefix = payload.get("cut_type_prefix")
+            if not prefix:
                 continue
 
-            # Fix the common wrap artifact: "all cuts" becomes "allcuts"
-            fixed_cuts = OrderedDict()
-            for k, v in cuts.items():
-                kk = "all cuts" if k == "allcuts" else k
-                fixed_cuts[kk] = float(v)
+            bins = payload.get("bins", [])
+            overall = payload.get("overall", {})
 
-            # Ensure stable order: keep first-seen order, and add new keys at the end if they appear later
-            if not accum[ct]:
-                for k in fixed_cuts.keys():
-                    accum[ct][k] = 0.0
-            else:
-                for k in fixed_cuts.keys():
-                    if k not in accum[ct]:
-                        accum[ct][k] = 0.0
+            if prefix not in acc:
+                acc[prefix] = {
+                    "bins": OrderedDict(),   # ptbin -> {"in_bin": float, "pass_trigger": float}
+                    "overall": {"in_bin": 0.0, "pass_trigger": 0.0},
+                }
 
-            for k, v in fixed_cuts.items():
-                accum[ct][k] += v
+            # overall
+            acc[prefix]["overall"]["in_bin"] += _safe_float(overall.get("in_bin"))
+            acc[prefix]["overall"]["pass_trigger"] += _safe_float(overall.get("pass_trigger"))
 
-    return CutflowResult(cutflows=dict(accum), n_jobs_used=n_jobs, out_files_used=used_files)
+            # bins
+            if isinstance(bins, list):
+                for b in bins:
+                    if not isinstance(b, dict):
+                        continue
+                    ptbin = b.get("ptbin")
+                    if not ptbin:
+                        continue
+                    if ptbin not in acc[prefix]["bins"]:
+                        acc[prefix]["bins"][ptbin] = {"in_bin": 0.0, "pass_trigger": 0.0}
+                    acc[prefix]["bins"][ptbin]["in_bin"] += _safe_float(b.get("in_bin"))
+                    acc[prefix]["bins"][ptbin]["pass_trigger"] += _safe_float(b.get("pass_trigger"))
+
+    # recompute eff fields for rendering convenience
+    out: Dict[str, Dict] = OrderedDict()
+    for prefix, d in sorted(acc.items(), key=lambda kv: kv[0]):
+        o_in = d["overall"]["in_bin"]
+        o_pass = d["overall"]["pass_trigger"]
+        o_eff = (o_pass / o_in) if o_in > 0 else 0.0
+
+        bins_od = OrderedDict()
+        for ptbin, bb in d["bins"].items():
+            b_in = bb["in_bin"]
+            b_pass = bb["pass_trigger"]
+            b_eff = (b_pass / b_in) if b_in > 0 else 0.0
+            bins_od[ptbin] = {"in_bin": b_in, "pass_trigger": b_pass, "eff": b_eff}
+
+        out[prefix] = {
+            "overall": {"in_bin": o_in, "pass_trigger": o_pass, "eff": o_eff},
+            "bins": bins_od,
+        }
+
+    return TrigEffResult(by_prefix=out, n_jobs_used=n_jobs, out_files_used=used_files)
+
+
+def render_trigeff(result: TrigEffResult) -> str:
+    """
+    LaTeX-friendly:
+      TrigEff: <cut_type_prefix>
+        overall & in & pass & eff \\
+        <ptbin> & in & pass & eff \\
+    """
+    lines: List[str] = []
+    if not result.by_prefix:
+        return ""
+
+    lines.append("Trigger efficiency payloads:")
+    for prefix, d in result.by_prefix.items():
+        o = d["overall"]
+        lines.append(f"TrigEff: {prefix}")
+        lines.append(f"  overall{'':30} & {o['in_bin']:.0f} & {o['pass_trigger']:.0f} & {o['eff']:.6f} \\\\")
+        for ptbin, bb in d["bins"].items():
+            lines.append(f"  {ptbin:35} & {bb['in_bin']:.0f} & {bb['pass_trigger']:.0f} & {bb['eff']:.6f} \\\\")
+        lines.append("")
+    return "\n".join(lines)
 
 
 # -----------------------------
@@ -442,7 +578,34 @@ def render_cutflows(result: CutflowResult) -> str:
         for cut_key, v in cuts.items():
             lines.append(f"  {label_for(ct, cut_key):35} & {format_value(ct, v)} \\\\")
         lines.append("")
+
     return "\n".join(lines)
+
+
+# --- NEW: JSON rendering (raw cut keys, no label replacement) ---
+def render_cutflows_json_dict(
+    result: CutflowResult,
+    syst: str = "nominal",
+) -> Dict:
+    """
+    JSON-friendly structure with raw cut keys.
+    {
+      "meta": {...},
+      "cutflows": {cut_type: {cut_key: value, ...}, ...}
+    }
+    """
+    cutflows_out: Dict[str, Dict[str, float]] = OrderedDict()
+    for ct, cuts in result.cutflows.items():
+        cutflows_out[ct] = OrderedDict((k, float(v)) for k, v in cuts.items())
+
+    return OrderedDict(
+        meta=OrderedDict(
+            syst=syst,
+            n_jobs_used=result.n_jobs_used,
+            out_files_used=list(result.out_files_used),
+        ),
+        cutflows=cutflows_out,
+    )
 
 
 # -----------------------------
@@ -529,9 +692,21 @@ def main() -> int:
         result = collect_cutflows(out_files, cutflow_types=cutflow_types, syst=syst)
         text = render_cutflows(result)
 
+        # NEW: trigger-eff payloads
+        trigeff = collect_trigeff(out_files, syst=syst)
+        trigeff_text = render_trigeff(trigeff)
+        if (trigeff_text):
+            text = text + "\n" + trigeff_text
+
         out_path = os.path.join(out_dir, f"cutflow_{dataset_type}_{dataset}_{year}.txt")
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(text + "\n")
+
+        # --- NEW: write JSON output (raw cut keys like N_lep_sel) ---
+        out_json_path = os.path.join(out_dir, f"cutflow_{dataset_type}_{dataset}_{year}.json")
+        payload = render_cutflows_json_dict(result, syst=syst)
+        with open(out_json_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
 
         n_ok += 1
         print(f"[OK] {dataset_type} {dataset} {year}  jobs={result.n_jobs_used}  -> {out_path}")

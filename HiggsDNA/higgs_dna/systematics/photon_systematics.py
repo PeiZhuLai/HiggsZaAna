@@ -12,6 +12,22 @@ logger = simple_logger(__name__)
 from higgs_dna.utils import awkward_utils, misc_utils
 from higgs_dna.systematics.utils import systematic_from_bins, ic_systematic_from_bins
 
+def _clib_inputs(obj):
+    """Return list of input names for correctionlib highlevel objects (Correction/CompoundCorrection)."""
+    return [v.name for v in getattr(obj, "inputs", [])]
+
+def _clib_eval(obj, args_by_name, override_order=None):
+    """
+    Evaluate a correctionlib object using its declared input order.
+    args_by_name: dict(name -> numpy array/scalar)
+    override_order: optional list of names to force a specific order.
+    """
+    order = override_order if override_order is not None else _clib_inputs(obj)
+    missing = [k for k in order if k not in args_by_name]
+    if missing:
+        raise ValueError(f"Missing inputs for correctionlib evaluate: {missing} (needed order={order})")
+    return obj.evaluate(*[args_by_name[k] for k in order])
+
 ########################
 ##### Photon ID SF #####
 ########################
@@ -880,7 +896,7 @@ scale_names = {
     "2022postEE" : "EGMScale_Compound_Pho_2022postEE",
     "2023preBPix" : "EGMScale_Compound_Pho_2023preBPIX",
     "2023postBPix" : "EGMScale_Compound_Pho_2023postBPIX",
-    "2024" : "EGMScale_PhoPTsplit_2024"
+    "2024" : "Scale",  # fix: compound_corrections.name in 2024 JSON is "Scale"
 }
 
 def photon_scale_smear_run3(events, year, is_data):
@@ -905,10 +921,14 @@ def photon_scale_smear_run3(events, year, is_data):
         )
         return events
 
-    if is_data:
+    if(year == "2024"):
+        # Use highlevel CorrectionSet for both data/MC to get consistent APIs (.compound, .evalv via .evaluate)
         evaluator = correctionlib.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
     else:
-        evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
+        if is_data:
+            evaluator = correctionlib.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
+        else:
+            evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
 
     photons = events["Photon"]
     n_photons = awkward.num(photons)
@@ -918,16 +938,38 @@ def photon_scale_smear_run3(events, year, is_data):
     photons_AbsScEta = numpy.abs(photons_scEta)
     photons_pt = awkward.to_numpy(photons_flattened.pt)
     photons_r9 = awkward.to_numpy(photons_flattened.r9)
-    if is_data:
-        photons_seedGain = awkward.to_numpy(photons_flattened.seedGain)
-        run_arr_flattened = numpy.repeat(awkward.to_numpy(events.run), n_photons)
 
     if is_data:
-        scale = evaluator.compound[scale_names[year]].evaluate("scale", run_arr_flattened, photons_scEta, photons_r9, photons_AbsScEta, photons_pt, photons_seedGain)
+        photons_seedGain = awkward.to_numpy(photons_flattened.seedGain)
+
+        if year == "2024":
+            # per-photon run array (broadcast events.run to Photon axis then flatten)
+            run_per_photon = awkward.to_numpy(awkward.flatten(awkward.broadcast_arrays(events.run, photons.pt)[0]))
+
+            # compound inputs order in JSON "Scale":
+            # (syst, run, ScEta, r9, pt, seedGain)  <-- 6 inputs total
+            scale = _clib_eval(
+                evaluator.compound[scale_names[year]],
+                {
+                    "syst": "scale",
+                    "run": run_per_photon,
+                    "ScEta": photons_scEta,
+                    "r9": photons_r9,
+                    "pt": photons_pt,
+                    "seedGain": photons_seedGain,
+                    "AbsScEta": photons_AbsScEta,  # harmless if not requested
+                },
+            )
+        else:
+            run_arr_flattened = numpy.repeat(awkward.to_numpy(events.run), n_photons)
+
+            if is_data:
+                scale = evaluator.compound[scale_names[year]].evaluate("scale", run_arr_flattened, photons_scEta, photons_r9, photons_AbsScEta, photons_pt, photons_seedGain)
+
         scale = awkward.where(
             (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
             awkward.ones_like(photons_pt, dtype=float),
-            scale
+            scale,
         )
         corrected_pt = awkward.to_numpy(photons_pt * scale)
         events["Photon", "corrected_pt"] = awkward.unflatten(corrected_pt, n_photons)
@@ -935,65 +977,104 @@ def photon_scale_smear_run3(events, year, is_data):
         print("Photon pt after scale corrections:", events["Photon", "corrected_pt"])
         return events
 
-    # Apply smear corrections first
-    smear = evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_AbsScEta)
+    if year == "2024":
+        # Apply smear corrections first (highlevel API uses .evaluate, not .evalv)
+        smear = _clib_eval(
+            evaluator[smear_names[year]],
+            {
+                "syst": "smear",
+                "pt": photons_pt,
+                "r9": photons_r9,
+                "ScEta": photons_scEta,
+                "AbsScEta": photons_AbsScEta,  # only used if JSON asks
+            },
+        )
+    else:
+        # Apply smear corrections first
+        smear = evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_AbsScEta)
+
     rng = numpy.random.default_rng(seed=123)
     smear_val = awkward.where(
         (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
         awkward.ones_like(photons_pt, dtype=float),
-        rng.normal(loc=1., scale=numpy.abs(smear))
+        rng.normal(loc=1.0, scale=numpy.abs(smear)),
     )
-    
-    # Apply central smear correction to photon pt
+
     corrected_pt = awkward.to_numpy(photons_pt * smear_val)
 
-    # Calculate smear systematics
-    for syst in ["smear_up", "smear_down"]:
-        smear_syst = evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta)
-        
-        if "up" in syst:
-            smear_up = awkward.unflatten(rng.normal(loc=1., scale=numpy.abs(smear+smear_syst)), n_photons)
-            events["Photon", "dEsigmaUp"] = photons.pt * awkward.where(
-                (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
-                awkward.ones_like(smear_up, dtype=float),
-                smear_up
+    if year == "2024":
+        for syst in ["smear_up", "smear_down"]:
+            smear_syst = _clib_eval(
+                evaluator[smear_names[year]],
+                {
+                    "syst": syst,
+                    "pt": photons_pt,
+                    "r9": photons_r9,
+                    "ScEta": photons_scEta,
+                    "AbsScEta": photons_AbsScEta,
+                },
             )
-        elif "down" in syst:
-            smear_down = awkward.unflatten(rng.normal(loc=1., scale=numpy.abs(smear-smear_syst)), n_photons)
-            events["Photon", "dEsigmaDown"] = photons.pt * awkward.where(
-                (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
-                awkward.ones_like(smear_down, dtype=float),
-                smear_down
-            )
-    
-    print("Photon pt before smear corrections:", photons.pt)
-    events["Photon", "corrected_pt"] = awkward.unflatten(corrected_pt, n_photons)
-    photons = events["Photon"]
 
-    # Calculate scale systematics
-    for syst in ["scale_up", "scale_down"]:
-        scale = evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta)
+        for syst in ["scale_up", "scale_down"]:
+            scale = _clib_eval(
+                evaluator[smear_names[year]],
+                {
+                    "syst": syst,
+                    "pt": photons_pt,
+                    "r9": photons_r9,
+                    "ScEta": photons_scEta,
+                    "AbsScEta": photons_AbsScEta,
+                },
+            )
+    else:
+        # Calculate smear systematics
+        for syst in ["smear_up", "smear_down"]:
+            smear_syst = evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta)
+            
+            if "up" in syst:
+                smear_up = awkward.unflatten(rng.normal(loc=1., scale=numpy.abs(smear+smear_syst)), n_photons)
+                events["Photon", "dEsigmaUp"] = photons.pt * awkward.where(
+                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    awkward.ones_like(smear_up, dtype=float),
+                    smear_up
+                )
+            elif "down" in syst:
+                smear_down = awkward.unflatten(rng.normal(loc=1., scale=numpy.abs(smear-smear_syst)), n_photons)
+                events["Photon", "dEsigmaDown"] = photons.pt * awkward.where(
+                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    awkward.ones_like(smear_down, dtype=float),
+                    smear_down
+                )
         
-        if "up" in syst:
-            scale_up = awkward.unflatten(scale, n_photons)
-            events["Photon", "pt_ScaleUp"] = photons.corrected_pt * awkward.where(
-                (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
-                awkward.ones_like(scale_up, dtype=float),
-                1 - scale_up
-            )
-        elif "down" in syst:
-            scale_down = awkward.unflatten(scale, n_photons)
-            events["Photon", "pt_ScaleDown"] = photons.corrected_pt * awkward.where(
-                (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
-                awkward.ones_like(scale_down, dtype=float),
-                1 - scale_down
-            )
+        print("Photon pt before smear corrections:", photons.pt)
+        events["Photon", "corrected_pt"] = awkward.unflatten(corrected_pt, n_photons)
+        photons = events["Photon"]
+
+        # Calculate scale systematics
+        for syst in ["scale_up", "scale_down"]:
+            scale = evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta)
+            
+            if "up" in syst:
+                scale_up = awkward.unflatten(scale, n_photons)
+                events["Photon", "pt_ScaleUp"] = photons.corrected_pt * awkward.where(
+                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    awkward.ones_like(scale_up, dtype=float),
+                    1 - scale_up
+                )
+            elif "down" in syst:
+                scale_down = awkward.unflatten(scale, n_photons)
+                events["Photon", "pt_ScaleDown"] = photons.corrected_pt * awkward.where(
+                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    awkward.ones_like(scale_down, dtype=float),
+                    1 - scale_down
+                )
 
     print("Photon pt after scale and smear corrections:", events["Photon", "corrected_pt"])
     print("Photon pt Scale Up:", events["Photon", "pt_ScaleUp"])
     print("Photon pt Scale Down:", events["Photon", "pt_ScaleDown"])
     print("Photon pt Smear Up:", events["Photon", "dEsigmaUp"])
     print("Photon pt Smear Down:", events["Photon", "dEsigmaDown"])
+
 
     return events
 
