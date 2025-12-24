@@ -115,14 +115,14 @@ LABELS_COMMON = {
     "all": "Initial Events",
     "N_lep_sel": r"$N_{l}\geq 2$",
     "trig_cut": "Trigger",
-    "lep_pt_cut": r"Lepton trigger $p_T$ cut",
+    "lep_pt_cut": r"Lepton Trigger $p_T$ Cut",
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
-    "g_kin_cut": "Photon kinematic cuts",
+    "g_kin_cut": "Photon Kinematic Cuts",
     "has_2g_cand": r"$N_{\gamma}\geq 2$",
     "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
     "sel_h_2": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
-    "event": "Event filtering",
-    "all cuts": "All cuts",
+    "event": "Event Filtering",
+    "all cuts": "Total Baseline Events",
 }
 
 
@@ -131,15 +131,15 @@ LABELS_COMMON_ele_ip3d = {
     "all": "Initial Events",
     "N_lep_sel": r"$N_{l}\geq 2$",
     "trig_cut": "Trigger",
-    "lep_pt_cut": r"Lepton trigger $p_T$ cut",
-    "ele_ip3d_cut": r"Electron sip3d cut",
+    "lep_pt_cut": r"Lepton Trigger $p_T$ Cut",
+    "ele_ip3d_cut": r"Electron SIP3D Cut",
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
-    "g_kin_cut": "Photon kinematic cuts",
+    "g_kin_cut": "Photon Kinematic Cuts",
     "has_2g_cand": r"$N_{\gamma}\geq 2$",
     "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
-    "sel_h_2": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
-    "event": "Event filtering",
-    "all cuts": "All cuts",
+    "sel_h_2": r"$95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "event": "Event Filtering",
+    "all cuts": "Total Baseline Events",
 }
 # -----------------------------
 # JSON de-wrapping helpers

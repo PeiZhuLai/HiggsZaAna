@@ -986,10 +986,10 @@ class ZaTaggerRun3(Tagger):
                     continue
 
                 cut0 = ak.num(events.Photon) >= 0
-                cut1 = z_ee_cut | z_mumu_cut
+                cut1 = z_ee_cut
                 cut1b = cut1 & ak.fill_none(events.pass_sel_ele_ip3d, False)  # <-- ip3d scenario
-                cut2 = cut1b & trigger_cut
-                cut3 = cut2 & trigger_pt_cut
+                cut2 = cut1b & ele_trigger_cut
+                cut3 = cut2 & ele_trigger_pt_cut
                 cut4 = cut3 & has_z_cand
                 cut5 = cut4 & has_2gamma_cand
                 cut6 = cut5 & sel_h_1
@@ -1000,7 +1000,7 @@ class ZaTaggerRun3(Tagger):
                     names = ["all", "N_lep_sel", "ele_ip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
                     results = [cut0, cut1, cut1b, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut8],
                     events = events,
-                    cut_type = "zgammas_eleip3d_w" if weighted else "zgammas_eleip3d",
+                    cut_type = "zgammas_ele_eleip3d_w" if weighted else "zgammas_ele_eleip3d",
                     weighted = weighted
                 )
 

@@ -11,7 +11,8 @@ CMD = ["bash", "scripts/run_analysis_signal_run3.sh"]
 # NUM_CYCLES = 10           # 週期次數
 # NUM_CYCLES = 15           # 週期次數
 # NUM_CYCLES = 20           # 週期次數
-NUM_CYCLES = 48             # 週期次數
+# NUM_CYCLES = 48             # 週期次數
+NUM_CYCLES = 100             # 週期次數
 # WORK_SECONDS = 3600       # 單輪跑多久（秒）= 1 小時
 WORK_SECONDS = 1800         # 單輪跑多久（秒）= 30 分鐘
 # WORK_SECONDS = 900        # 單輪跑多久（秒）= 15 分鐘

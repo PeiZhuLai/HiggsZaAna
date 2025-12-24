@@ -1,4 +1,5 @@
 outdir="/eos/home-p/pelai/HZa/parquet_DNA/Data"
+# outdir="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/parquet_DNA/Data"
 
 # rm -fr /eos/home-p/pelai/HZa/parquet_DNA/Data
 # rm -fr /eos/home-p/pelai/HZa/parquet_DNA/Data/Data_2024/job_1

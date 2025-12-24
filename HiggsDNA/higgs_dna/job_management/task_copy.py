@@ -293,19 +293,16 @@ class Task():
             for syst_tag, output in job_info["outputs"].items():
                 if syst_tag not in self.outputs.keys():
                     self.outputs[syst_tag] = []
-                # Check the number of events
-                if job_info["n_events_selected"].get(syst_tag, 0) == 0:
-                    continue
-                # Check whether the file exists
                 if not os.path.exists(output):
-                    logger.error(
-                        "[Task : summarize] Missing output for job '%s' syst '%s': %s",
-                        job.name, syst_tag, output
-                    )
-                    # job.status = "failed"
+                    if os.path.exists(job.output_dir + "/" + output):
+                        output = job.output_dir + "/" + output
+                    else:
+                        logger.exception("[Task : summarize] Did not find output for job '%s' with dir '%s', output dir '%s', config file '%s', and summary file '%s'." % (job.name, job.dir, job.output_dir, job.config_file, job.summary_file))
+                        # raise RuntimeError() # FIXME : this is a temporary fix to avoid crashing, but we should handle this more gracefully
+                if not job_info["n_events_selected"][syst_tag] > 0: # skip empty parquet files to avoid errors
                     continue
-                # Only when nEvents > 0 & file exists, we append 
-                self.outputs[syst_tag].append(output)
+                else:
+                    self.outputs[syst_tag].append(output)
 
             self.performance["time"] += job_info["time"]
             for portion in ["load", "syst", "taggers"]:

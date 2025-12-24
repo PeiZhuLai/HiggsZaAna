@@ -8,8 +8,8 @@ echo "==============STARTED=============="
 # target="./"
 
 # Run3
-input="/eos/home-p/pelai/HZa/parquet_MStudy_DNA/"
-target="/eos/home-p/pelai/HZa/root_MStudy_DNA/"
+input="/eos/home-p/pelai/HZa/parquet_DNA/"
+target="/eos/home-p/pelai/HZa/root_P2Root/run3"
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
 # target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
@@ -19,19 +19,18 @@ target="/eos/home-p/pelai/HZa/root_MStudy_DNA/"
 # target="/eos/home-p/pelai/HZgamma/root_P2Root/run2/NanoV9/"
 
 
-# years=(2016preVFP 2016postVFP 2017 2018 2022preEE 2022postEE 2023preBPix 2023postBPix)
-# years=(2016preVFP 2016postVFP 2017 2018)
+years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 # years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
-years=(2022preEE)
+# years=(2022preEE)
 # years=(2022preEE 2022postEE)
 # years=(2023preBPix 2023postBPix)
-systs=("FNUF" "Material" "Electron_scale" "Electron_smear" "Muon_pt_scale" "Muon_pt_smear" "Photon_scale" "Photon_smear")
+systs=("FNUF" "Material" "Electron_scale" "Electron_smear" "Muon_scale" "Muon_smear" "Photon_scale" "Photon_smear")
 # systs=("FNUF" "Material" "Scale" "Smearing" "JER" "JES" "MET_JES" "MET_Unclustered" "Muon_pt")
 
 # 函数定义：执行命令并处理错误
 execute_command() {
     local cmd="$1"
-    local max_retries=10  # 最大重试次数
+    local max_retries=2  # 最大重试次数
     local attempt=1
 
     while [ $attempt -le $max_retries ]; do
@@ -115,9 +114,9 @@ process_sample_syst() {
 #---------------------------------------------------------------------------------------
 # 处理 signal 样本
 
-# samples=(ggH_M125 VBF_M125 WplusH_M125 WminusH_M125 ZH_M125 ttH_M125 ggH_M120 VBFH_M120 WplusH_M120 WminusH_M120 ZH_M120 ttH_M120 ggH_M130 VBFH_M130 WplusH_M130 WminusH_M130 ZH_M130 ttH_M130 ggH_mix VBF_mix ggH VBF WplusH WminusH ZH ttH)
+# samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 
-samples=(mA_M5)
+samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 type="Sig_MC"
 for sample in "${samples[@]}"; do
     mkdir -p "$target${sample}/"
@@ -128,7 +127,7 @@ for sample in "${samples[@]}"; do
     process_sample "$sample" "$type"
 done
 
-# samples=(mA_M5)
+# samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 # type="Sig_MC"
 # for sample in "${samples[@]}"; do
 #     for sf in "up" "down"; do #  "up" "down"
