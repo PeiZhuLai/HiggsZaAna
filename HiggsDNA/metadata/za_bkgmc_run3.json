@@ -12,7 +12,7 @@
                 "name": "za_tagger_resolved_run3",
                 "options": {
                     "gen_info": {
-                        "calculate": true
+                        "calculate": false
                     }
                 }
             }
@@ -246,10 +246,10 @@
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "DYGto2LG_10to50", "DYGto2LG_50to100", "DYJetsToLL"
+            "DYGto2LG_10to100", "DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"
         ],
         "years": [
-            "2022preEE", "2022postEE"
+            "2024"
         ]
     },
     "variables_of_interest": [
@@ -379,30 +379,30 @@
         "gamma_fsr_dROverEt2",
         "gamma_fsr_muonIdx",
         "max_I_mini",
-        "GenHzgHiggs_pt",
-        "GenHzgHiggs_eta",
-        "GenHzgHiggs_phi",
-        "GenHzgHiggs_mass",
-        "GenHzgLeadGenChild_pt",
-        "GenHzgLeadGenChild_eta",
-        "GenHzgLeadGenChild_phi",
-        "GenHzgLeadGenChild_mass",
-        "GenHzgLeadGenChild_pdgId",
-        "GenHzgSubleadGenChild_pt",
-        "GenHzgSubleadGenChild_eta",
-        "GenHzgSubleadGenChild_phi",
-        "GenHzgSubleadGenChild_mass",
-        "GenHzgSubleadGenChild_pdgId",
-        "GenHzgLeadGenChildChild1_pt",
-        "GenHzgLeadGenChildChild1_eta",
-        "GenHzgLeadGenChildChild1_phi",
-        "GenHzgLeadGenChildChild1_mass",
-        "GenHzgLeadGenChildChild1_pdgId",
-        "GenHzgLeadGenChildChild1_pt",
-        "GenHzgLeadGenChildChild2_eta",
-        "GenHzgLeadGenChildChild2_phi",
-        "GenHzgLeadGenChildChild2_mass",
-        "GenHzgLeadGenChildChild2_pdgId",
+        "GenHzaHiggs_pt",
+        "GenHzaHiggs_eta",
+        "GenHzaHiggs_phi",
+        "GenHzaHiggs_mass",
+        "GenHzaLeadGenChild_pt",
+        "GenHzaLeadGenChild_eta",
+        "GenHzaLeadGenChild_phi",
+        "GenHzaLeadGenChild_mass",
+        "GenHzaLeadGenChild_pdgId",
+        "GenHzaSubleadGenChild_pt",
+        "GenHzaSubleadGenChild_eta",
+        "GenHzaSubleadGenChild_phi",
+        "GenHzaSubleadGenChild_mass",
+        "GenHzaSubleadGenChild_pdgId",
+        "GenHzaLeadGenChildChild1_pt",
+        "GenHzaLeadGenChildChild1_eta",
+        "GenHzaLeadGenChildChild1_phi",
+        "GenHzaLeadGenChildChild1_mass",
+        "GenHzaLeadGenChildChild1_pdgId",
+        "GenHzaLeadGenChildChild1_pt",
+        "GenHzaLeadGenChildChild2_eta",
+        "GenHzaLeadGenChildChild2_phi",
+        "GenHzaLeadGenChildChild2_mass",
+        "GenHzaLeadGenChildChild2_pdgId",
         "n_leptons",
         "n_electrons",
         "n_muons",

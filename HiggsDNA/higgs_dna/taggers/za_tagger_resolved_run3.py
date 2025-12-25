@@ -1090,60 +1090,108 @@ class ZaTaggerRun3(Tagger):
 
     def calculate_gen_info(self, zgammas, options):
         """
-        Calculate gen info, adding the following fields to the events array:
-            GenHggHiggs : [pt, eta, phi, mass, dR]
-            GenHggLeadPhoton : [pt, eta, phi, mass, dR, pt_diff]
-            GenHggSubleadPhoton : [pt, eta, phi, mass, dR, pt_diff]
-            LeadPhoton : [gen_dR, gen_pt_diff]
-            SubleadPhoton : [gen_dR, gen_pt_diff]
-
-        Perform both matching of
-            - closest gen photons from Higgs to reco lead/sublead photons from diphoton candidate
-            - closest reco photons to gen photons from Higgs
-
-        If no match is found for a given reco/gen photon, it will be given values of -999. 
+        Store gen-level info for H -> Z a, Z -> ll, a -> gamma gamma .
+        Expected fields from gen_selections.select_x_to_yz:
+          ['LeadGenChild','SubleadGenChild','LeadGenChildChild1','LeadGenChildChild2','GenParent']
         """
-        gen_hzg = gen_selections.select_x_to_yz(zgammas.GenPart, 25, 23, 22)
+        # H(25) -> Z(23) + a(9000005), and Z -> l l (l = e/mu/t)
+        gen_hza = gen_selections.select_x_to_yz(zgammas.GenPart, 25, 23, 9000005)
 
-        print("DEBUG: bing", gen_hzg.fields)
-        
-        awkward_utils.add_object_fields(
-                events = zgammas,
-                name = "GenHzgHiggs",
-                objects = gen_hzg.GenParent,
-                n_objects = 1
-        )
+        # Robust mapping:
+        # - For (23,9000005) with abs(pdgId) sort desc: LeadGenChild=ALP (9000005) OR Z? actually 9000005>23 so LEAD would be ALP.
+        #   Your comment says "leading for Z" but current sorting makes ALP lead. So enforce by pdgId here.
+        z_cand  = ak.where(abs(gen_hza.LeadGenChild.pdgId) == 23, gen_hza.LeadGenChild, gen_hza.SubleadGenChild)
+        a_cand  = ak.where(abs(gen_hza.LeadGenChild.pdgId) == 9000005, gen_hza.LeadGenChild, gen_hza.SubleadGenChild)
 
-        awkward_utils.add_object_fields(
-                events = zgammas,
-                name = "GenHzgLeadGenChild",
-                objects = gen_hzg.LeadGenChild,
-                n_objects = 1
-        )
+        # Z -> ll children: sort by pt to define lead/sublead leptons
+        l1 = gen_hza.LeadGenChildChild1
+        l2 = gen_hza.LeadGenChildChild2
+        lep_lead = ak.where(l1.pt >= l2.pt, l1, l2)
+        lep_sub  = ak.where(l1.pt >= l2.pt, l2, l1)
 
         awkward_utils.add_object_fields(
-                events = zgammas,
-                name = "GenHzgSubleadGenChild",
-                objects = gen_hzg.SubleadGenChild,
-                n_objects = 1
+            events=zgammas,
+            name="GenHzaHiggs",
+            objects=gen_hza.GenParent,
+            n_objects=1
         )
-
         awkward_utils.add_object_fields(
-                events = zgammas,
-                name = "GenHzgLeadGenChildChild1",
-                objects = gen_hzg.LeadGenChildChild1,
-                n_objects = 1
+            events=zgammas,
+            name="GenHzaZ",
+            objects=z_cand,
+            n_objects=1
         )
-
         awkward_utils.add_object_fields(
-                events = zgammas,
-                name = "GenHzgLeadGenChildChild2",
-                objects = gen_hzg.LeadGenChildChild2,
-                n_objects = 1
+            events=zgammas,
+            name="GenHzaALP",
+            objects=a_cand,
+            n_objects=1
+        )
+        awkward_utils.add_object_fields(
+            events=zgammas,
+            name="GenHzaZLeadLep",
+            objects=lep_lead,
+            n_objects=1
+        )
+        awkward_utils.add_object_fields(
+            events=zgammas,
+            name="GenHzaZSubleadLep",
+            objects=lep_sub,
+            n_objects=1
         )
 
-        return zgammas 
-        
+        # Optional: store useful dR's (event-level scalars)
+        awkward_utils.add_field(
+            zgammas,
+            "GenHza_dR_ZALP",
+            ak.fill_none(z_cand.deltaR(a_cand), DUMMY_VALUE),
+            overwrite=True
+        )
+        awkward_utils.add_field(
+            zgammas,
+            "GenHza_dR_ll",
+            ak.fill_none(lep_lead.deltaR(lep_sub), DUMMY_VALUE),
+            overwrite=True
+        )
+
+        # (Optional) a(9000005) -> γγ : try to select ALP->γγ separately; if absent, branches will be dummy
+        try:
+            gen_agam = gen_selections.select_x_to_yz(zgammas.GenPart, 9000005, 22, 22)
+
+            # NEW: robust 取 child（支援 direct 2-body 回傳；legacy 4-body 也仍可用）
+            g1 = gen_agam.LeadGenChild
+            g2 = gen_agam.SubleadGenChild
+
+            # 若 event 沒有 pair，g1/g2 會是 None；排序前先保護
+            g1_pt = ak.fill_none(g1.pt, -1.0)
+            g2_pt = ak.fill_none(g2.pt, -1.0)
+
+            pho_lead = ak.where(g1_pt >= g2_pt, g1, g2)
+            pho_sub  = ak.where(g1_pt >= g2_pt, g2, g1)
+
+            awkward_utils.add_object_fields(
+                events=zgammas,
+                name="GenALPLeadPho",
+                objects=pho_lead,
+                n_objects=1
+            )
+            awkward_utils.add_object_fields(
+                events=zgammas,
+                name="GenALPSubleadPho",
+                objects=pho_sub,
+                n_objects=1
+            )
+            awkward_utils.add_field(
+                zgammas,
+                "GenALP_dR_gg",
+                ak.fill_none(pho_lead.deltaR(pho_sub), DUMMY_VALUE),
+                overwrite=True
+            )
+        except Exception:
+            # keep backward compatible; no crash if decay not present / selection logic doesn't find it
+            pass
+
+        return zgammas
 
     def select_photons(self, photons, options, electrons, rho, year):
         """
@@ -1619,7 +1667,7 @@ class ZaTaggerRun3(Tagger):
         if dbg:
             try:
                 n_valid = int(ak.sum(valid))
-                logger.info(f"[ALP ISO] total_events={len(all_photons)}, valid_events={n_valid}, dr_cone={dr_cone}")
+                logger.info(f"[ALP ISO] total_events={len(all_photons)}, valid_events={n_valid}, dr_cone={0.3}")
             except Exception as e:
                 logger.info(f"[ALP ISO] debug summary failed: {e}")
 

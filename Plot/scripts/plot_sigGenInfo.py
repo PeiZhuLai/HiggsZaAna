@@ -25,15 +25,17 @@ import math   # NEW: significance formula
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptFit(0)
 
-baseDir = "/eos/home-p/pelai/HZa/root_P2Root/run3"
+baseDir = "/eos/home-p/pelai/HZa/root_Sig_MC_P2Root/run3"
 
-outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/dREff"
+outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/sigGenInfo"
 
 # Define the list of mA values
 mAs = ["mA_M1", "mA_M2", "mA_M3", "mA_M4", "mA_M5", "mA_M6", "mA_M7", "mA_M8", "mA_M9", "mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+mAs = ["mA_M5"]
 
 
-YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
+# YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
+YEAR_ORDER = ["2022preEE"]
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95,
@@ -416,6 +418,292 @@ def _plot_sumw_vs_var_dR_year(
     del frame, c
     _ = _keepalive
 
+def _safe_np(a) -> np.ndarray:
+    try:
+        return ak.to_numpy(a)
+    except Exception:
+        return np.asarray([])
+
+def _load_arrays_for_year_mas(
+    base_dir: Path,
+    *,
+    year: str,
+    ma_dirs: List[str],
+    branches: List[str],
+    tree_name: str = "inclusive",
+) -> Dict[str, np.ndarray]:
+    """
+    讀取指定 year + 多個 mA 檔案，將 branches 串接起來（缺 branch/檔就跳過）。
+    回傳: branch -> numpy array (flatten 後)
+    """
+    out: Dict[str, List[np.ndarray]] = {b: [] for b in branches}
+
+    for ma_tag in ma_dirs:
+        ma_path = base_dir / ma_tag
+        if not ma_path.is_dir():
+            continue
+        fpath = ma_path / f"{year}.root"
+        if not fpath.exists():
+            continue
+
+        try:
+            with uproot.open(str(fpath)) as f:
+                t = f[tree_name]
+                keys = set(t.keys())
+                want = [b for b in branches if b in keys]
+                if not want:
+                    continue
+                arrs = t.arrays(want, library="ak")
+        except Exception:
+            continue
+
+        for b in branches:
+            if b not in arrs.fields:
+                continue
+            a = arrs[b]
+            # 以 "event-level scalar" 為主：flatten 全部
+            a = ak.flatten(a, axis=None)
+            anp = _safe_np(a)
+            if anp.size:
+                out[b].append(anp)
+
+    merged: Dict[str, np.ndarray] = {}
+    for b, chunks in out.items():
+        if chunks:
+            merged[b] = np.concatenate(chunks, axis=0)
+    return merged
+
+def _make_hist_from_np(
+    name: str,
+    x: np.ndarray,
+    w: Optional[np.ndarray],
+    *,
+    nbins: int,
+    xlow: float,
+    xhigh: float,
+) -> ROOT.TH1F:
+    h = ROOT.TH1F(name, "", nbins, xlow, xhigh)
+    h.SetDirectory(0)
+
+    if x is None or x.size == 0:
+        return h
+
+    m = np.isfinite(x) & (x >= xlow) & (x <= xhigh)
+    x = x[m]
+    if w is not None and w.size:
+        w = w[m]
+
+    bins = np.linspace(xlow, xhigh, nbins + 1, dtype=float)
+    counts, _ = np.histogram(x, bins=bins, weights=w if (w is not None and w.size) else None)
+
+    for i in range(nbins):
+        h.SetBinContent(i + 1, float(counts[i]))
+    return h
+
+def _root_style_line(h, color: int, mstyle: int) -> None:
+    h.SetLineColor(color)
+    h.SetMarkerColor(color)
+    h.SetLineWidth(3)
+    h.SetMarkerStyle(mstyle)
+    h.SetMarkerSize(0.9)
+
+def _plot_overlay_hists(
+    *,
+    year: str,
+    title: str,
+    xlabel: str,
+    out_path: Path,
+    hists: List[Tuple[str, ROOT.TH1F]],
+    normalize: bool = False,
+) -> None:
+    if not hists:
+        return
+
+    c = ROOT.TCanvas(f"c_{out_path.stem}_{year}", "", 800, 650)
+    c.SetMargin(0.13, 0.04, 0.14, 0.08)
+    c.SetTickx()
+    c.SetTicky()
+    c.cd()
+
+    # y-max
+    ymax = 0.0
+    for _, h in hists:
+        if normalize and h.Integral() > 0:
+            h.Scale(1.0 / h.Integral())
+        ymax = max(ymax, h.GetMaximum())
+
+    frame = ROOT.TH1F(f"frame_{out_path.stem}_{year}", "", 1, hists[0][1].GetXaxis().GetXmin(), hists[0][1].GetXaxis().GetXmax())
+    frame.SetDirectory(0)
+    frame.SetTitle("")
+    frame.GetXaxis().SetTitle(xlabel)
+    frame.GetYaxis().SetTitle("Normalized" if normalize else "Weighted events")
+    frame.SetMaximum(1.25 * ymax if ymax > 0 else 1.0)
+    frame.SetMinimum(0.0)
+    frame.Draw()
+
+    if ROOT.gPad:
+        ROOT.gPad.SetGridx(1)
+        ROOT.gPad.SetGridy(1)
+
+    leg = ROOT.TLegend(0.62, 0.70, 0.94, 0.90)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+    leg.SetTextFont(42)
+    leg.SetTextSize(0.032)
+
+    for i, (lab, h) in enumerate(hists):
+        opt = "HIST SAME" if i else "HIST SAME"
+        h.Draw(opt)
+        leg.AddEntry(h, lab, "l")
+
+    leg.Draw()
+
+    lat = ROOT.TLatex()
+    lat.SetNDC()
+    lat.SetTextFont(42)
+    lat.SetTextSize(0.045)
+    lat.DrawLatex(0.13, 0.93, "#bf{CMS} #it{Preliminary}")
+
+    lumi_fb = _lumi_fb_for_year(year)
+    if lumi_fb is not None:
+        lat_lumi = ROOT.TLatex()
+        lat_lumi.SetNDC()
+        lat_lumi.SetTextFont(42)
+        lat_lumi.SetTextAlign(31)
+        lat_lumi.SetTextSize(0.040)
+        lat_lumi.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    c.Modified()
+    c.Update()
+    if ROOT.gPad:
+        ROOT.gPad.RedrawAxis()
+    c.SaveAs(str(out_path))
+    try:
+        c.Close()
+    except Exception:
+        pass
+    del frame, c
+
+def _plot_gen_distributions_for_year(
+    *,
+    base_dir: Path,
+    out_dir: Path,
+    year: str,
+    ma_dirs: List[str],
+    tree_name: str = "inclusive",
+) -> None:
+    # 你指定要畫的分布
+    single_vars = [
+        ("GenHzaHiggs_pt", "GenHzaHiggs_pt [GeV]", 60, 0.0, 600.0),
+        ("GenHzaZ_pt",     "GenHzaZ_pt [GeV]",     60, 0.0, 600.0),
+        ("GenHzaALP_pt",   "GenHzaALP_pt [GeV]",   60, 0.0, 600.0),
+        ("GenHza_dR_ZALP", "#DeltaR(Z, ALP)",      60, 0.0, 6.0),
+        ("GenHza_dR_ll",   "#DeltaR(l, l)",        60, 0.0, 6.0),
+        ("GenALP_dR_gg",   "#DeltaR(#gamma,#gamma)",60, 0.0, 6.0),
+    ]
+
+    overlay_pairs = [
+        (["GenALPLeadPho_pt", "GenALPSubleadPho_pt"], "Photon p_{T} [GeV]", 60, 0.0, 600.0, "GenALP_pho_pt_overlay"),
+    ]
+
+    # 需要用 pdgId 分 e/mu 的 overlay
+    lep_overlay = (["GenHzaZLeadLep_pt", "GenHzaZSubleadLep_pt"], "Lepton p_{T} [GeV]", 60, 0.0, 600.0, "GenHza_lep_pt_overlay_byFlav")
+    pdg_branch = "GenHzaZSubleadLep_pdgId"
+
+    # 一次把需要的 branch 全列出來讀
+    need = {"weight", pdg_branch}
+    for b, _, _, _, _ in single_vars:
+        need.add(b)
+    for bs, _, _, _, _, _ in overlay_pairs:
+        need.update(bs)
+    need.update(lep_overlay[0])
+
+    arr = _load_arrays_for_year_mas(base_dir, year=year, ma_dirs=ma_dirs, branches=sorted(need), tree_name=tree_name)
+    w = arr.get("weight")
+
+    # colors/markers
+    cols = [
+        _root_color("#1F78B4", fallback=ROOT.kBlue+1),
+        _root_color("#E31A1C", fallback=ROOT.kRed+1),
+        _root_color("#33A02C", fallback=ROOT.kGreen+2),
+        _root_color("#FF7F00", fallback=ROOT.kOrange+7),
+    ]
+    mstyles = [20, 21, 23, 33]
+
+    # 單變數
+    for (b, xlabel, nb, xl, xh) in single_vars:
+        x = arr.get(b)
+        if x is None or x.size == 0:
+            continue
+        h = _make_hist_from_np(f"h_{b}_{year}", x, w, nbins=nb, xlow=xl, xhigh=xh)
+        _root_style_line(h, cols[0], mstyles[0])
+
+        _plot_overlay_hists(
+            year=year,
+            title=b,
+            xlabel=xlabel,
+            out_path=out_dir / year / f"{b}_{year}.pdf",
+            hists=[(b, h)],
+            normalize=False,
+        )
+
+    # 同張 overlay（不分 flavor）
+    for (bs, xlabel, nb, xl, xh, tag) in overlay_pairs:
+        hs = []
+        for i, b in enumerate(bs):
+            x = arr.get(b)
+            if x is None or x.size == 0:
+                continue
+            h = _make_hist_from_np(f"h_{b}_{year}", x, w, nbins=nb, xlow=xl, xhigh=xh)
+            _root_style_line(h, cols[i % len(cols)], mstyles[i % len(mstyles)])
+            hs.append((b, h))
+
+        if hs:
+            _plot_overlay_hists(
+                year=year,
+                title=tag,
+                xlabel=xlabel,
+                out_path=out_dir / year / f"{tag}_{year}.pdf",
+                hists=hs,
+                normalize=False,
+            )
+
+    # lepton overlay by flavour (from sublead pdgId)
+    pdg = arr.get(pdg_branch)
+    if pdg is not None and pdg.size and w is not None and w.size:
+        # 同步長度保護（若某些 branch 長度不一致，先裁到最短）
+        nmin = min(pdg.size, w.size, *(arr.get(b).size for b in lep_overlay[0] if arr.get(b) is not None))
+        pdg = pdg[:nmin]
+        w0 = w[:nmin]
+
+        absid = np.abs(pdg.astype(np.int64, copy=False))
+        m_e = absid == 11
+        m_mu = absid == 13
+
+        for flav, msk in [("electron", m_e), ("muon", m_mu)]:
+            hs = []
+            for i, b in enumerate(lep_overlay[0]):
+                x = arr.get(b)
+                if x is None or x.size == 0:
+                    continue
+                x = x[:nmin]
+                xx = x[msk]
+                ww = w0[msk]
+                h = _make_hist_from_np(f"h_{b}_{year}_{flav}", xx, ww, nbins=lep_overlay[2], xlow=lep_overlay[3], xhigh=lep_overlay[4])
+                _root_style_line(h, cols[i % len(cols)], mstyles[i % len(mstyles)])
+                hs.append((f"{b} ({flav})", h))
+
+            if hs:
+                _plot_overlay_hists(
+                    year=year,
+                    title=f"{lep_overlay[5]}_{flav}",
+                    xlabel=lep_overlay[1],
+                    out_path=out_dir / year / f"{lep_overlay[5]}_{flav}_{year}.pdf",
+                    hists=hs,
+                    normalize=False,
+                )
+
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
     parser.add_argument("--year", default="all", help="Year to plot (e.g. 2022preEE). Use 'all' to plot all years.")
@@ -428,44 +716,16 @@ def main():
     global _BKG_EVENT_BY_YEAR
     _BKG_EVENT_BY_YEAR = _load_bkg_event_count_by_year(in_dir)
 
-
-    # year -> ma -> scenario -> {cut:eff}
-    store: Dict[str, Dict[int, Dict[str, Dict[str, float]]]] = {}
-
-    # NEW: efficiency vs var_dR_g1g2 cut (0~3), 14 lines (mA) per year
-    eff_scan = _load_eff_scan_from_root_by_year_ma(
-        Path(baseDir),
-        years=YEAR_ORDER if args.year == "all" else [args.year],
-        ma_dirs=mAs,
-        tree_name="inclusive",
-        dr_branch="var_dR_g1g2",
-        dr_min=0.0,
-        dr_max=4.0,
-        dr_step=0.05,
-    )
-
-    if args.year != "all":
-        by_ma = eff_scan.get(args.year)
-        if by_ma:
-            _plot_sumw_vs_var_dR_year(
-                args.year,
-                by_ma,
-                out_dir,
-                scenario_label="Efficiency / 0.05",
-                out_name=f"EffVdRg1g2_{args.year}.pdf",
-            )
-        return
-
-    for year in YEAR_ORDER:
-        by_ma = eff_scan.get(year)
-        if by_ma:
-            _plot_sumw_vs_var_dR_year(
-                year,
-                by_ma,
-                out_dir,
-                scenario_label="Efficiency / 0.05",
-                out_name=f"EffVdRg1g2_{year}.pdf",
-            )
+    # NEW: Gen-level distributions (weighted) from inclusive tree
+    years = YEAR_ORDER if args.year == "all" else [args.year]
+    for y in years:
+        _plot_gen_distributions_for_year(
+            base_dir=Path(baseDir),
+            out_dir=Path(outDir) / "genDist",
+            year=y,
+            ma_dirs=mAs,
+            tree_name="inclusive",
+        )
 
 if __name__ == "__main__":
     main()
