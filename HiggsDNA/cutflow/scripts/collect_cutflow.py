@@ -74,9 +74,9 @@ name_DYJet_2022 = ["DYJetsToLL"]
 name_DYJet_2023 = ["DYJetsToLL"]
 name_DYJet_2024 = ["DYJetsTo2E","DYJetsTo2Mu","DYJetsTo2Tau"]
 # Name of Data Sample
-name_Data_2022 = ["DYJetsToLL"]
-name_Data_2023 = ["DYJetsToLL"]
-name_Data_2024 = ["DYJetsToLL"]
+name_Data_2022 = ["Data"]
+name_Data_2023 = ["Data"]
+name_Data_2024 = ["Data"]
 
 # -----------------------------
 # Defaults

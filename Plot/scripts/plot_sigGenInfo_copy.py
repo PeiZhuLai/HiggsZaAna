@@ -164,12 +164,31 @@ def _ma_value_from_dir(ma_dir: str) -> Optional[int]:
 def _colors_many(n: int) -> List[int]:
     # 簡單的可辨識 palette；不夠就循環
     hexes = [
-        "#1B4F72", "#2874A6", "#3498DB", "#5DADE2",
-        "#117864", "#17A589", "#48C9B0",
-        "#7D3C98", "#8E44AD", "#A569BD",
-        "#AF601A", "#D68910", "#E67E22",
-        "#7F7F7F",
+        # Cool vivid
+        "#4C72B0",  # blue
+        "#55A868",  # green
+        "#64B5CD",  # cyan
+        "#8172B2",  # purple
+
+        # Warm vivid
+        "#DD8452",  # orange
+        "#C44E52",  # red
+        "#E39C34",  # gold
+        "#8C564B",  # brown
+
+        # Accent / contrast
+        "#937860",  # olive-brown
+        "#DA8BC3",  # pink
+        "#8DA0CB",  # soft blue
+        "#66C2A5",  # teal
+
+        # Dark / neutral anchors
+        "#2E2E2E",  # dark gray
+        "#5C5C5C",
+        "#8C8C8C",
+        "#BEBEBE",
     ]
+
 
     cols = [_root_color(hx, fallback=ROOT.kBlack) for hx in hexes]
     if n <= len(cols):
@@ -184,7 +203,7 @@ def _markers_many(n: int) -> List[int]:
     return [ms[i % len(ms)] for i in range(n)]
 
 def _linestyles_many(n: int) -> List[int]:
-    ls = [1,2,3]
+    ls = [1,2]
     if n <= len(ls):
         return ls[:n]
     return [ls[i % len(ls)] for i in range(n)]
@@ -249,22 +268,12 @@ def _plot_overlay_hists(
     normalize: bool = False,
     legend_map: Optional[Dict[str, str]] = None,  # NEW: map branch->label for legend
     subtitle_lines: Optional[List[str]] = None,    # NEW: extra lines (e.g. mA info)
-    norm_left_margin: Optional[float] = None,       # NEW
-    norm_y_title_offset: Optional[float] = None,    # NEW
-    cms_label_x: Optional[float] = None,            # NEW: CMS label x (NDC)
-    cms_label_y: Optional[float] = None,            # NEW: CMS label y (NDC)
 ) -> None:
     if not hists:
         return
 
-    c = ROOT.TCanvas(f"c_{out_path.stem}_{year}", "", 800, 600)
-
-    # CHANGED: normalize 圖可獨立調整 left margin（不影響非 normalize）
-    left, right, bottom, top = 0.13, 0.04, 0.14, 0.08
-    if normalize and norm_left_margin is not None:
-        left = float(norm_left_margin)
-    c.SetMargin(left, right, bottom, top)
-
+    c = ROOT.TCanvas(f"c_{out_path.stem}_{year}", "", 800, 650)
+    c.SetMargin(0.13, 0.04, 0.14, 0.08)
     c.SetTickx()
     c.SetTicky()
     c.cd()
@@ -287,13 +296,7 @@ def _plot_overlay_hists(
     frame.SetTitle("")
     frame.GetXaxis().SetTitle(xlabel)
     frame.GetXaxis().SetTitleOffset(1.1)
-
-    # CHANGED: normalize 圖可獨立調整 y axis title offset
-    ytitle_off = 1.15
-    if normalize and norm_y_title_offset is not None:
-        ytitle_off = float(norm_y_title_offset)
-    frame.GetYaxis().SetTitleOffset(ytitle_off)
-
+    frame.GetYaxis().SetTitleOffset(1.15)
     frame.GetXaxis().SetTitleSize(0.055)
     frame.GetYaxis().SetTitleSize(0.055)
     frame.GetXaxis().SetLabelSize(0.05)
@@ -358,14 +361,7 @@ def _plot_overlay_hists(
     lat.SetNDC()
     lat.SetTextFont(42)
     lat.SetTextSize(0.045)
-
-    # NEW: CMS Preliminary 位置跟著 left margin（normalize 調過 margin 時自動右移）
-    cms_x = 0.13 if cms_label_x is None else float(cms_label_x)
-    cms_y = 0.93 if cms_label_y is None else float(cms_label_y)
-    if cms_label_x is None and normalize and norm_left_margin is not None:
-        cms_x = float(norm_left_margin)
-
-    lat.DrawLatex(cms_x, cms_y, "#bf{CMS} #it{Preliminary}")
+    lat.DrawLatex(0.13, 0.93, "#bf{CMS} #it{Preliminary}")
 
     # NEW: 右上角次標題（例如 mA 資訊）
     if subtitle_lines:
@@ -432,38 +428,17 @@ def _plot_gen_distributions_for_year(
         (["GenALPSubleadPho_pt"], "Sublead Photon P_{T} [GeV]", 100, 0.0, 70.0, "GenALP_subleadPho_pt_overlay_byMA"),
     ]
 
-    # CHANGED: 原本 lep_overlay 連續賦值會被覆蓋；改成 lead/sublead 各自的 spec（含對應 pdg branch）
-    lep_pt_specs = [
-        {
-            "pt_branch": "GenHzaZLeadLep_pt",
-            "pdg_branch": "GenHzaZLeadLep_pdgId",
-            "xlabel": "Lead Lepton P_{T} [GeV]",
-            "nb": 100,
-            "xl": 0.0,
-            "xh": 200.0,
-            "tag_suffix": "leadLep",
-        },
-        {
-            "pt_branch": "GenHzaZSubleadLep_pt",
-            "pdg_branch": "GenHzaZSubleadLep_pdgId",
-            "xlabel": "Sublead Lepton P_{T} [GeV]",
-            "nb": 100,
-            "xl": 0.0,
-            "xh": 200.0,
-            "tag_suffix": "subleadLep",
-        },
-    ]
+    # 需要用 pdgId 分 e/mu 的 overlay
+    lep_overlay = (["GenHzaZLeadLep_pt", "GenHzaZSubleadLep_pt"], "Lepton P_{T} [GeV]", 100, 0.0, 200.0, "GenHza_lep_pt_overlay_byFlav")
+    pdg_branch = "GenHzaZSubleadLep_pdgId"
 
     # 一次把需要的 branch 全列出來讀
-    # CHANGED: pdg_branch 不再用單一變數，改把 lead/sublead 的 pdg branch 都加入
-    need = {"weight"}
-    for spec in lep_pt_specs:
-        need.add(spec["pdg_branch"])
-        need.add(spec["pt_branch"])
+    need = {"weight", pdg_branch}
     for b, _, _, _, _ in single_vars:
         need.add(b)
     for bs, _, _, _, _, _ in overlay_pairs:
         need.update(bs)
+    need.update(lep_overlay[0])
 
     # --- CHANGED: 讀兩次：general(全 mA) + pt(只挑指定 mA) ---
     arr = _load_arrays_for_year_mas(base_dir, year=year, ma_dirs=ma_dirs, branches=sorted(need), tree_name=tree_name)
@@ -510,7 +485,6 @@ def _plot_gen_distributions_for_year(
         hs = []
         legend_map_by_ma: Dict[str, str] = {}
 
-        # FIX: ma_dirs 是 list[str]，需用 enumerate 取得 index
         for i, ma_tag in enumerate(ma_dirs):
             arr_ma = _load_arrays_for_year_ma(
                 base_dir,
@@ -529,17 +503,10 @@ def _plot_gen_distributions_for_year(
             legend_map_by_ma[key] = (f"m_{{a}} = {ma_val} GeV" if ma_val is not None else str(ma_tag))
 
             h = _make_hist_from_np(f"h_{b}_{year}_{ma_tag}", x, w_ma, nbins=nb, xlow=xl, xhigh=xh)
-
-            # guard: palette 長度不足時循環使用
-            ci = cols_many_all[i % len(cols_many_all)] if cols_many_all else ROOT.kBlack
-            mi = mstyles_many_all[i % len(mstyles_many_all)] if mstyles_many_all else 20
-            li = ls_many_all[i % len(ls_many_all)] if ls_many_all else 1
-            _root_style_line(h, ci, mi, li)
-
+            _root_style_line(h, cols_many_all[i], mstyles_many_all[i], ls_many_all[i])  # CHANGED
             hs.append((key, h))
 
         if hs:
-            # 原本：未歸一化
             _plot_overlay_hists(
                 year=year,
                 title=b,
@@ -551,30 +518,14 @@ def _plot_gen_distributions_for_year(
                 legend_map=legend_map_by_ma,
                 subtitle_lines=None,
             )
-            # NEW：歸一化到 1
-            _plot_overlay_hists(
-                year=year,
-                title=b,
-                xlabel=xlabel,
-                ylabel="Events",
-                out_path=out_dir / year / f"{b}_{year}_norm.pdf",
-                hists=hs,
-                normalize=True,
-                legend_map=legend_map_by_ma,
-                subtitle_lines=None,
-                norm_left_margin=0.15,      
-                norm_y_title_offset=1.25,
-            )
 
-    # ------------------------------------------------------------------
-    # CHANGED: photon lead/sublead pT 一律畫 14 條線（ALL mA），不再只用 pt subset
-    # ------------------------------------------------------------------
+    # CHANGED: pt overlay 用「pt 限定 mA」；每張圖只畫 bs 內的每個 branch（目前每個 bs 都只有 1 個）
     for (bs, xlabel, nb, xl, xh, tag) in overlay_pairs:
         for b in bs:
             hs = []
             legend_map_by_ma: Dict[str, str] = {}
 
-            for i, ma_tag in enumerate(ma_dirs):  # CHANGED: ma_dirs (ALL)
+            for i, ma_tag in enumerate(ma_dirs_pt):
                 arr_ma = _load_arrays_for_year_ma(
                     base_dir,
                     year=year,
@@ -592,11 +543,10 @@ def _plot_gen_distributions_for_year(
                 legend_map_by_ma[key] = (f"m_{{a}} = {ma_val} GeV" if ma_val is not None else str(ma_tag))
 
                 h = _make_hist_from_np(f"h_{b}_{year}_{ma_tag}", x, w_ma, nbins=nb, xlow=xl, xhigh=xh)
-                _root_style_line(h, cols_many_all[i], mstyles_many_all[i], ls_many_all[i])  # CHANGED: all palette
+                _root_style_line(h, cols_many[i], mstyles_many[i], ls_many[i])  # CHANGED
                 hs.append((key, h))
 
             if hs:
-                # 原本：未歸一化
                 _plot_overlay_hists(
                     year=year,
                     title=tag,
@@ -608,109 +558,53 @@ def _plot_gen_distributions_for_year(
                     legend_map=legend_map_by_ma,
                     subtitle_lines=None,
                 )
-                # NEW：歸一化到 1
-                _plot_overlay_hists(
-                    year=year,
-                    title=tag,
-                    xlabel=xlabel,
-                    ylabel="Events",
-                    out_path=out_dir / year / f"{tag}_{year}_norm.pdf",
-                    hists=hs,
-                    normalize=True,
-                    legend_map=legend_map_by_ma,
-                    subtitle_lines=None,
-                    norm_left_margin=0.16,      # NEW
-                    norm_y_title_offset=1.45,   # NEW
-                )
 
-    # ------------------------------------------------------------------
-    # CHANGED: electron/muon Lead/Sublead pT 各自畫 14 條線（ALL mA）
-    # ------------------------------------------------------------------
-    for spec in lep_pt_specs:
-        pt_branch = spec["pt_branch"]
-        pdg_branch = spec["pdg_branch"]
-        nb, xl, xh = spec["nb"], spec["xl"], spec["xh"]
-        tag_suffix = spec["tag_suffix"]
+    # lepton overlay by flavour (from sublead pdgId)
+    pdg = arr.get(pdg_branch)
+    if pdg is not None and pdg.size and w is not None and w.size:
+        # 同步長度保護（若某些 branch 長度不一致，先裁到最短）
+        nmin = min(pdg.size, w.size, *(arr.get(b).size for b in lep_overlay[0] if arr.get(b) is not None))
+        pdg = pdg[:nmin]
+        w0 = w[:nmin]
 
-        lep_specs = [
-            ("electron", 11, pt_branch, f"GenHza_e_{tag_suffix}_pt_overlay_byMA", f"{'Lead' if tag_suffix=='leadLep' else 'Sublead'} Electron P_{{T}} [GeV]"),
-            ("muon",     13, pt_branch, f"GenHza_mu_{tag_suffix}_pt_overlay_byMA", f"{'Lead' if tag_suffix=='leadLep' else 'Sublead'} Muon P_{{T}} [GeV]"),
-        ]
+        absid = np.abs(pdg.astype(np.int64, copy=False))
+        m_e = absid == 11
+        m_mu = absid == 13
 
-        for flav_name, abs_pdg, b_lep, out_tag, flav_xlabel in lep_specs:
+        for flav, msk in [("electron", m_e), ("muon", m_mu)]:
             hs = []
-            legend_map_by_ma: Dict[str, str] = {}
-
-            for i, ma_tag in enumerate(ma_dirs):
-                arr_ma = _load_arrays_for_year_ma(
-                    base_dir,
-                    year=year,
-                    ma_dir=ma_tag,
-                    branches=["weight", pdg_branch, b_lep],
-                    tree_name=tree_name,
-                )
-                x = arr_ma.get(b_lep)
-                w_ma = arr_ma.get("weight")
-                pdg_ma = arr_ma.get(pdg_branch)
-                if x is None or w_ma is None or pdg_ma is None:
-                    continue
-                if x.size == 0 or w_ma.size == 0 or pdg_ma.size == 0:
-                    continue
-
-                nmin = min(int(x.size), int(w_ma.size), int(pdg_ma.size))
-                if nmin <= 0:
+            for i, b in enumerate(lep_overlay[0]):
+                x = arr.get(b)
+                if x is None or x.size == 0:
                     continue
                 x = x[:nmin]
-                w0 = w_ma[:nmin]
-                pdg0 = pdg_ma[:nmin]
-
-                absid = np.abs(pdg0.astype(np.int64, copy=False))
-                msk = absid == int(abs_pdg)
-
                 xx = x[msk]
                 ww = w0[msk]
-                if xx.size == 0:
-                    continue
-
-                ma_val = _ma_value_from_dir(ma_tag)
-                key = ma_tag
-                legend_map_by_ma[key] = (f"m_{{a}} = {ma_val} GeV" if ma_val is not None else str(ma_tag))
-
                 h = _make_hist_from_np(
-                    f"h_{b_lep}_{year}_{flav_name}_{ma_tag}",
-                    xx,
-                    ww,
-                    nbins=nb,
-                    xlow=xl,
-                    xhigh=xh,
+                    f"h_{b}_{year}_{flav}", xx, ww,
+                    nbins=lep_overlay[2], xlow=lep_overlay[3], xhigh=lep_overlay[4]
                 )
-                _root_style_line(h, cols_many_all[i], mstyles_many_all[i], ls_many_all[i])
-                hs.append((key, h))
+                _root_style_line(h, cols[i % len(cols)], mstyles[i % len(mstyles)])
+                # CHANGED: 用原始 branch 名稱當 legend key，才能吃到 legend_map (Lead/Sublead)
+                hs.append((b, h))
 
             if hs:
+                # NEW: legend 第二行顯示對應的 ll flavour
+                ll = "#mu^{#pm}" if flav == "muon" else "e^{#pm}"
+                legend_map_flav = dict(legend_map or {})
+                legend_map_flav["GenHzaZLeadLep_pt"] = f"Lead ({ll})"
+                legend_map_flav["GenHzaZSubleadLep_pt"] = f"Sublead ({ll})"
+
                 _plot_overlay_hists(
                     year=year,
-                    title=out_tag,
-                    xlabel=flav_xlabel,  # CHANGED
+                    title=f"{lep_overlay[5]}_{flav}",
+                    xlabel=lep_overlay[1],
                     ylabel="Events",
-                    out_path=out_dir / year / f"{out_tag}_{year}.pdf",
+                    out_path=out_dir / year / f"{lep_overlay[5]}_{flav}_{year}.pdf",
                     hists=hs,
                     normalize=False,
-                    legend_map=legend_map_by_ma,
-                    subtitle_lines=None,
-                )
-                _plot_overlay_hists(
-                    year=year,
-                    title=out_tag,
-                    xlabel=flav_xlabel,  # CHANGED
-                    ylabel="Events",
-                    out_path=out_dir / year / f"{out_tag}_{year}_norm.pdf",
-                    hists=hs,
-                    normalize=True,
-                    legend_map=legend_map_by_ma,
-                    subtitle_lines=None,
-                    norm_left_margin=0.16,
-                    norm_y_title_offset=1.45,
+                    legend_map=legend_map_flav,
+                    subtitle_lines=[ma_text] if ma_text else None,  # NEW
                 )
 
 def main():

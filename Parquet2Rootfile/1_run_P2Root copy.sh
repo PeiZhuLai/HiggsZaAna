@@ -8,12 +8,12 @@ echo "==============STARTED=============="
 # target="./"
 
 # Run3
-input="/eos/home-p/pelai/HZa/parquet_DNA/"
-target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
+# input="/eos/home-p/pelai/HZa/parquet_DNA/"
+# target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
 
 # Gen Info
-# input="/eos/home-p/pelai/HZa/parquet_Sig_MC_DNA/"
-# target="/eos/home-p/pelai/HZa/root_Sig_MC_P2Root/run3/"
+input="/eos/home-p/pelai/HZa/parquet_Sig_MC_DNA/"
+target="/eos/home-p/pelai/HZa/root_Sig_MC_P2Root/run3/"
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
 # target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
@@ -117,18 +117,19 @@ process_sample_syst() {
 
 #---------------------------------------------------------------------------------------
 # 处理 signal 样本
+
 # samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 
-# # samples=(mA_M5)
-# type="Sig_MC"
-# for sample in "${samples[@]}"; do
-#     mkdir -p "$target${sample}/"
-#     # 存储后台任务的进程ID列表
-#     pid_list=()
+samples=(mA_M5)
+type="Sig_MC"
+for sample in "${samples[@]}"; do
+    mkdir -p "$target${sample}/"
+    # 存储后台任务的进程ID列表
+    pid_list=()
 
-#     # 调用函数处理样本数据
-#     process_sample "$sample" "$type"
-# done
+    # 调用函数处理样本数据
+    process_sample "$sample" "$type"
+done
 
 # samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 # type="Sig_MC"
@@ -155,49 +156,47 @@ process_sample_syst() {
 # ********* Nomianl **********
 # ****************************
 
+#  Run 2
+#       Z + Fake g   |   Z + g          |   tt        |   tg/ttg  |   VBS Z + g   |   tt + X  |   Multibosons              |
+#       DYJetsToLL   |   ZGToLLG        |   TTtoLNu2Q |   TGJets  |   ZG2JToG2L2J |   ttWJets |   WW  / WZ  / ZZ  / WGToLNuG  |
+#       EWKZ2J       |                  |   TT        |   TTGJets |               |   ttZJets |   WWG / WZG / ZZG /
+
 #  Run 3
-# -------------------------------------
-#  2022preEE, 2022postEE
-#  DYJetsToLL   |DYGto2LG_10to50   
-#               |DYGto2LG_50to100
-# -------------------------------------
-#  2023preBPix, 2023postBPix
-#  DYJetsToLL   |DYGto2LG_10to100  
-# -------------------------------------
-#  2024
-#  DYJetsTo2E   |DYGto2LG_10to100
-#  DYJetsTo2Mu
-#  DYJetsTo2Tau
+#  2022 DYJetsToLL   |DYGto2LG_10to50   |   TTtoLNu2Q |   Lack    |   ZG2JToG2L2J |   Lack    |   WW / WZ / ZZ
+#  2022EE            |DYGto2LG_50to100  |   TT        |   Lack    |               |   Lack    |
 
-## 处理 bkgmc 样本
-for i in {1..4};do
-    if [ "$i" = "1" ]; then
-        samples=(DYGto2LG_10to50 DYGto2LG_50to100)
-        years=(2022preEE 2022postEE)
+#  2023 DYJetsToLL   |DYGto2LG_10to100  |   TTtoLNu2Q |   Lack    |   ZG2JToG2L2J |   Lack    |   WW / WZ / ZZ 
+#                    |                  |   TT        |   Lack    |               |   Lack    |
 
-    elif [ "$i" = "2" ]; then
-        samples=(DYGto2LG_10to100)
-        years=(2023preBPix 2023postBPix 2024)
+# 处理 bkgmc 样本
 
-    elif [ "$i" = "3" ]; then
-        samples=(DYJetsToLL)
-        years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+# samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
+# for i in {1..3};do
+#     if [ "$i" = "1" ]; then
+#         samples=(DYGto2LG_10to50 DYGto2LG_50to100)
+#         years=(2022preEE 2022postEE)
 
-    elif [ "$i" = "4" ]; then
-        samples=(DYJetsTo2E DYJetsTo2Mu DYJetsTo2Tau)
-        years=(2024)
-    fi
+#     elif [ "$i" = "2" ]; then
+#         samples=(DYGto2LG_10to100)
+#         years=(2023preBPix 2023postBPix)
 
-    type="Bkg_MC"
-    for sample in "${samples[@]}"; do
-        mkdir -p "$target$sample"
-        # 存储后台任务的进程ID列表
-        pid_list=()
+#     elif [ "$i" = "3" ]; then
+#         samples=(DYJetsToLL)
+#         years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+#     fi
 
-        # 调用函数处理样本数据
-        process_sample "$sample" "$type"
-    done
-done 
+#     # samples=(DYGto2LG_10to100)
+#     # samples=(DYJetsToLL)
+#     type="Bkg_MC"
+#     for sample in "${samples[@]}"; do
+#         mkdir -p "$target$sample"
+#         # 存储后台任务的进程ID列表
+#         pid_list=()
+
+#         # 调用函数处理样本数据
+#         process_sample "$sample" "$type"
+#     done
+# done 
 
 # samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
 # samples=(DYGto2LG_10to50 DYGto2LG_50to100)
@@ -229,16 +228,16 @@ done
 
 # # 处理 data 样本
 
-samples=(Data)
-type="Data"
-for sample in "${samples[@]}"; do
-    mkdir -p "$target$sample"
-    # 存储后台任务的进程ID列表
-    pid_list=()
+# samples=(Data)
+# type="Data"
+# for sample in "${samples[@]}"; do
+#     mkdir -p "$target$sample"
+#     # 存储后台任务的进程ID列表
+#     pid_list=()
 
-    # 调用函数处理样本数据
-    process_sample "$sample" "$type"
-done
+#     # 调用函数处理样本数据
+#     process_sample "$sample" "$type"
+# done
 
 # Use fake photon background estimation with data-driven
 
