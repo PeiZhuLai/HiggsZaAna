@@ -7,7 +7,7 @@ from higgs_dna.utils.logger_utils import simple_logger
 # logger = logging.getLogger(__name__)
 logger = simple_logger(__name__)
 import json
-import re  # <-- NEW
+import re
 
 from higgs_dna.utils import misc_utils
 
@@ -92,7 +92,7 @@ class Tagger():
 
         else:
             selection, events = self.calculate_selection(events)
-            # print("after selection",events)
+            logger.debug("after selection",events)
             self.selection[syst_tag] = selection
             logger.debug("[Tagger] %s : event set : %s : %d (%d) events before (after) selection" % (self.name, syst_tag, len(selection), awkward.sum(selection)))
         
@@ -381,7 +381,8 @@ class Tagger():
                     prefix = f"trigeff_{meta['lep']}_{meta['ord']}_{meta['trig']}"
                     if prefix not in self._trigeff_json_dumped:
                         payload = self._trigeff_build_summary_json(prefix)
-                        logger.debug("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
+                        logger.info("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
+                        logger.debug("-" * 80)
                         self._trigeff_json_dumped.add(prefix)
 
             return
@@ -411,7 +412,7 @@ class Tagger():
             "cut_type": cut_type,
             "cuts": {k: float(ymap.get(k, 0.0)) for k in order},
         }
-        logger.debug("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
+        logger.info("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
         logger.debug("-" * 80)
 
 

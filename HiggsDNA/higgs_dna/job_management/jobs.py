@@ -165,7 +165,7 @@ class Job():
         lines.append("from higgs_dna.utils.logger_utils import setup_logger")
         lines.append("from higgs_dna.analysis import run_analysis")
         lines.append("")
-        lines.append("logger = setup_logger('DEBUG')")
+        lines.append("logger = setup_logger('INFO')")
         lines.append("config_file = '%s'" % self.config_file) # start with absolute path to config file
         lines.append("if not os.path.exists(config_file):") # in case this is a remote job, absolute path will not exist
         lines.append("    config_file = os.path.split(config_file)[-1]") # and we should have sent a copy that is present in the job's current dir

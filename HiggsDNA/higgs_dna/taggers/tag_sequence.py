@@ -36,7 +36,7 @@ class TagSequence():
         self.selections = {}
         self.summary = {}
         self.output_dir = output_dir
-        logger.info("[TagSequence : __init__] Creating tag sequence with the following tags and priority:")
+        logger.debug("[TagSequence : __init__] Creating tag sequence with the following tags and priority:")
         for i, tag_set in enumerate(tag_list):
             m_tag_set = []
             if not isinstance(tag_set, list): # if not already given as a list, cast as a list of one tagger
@@ -58,7 +58,7 @@ class TagSequence():
                 m_tag_set.append(m_tagger)
 
             self.tag_list.append(m_tag_set)
-            logger.info("[TagSequence : __init__] The %d-th tag set has taggers %s (listed in order priority will be given)." % (i, str([t.name for t in m_tag_set])))
+            logger.debug("[TagSequence : __init__] The %d-th tag set has taggers %s (listed in order priority will be given)." % (i, str([t.name for t in m_tag_set])))
 
         # If this is data, insert a golden json tagger at the beginning of the tag sequence
         if self.tag_list[0][0].is_data:
@@ -102,7 +102,7 @@ class TagSequence():
 
             events = self.run_taggers(events, syst_tag, tag_set)
             if n_taggers > 1:
-                print("debuging: check events in run",events)
+                logger.debug("debuging: check events in run: %s",events)
                 events = self.orthogonalize_tags(events, syst_tag, tag_set)
             events = self.select_events(events, syst_tag, tag_set)
 
@@ -165,7 +165,6 @@ class TagSequence():
         self.tag_idx_map = {}
         for idx, tagger in enumerate(tag_list):
             self.tag_idx_map[tagger.name] = idx
-        print(events)
         tag_idx = numpy.ones_like(awkward.to_numpy(events.run), dtype='int32') * -1
         if len(events) >= 1:
             for tagger_name, idx in self.tag_idx_map.items():

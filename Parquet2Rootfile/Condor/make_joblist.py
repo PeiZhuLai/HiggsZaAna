@@ -18,15 +18,15 @@ CORR:
 import os
 
 # ===== Base paths =====
-INPUT_BASE  = "/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/"
+INPUT_BASE  = "/eos/home-p/pelai/HZa/parquet_DNA/NanoV12/run3/"
 OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
 
 # ===== Switches =====
-DO_SIGNAL_NOMINAL = False
-DO_SIGNAL_SYST    = False       # 先 False，稳定后再 True
+DO_SIGNAL_NOMINAL = True
+DO_SIGNAL_SYST    = True       # 先 False，稳定后再 True
 DO_BKG_NOMINAL    = True
 DO_BKG_SYST       = False       # 如后续需要也可 True
-DO_DATA_NOMINAL   = False       # 你目前注释掉 Data，可按需改 True
+DO_DATA_NOMINAL   = True       # 你目前注释掉 Data，可按需改 True
 
 # ===== Common config =====
 years_all = {
@@ -36,14 +36,14 @@ years_all = {
 }
 
 # 你之前实际使用的组合：
-years_sig  = ["2022preEE"]  # 信号
+years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
 years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
-years_23   = ["2023preBPix","2023postBPix"]
-years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
+years_23   = ["2023preBPix","2023postBPix", "2024"]  # 背景（2023）
+years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
 
 # 系统误差类型
 systs = ["FNUF","Material","Electron_scale","Electron_smear",
-         "Muon_pt_scale","Muon_pt_smear","Photon_scale","Photon_smear"]
+         "Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
 updown = ["up","down"]
 
 # 扫描的 ma 列表（背景也按你的原脚本扫）
@@ -51,7 +51,7 @@ updown = ["up","down"]
 ma_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] # Bkg MC / Data
 
 # ===== Samples =====
-sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
+sig_samples = [f"mA_M{m}" for m in [1,2,3,4,5,6,7,8,9,10,15,20,25,30]]
 
 # 背景
 bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]

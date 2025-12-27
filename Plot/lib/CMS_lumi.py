@@ -58,8 +58,10 @@ def CMS_lumi(pad,  iPeriod,  iPosX, year ):
         lumi_sqrtS = "17.79 fb^{-1}"
     elif year == '2023postBPix':
         lumi_sqrtS = "9.45 fb^{-1}"
+    elif year == '2024':
+        lumi_sqrtS = "108.95 fb^{-1}"
     elif year == 'run3':
-        lumi_sqrtS = "61.89 fb^{-1}"
+        lumi_sqrtS = "170.84 fb^{-1}"
     else:
         print("do not include at 2016/2017/2018")
         exit(0)

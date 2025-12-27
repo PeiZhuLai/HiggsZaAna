@@ -86,13 +86,13 @@ class Analyzer_Config:
             if self.year == 'run2Rereco':
                 self.sig_names  = ['M1', 'M5', 'M15', 'M30']
             else:    
-                # self.sig_names  = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M15', 'M20', 'M25', 'M30']
-                self.sig_names  = ['M5', 'M15', 'M30']
+                self.sig_names  = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M15', 'M20', 'M25', 'M30']
+                # self.sig_names  = ['M5', 'M15', 'M30']
 
-            self.years_sig  = ["2022preEE"]  # 信号
+            self.years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
             self.years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
-            self.years_23   = ["2023preBPix","2023postBPix"]
-            self.years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
+            self.years_23   = ["2023preBPix","2023postBPix", "2024"]  # 背景（2023）
+            self.years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
             self.bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
             self.bkg_2023 = ["DYGto2LG_10to100"]
             self.bkg_dyll = ["DYJetsToLL"]

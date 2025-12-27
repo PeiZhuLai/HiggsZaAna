@@ -5,7 +5,12 @@ from random import random
 import awkward as ak
 from typing import List
 import random
-# import ROOT
+import ROOT
+
+import logging
+# logger = logging.getLogger(__name__)
+from higgs_dna.utils.logger_utils import simple_logger
+logger = simple_logger(__name__)
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -162,9 +167,9 @@ def get_rndm(eta, phi, nL, evtNr, lumiNr, cset, nested=False):
     ]
 
     # get random number following the CB
-    # rndm_f = [ROOT.TRandom3(int(seed)).Rndm() for seed in seeds]
+    rndm_f = [ROOT.TRandom3(int(seed)).Rndm() for seed in seeds]
     # Get away ROOT
-    rndm_f = [random.Random(seed).random() for seed in seeds]
+    # rndm_f = [random.Random(seed).random() for seed in seeds]
 
     cb_f = CrystallBall(mean_f, sigma_f, alpha_f, n_f)
 
@@ -239,7 +244,7 @@ def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 26):
         n_pt_outside = np.sum(outside_bounds)
 
     if n_pt_outside > 0:
-        print(
+        logger.debug(
             f"There are {n_pt_outside} events with muon pt outside of [" + str(low_pt_threshold) + ",200] GeV. "
             "Setting those entries to their initial value."
         )

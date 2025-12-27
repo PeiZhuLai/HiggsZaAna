@@ -72,12 +72,12 @@ def run_analysis(config):
         if branch_map:
             for x in branch_map:
                 logger.debug("[run_analysis] Replacing %s with %s." % (str(x[0]), str(x[1])))
-                print("[run_analysis] variables in Photon", awkward.fields(events["Photon"]))
+                logger.debug("[run_analysis] variables in Photon: %s", awkward.fields(events["Photon"]))
                 if isinstance(x[0], list):
                     try:
                         events[tuple(x[0])] = events[tuple(x[1])]
                     except:
-                        print("[run_analysis] Failed to map branches:", x)
+                        logger.debug("[run_analysis] Failed to map branches: %s", x)
                 else:
                     events[x[0]] = events[x[1]]
 
@@ -443,7 +443,7 @@ class AnalysisManager():
                     continue
                 logger.debug("\t [PHYSICS : %s] events set '%s' has eff. of %.2f percent (all taggers)" % (task, syst_tag, (float(n_events) * 100.) / float(info["physics"]["n_events_initial"])))
             if "scale1fb" in info["physics"].keys():
-                logger.debug("\t [PHYSICS : %s] With a cross section times BF of %.9f pb and a sum of weights of %.9f, scale1fb for this sample is %.9f" % (task, info["physics"]["norm_factor"], info["physics"]["sum_weights"], info["physics"]["scale1fb"]))
+                logger.info("\t [PHYSICS : %s] With a cross section times BF of %.9f pb and a sum of weights of %.9f, scale1fb for this sample is %.9f" % (task, info["physics"]["norm_factor"], info["physics"]["sum_weights"], info["physics"]["scale1fb"]))
 
 
         retired_jobs = []
@@ -580,11 +580,11 @@ class AnalysisManager():
             if "Generator_weight" in tree.keys():
                 sum_genWeight = numpy.sum(tree["Generator_weight"])
                 sum_weights += sum_genWeight #FIXME: use genWeight or Generator_weight
-                logger.debug("[AnalysisManager : GeneratorWeightSum] Sum of Generator_weight: {}".format(sum_genWeight))
+                logger.info("[AnalysisManager : GeneratorWeightSum] Sum of Generator_weight: {}".format(sum_genWeight))
                 unique_values = numpy.unique(tree["Generator_weight"])
                 for i, value in enumerate(unique_values):
                     unique_counts = numpy.sum(tree["Generator_weight"] == value)
-                    logger.debug("[AnalysisManager : GeneratorWeight] Unique values of Generator_weight: {}, numbers: {}".format(value, unique_counts))
+                    logger.info("[AnalysisManager : GeneratorWeight] Unique values of Generator_weight: {}, numbers: {}".format(value, unique_counts))
                     
             # Get events that is not duplicated or overlapped
             if is_data:
@@ -640,11 +640,11 @@ class AnalysisManager():
                 if "Generator_weight" in tree_skimmed.keys():
                     sum_genWeight_skimmed = numpy.sum(tree_skimmed["Generator_weight"])
                     sum_weights += sum_genWeight_skimmed
-                    logger.debug("[AnalysisManager : GeneratorWeightSum Skimmed] Sum of Generator_weight: {}".format(sum_genWeight_skimmed))
+                    logger.info("[AnalysisManager : GeneratorWeightSum Skimmed] Sum of Generator_weight: {}".format(sum_genWeight_skimmed))
                     unique_values = numpy.unique(tree_skimmed["Generator_weight"])
                     for i, value in enumerate(unique_values):
                         unique_counts = numpy.sum(tree_skimmed["Generator_weight"] == value)
-                        logger.debug("[AnalysisManager : GeneratorWeight Skimmed] Unique values of Generator_weight: {}, numbers: {}".format(value, unique_counts))
+                        logger.info("[AnalysisManager : GeneratorWeight Skimmed] Unique values of Generator_weight: {}, numbers: {}".format(value, unique_counts))
 
                 trimmed_branches_skimmed = [x for x in branches if x in tree_skimmed.keys()]
                 events_skimmed_file = tree_skimmed.arrays(trimmed_branches_skimmed, library = "ak", how = "zip") 

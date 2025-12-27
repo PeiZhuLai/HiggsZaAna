@@ -243,8 +243,8 @@ def photon_id_shape_sf(events, year, central_only, input_collection="Photon"):
     epsilon = 1e-7
     dnn_output = np.clip(dnn_output, epsilon, 1.0 - epsilon)
     logger.debug(f"DNN output shape: {dnn_output.shape}")
-    print(f"Input features (first 10): {dnn_input[:10]}")
-    print(f"DNN output: {dnn_output[:10]}")
+    logger.debug(f"Input features (first 10): {dnn_input[:10]}")
+    logger.debug(f"DNN output: {dnn_output[:10]}")
     sf_values = dnn_output / (1.0 - dnn_output)
     
     # Apply reasonable SF limits

@@ -18,7 +18,7 @@ def do_cmd(cmd, returnStatus=False, dryRun=False):
 
     """
     if dryRun:
-        print("dry run: {}".format(cmd))
+        logger.debug("dry run: {}".format(cmd))
         status, out = 1, ""
     else:
         status, out = subprocess.getstatusoutput(cmd)

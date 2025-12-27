@@ -884,7 +884,10 @@ class ZaTaggerRun3(Tagger):
         sel_h_1_noFSR = ak.fill_none(sel_h_1_noFSR, value=False)
         sel_h_2_noFSR = ak.fill_none(sel_h_2_noFSR, value=False)
 
-        print(f'!!!!has H: {sum(has_z_cand & has_2gamma_cand & z_mumu_cut)} | {sum(has_z_cand & has_2gamma_cand & z_ee_cut)}')
+        logger.debug(
+            f'!!!!has H: {sum(has_z_cand & has_2gamma_cand & z_mumu_cut)} | '
+            f'{sum(has_z_cand & has_2gamma_cand & z_ee_cut)}'
+        )
 
         # Add Higgs-related fields to array
         for field in ["pt", "eta", "phi", "mass"]:

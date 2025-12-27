@@ -758,7 +758,7 @@ fnuf_bins = {
     "2024" : FNUF_2018,
 }
 
-def fnuf_unc(events, year, nominal_only, modify_nominal, loc = "all"):
+def fnuf_unc(events, year, nominal_only, modify_nominal):
     """
 
     """
@@ -774,6 +774,8 @@ def fnuf_unc(events, year, nominal_only, modify_nominal, loc = "all"):
         raise ValueError(message) 
 
     photons = events.Photon
+
+    loc = "all"  # fixed default; previously a function argument
 
     if loc == "all":
         mask = photons.pt > 0
@@ -814,8 +816,10 @@ material_bins = {
     "2024" : MATERIAL_2018
 }
 
-def material_unc(events, year, nominal_only, modify_nominal, loc = "all"):
+def material_unc(events, year, nominal_only, modify_nominal):
     photons = events.Photon
+
+    loc = "all"  # fixed default; previously a function argument
 
     if loc == "all":
         mask = photons.pt > 0
@@ -886,7 +890,7 @@ def photon_electron_veto_sf(events, central_only, year):
         },
         central_only = central_only
     )
-    print(variations)
+    logger.debug(variations)
     return variations
 
 #######################
@@ -952,7 +956,7 @@ def photon_scale_smear_run3(events, year, is_data):
     This function applies photon scale and smear corrections on the photon pt.
     It returns events with the corrected photon pt values.
     """
-    logger.info("[Photon Systematics] Applying photon scale and smear corrections for year %s", year)
+    logger.info("[Photon Systematics] Applying Photon scale and smear corrections for year %s", year)
 
     required_fields = [
         ("Photon", "eta"), ("Photon", "pt"), ("Photon", "r9")

@@ -913,7 +913,7 @@ def electron_scale_smear_run3(events, year, is_data):
     See:
         - https://gitlab.cern.ch/cms-egamma/EgammaPostRecoTools/-/tree/master/EgammaAnalysis/ElectronTools/data/Run3
     """
-    logger.info("[Lepton Systematics] Applying electron scale and smear corrections for year %s", year)
+    logger.info("[Lepton Systematics] Applying Electron scale and smear corrections for year %s", year)
 
     required_fields = [
         ("Electron", "eta"), ("Electron", "pt"), ("Electron", "r9"), ("Electron", "deltaEtaSC")
@@ -1000,7 +1000,7 @@ def electron_scale_smear_run3(events, year, is_data):
         )
         events["Electron", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(corrected_pt * (smear_val_syst - 1), n_electrons)
 
-    print("Electron pt before smear correction:", electrons.pt)
+    logger.debug("Electron pt before smear correction: %s", electrons.pt)
     events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
     electrons = events["Electron"]
 
@@ -1009,12 +1009,12 @@ def electron_scale_smear_run3(events, year, is_data):
         scale_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_AbsScEta)
         events["Electron", "dEscale" + syst.replace("scale_", "").capitalize()] = awkward.unflatten(corrected_pt * scale_syst, n_electrons)
 
-    logger.info("[Lepton Systematics] Electron scale and smear corrections applied successfully")
-    print("Electron pt after scale and smear corrections:", events["Electron", "corrected_pt"])
-    print("Electron pt Scale Up:", events["Electron", "dEscaleUp"])
-    print("Electron pt Scale Down:", events["Electron", "dEscaleDown"])
-    print("Electron pt Smear Up:", events["Electron", "dEsigmaUp"])
-    print("Electron pt Smear Down:", events["Electron", "dEsigmaDown"])
+    logger.debug("[Lepton Systematics] Electron scale and smear corrections applied successfully")
+    logger.debug("Electron pt after scale and smear corrections: %s", events["Electron", "corrected_pt"])
+    logger.debug("Electron pt Scale Up: %s", events["Electron", "dEscaleUp"])
+    logger.debug("Electron pt Scale Down: %s", events["Electron", "dEscaleDown"])
+    logger.debug("Electron pt Smear Up: %s", events["Electron", "dEsigmaUp"])
+    logger.debug("Electron pt Smear Down: %s", events["Electron", "dEsigmaDown"])
 
     return events
 
@@ -1038,7 +1038,7 @@ def muon_scale_run3(events, year, is_data):
     See:
         - https://github.com/CMS-MUO-POG/MuonScaRe
     """
-    logger.info("[Lepton Systematics] Applying muon scale corrections for year %s", year)
+    logger.info("[Lepton Systematics] Applying Muon scale corrections for year %s", year)
 
     required_fields = [
         ("Muon", "eta"), ("Muon", "pt"), ("Muon", "phi"), ("Muon", "charge")
@@ -1109,7 +1109,7 @@ def muon_scale_smear_run3(events, year, is_data):
         If they are missing, we fall back to sequential indices (still deterministic
         within one pass, but not stable across different skims).
     """
-    logger.info("[Lepton Systematics] Applying muon scale+smear (Run3) for year %s", year)
+    logger.info("[Lepton Systematics] Applying Muon scale and smear corrections for year %s", year)
 
     required_fields = [("Muon", "pt"), ("Muon", "eta"), ("Muon", "phi"), ("Muon", "charge"), ("Muon", "nTrackerLayers")]
     if not is_data:
@@ -1194,5 +1194,5 @@ def muon_scale_smear_run3(events, year, is_data):
     events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup - pt_corr, n_muons)
     events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn - pt_corr, n_muons)
 
-    logger.info("[Lepton Systematics] Muon scale+smear applied (MC).")
+    logger.debug("[Lepton Systematics] Muon scale+smear applied (MC).")
     return events
