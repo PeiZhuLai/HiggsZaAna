@@ -24,7 +24,6 @@ import optuna
 import pickle
 import os
 import inspect
-from typing import Optional
 try:
     import plotly.io as pio
 except Exception:
@@ -45,14 +44,14 @@ def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
     lineno = frame.f_back.f_lineno
     return f"{prefix}_L{lineno}.{ext}"
 
-def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300):
+def savefig_and_show(pdf_name: str | None = None, *, dpi: int = 300):
     """
     Save current matplotlib figure to plots_MVA/run3 as PDF, then show.
     """
     if pdf_name is None:
         pdf_name = _auto_pdf_name("matplotlib")
     out = PLOTS_DIR / pdf_name
-    plt.savefig(str(out), format="pdf", bbox_inches="tight", dpi=dpi)
+    plt.savefig(str(out), format="pdf", bbox_inches="tight")
     # plt.show()
 
 # +++ add: save optuna (plotly) figures as PDF +++
@@ -354,8 +353,8 @@ ax1.tick_params(axis='both', which='major', labelsize=30)
 cbar1 = ax1.collections[0].colorbar
 cbar1.ax.tick_params(labelsize=29)
 
-ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
-ax1.set_yticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \ eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
+ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
+ax1.set_yticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
 
 
 ax1.set_xticklabels(ax1.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
@@ -379,8 +378,8 @@ ax1.tick_params(axis='both', which='major', labelsize=30)
 cbar1 = ax1.collections[0].colorbar
 cbar1.ax.tick_params(labelsize=29)
 
-ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \ eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \ eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
-ax1.set_yticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \ eta i \ eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \ eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
+ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
+ax1.set_yticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\γ}$ Iso", "$γ_{Subleading} \ P_{T}$", "$γ_{Subleading}$ R9", "$γ_{Subleading}$ $\σ_{i \η i \η \ 5x5}$", "$γ_{Subleading}$ $PF_{γ}$ Iso", "$γγ$ Iso", "$Δ R(Z,a)$", "$Δ R(γ,γ)$", "$Δ R(γ_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
 
 ax1.set_xticklabels(ax1.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
 
@@ -396,43 +395,8 @@ sns.heatmap(df_sig_all[variables+["param"]+["H_m"]].corr(), annot=True, fmt=".2f
 ax1.set_title('Signal', fontsize=44, fontstyle='italic', pad=18)
 ax1.tick_params(axis='both', which='major', labelsize=38)
 
-# FIX: use valid LaTeX commands (\gamma, \Delta, \sigma, \eta) + raw strings
-ax1.set_xticklabels([
-    r"$\gamma_{Leading}\ P_{T}$",
-    r"$\gamma_{Leading}$ R9",
-    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
-    r"$\gamma_{Subleading}$ R9",
-    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma\gamma$ Iso",
-    r"$\Delta R(Z,a)$",
-    r"$\Delta R(\gamma,\gamma)$",
-    r"$\Delta R(\gamma_{Leading}, Z)$",
-    r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
-    r"$(m_{a} - m_{a,\ hype}) / m_{H}$",
-    r"$m_{H}$",
-])
-ax1.set_yticklabels([
-    r"$\gamma_{Leading}\ P_{T}$",
-    r"$\gamma_{Leading}$ R9",
-    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
-    r"$\gamma_{Subleading}$ R9",
-    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma\gamma$ Iso",
-    r"$\Delta R(Z,a)$",
-    r"$\Delta R(\gamma,\gamma)$",
-    r"$\Delta R(\gamma_{Leading}, Z)$",
-    r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
-    r"$(m_{a} - m_{a,\ hype}) / m_{H}$",
-    r"$m_{H}$",
-])
+ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\γ_{Leading}$ R9", "$\γ_{Leading}$ $\σ_{i \η i \η \ 5x5}$", " $\γ_{Leading}$ $PF_{γ}$ Iso", "$\γ_{Subleading} \ P_{T}$", "$\γ_{Subleading}$ R9", "$\γ_{Subleading}$ $\σ_{i \η i \η \ 5x5}$", "$\γ_{Subleading}$ $PF_{γ}$ Iso", "$\γγ$ Iso", "$Δ R(Z,a)$", "$Δ R(γ,γ)$", "$Δ R(γ_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
+ax1.set_yticklabels(["$\γ_{Leading} \ P_{T}$", "$\γ_{Leading}$ R9", "$\γ_{Leading}$ $\σ_{i \η i \η \ 5x5}$", " $\γ_{Leading}$ $PF_{γ}$ Iso", "$\γ_{Subleading} \ P_{T}$", "$\γ_{Subleading}$ R9", "$\γ_{Subleading}$ $\σ_{i \η i \η \ 5x5}$", "$\γ_{Subleading}$ $PF_{γ}$ Iso", "$\γγ$ Iso", "$Δ R(Z,a)$", "$Δ R(γ,γ)$", "$Δ R(γ_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
 
 ax1.set_xticklabels(ax1.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
 ############################################################################################################## 
@@ -445,26 +409,7 @@ cbar2 = ax2.collections[0].colorbar
 cbar2.ax.tick_params(labelsize=36)
 
 ax2.set_yticklabels([])
-
-# FIX: use valid LaTeX commands + raw strings
-ax2.set_xticklabels([
-    r"$\gamma_{Leading}\ P_{T}$",
-    r"$\gamma_{Leading}$ R9",
-    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
-    r"$\gamma_{Subleading}$ R9",
-    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma\gamma$ Iso",
-    r"$\Delta R(Z,a)$",
-    r"$\Delta R(\gamma,\gamma)$",
-    r"$\Delta R(\gamma_{Leading}, Z)$",
-    r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
-    r"$(m_{a} - m_{a,\ hype}) / m_{H}$",
-    r"$m_{H}$",
-])
+ax2.set_xticklabels(["$\γ_{Leading} \ P_{T}$", "$\γ_{Leading}$ R9", "$\γ_{Leading}$ $\σ_{i \η i \η \ 5x5}$", " $\γ_{Leading}$ $PF_{γ}$ Iso", "$\γ_{Subleading} \ P_{T}$", "$\γ_{Subleading}$ R9", "$\γ_{Subleading}$ $\σ_{i \η i \η \ 5x5}$", "$\γ_{Subleading}$ $PF_{γ}$ Iso", "$\γγ$ Iso", "$Δ R(Z,a)$", "$Δ R(γ,γ)$", "$Δ R(γ_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
 
 ax2.set_xticklabels(ax2.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
 
@@ -522,8 +467,8 @@ sig_label_a = np.ones(len(signal_a))
 #sig_label_WH = np.ones(len(signal_WH))
 #sig_label_ZH = np.ones(len(signal_ZH))
 bkg_label_DY = np.zeros(len(background_DY))
-# bkg_label_ZG = 2*np.ones(len(background_ZG))
-#bkg_label_TT = 3*np.ones(len(background_TT))
+# bkg_label_ZG = np.zeros(len(background_ZG))
+#bkg_label_TT = np.zeros(len(background_TT))
 
 sig_proc_a = -1*np.ones(len(signal_a))
 # sig_proc_VBF = -2*np.ones(len(signal_VBF))
@@ -1534,7 +1479,7 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
     bins = bins + (bins[1]-bins[0])/2.
     # center = (bins[:-1] + bins[1:]) / 2
 
-    # 绘制堆叆的直方图
+    # 绘制堆叠的直方图
     plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
     # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
     plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
@@ -1569,9 +1514,9 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/ALP_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
             dfs[year][dataset][mass]["mass"] = mass
-            dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]) / dfs[year][dataset][mass]['H_m']
+            dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
 
 
@@ -1840,9 +1785,8 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50, range_hl=(0,1)):
     bins = bins + (bins[1]-bins[0])/2.
     # center = (bins[:-1] + bins[1:]) / 2.
 
-    # 绘制堆叆的直方图
+    # 绘制堆叠的直方图
     plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
-    # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
     plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
     plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
 

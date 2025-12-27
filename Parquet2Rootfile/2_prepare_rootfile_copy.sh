@@ -6,7 +6,7 @@ strip_cr() { printf '%s' "$1" | tr -d $'\r'; }
 
 # 新增：模組清單與使用說明、參數解析
 # AVAILABLE_MODULES=( dygto2lg dyjets all-bkg data sig )
-AVAILABLE_MODULES=( data )
+AVAILABLE_MODULES=( sig )
 
 print_usage() {
   cat <<'EOF'
@@ -142,26 +142,8 @@ DYJetsTo2Mu_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYJetsTo2Mu
 DYJetsTo2Tau_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYJetsTo2Tau
 
 DYJetsToLL_path="$(strip_cr "$DYJetsToLL_path")"
-DYJetsTo2E_path="$(strip_cr "$DYJetsTo2E_path")"
-DYJetsTo2Mu_path="$(strip_cr "$DYJetsTo2Mu_path")"
-DYJetsTo2Tau_path="$(strip_cr "$DYJetsTo2Tau_path")"
 
-years=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024 )
-
-# 2024：先把三個 channel hadd 成 DYJetsToLL/2024.root
-for f in "$DYJetsTo2E_path/2024.root" "$DYJetsTo2Mu_path/2024.root" "$DYJetsTo2Tau_path/2024.root"; do
-    if [ ! -s "$f" ]; then
-        echo "ERROR: missing or empty file: $f"
-        ls -l "$(dirname "$f")" || true
-        exit 1
-    fi
-done
-
-rm -f "$DYJetsToLL_path/2024.root"
-pushd "$DYJetsToLL_path" >/dev/null
-echo "hadd $DYJetsToLL_path/2024.root $DYJetsTo2E_path/2024.root $DYJetsTo2Mu_path/2024.root $DYJetsTo2Tau_path/2024.root"
-hadd "2024.root" "$DYJetsTo2E_path/2024.root" "$DYJetsTo2Mu_path/2024.root" "$DYJetsTo2Tau_path/2024.root"
-popd >/dev/null
+years=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
 
 # 收集輸入檔，並對元素做 \r 清理
 input_files=()
@@ -227,7 +209,7 @@ prepare_data() {
 Data_path=/eos/home-p/pelai/HZa/root_P2Root/run3/Data
 Data_path="$(strip_cr "$Data_path")"
 
-years=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
+years=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
 
 # 收集輸入檔，並對元素做 \r 清理
 input_files=()
@@ -265,17 +247,17 @@ prepare_sig() {
 # # Prepare Sig
 #########################################################################
 base_path=/eos/home-p/pelai/HZa/root_P2Root/run3
-massList=( M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M15 M20 M25 M30 )
-years=( 2024 )
+massList=( M5 M15 M30 )
+years=( 2022preEE )
 
 # Add years into run3.root
 for mass in "${massList[@]}"; do
     input_files=""
     for year in "${years[@]}"; do
-        input_files+=" $base_path/mA_${mass}/${year}.root"
+        input_files+=" $base_path/ALP_${mass}/${year}.root"
     done
 
-    output_file="$base_path/mA_${mass}/run3.root"
+    output_file="$base_path/ALP_${mass}/run3.root"
     
     # Check if output file exists and remove it
     if [ -f "$output_file" ]; then
@@ -299,7 +281,7 @@ mkdir -p "$Sig_MC_path"
 
 input_files=""
 for mass in "${massList[@]}"; do
-    input_files+=" $base_path/mA_${mass}/run3.root"
+    input_files+=" $base_path/ALP_${mass}/run3.root"
 done
 output_file="$Sig_MC_path/run3.root"
 

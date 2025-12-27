@@ -169,35 +169,35 @@ process_sample_syst() {
 #  DYJetsTo2Mu
 #  DYJetsTo2Tau
 
-## 处理 bkgmc 样本
-for i in {1..4};do
-    if [ "$i" = "1" ]; then
-        samples=(DYGto2LG_10to50 DYGto2LG_50to100)
-        years=(2022preEE 2022postEE)
+# ## 处理 bkgmc 样本
+# for i in {1..4};do
+#     if [ "$i" = "1" ]; then
+#         samples=(DYGto2LG_10to50 DYGto2LG_50to100)
+#         years=(2022preEE 2022postEE)
 
-    elif [ "$i" = "2" ]; then
-        samples=(DYGto2LG_10to100)
-        years=(2023preBPix 2023postBPix 2024)
+#     elif [ "$i" = "2" ]; then
+#         samples=(DYGto2LG_10to100)
+#         years=(2023preBPix 2023postBPix 2024)
 
-    elif [ "$i" = "3" ]; then
-        samples=(DYJetsToLL)
-        years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+#     elif [ "$i" = "3" ]; then
+#         samples=(DYJetsToLL)
+#         years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
 
-    elif [ "$i" = "4" ]; then
-        samples=(DYJetsTo2E DYJetsTo2Mu DYJetsTo2Tau)
-        years=(2024)
-    fi
+#     elif [ "$i" = "4" ]; then
+#         samples=(DYJetsTo2E DYJetsTo2Mu DYJetsTo2Tau)
+#         years=(2024)
+#     fi
 
-    type="Bkg_MC"
-    for sample in "${samples[@]}"; do
-        mkdir -p "$target$sample"
-        # 存储后台任务的进程ID列表
-        pid_list=()
+#     type="Bkg_MC"
+#     for sample in "${samples[@]}"; do
+#         mkdir -p "$target$sample"
+#         # 存储后台任务的进程ID列表
+#         pid_list=()
 
-        # 调用函数处理样本数据
-        process_sample "$sample" "$type"
-    done
-done 
+#         # 调用函数处理样本数据
+#         process_sample "$sample" "$type"
+#     done
+# done 
 
 # samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
 # samples=(DYGto2LG_10to50 DYGto2LG_50to100)
