@@ -31,8 +31,10 @@ class Plot_Config:
             self.lumi    = '17.79'
         elif year == '2023postBPix':
             self.lumi    = '9.45'
+        elif year == '2024':
+            self.lumi    = '108.95'    
         elif year == 'run3':
-            self.lumi    = '61.89'
+            self.lumi    = '170.84'
         else:
             print('do not in 2016/2017/2018!')
             exit(0)

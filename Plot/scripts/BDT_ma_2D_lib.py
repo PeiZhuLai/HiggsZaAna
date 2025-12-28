@@ -10,12 +10,53 @@ import uproot
 
 INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
 
-# 你之前实际使用的组合：
-years_sig  = ["2022preEE"]  # 信号
-years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
-years_23   = ["2023preBPix","2023postBPix"]
-years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
+# Year of Signal
+year_sig_2022 = ["2022preEE", "2022postEE"]
+year_sig_2023 = ["2023preBPix", "2023postBPix"]
+year_sig_2024 = ["2024"]
+# Year of Bkg
+year_DYG_2022 = ["2022preEE", "2022postEE"]
+year_DYG_2023 = ["2023preBPix", "2023postBPix"]
+year_DYG_2024 = ["2024"]
+years_DYJet_2022 = ["2022preEE","2022postEE"]
+year_DYJet_2023  = ["2023preBPix", "2023postBPix"]
+years_DYJet_2024 = ["2024"]
+# Year of Data
+years_Data_2022 = ["2022preEE","2022postEE"]
+year_Data_2023  = ["2023preBPix", "2023postBPix"]
+years_Data_2024 = ["2024"]
 
+# Name of Signal Sample
+name_sig_2022 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+name_sig_2023 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+name_sig_2024 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+# Name of Bkg Sample
+name_DYG_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+name_DYG_2023 = ["DYGto2LG_10to100"]
+name_DYG_2024 = ["DYGto2LG_10to100"]
+name_DYJet_2022 = ["DYJetsToLL"]
+name_DYJet_2023 = ["DYJetsToLL"]
+name_DYJet_2024 = ["DYJetsTo2E","DYJetsTo2Mu","DYJetsTo2Tau"]
+# Name of Data Sample
+name_Data_2022 = ["Data"]
+name_Data_2023 = ["Data"]
+name_Data_2024 = ["Data"]
+
+#-----------------------------------------------------
+# 使用你提供的選項來組裝實際要跑的 samples/years
+years_sig = year_sig_2022 + year_sig_2023 + year_sig_2024
+sig_samples = name_sig_2022 + name_sig_2023 + name_sig_2024
+
+bkg_2022 = name_DYG_2022
+bkg_2023 = name_DYG_2023
+years_22 = year_DYG_2022
+years_23 = year_DYG_2023
+
+bkg_dyll = name_DYJet_2022 + name_DYJet_2023 + name_DYJet_2024
+years_dyll = years_DYJet_2022 + year_DYJet_2023 + years_DYJet_2024
+#-----------------------------------------------------
+
+#-----------------------------------------------------
 # 扫描的 ma 列表（背景也按你的原脚本扫）
 interpolate = True
 
@@ -26,21 +67,14 @@ else:
 
 tuneStyle = False # False # True: 只產生樣式預覽圖，不讀資料
 
-# sig_ma_ticks =  [1,2,3,4,5,6,7,8,9,10,15,20,25,30]  # x 軸只顯示這些質量刻度
-sig_ma_ticks =  [5,15,30]  # x 軸只顯示這些質量刻度
-# bkg_ma_ticks = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
-bkg_ma_ticks = [5,15,30]
-# ===== Samples =====
-sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
-
-# 背景
-bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
-bkg_2023 = ["DYGto2LG_10to100"]
-bkg_dyll = ["DYJetsToLL"]
-# 如需其它：["ZGToLLG","WGToLNuG","ZG2JToG2L2J","EWKZ2J","TT","TTGJets","TGJets","ttWJets","ttZJets","WW","WZ","ZZ"]
+sig_ma_ticks =  [1,2,3,4,5,6,7,8,9,10,15,20,25,30]  # x 軸只顯示這些質量刻度
+# sig_ma_ticks =  [5,15,30]  # x 軸只顯示這些質量刻度
+bkg_ma_ticks = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
+# bkg_ma_ticks = [5,15,30]
 
 MVA_CANDIDATES = ["MVA_Score"]
-WEIGHT_CANDIDATES = ["weight", "event_weight", "wgt_nominal", "genWeight", "genweight", "totalWeight", "w"]
+WEIGHT_CANDIDATES = ["weight", "w"]
+#-----------------------------------------------------
 
 # ==== Helpers ====
 # 设置全局字体大小和图形样式
@@ -58,7 +92,7 @@ plt.rcParams.update({
 })
 
 def mass_from_sig(sample: str) -> float:
-    # ALP_M5 -> 5 (float)
+    # 支援：ALP_M5 / mA_M5 -> 5
     if "_M" in sample:
         try:
             return float(sample.split("_M", 1)[1])
@@ -161,7 +195,7 @@ def weighted_corr(x, y, w):
     return cov / np.sqrt(vx * vy)
 
 def ensure_outdir():
-    outdir = Path("../plots/BDT_ma_2D")
+    outdir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/BDT_ma_2D")
     outdir.mkdir(parents=True, exist_ok=True)
     return outdir
 
@@ -261,11 +295,12 @@ def draw_hist2d(
     cms_bb = t_cms.get_window_extent(renderer=renderer)
     dx = cms_bb.width / fig.bbox.width + 0.006
     fig.text(x0 + dx, y0, "Preliminary", ha="left", va="top", fontsize=19)
-    fig.text(0.84, 0.965, r"$61.89\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
+    fig.text(0.84, 0.965, r"$170.84\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
     plt.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.92)
 
-    plt.savefig(out_png, dpi=200, bbox_inches="tight", pad_inches=0.05)
-    plt.savefig(out_png.with_suffix(".pdf"), bbox_inches="tight", pad_inches=0.05)
+    # 只輸出 PDF（不輸出 PNG）
+    out_pdf = out_png.with_suffix(".pdf")
+    plt.savefig(out_pdf, bbox_inches="tight", pad_inches=0.05)
     plt.close()
 
 # 新增：樣式預覽（不讀取資料）
@@ -287,7 +322,7 @@ def make_style_previews(outdir):
         xtick_labelsize=(10 if interpolate else None),
         style_only=True
     )
-    print(f"[style] saved -> {outdir/'BDT_vs_ma_background_style.png'}")
+    print(f"[style] saved -> {outdir/'BDT_vs_ma_background_style.pdf'}")
 
     # 訊號樣式預覽
     sig_masses = [mass_from_sig(s) for s in sig_samples]
@@ -296,7 +331,7 @@ def make_style_previews(outdir):
         x=None, y=None, w=None,
         x_edges=sig_x_edges, y_edges=bdt_edges,
         title=None,
-        out_png=outdir / "BDT_vs_ma_signal_style.png",
+        out_png=outdir / "BDT_vs_ma_signal_style.pdf",
         y_label="Signal BDT Score",
         x_tick_masses=ma_list,
         corr_text="Correlation = 0.000",
@@ -309,7 +344,6 @@ def make_style_previews(outdir):
 # ==== Collectors ====
 def collect_background_xyw():
     xs, ys, ws = [], [], []
-    # 三類背景各自對應年份
     groups = [
         (bkg_2022, years_22),
         (bkg_2023, years_23),
@@ -320,7 +354,7 @@ def collect_background_xyw():
         for s in samples:
             for y in years:
                 for ma in ma_list:
-                    fpath = os.path.join(INPUT_BASE, s, f"ALP_M{ma}", f"{y}.root")
+                    fpath = os.path.join(INPUT_BASE, s, f"mA_M{ma}", f"{y}.root")
                     if not os.path.exists(fpath):
                         missing += 1
                         continue
@@ -393,10 +427,6 @@ def main():
     # ---- 訊號：x=ma, y=BDT ----
     sx, sy, sw = collect_signal_xyw()  # 目前 sx=mva, sy=ma
     if sx.size > 0:
-        # extract ma from sig_samples
-        # sig_masses = [mass_from_sig(s) for s in sig_samples]
-        # sig_x_edges = build_uniform_mass_edges(sig_masses, step=1.0)
-        # -------------------------------
         # extract ma from ma_list
         sig_x_edges = build_uniform_mass_edges(ma_list, step=1.0)
         corr_sig = weighted_corr(sy, sx, sw)

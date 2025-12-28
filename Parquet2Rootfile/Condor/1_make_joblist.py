@@ -22,7 +22,7 @@ INPUT_BASE  = "/eos/home-p/pelai/HZa/parquet_DNA"
 OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT"
 
 # ===== Switches =====
-DO_SIGNAL_NOMINAL = True
+DO_SIGNAL_NOMINAL = False
 DO_SIGNAL_SYST    = True       # 先 False，稳定后再 True
 DO_BKG_NOMINAL    = False
 DO_BKG_SYST       = False       # 如后续需要也可 True
@@ -64,8 +64,9 @@ name_Data_2024 = ["Data"]
 ma_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] # Bkg MC / Data
 
 # 系统误差类型
-systs = ["FNUF","Material","Electron_scale","Electron_smear",
-         "Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
+# systs = ["FNUF","Material","Electron_scale","Electron_smear","Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
+systs = ["FNUF","Material","Electron_scale","Electron_smear"]
+# systs = ["Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
 updown = ["up","down"]
 
 # 以你提供的清單建立「year -> samples」mapping（統一驅動 loop）
