@@ -62,7 +62,7 @@ class TagSequence():
 
         # If this is data, insert a golden json tagger at the beginning of the tag sequence
         if self.tag_list[0][0].is_data:
-            logger.info("[TagSequence : __init__] Inserting a golden json tagger at beginning of tag sequence since this is data.")
+            logger.debug("[TagSequence : __init__] Inserting a golden json tagger at beginning of tag sequence since this is data.")
             self.tag_list.insert(
                     0,
                     [GoldenJsonTagger(is_data=True, year=m_tag_set[0].year)]

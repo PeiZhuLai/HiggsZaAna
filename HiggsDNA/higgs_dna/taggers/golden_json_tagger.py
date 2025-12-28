@@ -114,8 +114,4 @@ class GoldenJsonTagger(Tagger):
             if len(result_dict[key]) == 1:
                 result_dict[key] = result_dict[key][0]
 
-        print("[[INFO]] Processed Lumi:",  result_dict)
-
-
-
-
+        logger.debug("Processed Lumi: %s", result_dict)

@@ -260,10 +260,11 @@ def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 26):
         n_nan = np.sum(nan_entries)
 
     if n_nan > 0:
-        print(
-            f"There are {n_nan} nan entries in the corrected pt. "
+        logger.debug(
+            "There are %d nan entries in the corrected pt. "
             "This might be due to the number of tracker layers hitting boundaries. "
-            "Setting those entries to their initial value."
+            "Setting those entries to their initial value.",
+            n_nan,
         )
         pt_corr = np.where(np.isnan(pt_corr), pt, pt_corr)
 

@@ -18,49 +18,86 @@ CORR:
 import os
 
 # ===== Base paths =====
-INPUT_BASE  = "/eos/home-p/pelai/HZa/parquet_DNA/NanoV12/run3/"
-OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
+INPUT_BASE  = "/eos/home-p/pelai/HZa/parquet_DNA"
+OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT"
 
 # ===== Switches =====
 DO_SIGNAL_NOMINAL = True
 DO_SIGNAL_SYST    = True       # 先 False，稳定后再 True
-DO_BKG_NOMINAL    = True
+DO_BKG_NOMINAL    = False
 DO_BKG_SYST       = False       # 如后续需要也可 True
-DO_DATA_NOMINAL   = True       # 你目前注释掉 Data，可按需改 True
+DO_DATA_NOMINAL   = False       # 你目前注释掉 Data，可按需改 True
 
-# ===== Common config =====
-years_all = {
-    "Run2":      ["2016preVFP","2016postVFP","2017","2018"],
-    "Run3_2022": ["2022preEE","2022postEE"],
-    "Run3_2023": ["2023preBPix","2023postBPix"],
-}
 
-# 你之前实际使用的组合：
-years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
-years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
-years_23   = ["2023preBPix","2023postBPix", "2024"]  # 背景（2023）
-years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
+# Year of Signal
+year_sig_2022 = ["2022preEE", "2022postEE"]
+year_sig_2023 = ["2023preBPix", "2023postBPix"]
+year_sig_2024 = ["2024"]
+# Year of Bkg
+year_DYG_2022 = ["2022preEE", "2022postEE"]
+year_DYG_2023 = ["2023preBPix", "2023postBPix"]
+year_DYG_2024 = ["2024"]
+years_DYJet_2022 = ["2022preEE","2022postEE"]
+year_DYJet_2023  = ["2023preBPix", "2023postBPix"]
+years_DYJet_2024 = ["2024"]
+# Year of Data
+years_Data_2022 = ["2022preEE","2022postEE"]
+year_Data_2023  = ["2023preBPix", "2023postBPix"]
+years_Data_2024 = ["2024"]
+
+# Name of Signal Sample
+name_sig_2022 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+name_sig_2023 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+name_sig_2024 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
+# Name of Bkg Sample
+name_DYG_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+name_DYG_2023 = ["DYGto2LG_10to100"]
+name_DYG_2024 = ["DYGto2LG_10to100"]
+name_DYJet_2022 = ["DYJetsToLL"]
+name_DYJet_2023 = ["DYJetsToLL"]
+name_DYJet_2024 = ["DYJetsTo2E","DYJetsTo2Mu","DYJetsTo2Tau"]
+# Name of Data Sample
+name_Data_2022 = ["Data"]
+name_Data_2023 = ["Data"]
+name_Data_2024 = ["Data"]
+
+ma_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] # Bkg MC / Data
 
 # 系统误差类型
 systs = ["FNUF","Material","Electron_scale","Electron_smear",
          "Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
 updown = ["up","down"]
 
-# 扫描的 ma 列表（背景也按你的原脚本扫）
-# ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30] # MC
-ma_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] # Bkg MC / Data
+# 以你提供的清單建立「year -> samples」mapping（統一驅動 loop）
+SIGNAL_BY_YEAR = {
+    **{y: name_sig_2022 for y in year_sig_2022},
+    **{y: name_sig_2023 for y in year_sig_2023},
+    **{y: name_sig_2024 for y in year_sig_2024},
+}
 
-# ===== Samples =====
-sig_samples = [f"mA_M{m}" for m in [1,2,3,4,5,6,7,8,9,10,15,20,25,30]]
+DYG_BY_YEAR = {
+    **{y: name_DYG_2022 for y in year_DYG_2022},
+    **{y: name_DYG_2023 for y in year_DYG_2023},
+    **{y: name_DYG_2024 for y in year_DYG_2024},
+}
 
-# 背景
-bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
-bkg_2023 = ["DYGto2LG_10to100"]
-bkg_dyll = ["DYJetsToLL"]
-# 如需其它：["ZGToLLG","WGToLNuG","ZG2JToG2L2J","EWKZ2J","TT","TTGJets","TGJets","ttWJets","ttZJets","WW","WZ","ZZ"]
+DYJET_BY_YEAR = {
+    **{y: name_DYJet_2022 for y in years_DYJet_2022},
+    **{y: name_DYJet_2023 for y in year_DYJet_2023},
+    **{y: name_DYJet_2024 for y in years_DYJet_2024},
+}
 
-# Data（如需）
-data_samples = ["Data"]  # 输出路径合并为 /Data/<year>.root
+DATA_BY_YEAR = {
+    **{y: name_Data_2022 for y in years_Data_2022},
+    **{y: name_Data_2023 for y in year_Data_2023},
+    **{y: name_Data_2024 for y in years_Data_2024},
+}
+
+def iter_year_sample(mapping):
+    # mapping: dict[str, list[str]]  -> yields (year, sample)
+    for y, samples in mapping.items():
+        for s in samples:
+            yield y, s
 
 # ===== Helpers =====
 def mass_from_sig(sample: str) -> str:
@@ -78,88 +115,82 @@ os.makedirs("logs", exist_ok=True)
 with open("joblist.tsv", "w") as f:
     # ---------- SIGNAL: nominal ----------
     if DO_SIGNAL_NOMINAL:
-        for s in sig_samples:
+        for y, s in iter_year_sample(SIGNAL_BY_YEAR):
             s_ma = mass_from_sig(s)
-            for y in years_sig:
-                inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", "merged_nominal.parquet")
-                out = os.path.join(OUTPUT_BASE, s, f"{y}.root")
-                f.write(line(inp, out, s_ma, "nominal", 1))
+            inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", "merged_nominal.parquet")
+            out_dir = os.path.join(OUTPUT_BASE, s)
+            os.makedirs(out_dir, exist_ok=True)
+            out = os.path.join(out_dir, f"{y}.root")
+            f.write(line(inp, out, s_ma, "nominal", 1))
 
     # ---------- SIGNAL: systematics ----------
     if DO_SIGNAL_SYST:
-        for s in sig_samples:
+        for y, s in iter_year_sample(SIGNAL_BY_YEAR):
             s_ma = mass_from_sig(s)
-            for y in years_sig:
-                for ud in updown:
-                    for syst in systs:
-                        corr = f"{syst}_{ud}"
-                        inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", f"merged_{corr}.parquet")
-                        out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
-                        os.makedirs(out_dir, exist_ok=True)
-                        out = os.path.join(out_dir, f"{y}.root")
-                        f.write(line(inp, out, s_ma, corr, 1))
+            for ud in updown:
+                for syst in systs:
+                    corr = f"{syst}_{ud}"
+                    inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
+                    os.makedirs(out_dir, exist_ok=True)
+                    out = os.path.join(out_dir, f"{y}.root")
+                    f.write(line(inp, out, s_ma, corr, 1))
 
     # ---------- BACKGROUND: nominal ----------
     if DO_BKG_NOMINAL:
-        # 2022
-        for s in bkg_2022:
-            for y in years_22:
-                for ma in ma_list:
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
-                    out_dir = os.path.join(OUTPUT_BASE, s, f"ALP_M{ma}")
-                    os.makedirs(out_dir, exist_ok=True)
-                    out = os.path.join(out_dir, f"{y}.root")
-                    f.write(line(inp, out, str(ma), "nominal", 0))
-        # 2023
-        for s in bkg_2023:
-            for y in years_23:
-                for ma in ma_list:
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
-                    out_dir = os.path.join(OUTPUT_BASE, s, f"ALP_M{ma}")
-                    os.makedirs(out_dir, exist_ok=True)
-                    out = os.path.join(out_dir, f"{y}.root")
-                    f.write(line(inp, out, str(ma), "nominal", 0))
-        # DYJetsToLL
-        for s in bkg_dyll:
-            for y in years_dyll:
-                for ma in ma_list:
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
-                    out_dir = os.path.join(OUTPUT_BASE, s, f"ALP_M{ma}")
-                    os.makedirs(out_dir, exist_ok=True)
-                    out = os.path.join(out_dir, f"{y}.root")
-                    f.write(line(inp, out, str(ma), "nominal", 0))
+        # DYG
+        for y, s in iter_year_sample(DYG_BY_YEAR):
+            for ma in ma_list:
+                inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
+                out_dir = os.path.join(OUTPUT_BASE, s, f"mA_M{ma}")
+                os.makedirs(out_dir, exist_ok=True)
+                out = os.path.join(out_dir, f"{y}.root")
+                f.write(line(inp, out, str(ma), "nominal", 0))
+
+        # DYJets
+        for y, s in iter_year_sample(DYJET_BY_YEAR):
+            for ma in ma_list:
+                inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
+                out_dir = os.path.join(OUTPUT_BASE, s, f"mA_M{ma}")
+                os.makedirs(out_dir, exist_ok=True)
+                out = os.path.join(out_dir, f"{y}.root")
+                f.write(line(inp, out, str(ma), "nominal", 0))
 
     # ---------- BACKGROUND: systematics（如需要） ----------
     if DO_BKG_SYST:
-        for s in (bkg_2022 + bkg_2023 + bkg_dyll):
-            # 用哪些年？按样本归属做简单划分：
-            if s in bkg_2022:
-                yrs = years_22
-            elif s in bkg_2023:
-                yrs = years_23
-            else:
-                yrs = years_dyll
-            for y in yrs:
-                for ud in updown:
-                    for syst in systs:
-                        corr = f"{syst}_{ud}"
-                        for ma in ma_list:
-                            inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
-                            out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}", f"ALP_M{ma}")
-                            os.makedirs(out_dir, exist_ok=True)
-                            out = os.path.join(out_dir, f"{y}.root")
-                            f.write(line(inp, out, str(ma), corr, 0))
+        # DYG
+        for y, s in iter_year_sample(DYG_BY_YEAR):
+            for ud in updown:
+                for syst in systs:
+                    corr = f"{syst}_{ud}"
+                    for ma in ma_list:
+                        inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                        out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}", f"mA_M{ma}")
+                        os.makedirs(out_dir, exist_ok=True)
+                        out = os.path.join(out_dir, f"{y}.root")
+                        f.write(line(inp, out, str(ma), corr, 0))
+
+        # DYJets
+        for y, s in iter_year_sample(DYJET_BY_YEAR):
+            for ud in updown:
+                for syst in systs:
+                    corr = f"{syst}_{ud}"
+                    for ma in ma_list:
+                        inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                        out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}", f"mA_M{ma}")
+                        os.makedirs(out_dir, exist_ok=True)
+                        out = os.path.join(out_dir, f"{y}.root")
+                        f.write(line(inp, out, str(ma), corr, 0))
 
     # ---------- DATA（如需要） ----------
     if DO_DATA_NOMINAL:
-        for y in years_dyll:  # 或按你的实际年份集合
+        # 你目前資料樣本名其實都叫 Data，但仍保留 mapping 以便未來擴充
+        for y, s in iter_year_sample(DATA_BY_YEAR):
             for ma in ma_list:
-                inp = os.path.join(INPUT_BASE, "Data", f"Data_{y}", "merged_nominal.parquet")
-                out_dir = os.path.join(OUTPUT_BASE, "Data", f"ALP_M{ma}")
+                inp = os.path.join(INPUT_BASE, "Data", f"{s}_{y}", "merged_nominal.parquet")
+                out_dir = os.path.join(OUTPUT_BASE, s, f"mA_M{ma}")
                 os.makedirs(out_dir, exist_ok=True)
                 out = os.path.join(out_dir, f"{y}.root")
-                # 注意：这里第三列传 str(ma)，SPLIT_FLAG=0
                 f.write(line(inp, out, str(ma), "nominal", 0))
-
 
 print("Wrote joblist.tsv with tasks.")

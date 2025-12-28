@@ -70,10 +70,10 @@ def LoadNtuples_split_by_mass(ana_cfg):
     为每个 mA in ana_cfg.sig_names 构建一组链：
       ntuples_by_mass[mA][sample] = TChain(...)
     规则（文件系统目录）：
-      - 信号 Mx ： base/ALP_Mx/<year>.root （年表用 ana_cfg.years_sig）
-      - DYJetsToLL： base/DYJetsToLL/ALP_Mx/<year>.root （年表用 ana_cfg.years_dyll）
-      - DYGto2LG ： base/<子样本>/ALP_Mx/<year>.root （2022/2023 各自子样本与年表）
-      - Data     ： 先试 base/Data/ALP_Mx/<year>.root；若不存在回退 base/Data/<year>.root
+      - 信号 Mx ： base/mA_Mx/<year>.root （年表用 ana_cfg.years_sig）
+      - DYJetsToLL： base/DYJetsToLL/mA_Mx/<year>.root （年表用 ana_cfg.years_dyll）
+      - DYGto2LG ： base/<子样本>/mA_Mx/<year>.root （2022/2023 各自子样本与年表）
+      - Data     ： 先试 base/Data/mA_Mx/<year>.root；若不存在回退 base/Data/<year>.root
     """
     base = ana_cfg.sample_loc
     ntuples_by_mass = {}  # dict[mA][sample] -> TChain
@@ -87,14 +87,14 @@ def LoadNtuples_split_by_mass(ana_cfg):
             return 0
 
     for mA in ana_cfg.sig_names:
-        mdir = f"ALP_{mA}"
+        mdir = f"mA_{mA}"
         group = {}
 
         # --- 信号（Mx） ---
         ch_sig = ROOT.TChain("test", f"chain_sig_{mA}")
         added = 0
         for y in getattr(ana_cfg, "years_sig", ["2022preEE"]):
-            p = os.path.join(base, f"ALP_{mA}", f"{y}.root")
+            p = os.path.join(base, f"mA_{mA}", f"{y}.root")
             added += _add_if_exists(ch_sig, p)
         if added == 0:
             print(f"[WARN] signal {mA} empty.")
@@ -161,7 +161,7 @@ def _run3_build_chain(sample, ana_cfg):
       - signal (M*) : only 2022preEE
       - DYJetsToLL  : years_dyll
       - DYGto2LG    : merge bkg_2022/years_22 and bkg_2023/years_23 sub-samples
-      - Data        : years_dyll (try /Data/ALP_{mass}/{year}.root then /Data/{year}.root)
+      - Data        : years_dyll (try /Data/mA_{mass}/{year}.root then /Data/{year}.root)
     """
     # Decide tree name (keep previous convention)
     tree_name = "test" if ("M" in sample and sample[0] == 'M') else "inclusive"
@@ -169,21 +169,21 @@ def _run3_build_chain(sample, ana_cfg):
     base = ana_cfg.sample_loc  # /eos/.../run3_BDT
     added = 0
 
-    # 依 mva 模式決定 ALP 子資料夾；預設 M1
+    # 依 mva 模式決定 mA 子資料夾；預設 M1
     use_mva = bool(getattr(ana_cfg, "mva", False))
     mva_tag = str(getattr(ana_cfg, "mva_alp_mass", "M1")) if use_mva else "M1"
-    alp_folder = f"ALP_{mva_tag}"
+    alp_folder = f"mA_{mva_tag}"
 
     # Signal samples like 'M5','M15','M30'
     if sample in ana_cfg.sig_names:
         year = "2022preEE"
-        path = os.path.join(base, f"ALP_{sample}", f"{year}.root")
+        path = os.path.join(base, f"mA_{sample}", f"{year}.root")
         if _add_file_if_exists(ch, path):
             added += 1
 
     elif sample == "DYJetsToLL":
         for y in ana_cfg.years_dyll:
-            # 改用 ALP_{mva_tag}
+            # 改用 mA_{mva_tag}
             path1 = os.path.join(base, "DYJetsToLL", alp_folder, f"{y}.root")
             if _add_file_if_exists(ch, path1):
                 added += 1
@@ -205,7 +205,7 @@ def _run3_build_chain(sample, ana_cfg):
 
     elif sample == "Data":
         for y in getattr(ana_cfg, "years_dyll", []):
-            # 先嘗試 /Data/ALP_{mva_tag}/{year}.root
+            # 先嘗試 /Data/mA_{mva_tag}/{year}.root
             p1 = os.path.join(base, "Data", alp_folder, f"{y}.root")
             if _add_file_if_exists(ch, p1):
                 added += 1
@@ -240,7 +240,7 @@ def LoadNtuples(ana_cfg):
     for sample in ana_cfg.samp_names:
         if "M" in sample: 
             ntuples[sample] = TChain("test","chain_" + sample)
-            ntuples[sample].Add(ana_cfg.sample_loc + '/ALP_%s/run3.root' %sample)
+            ntuples[sample].Add(ana_cfg.sample_loc + '/mA_%s/run3.root' %sample)
         else: 
             ntuples[sample] = TChain("inclusive","chain_" + sample)
             ntuples[sample].Add(ana_cfg.sample_loc + '/%s/run3.root' %sample)
@@ -280,7 +280,7 @@ def MakeLumiLabel(lumi):
 def MakeCMSDASLabel():
     #tex = TLatex()
     #tex.SetTextSize(0.03)
-    #tex.DrawLatexNDC(0.12, 0.85, '#scale[1.5]{CMSDAS} H To Z + ALP')
+    #tex.DrawLatexNDC(0.12, 0.85, '#scale[1.5]{CMSDAS} H To Z + mA')
     #return tex
 
     onTop=False

@@ -974,8 +974,8 @@ def electron_scale_smear_run3(events, year, is_data):
         )
         corrected_pt = awkward.to_numpy(electrons_pt * scale)
         events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
-        logger.info("[Lepton Systematics] Electron pt before scale correction (data): %s", electrons.pt)
-        logger.info("[Lepton Systematics] Electron pt after scale correction (data): %s", corrected_pt)
+        logger.debug("[Lepton Systematics] Electron pt before scale correction (data): %s", electrons.pt)
+        logger.debug("[Lepton Systematics] Electron pt after scale correction (data): %s", corrected_pt)
         return events
 
     # Apply smear corrections first
