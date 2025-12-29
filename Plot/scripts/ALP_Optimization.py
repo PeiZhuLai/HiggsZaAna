@@ -38,7 +38,7 @@ ROOT.gErrorIgnoreLevel = 2000  # 等同於 ROOT.kError
 
 
 parser = OptionParser()
-parser.add_option("-y", "--Year", dest="year", default='run2', type="str", help="which year's datasetes")
+parser.add_option("-y", "--Year", dest="year", default='run3', type="str", help="which year's datasetes")
 parser.add_option('-o', "--outDir", dest='outDir', default="./optimize", type="string", help="outDir")
 parser.add_option("--region", dest="region", type=int, default=0, help="0 for full region, 1 for signal region, 2 for sideband region")
 parser.add_option('-m', '--mva', dest='mva', action='store_true', default=False, help='use mva or not')
@@ -226,7 +226,7 @@ def smooth(graph, hist, mva_low = 0.1):
 def compare(hist, hist_smooth, ma):
     if gROOT.FindObject("cc"):
         gROOT.FindObject("cc").Close()
-    canv = TCanvas("cc", "cc", 650, 600)
+    canv = TCanvas("cc", "cc", 800, 600)
     canv.cd()
     canv.SetLogy()
     SetgStyle()
@@ -241,7 +241,7 @@ def compare(hist, hist_smooth, ma):
     canv.SetTicky(1)
 
     hist.SetMinimum(0.5)
-    hist.SetMaximum( 2 * hist.GetMaximum() )
+    hist.SetMaximum( 10. * hist.GetMaximum() )
 
     hist.SetFillColor(0)
     hist.SetLineColor(1)
@@ -299,13 +299,14 @@ def compare(hist, hist_smooth, ma):
     
     #canv.cd()
     global legend
-    legend = TLegend(0.55,0.60,0.94,0.82)
+    legend = TLegend(0.65,0.62,0.94,0.88)
     #legend.AddEntry(hist, "Background")
     legend.SetTextFont(42)
     legend.SetBorderSize(0)
     legend.SetFillStyle(0)
     legend.SetFillColor(0)
     legend.SetTextSize(0.045)
+    legend.AddEntry("", f"m_{{a}} = {ma.lstrip('M')} GeV", "")
     legend.AddEntry(hist, "Nominal", "l")
     legend.AddEntry(hist_smooth[1], "Smoothed + 1#sigma", "l")
     legend.AddEntry(hist_smooth[0], "Smoothed", "l")
@@ -318,10 +319,9 @@ def compare(hist, hist_smooth, ma):
     latex.SetTextFont(42)
     latex.SetTextSize(0.045)
     latex.SetTextAlign(13)
-    latex.DrawLatex(0.65, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
+    # latex.DrawLatex(0.73, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
 
-    # latex.DrawLatex(0.685,0.97,("138 fb^{-1} (13 TeV)"))
-    latex.DrawLatex(0.625,0.97,("61.89 fb^{-1} (13.6 TeV)"))
+    latex.DrawLatex(0.67,0.97,("170.84 fb^{-1} (13.6 TeV)"))
     
     latex.SetTextSize(0.045)  # 字體大小
     latex.SetTextFont(61)  # 粗體字 CMS 標籤
@@ -429,10 +429,10 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
             f"signal total: {signal_total:.3f}, "
             f"events: {events_total:.0f}, "
             f"signal cut: {signal_cut:.3f}, "
-            f"smoothed background: {smoothed_background:.3f}, "
+            f"smoothed_background: {smoothed_background:.3f}, "
             f"data: {data:.0f}, "
             f"NEXT BIN: "
-            f"smoothed background: {next_bin_smoothed_background:.3f}, "
+            f"smoothed_background: {next_bin_smoothed_background:.3f}, "
             f"data: {next_bin_data:.0f}"
         )
 
@@ -662,8 +662,15 @@ def main():
         if options.sigVSscore:
             
             if nCats == 1:
-                
-                w = hist_signal['all']['M5'].GetBinWidth(1)            
+                # 不要硬編碼 'M5'，改用目前迴圈的 sig；若不存在則用任意可用的 mass 當 fallback
+                if sig in hist_signal.get('all', {}):
+                    w = hist_signal['all'][sig].GetBinWidth(1)
+                else:
+                    all_keys = list(hist_signal.get('all', {}).keys())
+                    if len(all_keys) == 0:
+                        continue
+                    w = hist_signal['all'][all_keys[0]].GetBinWidth(1)
+
                 '''
                 plt.plot([(i-1)*w for i in significance_all['all'].keys()], significance_all['all'].values(), "o-", markersize=2., label='Significance')
                 #plt.plot([(i-1)*w for i in significance_all['all'].keys()], significance_all_up['all'].values(), "o-", c='red')
@@ -800,7 +807,7 @@ def main():
                 latex_cut.DrawLatex(0.24, 0.87, f"m_{{a}} = {sig.lstrip('M')} GeV")
 
                 # latex_cut.DrawLatex(0.76,0.97,("138 fb^{-1} (13 TeV)"))
-                latex_cut.DrawLatex(0.71,0.97,("61.89 fb^{-1} (13.6 TeV)"))
+                latex_cut.DrawLatex(0.71,0.97,("170.84 fb^{-1} (13.6 TeV)"))
                 
                 latex_cut.SetTextSize(0.045)  # 字體大小
                 latex_cut.SetTextFont(61)  # 粗體字 CMS 標籤

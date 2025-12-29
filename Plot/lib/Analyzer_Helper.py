@@ -34,9 +34,9 @@ def getMassSigma(ana_cfg):
         candidate_paths = []
         if ana_cfg.year == 'run3':
             for y in getattr(ana_cfg, "years_sig", []):
-                candidate_paths.append(os.path.join(ana_cfg.sample_loc, f"ALP_{sample}", f"{y}.root"))
+                candidate_paths.append(os.path.join(ana_cfg.sample_loc, f"mA_{sample}", f"{y}.root"))
         # 舊結構 (若仍存在)
-        candidate_paths.append(os.path.join(ana_cfg.sample_loc, f"ALP_{sample}", "run3.root"))
+        candidate_paths.append(os.path.join(ana_cfg.sample_loc, f"mA_{sample}", "run3.root"))
 
         opened_file = None
         for p in candidate_paths:

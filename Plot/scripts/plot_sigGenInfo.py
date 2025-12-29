@@ -26,9 +26,12 @@ PT_MA_DIRS = ["mA_M1", "mA_M5", "mA_M10", "mA_M20", "mA_M30"]
 YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
 # YEAR_ORDER = ["2022preEE"]
 
+# NEW: run3 組成用的子年份清單
+RUN3 = YEAR_ORDER[:]  # ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
+
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95,
-            'combined_run3':170.84 }
+            'Run3':170.84 }
 
 
 def _lumi_fb_for_year(year: str) -> Optional[float]:
@@ -157,18 +160,86 @@ def _load_arrays_for_year_ma(
             out[b] = anp
     return out
 
+# NEW: 合併多個年份（同一個 mA）成單一 arrays dict
+def _merge_arrays_dicts(dicts: List[Dict[str, np.ndarray]]) -> Dict[str, np.ndarray]:
+    merged: Dict[str, List[np.ndarray]] = {}
+    for d in dicts:
+        for k, v in d.items():
+            if v is None or getattr(v, "size", 0) == 0:
+                continue
+            merged.setdefault(k, []).append(v)
+    out: Dict[str, np.ndarray] = {}
+    for k, chunks in merged.items():
+        if chunks:
+            out[k] = np.concatenate(chunks, axis=0)
+    return out
+
+# NEW: 讀取多年份 + 多 mA，將 branches 串接起來（缺檔就跳過）
+def _load_arrays_for_years_mas(
+    base_dir: Path,
+    *,
+    years: List[str],
+    ma_dirs: List[str],
+    branches: List[str],
+    tree_name: str = "inclusive",
+) -> Dict[str, np.ndarray]:
+    per_year = [
+        _load_arrays_for_year_mas(base_dir, year=y, ma_dirs=ma_dirs, branches=branches, tree_name=tree_name)
+        for y in years
+    ]
+    return _merge_arrays_dicts(per_year)
+
+# NEW: 讀取多年份 + 單一 mA
+def _load_arrays_for_years_ma(
+    base_dir: Path,
+    *,
+    years: List[str],
+    ma_dir: str,
+    branches: List[str],
+    tree_name: str = "inclusive",
+) -> Dict[str, np.ndarray]:
+    per_year = [
+        _load_arrays_for_year_ma(base_dir, year=y, ma_dir=ma_dir, branches=branches, tree_name=tree_name)
+        for y in years
+    ]
+    return _merge_arrays_dicts(per_year)
+
 def _ma_value_from_dir(ma_dir: str) -> Optional[int]:
     m = re.match(r"mA_M(\d+)$", str(ma_dir))
     return int(m.group(1)) if m else None
 
 def _colors_many(n: int) -> List[int]:
     # 簡單的可辨識 palette；不夠就循環
+    # hexes = [
+    #     "#1B4F72", "#2874A6", "#3498DB", "#5DADE2",
+    #     "#117864", "#17A589", "#48C9B0",
+    #     "#7D3C98", "#8E44AD", "#A569BD",
+    #     "#AF601A", "#D68910", "#E67E22",
+    #     "#7F7F7F",
+    # ]
+
     hexes = [
-        "#1B4F72", "#2874A6", "#3498DB", "#5DADE2",
-        "#117864", "#17A589", "#48C9B0",
-        "#7D3C98", "#8E44AD", "#A569BD",
-        "#AF601A", "#D68910", "#E67E22",
-        "#7F7F7F",
+        # Cold & dark (背景用)
+        "#0B3C5D",  # deep navy
+        "#1F618D",
+        "#2874A6",
+        "#3498DB",
+        "#5DADE2",
+
+        # Green → cyan
+        "#117864",
+        "#17A589",
+        "#48C9B0",
+
+        # Purple / pink
+        "#7D3C98",
+        "#C0392B",  # dark red jump
+        "#E74C3C",
+
+        # Nuclear highlights (後畫王者)
+        "#FF6F00",  # neon orange
+        "#FF1744",  # hot red
+        "#000000",  # final boss
     ]
 
     cols = [_root_color(hx, fallback=ROOT.kBlack) for hx in hexes]
@@ -465,11 +536,26 @@ def _plot_gen_distributions_for_year(
     for bs, _, _, _, _, _ in overlay_pairs:
         need.update(bs)
 
-    # --- CHANGED: 讀兩次：general(全 mA) + pt(只挑指定 mA) ---
-    arr = _load_arrays_for_year_mas(base_dir, year=year, ma_dirs=ma_dirs, branches=sorted(need), tree_name=tree_name)
+    # --- CHANGED: general/pt arrays 讀取支援 Run3 ---
+    is_combined = (year == "Run3")
+    years_to_merge = RUN3 if is_combined else [year]
 
     ma_dirs_pt = ma_dirs_pt or ma_dirs
-    arr_pt = _load_arrays_for_year_mas(base_dir, year=year, ma_dirs=ma_dirs_pt, branches=sorted(need), tree_name=tree_name)
+
+    arr = _load_arrays_for_years_mas(
+        base_dir,
+        years=years_to_merge,
+        ma_dirs=ma_dirs,
+        branches=sorted(need),
+        tree_name=tree_name,
+    )
+    arr_pt = _load_arrays_for_years_mas(
+        base_dir,
+        years=years_to_merge,
+        ma_dirs=ma_dirs_pt,
+        branches=sorted(need),
+        tree_name=tree_name,
+    )
 
     w = arr.get("weight")
     w_pt = arr_pt.get("weight")
@@ -510,11 +596,10 @@ def _plot_gen_distributions_for_year(
         hs = []
         legend_map_by_ma: Dict[str, str] = {}
 
-        # FIX: ma_dirs 是 list[str]，需用 enumerate 取得 index
         for i, ma_tag in enumerate(ma_dirs):
-            arr_ma = _load_arrays_for_year_ma(
+            arr_ma = _load_arrays_for_years_ma(
                 base_dir,
-                year=year,
+                years=years_to_merge,   # CHANGED
                 ma_dir=ma_tag,
                 branches=["weight", b],
                 tree_name=tree_name,
@@ -575,9 +660,9 @@ def _plot_gen_distributions_for_year(
             legend_map_by_ma: Dict[str, str] = {}
 
             for i, ma_tag in enumerate(ma_dirs):  # CHANGED: ma_dirs (ALL)
-                arr_ma = _load_arrays_for_year_ma(
+                arr_ma = _load_arrays_for_years_ma(
                     base_dir,
-                    year=year,
+                    years=years_to_merge,  # CHANGED
                     ma_dir=ma_tag,
                     branches=["weight", b],
                     tree_name=tree_name,
@@ -642,9 +727,9 @@ def _plot_gen_distributions_for_year(
             legend_map_by_ma: Dict[str, str] = {}
 
             for i, ma_tag in enumerate(ma_dirs):
-                arr_ma = _load_arrays_for_year_ma(
+                arr_ma = _load_arrays_for_years_ma(
                     base_dir,
-                    year=year,
+                    years=years_to_merge,  # CHANGED
                     ma_dir=ma_tag,
                     branches=["weight", pdg_branch, b_lep],
                     tree_name=tree_name,
@@ -720,7 +805,11 @@ def main():
 
     out_dir = Path(outDir)
 
+    # CHANGED: year=all 時，除了逐年也多跑 run3
     years = YEAR_ORDER if args.year == "all" else [args.year]
+    if args.year == "all":
+        years = years + ["Run3"]
+
     for y in years:
         _plot_gen_distributions_for_year(
             base_dir=Path(baseDir),

@@ -267,11 +267,11 @@ def main():
                 histos['mvaVal_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_2sigma_'+ALP_mass    + '_' + sample, 240,  -0.1, 1.1)
                 histos['mvaVal_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_3sigma_'+ALP_mass    + '_' + sample, 240,  -0.1, 1.1)
 
-                histos['mvaVal_larger_'+ALP_mass][sample]           = TH1F('mvaVal_larger_'+ALP_mass           + '_' + sample, 'mvaVal_larger_'+ALP_mass    + '_' + sample, 10, 0, 1.0)
-                histos['mvaVal_larger_1sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 10,  0., 1.0)
-                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample]  = TH1F('mvaVal_larger_1P5sigma_'+ALP_mass  + '_' + sample, 'mvaVal_larger_1P5sigma_'+ALP_mass    + '_' + sample, 10,  0., 1.0)
-                histos['mvaVal_larger_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 10,  0., 1.0)
-                histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 10,  0., 1.0)
+                histos['mvaVal_larger_'+ALP_mass][sample]           = TH1F('mvaVal_larger_'+ALP_mass           + '_' + sample, 'mvaVal_larger_'+ALP_mass    + '_' + sample, 20, 0, 1.0)
+                histos['mvaVal_larger_1sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
+                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample]  = TH1F('mvaVal_larger_1P5sigma_'+ALP_mass  + '_' + sample, 'mvaVal_larger_1P5sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
+                histos['mvaVal_larger_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
+                histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
 
 
     for var_name in var_names:
@@ -462,10 +462,6 @@ def main():
                                     weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
                                 elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
                                     weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                                elif sys_name =='weight_electron_iso_sf_SelectedElectron_up':
-                                    weight_sys = weight * ntup.weight_electron_iso_sf_SelectedElectron_up / ntup.weight_electron_iso_sf_SelectedElectron_central
-                                elif sys_name =='weight_electron_iso_sf_SelectedElectron_down':
-                                    weight_sys = weight * ntup.weight_electron_iso_sf_SelectedElectron_down / ntup.weight_electron_iso_sf_SelectedElectron_central
                                 elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
                                     weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central
                                 elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
@@ -478,10 +474,6 @@ def main():
                                     weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
                                 elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
                                     weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                                elif sys_name =='weight_muon_iso_sf_SelectedMuon_up':
-                                    weight_sys = weight * ntup.weight_muon_iso_sf_SelectedMuon_up / ntup.weight_muon_iso_sf_SelectedMuon_central
-                                elif sys_name =='weight_muon_iso_sf_SelectedMuon_down':
-                                    weight_sys = weight * ntup.weight_muon_iso_sf_SelectedMuon_down / ntup.weight_muon_iso_sf_SelectedMuon_central
                                 elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
                                     weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
                                 elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':

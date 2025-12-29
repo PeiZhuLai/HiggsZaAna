@@ -15,19 +15,20 @@ from array import array
 INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
 
 # 你之前实际使用的组合：
-years_sig  = ["2022preEE"]  # 信号
+years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
 years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
-years_23   = ["2023preBPix","2023postBPix"]
-years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
+years_23   = ["2023preBPix","2023postBPix", "2024"]
+years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]
 
 # 扫描的 ma 列表（背景也按你的原脚本扫）
-current_ma_list = [5,15,30]
+current_ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 interploate_ma_list = [11,12,13,14,16,17,18,19,21,22,23,24,26,27,28,29]
 # interploate_ma_list = [11,12]
 # interploate_ma_list = [5,15,30]
 # ===== Samples =====
-sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
+# sig_samples = ["mA_M5", "mA_M15", "mA_M30"]
+sig_samples = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
 
 # 背景
 bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
@@ -256,7 +257,7 @@ def plot_bkg_mva_distributions():
                 mva_all = []
                 w_all = []
                 for y in years:
-                    fpath = os.path.join(INPUT_BASE, sample, f"ALP_M{int(ma)}", f"{y}.root")
+                    fpath = os.path.join(INPUT_BASE, sample, f"mA_M{int(ma)}", f"{y}.root")
                     if not os.path.exists(fpath):
                         continue
                     mva, w = read_arrays_with_mass(fpath, mass_tag)
@@ -446,7 +447,7 @@ def build_interpolated_bkg_hists(mva_bins=240, mva_min=-0.1, mva_max=1.1, mva_br
                 # 搜集各年资料
                 filled = False
                 for y in years:
-                    fpath = os.path.join(INPUT_BASE, sample, f"ALP_M{int(ma)}", f"{y}.root")
+                    fpath = os.path.join(INPUT_BASE, sample, f"mA_M{int(ma)}", f"{y}.root")
                     if not os.path.exists(fpath):
                         continue
                     # 以 mass_tag 解析对应的 MVA 分支（与 plot_variable_dataVmc.py 一致）
@@ -536,7 +537,7 @@ def collect_background_xyw():
         for s in samples:
             for y in years:
                 for ma in ma_list:
-                    fpath = os.path.join(INPUT_BASE, s, f"ALP_M{ma}", f"{y}.root")
+                    fpath = os.path.join(INPUT_BASE, s, f"mA_M{ma}", f"{y}.root")
                     if not os.path.exists(fpath):
                         missing += 1
                         continue

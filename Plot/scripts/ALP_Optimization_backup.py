@@ -38,7 +38,7 @@ ROOT.gErrorIgnoreLevel = 2000  # 等同於 ROOT.kError
 
 
 parser = OptionParser()
-parser.add_option("-y", "--Year", dest="year", default='run2', type="str", help="which year's datasetes")
+parser.add_option("-y", "--Year", dest="year", default='run3', type="str", help="which year's datasetes")
 parser.add_option('-o', "--outDir", dest='outDir', default="./optimize", type="string", help="outDir")
 parser.add_option("--region", dest="region", type=int, default=0, help="0 for full region, 1 for signal region, 2 for sideband region")
 parser.add_option('-m', '--mva', dest='mva', action='store_true', default=False, help='use mva or not')
@@ -224,7 +224,9 @@ def smooth(graph, hist, mva_low = 0.1):
 
 
 def compare(hist, hist_smooth, ma):
-    canv = TCanvas("cc", "cc", 650, 600)
+    if gROOT.FindObject("cc"):
+        gROOT.FindObject("cc").Close()
+    canv = TCanvas("cc", "cc", 800, 600)
     canv.cd()
     canv.SetLogy()
     SetgStyle()
@@ -238,17 +240,15 @@ def compare(hist, hist_smooth, ma):
     canv.SetTickx(1)
     canv.SetTicky(1)
 
-
-    hist.SetMinimum(2e0)
-    hist.SetMaximum(1e4)
-    hist_smooth[0].SetMinimum(2e0)
-    hist_smooth[0].SetMaximum(1e4)
+    hist.SetMinimum(0.5)
+    hist.SetMaximum( 2 * hist.GetMaximum() )
 
     hist.SetFillColor(0)
     hist.SetLineColor(1)
     hist.SetLineWidth(2)
     hist.GetXaxis().SetTitle('BDT Score')
-    hist.GetYaxis().SetTitle('Events')
+    # hist.GetYaxis().SetTitle('Events')
+    hist.GetYaxis().SetTitle(f'Events / {hist.GetBinWidth(1):.3f}')
     hist.GetXaxis().CenterTitle(True)
     hist.GetYaxis().CenterTitle(True)
 
@@ -299,7 +299,7 @@ def compare(hist, hist_smooth, ma):
     
     #canv.cd()
     global legend
-    legend = TLegend(0.55,0.60,0.94,0.82)
+    legend = TLegend(0.65,0.60,0.94,0.82)
     #legend.AddEntry(hist, "Background")
     legend.SetTextFont(42)
     legend.SetBorderSize(0)
@@ -307,9 +307,9 @@ def compare(hist, hist_smooth, ma):
     legend.SetFillColor(0)
     legend.SetTextSize(0.045)
     legend.AddEntry(hist, "Nominal", "l")
-    legend.AddEntry(hist_smooth[1], "Smoothed + 1 #sigma", "l")
+    legend.AddEntry(hist_smooth[1], "Smoothed + 1#sigma", "l")
     legend.AddEntry(hist_smooth[0], "Smoothed", "l")
-    legend.AddEntry(hist_smooth[2], "Smoothed - 1 #sigma", "l")
+    legend.AddEntry(hist_smooth[2], "Smoothed - 1#sigma", "l")
     legend.Draw("SAME")
 
     latex = TLatex()
@@ -318,10 +318,9 @@ def compare(hist, hist_smooth, ma):
     latex.SetTextFont(42)
     latex.SetTextSize(0.045)
     latex.SetTextAlign(13)
-    latex.DrawLatex(0.65, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
+    latex.DrawLatex(0.75, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
 
-    # latex.DrawLatex(0.685,0.97,("138 fb^{-1} (13 TeV)"))
-    latex.DrawLatex(0.685,0.97,("62 fb^{-1} (13.6 TeV)"))
+    latex.DrawLatex(0.625,0.97,("170.84 fb^{-1} (13.6 TeV)"))
     
     latex.SetTextSize(0.045)  # 字體大小
     latex.SetTextFont(61)  # 粗體字 CMS 標籤
@@ -570,7 +569,7 @@ def main():
         if options.plot:
             for r in signal_region:
                 canv_SR = compare(hist_SR[r][sig], hist_SR_smooth[r][sig],sig)
-                canv_SR.SaveAs(options.outDir+"/"+sig+"_"+r+"_DYJetsToLL_SR.pdf")
+                canv_SR.SaveAs(options.outDir+"/"+sig+"_"+r+"_DYJetsToLL_DYGto2LG_SR.pdf")
                 # canv_SR.SaveAs(options.outDir+"/"+sig+"_"+r+"_DYJetsToLL_SR.png")
             
             canv_CR = compare(hist_CR[sig], hist_CR_smooth[sig],sig)
@@ -681,6 +680,8 @@ def main():
                 plt.close('all')
                 '''
 
+                if gROOT.FindObject("cc1"):
+                    gROOT.FindObject("cc1").Close()
                 canv_sigVSscore = TCanvas("cc1", "cc1", 800, 600)
                 canv_sigVSscore.SetMargin(0.12, 0.02, 0.145, 0.08) #//left//right//bottom//top
                 canv_sigVSscore.cd()
@@ -715,13 +716,17 @@ def main():
                     gr_err.SetPoint(i, x_arr[i], list(significance_all_up['all'].values())[i+burden])
                     gr_err.SetPoint(2*count-1-i, x_arr[i], list(significance_all_dn['all'].values())[i+burden])
                 
-                y_high = 65.
+                # 先算上沿的最大 y
+                y_up = [list(significance_all_up['all'].values())[i+burden] for i in range(count)]
+                ymax = max(y_up)
+
+                # y_high = 65.
                 y_low = 0.
                 gr_err.SetLineColor(0)
                 gr_err.SetFillColorAlpha(2,0.3)
-                gr_err.GetHistogram().SetMaximum(y_high)
-                gr_err.GetHistogram().SetMinimum(y_low)
-                gr_err.GetHistogram().GetXaxis().SetRangeUser(x_low,x_high)
+                # gr_err.GetHistogram().SetMaximum(1.5 * ymax)
+                # gr_err.GetHistogram().SetMinimum(y_low)
+                # gr_err.GetHistogram().GetXaxis().SetRangeUser(x_low,x_high)
 
                 gr_err.GetYaxis().SetTitle( f'Significance (AMS) / {w:.3f}' )
                 gr_err.GetXaxis().SetTitle( 'BDT Score' )
@@ -754,7 +759,17 @@ def main():
                 gr.SetMarkerSize(0.8)
 
                 gr_err.Draw('AF')
-                Line = TLine((partition_final['all'][0][0]-1)*w - 0.1, y_low, (partition_final['all'][0][0]-1)*w - 0.1, y_high)
+
+                y_up = [list(significance_all_up['all'].values())[i+burden] for i in range(count)]
+                ymax = max(y_up)
+                frame = gr_err.GetHistogram()  # 现在能拿到有效的 TH1 框
+                frame.SetMaximum(5.0 * ymax)
+                frame.SetMinimum(y_low)
+                frame.GetXaxis().SetRangeUser(x_low, x_high)
+                gPad.Modified()
+                gPad.Update()
+
+                Line = TLine((partition_final['all'][0][0]-1)*w - 0.1, y_low, (partition_final['all'][0][0]-1)*w - 0.1, 5.0 * ymax)
                 Line.SetLineStyle(7)
                 Line.SetLineWidth(3)
                 Line.SetLineColor(4)
@@ -767,12 +782,12 @@ def main():
                 legend.SetLineColor(0)
                 legend.SetFillStyle(0)
                 legend.SetBorderSize(0)
-                legend.SetTextFont(52)
+                legend.SetTextFont(42)
                 legend.SetTextSize(0.045)
                 legend.SetLineWidth(0)                              # Remove the boundary on the legend
                 legend.AddEntry(Line,"Working Point", "l")          # Add the data points, labelled as "Data"
                 legend.AddEntry(gr,"Significance", "pl")                      # Add the MC histogram, labelled as "MC"
-                legend.AddEntry(gr_err,"Significance #pm 1 #sigma", "f") # Add the data points, labelled as "Data"
+                legend.AddEntry(gr_err,"Significance #pm 1#sigma", "f") # Add the data points, labelled as "Data"
                 legend.Draw("same")                                 # Draw the legend on the plot
 
                 latex_cut = TLatex()
@@ -784,7 +799,7 @@ def main():
                 latex_cut.DrawLatex(0.24, 0.87, f"m_{{a}} = {sig.lstrip('M')} GeV")
 
                 # latex_cut.DrawLatex(0.76,0.97,("138 fb^{-1} (13 TeV)"))
-                latex_cut.DrawLatex(0.76,0.97,("62 fb^{-1} (13.6 TeV)"))
+                latex_cut.DrawLatex(0.71,0.97,("170.84 fb^{-1} (13.6 TeV)"))
                 
                 latex_cut.SetTextSize(0.045)  # 字體大小
                 latex_cut.SetTextFont(61)  # 粗體字 CMS 標籤

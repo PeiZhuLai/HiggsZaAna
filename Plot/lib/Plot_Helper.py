@@ -705,8 +705,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         else:
             line_styles = [1, 5, 7, 9]
             # Run2 Paper
-            # for sample, i in zip(["M1", "M10", "M20", "M30"], range(4)):
-            for sample, i in zip(["M5", "M15", "M30"], range(3)):
+            for sample, i in zip(["M1", "M10", "M20", "M30"], range(4)):
+            # for sample, i in zip(["M5", "M15", "M30"], range(3)):
                 scaled_sig[sample].SetLineStyle(line_styles[i])
                 scaled_sig[sample].SetLineWidth(4)
                 scaled_sig[sample].Draw('HISTSAME')
@@ -802,10 +802,10 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 
     # CMS style
     CMS_lumi.cmsText = "CMS"
-    #CMS_lumi.extraText = "Preliminary"
+    CMS_lumi.extraText = "Preliminary"
     #CMS_lumi.extraText = "Supplementary"
     #CMS_lumi.cmsText = ""
-    CMS_lumi.extraText = ""
+    # CMS_lumi.extraText = ""
     #CMS_lumi.extraText_posX = 0.07
     #CMS_lumi.extraText = "Private"
     CMS_lumi.cmsTextSize = 0.95

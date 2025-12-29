@@ -1,8 +1,8 @@
 import os
 import json
 
-# mAs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30]
-mAs = [5, 15, 30]
+mAs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30]
+# mAs = [5, 15, 30]
 # 新增：輸出 LaTeX 表格
 output_latex = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/latexTable_MVAcut_eff_bkg.txt"
 

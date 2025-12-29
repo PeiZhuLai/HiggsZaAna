@@ -21,7 +21,6 @@ import json  # 新增：讀取 MVAcut 的 JSON
 # ===== Samples / 常數 (整合後唯一版本) =====
 years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
 ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
-ma_interpolate = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
 # sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
 sig_samples = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
 INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT"
@@ -33,10 +32,10 @@ BR = 1.0
 KEEP_FB = 1000.0
 TEST_TO_ALL = 2.0
 ALT_WEIGHT_CANDS = ["weight","genWeight","eventWeight"]
-SYS_Ele = []  # will be filled by _discover_sys_branches() in main()
-SYS_Ele_central = []  # will be filled by _discover_sys_branches() in main()
-SYS_Mu = []  # will be filled by _discover_sys_branches() in main()
-SYS_Mu_central = []  # will be filled by _discover_sys_branches() in main()
+SYS_Ele = ['weight_hlt_sf_up','weight_hlt_sf_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_electron_reco_sf_SelectedElectron_up', 'weight_electron_reco_sf_SelectedElectron_down', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down','weight_photon_id_sf_SelectedPhoton_up','weight_photon_id_sf_SelectedPhoton_down']
+SYS_Ele_central = ['weight_hlt_sf_central','weight_pu_reweight_sf_central','weight_electron_wplid_sf_SelectedElectron_central', 'weight_electron_reco_sf_SelectedElectron_central', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central', 'weight_photon_id_sf_SelectedPhoton_central']
+SYS_Mu = ['weight_hlt_sf_up','weight_hlt_sf_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down', 'weight_muon_iso_sf_SelectedMuon_up', 'weight_muon_iso_sf_SelectedMuon_down', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down','weight_photon_id_sf_SelectedPhoton_up','weight_photon_id_sf_SelectedPhoton_down']
+SYS_Mu_central = ['weight_hlt_sf_central','weight_pu_reweight_sf_central','weight_muon_looseid_sf_SelectedMuon_central', 'weight_muon_iso_sf_SelectedMuon_central', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central','weight_photon_id_sf_SelectedPhoton_central']
 
 INPUT_BASE_TREE_NAME = "test"
 
@@ -70,12 +69,6 @@ Y_MAX_5YEARS = 2.7   # 5條線(逐年)用：請改成你想要的值
 # 新增：error bar 最小可見門檻（單位：y 軸的百分比）
 ERR_ABS_FLOOR = 0.02   # 例如 0.02 (%)；太小會看不到
 ERR_REL_FLOOR = 0.02   # 例如 2% 的相對誤差：err >= eff * 0.02
-USE_VIS_FLOOR = False  # True 會強制 error bar 至少顯示到 floor（只為視覺化，不建議用於正式不確定度）
-
-# 新增：是否列印系統誤差 breakdown（每個 mA 都會印，量可能很大）
-PRINT_SYST_BREAKDOWN = False # False
-# 新增：是否也列印每個 systematic base 的分量（更長）
-PRINT_SYST_COMPONENTS = False # False
 
 # ====== 解析 BDT 門檻 ======
 def _to_int(v) -> Optional[int]:
@@ -227,103 +220,6 @@ def _list_root_files(base: str, sample: str, years: List[str]) -> List[str]:
         if f not in seen:
             seen.add(f); out.append(f)
     return sorted(out)
-
-def _discover_sys_branches(sample_map: Dict[int, str], years: List[str]) -> Tuple[List[str], List[str]]:
-    """
-    自動從一個可用的 ROOT 檔案中掃描 systematics weight branches。
-    回傳：
-      - sys_updown: 例如 weight_xxx_up / weight_xxx_down
-      - sys_central: 例如 weight_xxx_central（若存在）
-    好處：避免手動維護 SYS_* 清單，也避免因為字串被截斷導致 branch 名稱不匹配。
-    """
-    # 找到第一個能開的檔案當作「schema 代表」
-    rep_file = None
-    rep_sample = None
-    for ma, sample in sample_map.items():
-        files = _list_root_files(INPUT_BASE, sample, years)
-        if files:
-            rep_file = files[0]
-            rep_sample = sample
-            break
-    if rep_file is None:
-        print("[警告] 找不到任何輸入 ROOT 檔案，無法自動掃描 systematics branches。")
-        return [], []
-
-    try:
-        with uproot.open(rep_file) as f:
-            if INPUT_BASE_TREE_NAME not in f:
-                print(f"[警告] {rep_file} 沒有 tree={INPUT_BASE_TREE_NAME}，無法掃描 systematics branches。")
-                return [], []
-            t = f[INPUT_BASE_TREE_NAME]
-            fields = list(getattr(t, "keys", lambda: [])())
-            # uproot v4: t.keys() 回傳 branch 名稱
-            # 只抓 weight_* 且帶 _up/_down 的 branches；central 會另外嘗試從同一個 base 名稱推回來
-            sys_updown = [b for b in fields if b.startswith("weight_") and re.search(r"_(up|down)$", b)]
-            sys_updown = sorted(set(sys_updown))
-
-            # central/nominal 的 branch 命名在不同 ntuple 裡常不一樣：
-            #   - 有的叫 base（沒有 suffix）
-            #   - 有的叫 base_central
-            #   - 有的叫 base_nominal
-            bases = sorted(set(re.sub(r"_(up|down)$", "", b) for b in sys_updown))
-            sys_central = []
-            for base in bases:
-                for cand in (base, base + "_central", base + "_nominal"):
-                    if cand in fields:
-                        sys_central.append(cand)
-            sys_central = sorted(set(sys_central))
-            print(f"[資訊] 自動掃描 systematics branches：sample={rep_sample}, file={os.path.basename(rep_file)}")
-            print(f"       up/down branches: {len(sys_updown)}  |  central branches: {len(sys_central)}")
-            return sys_updown, sys_central
-    except Exception as e:
-        print(f"[警告] 掃描 systematics branches 失敗：{e}")
-        return [], []
-
-
-def _split_sys_branches_by_channel(sys_updown: List[str], sys_central: List[str]) -> Tuple[List[str], List[str], List[str], List[str]]:
-    """
-    依 branch 名稱將 systematics weight 分成：
-      - Electron channel: (common + electron-only)
-      - Muon channel:     (common + muon-only)
-    使用者需求：沒有寫 electron 或 muon 的 → 兩個 channel 都要考慮。
-    """
-    def _tag(b: str) -> str:
-        bl = b.lower()
-        has_e = 'electron' in bl
-        has_m = 'muon' in bl
-        if has_e and has_m:
-            return 'common'
-        if has_e:
-            return 'ele'
-        if has_m:
-            return 'mu'
-        return 'common'
-
-    common_ud, ele_ud, mu_ud = [], [], []
-    for b in sys_updown:
-        t = _tag(b)
-        if t == 'ele':
-            ele_ud.append(b)
-        elif t == 'mu':
-            mu_ud.append(b)
-        else:
-            common_ud.append(b)
-
-    common_c, ele_c, mu_c = [], [], []
-    for b in sys_central:
-        t = _tag(b)
-        if t == 'ele':
-            ele_c.append(b)
-        elif t == 'mu':
-            mu_c.append(b)
-        else:
-            common_c.append(b)
-
-    sys_ele = sorted(set(common_ud + ele_ud))
-    sys_mu  = sorted(set(common_ud + mu_ud))
-    cen_ele = sorted(set(common_c + ele_c))
-    cen_mu  = sorted(set(common_c + mu_c))
-    return sys_ele, sys_mu, cen_ele, cen_mu
 
 def _pick_weight_branch(t) -> Optional[str]:
     keys = set(map(str, t.keys()))
@@ -530,15 +426,8 @@ def _build_sumw_series(channel: str,
                        ma_order: List[int],
                        sample_map: Dict[int,str],
                        mva_cuts: Dict[int,float],
-                       years: List[str]) -> Tuple[List[int], List[float], List[float], List[float]]:
-    """
-    回傳 (xs, ys, yerr_lo, yerr_hi)，其中 y 軸是 Efficiency × Acceptance (%)。
-
-    - 統計誤差：由 pass events 的 sumw2（w^2）給出，因為分母（XS×BR×Lumi×KEEP）是常數。
-    - 系統誤差：對每個 systematic source 取 up/down 對 nominal 的偏移（envelope），再做 quadrature。
-      這裡輸出不對稱誤差（lo/hi），最後再與統計誤差做 quadrature。
-    """
-    xs, ys, yerr_lo, yerr_hi = [], [], [], []
+                       years: List[str]) -> Tuple[List[int],List[float],List[float]]:
+    xs, ys, yerrs = [], [], []
     for ma in ma_order:
         if ma not in sample_map or ma not in mva_cuts:
             continue
@@ -559,92 +448,68 @@ def _build_sumw_series(channel: str,
         sys_central = SYS_Mu_central if channel == "muon" else SYS_Ele_central
         sumw_systs = _accumulate_pass_sumw_systs(ma, sample_map, mva_cuts, years, sys_names, sys_central)
 
-        # envelope by base：分別蒐集「向上」與「向下」偏移（用正數表示幅度）
-        up_by_base: Dict[str, float] = {}
-        dn_by_base: Dict[str, float] = {}
+        # envelope by base (up/down max), 同時蒐集 sys 統計誤差（用 w_eff 的 sumw2）
+        deltas_by_base: Dict[str, float] = {}
+        max_sys_stat_delta = 0.0
 
         for sys_name, (sw_mu, sw_ele, sw2_mu, sw2_ele) in sumw_systs.items():
-            if channel == "muon":
-                sw, sw2 = float(sw_mu), float(sw2_mu)
-            else:
-                sw, sw2 = float(sw_ele), float(sw2_ele)
-
+            sw = sw_mu if channel == "muon" else sw_ele
+            sw2 = sw2_mu if channel == "muon" else sw2_ele
             if sw == 0.0:
                 continue
 
             eff_sys = _sumw_to_eff_percent(sw)
             delta = float(eff_sys - eff_nom)
 
+            # sys 統計誤差：由 w_eff 的 sumw2 來
+            stat_err_sys = _sumw2_to_efferr_percent(sw2)
+            max_sys_stat_delta = max(max_sys_stat_delta, abs(stat_err_sys - stat_err))
+
             base = re.sub(r"_(up|down)$", "", sys_name)
+            prev = deltas_by_base.get(base, 0.0)
+            if abs(delta) > abs(prev):
+                deltas_by_base[base] = delta
 
-            if delta >= 0.0:
-                prev = up_by_base.get(base, 0.0)
-                if delta > prev:
-                    up_by_base[base] = delta
-            else:
-                prev = dn_by_base.get(base, 0.0)
-                if (-delta) > prev:
-                    dn_by_base[base] = -delta
+        syst2 = float(sum(d*d for d in deltas_by_base.values()))
+        syst_err = float(np.sqrt(syst2)) if syst2 > 0 else 0.0
 
-        syst_up = float(np.sqrt(sum(v*v for v in up_by_base.values()))) if up_by_base else 0.0
-        syst_dn = float(np.sqrt(sum(v*v for v in dn_by_base.values()))) if dn_by_base else 0.0
+        # 新 error bar：把 sys 權重造成的統計波動也納入
+        tot_err = float(np.sqrt(stat_err * stat_err + syst_err * syst_err + max_sys_stat_delta * max_sys_stat_delta))
 
-        # === 新增：列印系統誤差 ===
-        if PRINT_SYST_BREAKDOWN:
-            yrs = ",".join(years)
-            ch = "muon" if channel == "muon" else "ele"
-            print(f"[SYST] ma={ma:>3d}  ch={ch:<4s}  years=[{yrs}]  "
-                  f"eff_nom={eff_nom:.6g}%  stat={stat_err:.6g}%  "
-                  f"syst(+/-)=({syst_up:.6g}%, {syst_dn:.6g}%)  "
-                  f"nBase(up/dn)=({len(up_by_base)}/{len(dn_by_base)})")
-
-            if PRINT_SYST_COMPONENTS:
-                # union of bases, stable ordering
-                bases = sorted(set(up_by_base.keys()) | set(dn_by_base.keys()))
-                for b in bases:
-                    du = up_by_base.get(b, 0.0)
-                    dd = dn_by_base.get(b, 0.0)
-                    # du/dd 已經是 envelope 幅度（正值）
-                    print(f"       - {b}:  +{du:.6g}%  -{dd:.6g}%")
-
-        tot_up = float(np.sqrt(stat_err*stat_err + syst_up*syst_up))
-        tot_dn = float(np.sqrt(stat_err*stat_err + syst_dn*syst_dn))
-
-        # 可選：視覺化 floor（不建議用於正式不確定度）
-        if USE_VIS_FLOOR:
-            vis_floor = max(float(ERR_ABS_FLOOR), float(abs(eff_nom) * ERR_REL_FLOOR))
-            tot_up = max(tot_up, vis_floor)
-            tot_dn = max(tot_dn, vis_floor)
+        # 新增：避免 error bar 小到看不見（視覺化 floor，不改 central value）
+        vis_floor = max(float(ERR_ABS_FLOOR), float(abs(eff_nom) * ERR_REL_FLOOR))
+        tot_err = max(tot_err, vis_floor)
 
         xs.append(ma)
         ys.append(eff_nom)
-        yerr_lo.append(tot_dn)
-        yerr_hi.append(tot_up)
+        yerrs.append(tot_err)
 
-    return xs, ys, yerr_lo, yerr_hi
+    return xs, ys, yerrs
 
 def _build_sumw_series_by_year(channel: str,
                                ma_order: List[int],
                                sample_map: Dict[int,str],
                                mva_cuts: Dict[int,float],
-                               years_list: List[str]) -> Dict[str, Tuple[List[int], List[float], List[float], List[float]]]:
-    out: Dict[str, Tuple[List[int], List[float], List[float], List[float]]] = {}
+                               years_list: List[str]) -> Dict[str, Tuple[List[int], List[float], List[float]]]:
+    out: Dict[str, Tuple[List[int], List[float], List[float]]] = {}
     for y in years_list:
-        x, yy, ylo, yhi = _build_sumw_series(channel, ma_order, sample_map, mva_cuts, years=[y])
+        x, yy, ye = _build_sumw_series(channel, ma_order, sample_map, mva_cuts, years=[y])
         if x:
-            out[y] = (x, yy, ylo, yhi)
+            out[y] = (x, yy, ye)
     return out
+
 def _build_sumw_series_by_year_group(channel: str,
                                      ma_order: List[int],
                                      sample_map: Dict[int, str],
                                      mva_cuts: Dict[int, float],
-                                     year_groups: Dict[str, List[str]]) -> Dict[str, Tuple[List[int], List[float], List[float], List[float]]]:
-    out: Dict[str, Tuple[List[int], List[float], List[float], List[float]]] = {}
+                                     year_groups: Dict[str, List[str]]) -> Dict[str, Tuple[List[int], List[float], List[float]]]:
+    out: Dict[str, Tuple[List[int], List[float], List[float]]] = {}
     for label, years in year_groups.items():
-        x, yy, ylo, yhi = _build_sumw_series(channel, ma_order, sample_map, mva_cuts, years=years)
+        x, yy, ye = _build_sumw_series(channel, ma_order, sample_map, mva_cuts, years=years)
         if x:
-            out[label] = (x, yy, ylo, yhi)
+            out[label] = (x, yy, ye)
     return out
+
 def _quadratic_curve(xs: List[int], ys: List[float], n: int = 400) -> Tuple[np.ndarray, np.ndarray]:
     """
     產生二次插值的平滑曲線點集。
@@ -694,7 +559,7 @@ def _quadratic_curve(xs: List[int], ys: List[float], n: int = 400) -> Tuple[np.n
     y_new = np.concatenate(y_new_list) if y_new_list else y
     return x_new, y_new
 
-def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], List[float], List[float]]],
+def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], List[float]]],
                         channel_label: str,
                         out_dir: Path,
                         name_suffix: str = "",
@@ -724,15 +589,6 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     years = list(series_by_year.keys())
     years.sort()  # 讓顏色/legend 順序穩定（可移除）
 
-    # 新增：收集「平滑線在 ma_interpolate 上」的 y 值（只在 5years 模式輸出）
-    interp_payload = {
-        "channel": channel_label,
-        "name_suffix": name_suffix,
-        "ma_points": list(map(int, ma_interpolate)),
-        "unit": "Efficiency x Acceptance (%)",
-        "values": {},  # year -> { "11": y, ... }
-    }
-
     c = ROOT.TCanvas(f"c_{channel_label.lower()}_by_year", "", 800, 600)
     c.SetMargin(0.12 + OFFSET, 0.035, 0.14, 0.09)
     c.SetTickx()
@@ -741,7 +597,7 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     # legend lines = 1(header) + 1 * number of actually drawable year-series (one combined entry per year)
     n_drawable = 0
     for y in years:
-        x, yy, ylo, yhi = series_by_year[y]
+        x, yy, ye = series_by_year[y]
         if len(x) >= 2:
             n_drawable += 1
     n_lines = 1 + 1 * n_drawable
@@ -772,7 +628,7 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
 
     # FIX: years 是 list[str]，需 enumerate 才能拿到 (index, year)
     for i, y in enumerate(years):
-        x, yy, ylo, yhi = series_by_year[y]
+        x, yy, ye = series_by_year[y]
         if len(x) < 2:
             continue
 
@@ -784,26 +640,6 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
 
         # 1) smooth line (不加誤差)
         x_smooth, y_smooth = _quadratic_curve(x, yy, n=400)
-
-        # 新增：輸出 ma_interpolate 的 y 值（用平滑線做線性內插）
-        try:
-            x_s = np.asarray(x_smooth, dtype=float)
-            y_s = np.asarray(y_smooth, dtype=float)
-            xmin, xmax = float(np.min(x_s)), float(np.max(x_s))
-
-            per_year_items = []  # (ma_int, value) 先收集再排序，確保輸出順序 1,2,3,...
-            for m in ma_interpolate:
-                mf = float(m)
-                if mf < xmin or mf > xmax:
-                    continue
-                per_year_items.append((int(m), float(np.interp(mf, x_s, y_s))))
-
-            if per_year_items:
-                per_year_items.sort(key=lambda t: t[0])
-                interp_payload["values"][y] = {str(k): v for k, v in per_year_items}
-        except Exception:
-            pass
-
         sx = list(map(float, x_smooth))
         sy = list(map(float, y_smooth))
 
@@ -823,16 +659,13 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
         # 2) original points + error bars
         px = list(map(float, x))
         py = list(map(float, yy))
-        pye_lo = list(map(float, ylo))
-        pye_hi = list(map(float, yhi))
-        pxe_lo = [0.0] * len(px)
-        pxe_hi = [0.0] * len(px)
+        pye = list(map(float, ye))
+        pxe = [0.0] * len(px)
 
-        g_pts = ROOT.TGraphAsymmErrors(
+        g_pts = ROOT.TGraphErrors(
             len(px),
             carray('d', px), carray('d', py),
-            carray('d', pxe_lo), carray('d', pxe_hi),
-            carray('d', pye_lo), carray('d', pye_hi),
+            carray('d', pxe), carray('d', pye),
         )
         g_pts.SetTitle("")
         g_pts.SetLineColor(color)
@@ -892,30 +725,6 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     fname = f"sigEfficiencyVmA_{'muon' if channel_label.lower().startswith('muon') else 'ele'}_byYear{name_suffix}"
     out_path = out_dir / f"{fname}.pdf"
     c.SaveAs(str(out_path))
-
-    # 新增：在 5years 模式把 interpolated y 寫成 JSON（每個 channel 一份）
-    if name_suffix == "_5years" and interp_payload["values"]:
-        json_name = f"{fname}_quadratic_interp_ma_points.json"
-        jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
-        json_path = jsonOutDir / json_name
-        meta = {
-            "input_years": years,
-            "mva_cut_json": optimized_BDT_Cut,
-            "input_base": INPUT_BASE,
-            "tree": INPUT_BASE_TREE_NAME,
-            "xs_pb": XS_PB,
-            "br": BR,
-            "keep_fb": KEEP_FB,
-            "test_to_all": TEST_TO_ALL,
-        }
-        try:
-            with open(json_path, "w") as jf:
-                # 重點：不要 sort_keys，不然 "10" 會又排到 "2" 前面
-                json.dump({"meta": meta, **interp_payload}, jf, indent=2, sort_keys=False)
-            print(f"[資訊] 已輸出 quadratic curve 內插點 JSON：{json_path}")
-        except Exception as e:
-            print(f"[警告] 寫出 JSON 失敗：{json_path} ({e})")
-
     return out_path
 
 def main():
@@ -929,13 +738,6 @@ def main():
 
     # 2. 建立 ma->sample 對應
     sample_map = _build_mass_map(sig_samples)
-
-    # 2.1 自動掃描 systematics branches（避免手動 SYS_* 清單與 branch 名稱不一致）
-    global SYS_Ele, SYS_Ele_central, SYS_Mu, SYS_Mu_central
-    sys_updown, sys_central = _discover_sys_branches(sample_map, years_sig)
-    # 依 branch 名稱把 e/μ 專屬系統分開；沒有寫 electron/muon 的視為 common（兩個 channel 都要考慮）
-    SYS_Ele, SYS_Mu, SYS_Ele_central, SYS_Mu_central = _split_sys_branches_by_channel(sys_updown, sys_central)
-    print(f"[資訊] syst branches split: common+ele={len(SYS_Ele)} | common+mu={len(SYS_Mu)} | central(ele)={len(SYS_Ele_central)} | central(mu)={len(SYS_Mu_central)}")
     out_dir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/signal_eff_sumw")
     out_dir.mkdir(parents=True, exist_ok=True)
 
