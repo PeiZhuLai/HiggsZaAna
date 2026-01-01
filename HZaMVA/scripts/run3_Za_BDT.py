@@ -31,7 +31,7 @@ except Exception:
     pio = None
 
 # --- ensure plot output dir exists + helper to save all matplotlib figures ---
-PLOTS_DIR = Path("plots_MVA/run3")
+PLOTS_DIR = Path("../plots_MVA/run3")
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
@@ -174,7 +174,25 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     plt.ylabel("Arbitrary Units", fontsize=18, labelpad=10)
     #plt.yscale('log')
     plt.legend(loc='upper center', fontsize=16, frameon=False)
-    plt.ylim([0.01, 1.3*max(hist)])
+
+    # --- signal histograms (for y-axis scaling) ---
+    hist_sig_train, _ = np.histogram(
+        decisions[0],
+        bins=bins,
+        range=low_high,
+        density=True,
+        weights=weight[0]
+    )
+
+    hist_sig_test, _ = np.histogram(
+        decisions[2],
+        bins=bins,
+        range=low_high,
+        density=True,
+        weights=weight[2]
+    )
+    ymax_signal = max(hist_sig_train.max(), hist_sig_test.max())
+    plt.ylim([0.0, 1.3 * ymax_signal])
     #plt.savefig('./plot/BDT_output.png',dpi=300)
     plt.savefig(f'./plots_MVA/run3/train_test.pdf', format='pdf')
     savefig_and_show("train_test.pdf")
@@ -565,14 +583,16 @@ print("finish")
 # # Optuna for optimization
 def objective(trial):
     
-    learning_rate = trial.suggest_float('learning_rate', 0.01, 0.5)
-    n_estimators = trial.suggest_int('n_estimators', 50, 1000, step=50)
-    max_depth = trial.suggest_int('max_depth', 3, 6)
-    min_child_weight = trial.suggest_int('min_child_weight', 1, 100)
-    gamma = trial.suggest_float('gamma', 0.001, 0.5)
-    reg_alpha = trial.suggest_float('reg_alpha', 0.001, 5)
-    reg_lambda = trial.suggest_float('reg_lambda', 0.001, 10)
-    
+    learning_rate = trial.suggest_float('learning_rate', 0.02, 0.15, log=True)
+    n_estimators = trial.suggest_int('n_estimators', 300, 1500, step=100)
+    max_depth = trial.suggest_int('max_depth', 3, 5)
+    min_child_weight = trial.suggest_int('min_child_weight', 5, 80, log=True)
+    gamma = trial.suggest_float('gamma', 0.01, 2.0, log=True)
+    reg_lambda = trial.suggest_float("reg_lambda", 1.0, 30.0, log=True)
+    reg_alpha  = trial.suggest_float("reg_alpha", 1e-4, 1.0, log=True)
+    subsample = trial.suggest_float("subsample", 0.6, 1.0)
+    colsample_bytree = trial.suggest_float("colsample_bytree", 0.6, 1.0)
+
     model = xgb.XGBClassifier(
         max_depth=max_depth,
         learning_rate=learning_rate,
@@ -588,14 +608,14 @@ def objective(trial):
         booster='gbtree',
         colsample_bylevel=1,
         colsample_bynode=1, 
-        colsample_bytree=1, 
+        colsample_bytree=colsample_bytree, 
         gamma=gamma,
         max_delta_step=0,
         objective='binary:logistic', 
         random_state=1, 
         reg_alpha=reg_alpha,
         reg_lambda=reg_lambda,
-        subsample=1, 
+        subsample=subsample, 
         verbosity=1)
     eval_set = [(x_train_reduced, y_train), (x_test_reduced, y_test)]
     model.fit(x_train_reduced, y_train, sample_weight=xgb.DMatrix(x_train).get_weight() , eval_set=eval_set, verbose=False)
@@ -614,7 +634,7 @@ def objective(trial):
 study_name = "Za-study"
 storage_name = "sqlite:///{}.db".format(study_name)
 xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name, storage=storage_name, load_if_exists=True)
-xgb_study.optimize(objective, n_trials=20, timeout=300)
+xgb_study.optimize(objective, n_trials=20, timeout=1000)
 # xgb_study.optimize(objective, n_trials=5, timeout=300)
 
 # --- replace .show() with PDF export ---
@@ -726,11 +746,11 @@ model = pickle.load(open(filename, 'rb'))
 y_test_pred = model.predict_proba(x_test_reduced)[:, 1]
 y_train_pred = model.predict_proba(x_train_reduced)[:, 1]
 
-print(len(z_test))
-print(len(y_test_pred))
-print(len(y_test))
-print(len(x_test_w))
-print(len(x_test_mass))
+# print(len(z_test))
+# print(len(y_test_pred))
+# print(len(y_test))
+# print(len(x_test_w))
+# print(len(x_test_mass))
 ##########################################################
 # make histogram of discriminator value for signal and bkg
 ##########################################################
@@ -753,14 +773,14 @@ disc_test_signal_all = y_test_frame[y_test_frame['truth'] < 0]['disc'].values
 stat_signal,pval_signal = ks_2samp(disc_train_signal_all,disc_test_signal_all)
 #stat_signal,pval_signal = ks_2samp(disc_train_signal_all[disc_train_signal_all>0.5],disc_test_signal_all[disc_test_signal_all>0.5])
 stat_bkg,pval_bkg = ks_2samp(disc_train_bkg_all,disc_test_bkg_all)
-print(pval_signal)
-print(pval_bkg)
-print(ks_2samp(disc_train_signal_all*100.0,disc_test_signal_all*100.0))
-print(stats.anderson_ksamp([disc_train_signal_all,disc_test_signal_all]))
-print(stats.mannwhitneyu(disc_train_signal_all,disc_test_signal_all,alternative='two-sided',use_continuity = False))
-print(len(disc_train_signal_all))
-print(len(disc_train_bkg_all))
-print(stats.ttest_ind(disc_train_signal_all,disc_test_signal_all))
+# print(pval_signal)
+# print(pval_bkg)
+# print(ks_2samp(disc_train_signal_all*100.0,disc_test_signal_all*100.0))
+# print(stats.anderson_ksamp([disc_train_signal_all,disc_test_signal_all]))
+# print(stats.mannwhitneyu(disc_train_signal_all,disc_test_signal_all,alternative='two-sided',use_continuity = False))
+# print(len(disc_train_signal_all))
+# print(len(disc_train_bkg_all))
+# print(stats.ttest_ind(disc_train_signal_all,disc_test_signal_all))
 
 bins = 50
 
@@ -798,7 +818,7 @@ fig, ax = plt.subplots(figsize=(8, 6))
 ax.barh(variables_sorted, model.feature_importances_[sorted_idx], color='#FF7609')
 
 # Add axis labels and increase font size
-ax.set_xlabel('Feature of Importance', fontsize=18, labelpad=15)
+ax.set_xlabel('Feature Importance', fontsize=18, labelpad=15)
 # ax.set_ylabel('Variable', fontsize=18, fontweight='bold')
 plt.subplots_adjust(left=0.25, right=0.97, top=0.97, bottom=0.13)
 plt.xticks(fontsize=14)
@@ -810,8 +830,8 @@ plt.yticks(fontsize=14)
 
 # Save and show the plot
 #plt.savefig('./plot/rank.png', dpi=300, bbox_inches='tight')
-plt.savefig(f'./plots_MVA/run3/variable_importance.pdf', format='pdf')
-savefig_and_show("variable_importance.pdf")
+plt.savefig(f'./plots_MVA/run3/feature_importance.pdf', format='pdf')
+savefig_and_show("feature_importance.pdf")
 
 ##########################################################
 # make ROC curve
@@ -822,7 +842,7 @@ savefig_and_show("variable_importance.pdf")
 
 fpr_test, tpr_test, boundary_test = roc_curve(y_test_frame['label'].values, y_test_frame['disc'].values)
 fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, y_train_frame['disc'].values)
-print(fpr_test, tpr_test)
+# print(fpr_test, tpr_test)
 ks_test = max(tpr_test-fpr_test)
 auc_test = auc(fpr_test,tpr_test)
 print("test K-S value: ",ks_test)
@@ -861,7 +881,7 @@ plt.figure(figsize=(8, 6))
 
 fpr_test, tpr_test, boundary_test = roc_curve(y_test_frame['label'].values, y_test_frame['disc'].values)
 fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, y_train_frame['disc'].values)
-print(fpr_test, tpr_test)
+# print(fpr_test, tpr_test)
 ks_test = max(tpr_test-fpr_test)
 auc_test = auc(fpr_test,tpr_test)
 print("test K-S value: ",ks_test)
@@ -888,13 +908,13 @@ plt.gca().tick_params(which='minor', direction='in', top=True, right=True, lengt
 
 plt.subplots_adjust(left=0.17, right=0.96, top=0.97, bottom=0.16)
 
-plt.plot([1, 0], [0, 1], color='navy', lw=lw, linestyle='--', label='Luck')
+plt.plot([1, 0], [0, 1], color='navy', lw=lw, linestyle='--', label='Random Guess')
 plt.xlim([0.01, 1.1])
 plt.ylim([0.0, 1.1])
 plt.xlabel('Signal Efficiency', fontsize=14, labelpad=10)
 plt.ylabel('Background Rejection', fontsize=14, labelpad=10)
 plt.legend(loc="lower left", fontsize=12, frameon=False)
-plt.savefig('./plots_MVA/run3/ROC.pdf')
+# plt.savefig('../plots_MVA/run3/ROC.pdf')
 savefig_and_show("ROC.pdf")
 
 
@@ -975,9 +995,9 @@ Hm_var_indices = [df_sig_all.columns.get_loc(v) for v in ['H_m']]
 # wt_var_indices = [df_bkg_all.columns.get_loc(v) for v in wt_variables]
 
 
-print("Number of signal MC events:",len(signal))
-print("Number of background MC events:",len(background))
-print("Number of background DY MC events:",len(background_DY))
+# print("Number of signal MC events:",len(signal))
+# print("Number of background MC events:",len(background))
+# print("Number of background DY MC events:",len(background_DY))
 # print("Number of background ZG MC events:",len(background_ZG))
 
 nsigw = np.sum(signal[:,wt_var_indices])
@@ -985,12 +1005,12 @@ nbkgw = np.sum(background[:,wt_var_indices])
 nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
 # nbkgw_ZG = np.sum(background_ZG[:,wt_var_indices])
 
-print("expected number of events for signal: ")
-print(nsigw)
-print("expected number of events for all bkg: ")
-print(nbkgw)
-print("expected number of events for DY bkg: ")
-print(nbkgw_DY)
+# print("expected number of events for signal: ")
+# print(nsigw)
+# print("expected number of events for all bkg: ")
+# print(nbkgw)
+# print("expected number of events for DY bkg: ")
+# print(nbkgw_DY)
 # print("expected number of events for ZG bkg: ")
 # print(nbkgw_ZG)
 
@@ -1311,7 +1331,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
             sig_all[i] = significance
         
         output = nCats," - Best category: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,"1. --->",significance_final,"signal total: ",h_bdt_signal_SR.Integral(1,nBins+1),"events:",h_bdt_signal_SR.GetEntries(),"signal cut",h_bdt_signal_SR.Integral(partition_final[0][0],nBins),"smoothed background: ",h_bdt_datamix_SR_weighted_smooth.Integral(partition_final[0][0],nBins),"data: ",h_bdt_data_SB.Integral(partition_final[0][0],nBins),"NEXT BIN: ","smoothed background: ",h_bdt_datamix_SR_weighted_smooth.Integral(partition_final[0][0]+1,nBins),"data: ",h_bdt_data_SB.Integral(partition_final[0][0]+1,nBins)
-        print(' '.join(map(str,output)))
+        # print(' '.join(map(str,output)))
 
     #2 categories
     elif nCats == 2:
@@ -1328,7 +1348,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
         
         if significance_final > -999:
             output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2,"1. --->",significance_final
-            print(' '.join(map(str,output)))
+            # print(' '.join(map(str,output)))
         else:
             print("No valid partition found for nCats=2")
     
@@ -1348,7 +1368,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                             partition_final = partition
         
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, "1. --->",significance_final
-        print(' '.join(map(str,output)))
+        # print(' '.join(map(str,output)))
         
     #4 categories
     elif nCats == 4:
@@ -1366,7 +1386,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                                 partition_final = partition
 
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[3][0])-h_bdt_signal_SR.GetBinWidth(partition_final[3][0])/2, "1. --->",significance_final
-        print(' '.join(map(str,output)))
+        # print(' '.join(map(str,output)))
 
     #5 categories
     elif nCats == 5:
@@ -1384,7 +1404,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                                     partition_final = partition
 
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[3][0])-h_bdt_signal_SR.GetBinWidth(partition_final[3][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[4][0])-h_bdt_signal_SR.GetBinWidth(partition_final[4][0])/2, "1. --->",significance_final
-        print(' '.join(map(str,output)))
+        # print(' '.join(map(str,output)))
 
     else:
         print("Number of categories not supported, choose: 1, 2, 3, 4, 5, 6, 7, 8 or 9!")
@@ -1424,9 +1444,9 @@ significance_all_dn = {}
 
 partition_final, significance_final, output, significance_all = getResults(roohist_sig_SR, hist_SR_smooth[0], hist_CR, nCats, nbins)
 
-print(partition_final)
+# print(partition_final)
 for [l,h] in partition_final:
-    print([l,h])
+    # print([l,h])
     s = roohist_sig_SR.Integral(l, h)
     b_smooth = hist_SR_smooth[0].Integral(l, h)
     b_smooth_up = hist_SR_smooth[1].Integral(l, h)
@@ -1434,7 +1454,7 @@ for [l,h] in partition_final:
     b_nosmooth = hist_SR.Integral(l, h)
 
     sig5 = computeSignificance(s,b_smooth,20)
-    print('significance:', sig5, 'ns:', s, 'nb smooth:', b_smooth, 'b_smooth_up:', b_smooth_up, 'b_smooth_dn:', b_smooth_dn, 'b_nosmooth:', b_nosmooth)
+    # print('significance:', sig5, 'ns:', s, 'nb smooth:', b_smooth, 'b_smooth_up:', b_smooth_up, 'b_smooth_dn:', b_smooth_dn, 'b_nosmooth:', b_nosmooth)
 
 nCats = 3
 partition_final = {}
@@ -1516,7 +1536,7 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
     plt.title('Stacked Weighted Histogram of Mass by Truth')
-    savefig_and_show(_auto_pdf_name(f"cat_{var_name}"))
+    # savefig_and_show(_auto_pdf_name(f"cat_{var_name}"))
 
 cats = [[0.0, 0.12999999523162842], [0.12999999523162842, 1.]]
 
@@ -1544,7 +1564,7 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
     plt.title('Stacked Weighted Histogram of Mass by Truth')
-    savefig_and_show(_auto_pdf_name(f"cat_{var_name}"))
+    # savefig_and_show(_auto_pdf_name(f"cat_{var_name}"))
 
 cats = [[0.0, 0.925000011920929], [0.925000011920929, 0.9599999785423279], [0.9599999785423279, 0.9700000286102295], [0.9700000286102295, 1.]]
 
@@ -1719,7 +1739,7 @@ for sig_eff in sig_effs:
 
 sig_effs = np.insert(sig_effs, 0, 0.0)
 BDT_boundaries = np.append(boundaries, 1.0)
-len(BDT_boundaries)
+# len(BDT_boundaries)
 
 hist_bkg_root, hist_bkg = getDiscriminator_hist(bkg, BDT_boundaries, sig_effs, 'bkg', region="SR")
 hist_sig_root, hist_sig = getDiscriminator_hist(sig, BDT_boundaries, sig_effs, 'sig', region="SR")
@@ -1772,96 +1792,95 @@ plt.xlim(range_hl)
 savefig_and_show("bkg_mass_shapes_by_bdt.pdf")
 
 
-from itertools import combinations
+# from itertools import combinations
 
-boundaries_test = sig_effs[::4][1:-1]
-boundaries_number = len(boundaries_test)
+# boundaries_test = sig_effs[::4][1:-1]
+# boundaries_number = len(boundaries_test)
 
-nCats = 2
+# nCats = 2
 
 #print(list(list(combinations(boundaries_test, 2))[6]))#.insert(0, 0.))
 #print(hist_bkg[0:2])
 #index = np.where(sig_effs == boundaries_test[5])[0]
 
-for nCats in range(4):
+# for nCats in range(4):
 
-    boundaries_all = list(combinations(boundaries_test, nCats+1))
+#     boundaries_all = list(combinations(boundaries_test, nCats+1))
 
-    #print(boundaries_all)
+#     #print(boundaries_all)
 
-    significance_best = 0.0
-    significance_best_lists = []
-    boundaries_best = np.array([])
+#     significance_best = 0.0
+#     significance_best_lists = []
+#     boundaries_best = np.array([])
 
-    for boundaries in boundaries_all:
+#     for boundaries in boundaries_all:
 
-        boundaries = np.array(boundaries)
-        boundaries = np.insert(boundaries, 0, 0.)
-        boundaries = np.append(boundaries, 1.0)
+#         boundaries = np.array(boundaries)
+#         boundaries = np.insert(boundaries, 0, 0.)
+#         boundaries = np.append(boundaries, 1.0)
         
-        #print(boundaries)
-        significance_sum = 0.0
-        significance_lists = []
+#         #print(boundaries)
+#         significance_sum = 0.0
+#         significance_lists = []
 
-        for i in range(len(boundaries)-1):
-            index_low = np.where(sig_effs == boundaries[i])[0][0]
-            index_heigh = np.where(sig_effs == boundaries[i+1])[0][0]
+#         for i in range(len(boundaries)-1):
+#             index_low = np.where(sig_effs == boundaries[i])[0][0]
+#             index_heigh = np.where(sig_effs == boundaries[i+1])[0][0]
 
-            # remove the lowest BDT bin
-            if index_low == 0: continue
+#             # remove the lowest BDT bin
+#             if index_low == 0: continue
 
-            nbkg = sum(hist_bkg[index_low:index_heigh-1])
-            nsig = sum(hist_sig[index_low:index_heigh-1])
+#             nbkg = sum(hist_bkg[index_low:index_heigh-1])
+#             nsig = sum(hist_sig[index_low:index_heigh-1])
 
-            #print("index_low",index_low, "index_heigh", index_heigh, "nbkg", nbkg, "nsig", nsig, "ndata", sum(hist_data[index_low:index_heigh-1]))
+#             #print("index_low",index_low, "index_heigh", index_heigh, "nbkg", nbkg, "nsig", nsig, "ndata", sum(hist_data[index_low:index_heigh-1]))
 
-            if nbkg > 0:
-                significance = nsig/np.sqrt(nbkg)
-            if nbkg == 0:
-                significance = nsig/np.sqrt(1.)
+#             if nbkg > 0:
+#                 significance = nsig/np.sqrt(nbkg)
+#             if nbkg == 0:
+#                 significance = nsig/np.sqrt(1.)
 
-            significance_sum = np.sqrt(significance_sum*significance_sum + significance*significance)
-            significance_lists.append(significance)
+#             significance_sum = np.sqrt(significance_sum*significance_sum + significance*significance)
+#             significance_lists.append(significance)
 
-        if significance_sum > significance_best:
-            significance_best = significance_sum
-            significance_best_lists = significance_lists
-            boundaries_best = boundaries
+#         if significance_sum > significance_best:
+#             significance_best = significance_sum
+#             significance_best_lists = significance_lists
+#             boundaries_best = boundaries
         
 
-    print("nCats:", nCats+2, ", max significance:", significance_best, ", Boundaries:", boundaries_best, "Significance list:", significance_best_lists)
+#     print("nCats:", nCats+2, ", max significance:", significance_best, ", Boundaries:", boundaries_best, "Significance list:", significance_best_lists)
 
-def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50, range_hl=(0,1)):
-    hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
-    hist_data, _ = np.histogram(data_all_frame[var_name][(data_all_frame['disc']>BDT_low) & (data_all_frame['disc']<=BDT_high) & ((data_all_frame['H_mass']<115) | (data_all_frame['H_mass']>135))], bins=nbins,range=range_hl)
-    hist_data_err = np.sqrt(hist_data)
-    bins = bins + (bins[1]-bins[0])/2.
-    # center = (bins[:-1] + bins[1:]) / 2.
+# def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50, range_hl=(0,1)):
+#     hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
+#     # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
+#     #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
+#     hist_data, _ = np.histogram(data_all_frame[var_name][(data_all_frame['disc']>BDT_low) & (data_all_frame['disc']<=BDT_high) & ((data_all_frame['H_mass']<115) | (data_all_frame['H_mass']>135))], bins=nbins,range=range_hl)
+#     hist_data_err = np.sqrt(hist_data)
+#     bins = bins + (bins[1]-bins[0])/2.
+#     # center = (bins[:-1] + bins[1:]) / 2.
 
-    # 绘制堆叆的直方图
-    plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
-    # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
-    plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
-    plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
+#     # 绘制堆叆的直方图
+#     plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
+#     # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
+#     plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
+#     plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
 
-    plt.legend()
-    plt.xlabel(var_name)
-    plt.ylabel('Weighted Frequency')
-    plt.title('Stacked Weighted Histogram of Mass by Truth')
-    savefig_and_show(_auto_pdf_name(f"bestbounds_{var_name}"))
+#     plt.legend()
+#     plt.xlabel(var_name)
+#     plt.ylabel('Weighted Frequency')
+#     plt.title('Stacked Weighted Histogram of Mass by Truth')
+#     savefig_and_show(_auto_pdf_name(f"bestbounds_{var_name}"))
 
-boundaries_best = [ 0., 0.12, 0.44, 0.56, 0.64, 1. ]
-nCats = 3
-BDT_boundaries_best = []
-for b in boundaries_best:
-    BDT_boundaries_best.append(BDT_boundaries[np.where(sig_effs == b)[0][0]])
+# boundaries_best = [ 0., 0.12, 0.44, 0.56, 0.64, 1. ]
+# nCats = 3
+# BDT_boundaries_best = []
+# for b in boundaries_best:
+#     BDT_boundaries_best.append(BDT_boundaries[np.where(sig_effs == b)[0][0]])
 
-for i in range(nCats):
-    BDT_low = BDT_boundaries_best[i+1]
-    BDT_high = BDT_boundaries_best[i+2]
+# for i in range(nCats):
+#     BDT_low = BDT_boundaries_best[i+1]
+#     BDT_high = BDT_boundaries_best[i+2]
 
-    print("BDT_low/BDT_high:", BDT_low, BDT_high)
-    draw_dataMC("H_mass", BDT_low, BDT_high, 65, (110,180))
-
+#     print("BDT_low/BDT_high:", BDT_low, BDT_high)
+#     draw_dataMC("H_mass", BDT_low, BDT_high, 65, (110,180))

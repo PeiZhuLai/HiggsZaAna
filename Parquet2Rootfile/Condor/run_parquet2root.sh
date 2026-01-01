@@ -6,9 +6,8 @@ set -euo pipefail
 
 INPUT="$1"      # /eos/.../merged_*.parquet
 OUTPUT="$2"     # /eos/.../*.root
-MA="$3"         # 1,2,3,... or "NA"
-CORR="$4"       # nominal / FNUF_up / ...
-SPLIT_FLAG="$5" # "1" for signal (--split), "0" otherwise
+CORR="$3"       # nominal / FNUF_up / ...
+SPLIT_FLAG="$4" # "1" for signal (--split), "0" otherwise
 
 # -------- single-thread everything (avoid PSI & oversubscription) --------
 export OMP_NUM_THREADS=1
@@ -74,11 +73,7 @@ PY_SCRIPT="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root
 # -------- 构建命令 --------
 CMD=("$PY_BIN" "$PY_SCRIPT" -i "$INPUT" -o "$OUTPUT")
 if [[ "$SPLIT_FLAG" == "1" ]]; then
-  CMD+=(--split --ma "$MA")
-else
-  if [[ "$MA" != "NA" ]]; then
-    CMD+=(--ma "$MA")
-  fi
+  CMD+=(--split)
 fi
 # 如需把 CORR 也交给脚本用作内部逻辑：CMD+=(--corr "$CORR")
 

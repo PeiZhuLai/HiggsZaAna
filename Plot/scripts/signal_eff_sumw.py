@@ -704,14 +704,14 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     if not series_by_year:
         return None
 
-    palette_hex_ele = [
+    palette_hex_mu = [
         "#540D6E", "#EE4266", "#FFB640",
         "#3BCEAC", "#0EAD69",
     ]
 
-    palette_hex_mu = [
+    palette_hex_ele = [
         "#5C7AFF", "#242038", "#59D2FE",
-        "#44E5E7", "#73FBD3",
+        "#44E5E7", "#417B5A",
     ]
 
     # 新增：依 channel 選擇調色盤（Electron/Muon 顏色不同）
@@ -722,7 +722,14 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     marker_size   = [1.4, 1.3, 1.6, 1.9, 1.7, 1.6, 1.9]
 
     years = list(series_by_year.keys())
-    years.sort()  # 讓顏色/legend 順序穩定（可移除）
+    # years.sort()  # 會導致 2022postEE 排到 2022preEE 前面，改用固定順序
+
+    # 新增：固定 legend 顯示順序（只影響文字/entry 順序，不改點的樣式設定邏輯）
+    _LEGEND_YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
+    years_set = set(years)
+    years_in_order = [y for y in _LEGEND_YEAR_ORDER if y in years_set]
+    years_rest = [y for y in years if y not in set(_LEGEND_YEAR_ORDER)]  # 保底：其他 key 維持原本插入順序
+    years = years_in_order + years_rest
 
     # 新增：收集「平滑線在 ma_interpolate 上」的 y 值（只在 5years 模式輸出）
     interp_payload = {

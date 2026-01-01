@@ -6,9 +6,9 @@ rewrite the joblist, then (optionally) resubmit via a submit file (e.g. 2_submit
 
 Designed for your current workflow:
   - 1_make_joblist.py -> joblist.tsv with columns:
-      ARG_IN \t ARG_OUT \t ARG_MA \t ARG_CORR \t ARG_SPLIT
+      ARG_IN \t ARG_OUT \t ARG_CORR \t ARG_SPLIT
   - 2_submit.sub contains:
-      queue ARG_IN, ARG_OUT, ARG_MA, ARG_CORR, ARG_SPLIT from joblist.tsv
+      queue ARG_IN, ARG_OUT, ARG_CORR, ARG_SPLIT from joblist.tsv
 
 Default behavior:
   - remove jobs whose output (ARG_OUT) already exists

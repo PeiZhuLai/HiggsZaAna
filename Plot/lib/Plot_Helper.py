@@ -152,7 +152,7 @@ def _add_file_if_exists(chain, path):
         chain.Add(path)
         return True
     else:
-        print(f"[LoadNtuples][MISS] {path}")
+        print(f"[Plot_Helper][MISS] {path}")
         return False
 
 def _run3_build_chain(sample, ana_cfg):
@@ -222,9 +222,9 @@ def _run3_build_chain(sample, ana_cfg):
             added += 1
 
     if added == 0:
-        print(f"[LoadNtuples][WARN] sample={sample} has no files added (chain empty).")
+        print(f"[Plot_Helper][WARN] sample={sample} has no files added (chain empty).")
     else:
-        print(f"[LoadNtuples] sample={sample} added files: {added}")
+        print(f"[Plot_Helper] sample={sample} added files: {added}")
     return ch
 
 def LoadNtuples(ana_cfg):
@@ -310,19 +310,19 @@ def MakeRatioPlot(h_data, h_MC, var_name):
     ratio_plot.SetMaximum(1.6)
     ratio_plot.SetMarkerStyle(20)
 
+    ratio_plot.GetYaxis().SetNdivisions(505)
+    ratio_plot.GetYaxis().SetTitle("Data / SM")
+    ratio_plot.GetYaxis().CenterTitle(True)
+    ratio_plot.GetYaxis().SetLabelSize(0.14)
+    ratio_plot.GetYaxis().SetTitleSize(0.14)
+    ratio_plot.GetYaxis().SetTitleOffset(0.535)
+
     ratio_plot.GetXaxis().SetLimits( h_data.GetXaxis().GetXmin(), h_data.GetXaxis().GetXmax() )
-    ratio_plot.GetXaxis().SetLabelSize(0.14)
     ratio_plot.GetXaxis().SetTitle(var_name)
+    ratio_plot.GetXaxis().SetLabelSize(0.14)
     ratio_plot.GetXaxis().SetTitleSize(0.16)
     ratio_plot.GetXaxis().SetTitleOffset(0.65)
     ratio_plot.GetXaxis().SetTickLength(0.08)
-
-    ratio_plot.GetYaxis().SetNdivisions(505)
-    ratio_plot.GetYaxis().SetLabelSize(0.14)
-    ratio_plot.GetYaxis().SetTitle("Data / SM")
-    ratio_plot.GetYaxis().CenterTitle(True)
-    ratio_plot.GetYaxis().SetTitleSize(0.14)
-    ratio_plot.GetYaxis().SetTitleOffset(0.535)
 
     return ratio_plot
 
@@ -665,13 +665,25 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     canv.SetTickx()
     canv.SetTicky()
 
+
     if logY:
+        
+        if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
+            h_max = histos['Data'].GetMaximum()
+        else:
+            h_max = stacks['all'].GetMaximum()
+        if h_max < stacks['sig'].GetMaximum():
+            h_max = stacks['sig'].GetMaximum()
+
         upper_pad.SetLogy()
         stacks['all'].SetMinimum(1e-2)
-        stacks['all'].SetMaximum(9e9)
-
         histos['Data'].SetMinimum(1e-2)
-        histos['Data'].SetMaximum(9e9)
+
+        # stacks['all'].SetMaximum(1e10)
+        # histos['Data'].SetMaximum(1e10)
+
+        histos['Data'].SetMaximum(h_max*1e4)
+        stacks['all'].SetMaximum(h_max*1e4)
 
     if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
         h_max = histos['Data'].GetMaximum()
@@ -686,13 +698,13 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].Draw('PE')
     histos['Data'].GetXaxis().SetLabelSize(0)
     histos['Data'].GetXaxis().SetTitleOffset(0.95)
-    histos['Data'].GetYaxis().SetLabelSize(0.06)
     
     if var_name in ["H_m","ALP_m","Z_m"]:
         histos['Data'].GetYaxis().SetTitle('Events / %.2f GeV' %histos['Data'].GetBinWidth(1))
     else:
         histos['Data'].GetYaxis().SetTitle('Events / %.3f' %histos['Data'].GetBinWidth(1))
     histos['Data'].GetYaxis().SetTitleSize(0.07)
+    histos['Data'].GetYaxis().SetLabelSize(0.055)
     histos['Data'].GetYaxis().SetTitleFont(42)
     histos['Data'].GetYaxis().SetTitleOffset(1.15)
     stacks['all'].Draw('HISTSAME')
@@ -730,7 +742,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].Draw("AXIS SAME")
 
     if var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names:
-        legend_1 = TLegend(0.67, 0.59, 0.97, 0.86)
+        # -------------------------------------------------------------------------------------------
+        legend_1 = TLegend(0.66, 0.59, 0.97, 0.86)
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
         bkg_labels = {"DYGto2LG": r"Z + \gamma",
@@ -741,19 +754,18 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 
         legend_1.AddEntry(total_abs,"Total Unc.","f")
         legend_1.AddEntry(stat_err,"Stat. Unc.","f")
-
+        # -------------------------------------------------------------------------------------------
         legend_2 = TLegend(0.40, 0.80, 0.66, 0.86)
         ROOT.SetOwnership(legend_2, False)
         legend_2.AddEntry(scaled_sig[var_name.split("_")[-1]], r"m_{a} = %s GeV" % (var_name.split("_")[-1].lstrip("M")), "l" )
-
+        # -------------------------------------------------------------------------------------------
         legend_1.SetBorderSize(0)
         legend_1.SetFillStyle(0)
         legend_1.SetFillColor(0)
         legend_1.SetTextFont(42)
         legend_1.SetTextSize(0.05)
         legend_1.Draw("SAME")
-        
-
+        # -------------------------------------------------------------------------------------------
         legend_2.SetBorderSize(0)
         legend_2.SetFillStyle(0)
         legend_2.SetFillColor(0)
@@ -763,42 +775,49 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 
 
     else:
-        legend_1 = TLegend(0.42, 0.59, 0.68, 0.86)
+        legend_1 = TLegend(0.29, 0.816, 0.50, 0.87)
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
+        # -------------------------------------------------------------------------------------------
+        legend_2 = TLegend(0.44, 0.654, 0.73, 0.87)
+        ROOT.SetOwnership(legend_2, False)
         bkg_labels = {"DYGto2LG": r"Z + \gamma",
                     "DYJetsToLL": r"Z + jets"}    
             
         for sample_bkg in plt_cfg.ana_cfg.bkg_names:            
-            legend_1.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
+            legend_2.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
             
-        legend_1.AddEntry(total_abs,"Total Unc.","f")
-        legend_1.AddEntry(stat_err,"Stat. Unc.","f")
-
-        legend_2 = TLegend(0.65, 0.58, 0.95, 0.80)
-        ROOT.SetOwnership(legend_2, False)
+        legend_2.AddEntry(total_abs,"Total Unc.","f")
+        legend_2.AddEntry(stat_err,"Stat. Unc.","f")
+        # -------------------------------------------------------------------------------------------
+        legend_3 = TLegend(0.67, 0.654, 0.97, 0.87)
+        ROOT.SetOwnership(legend_3, False)
         if bdtCut:
-            legend_2.AddEntry(scaled_sig[mA], r"m_{a} = %s GeV" % (mA.lstrip("M")), "l")
+            legend_3.AddEntry(scaled_sig[mA], r"m_{a} = %s GeV" % (mA.lstrip("M")), "l")
         else:
-            for s in ["M5","M15","M30"]:
-                legend_2.AddEntry(scaled_sig[s], r"m_{a} = %s GeV" % (s.lstrip("M")), "l")
-
+            for s in ["M1","M10","M20","M30"]:
+                legend_3.AddEntry(scaled_sig[s], r"m_{a} = %s GeV" % (s.lstrip("M")), "l")
+        # -------------------------------------------------------------------------------------------
         legend_1.SetBorderSize(0)
         legend_1.SetFillStyle(0)
         legend_1.SetFillColor(0)
         legend_1.SetTextFont(42)
-        legend_1.SetTextSize(0.05)
+        legend_1.SetTextSize(0.045)
         legend_1.Draw("SAME")
-        
-
+        # -------------------------------------------------------------------------------------------
         legend_2.SetBorderSize(0)
         legend_2.SetFillStyle(0)
         legend_2.SetFillColor(0)
         legend_2.SetTextFont(42)
-        legend_2.SetTextSize(0.048)
+        legend_2.SetTextSize(0.045)
         legend_2.Draw("SAME")
-
-
+        # -------------------------------------------------------------------------------------------
+        legend_3.SetBorderSize(0)
+        legend_3.SetFillStyle(0)
+        legend_3.SetFillColor(0)
+        legend_3.SetTextFont(42)
+        legend_3.SetTextSize(0.045)
+        legend_3.Draw("SAME")
 
     # CMS style
     CMS_lumi.cmsText = "CMS"

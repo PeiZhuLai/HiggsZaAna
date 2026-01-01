@@ -78,9 +78,9 @@ class Plot_Config:
             'pho1eta': "#eta_{#gamma1}",
             'pho1phi': "#phi_{#gamma1}",
             'pho1R9': "R_{9,#gamma1}",
-            'pho1IetaIeta55': "#sigma_{i#etai#eta,#gamma1}",
+            'pho1IetaIeta55': "#sigma_{i#etai#eta, #gamma1}",
             'pho1ECALIso': "I_{ECAL,#gamma1}",
-            'pho1CIso': "I_{ch,#gamma1}",
+            'pho1CIso': "I_{CH,#gamma1}",
             'pho1HCALIso': "I_{HCAL,#gamma1}",
             'pho1HOE': "#gamma1 H/E",
 
@@ -88,9 +88,9 @@ class Plot_Config:
             'pho2eta': "#eta_{#gamma2}",
             'pho2phi': "#phi_{#gamma2}",
             'pho2R9': "R_{9,#gamma2}",
-            'pho2IetaIeta55': "#sigma_{i#etai#eta,#gamma2}",
+            'pho2IetaIeta55': "#sigma_{i#etai#eta, #gamma2}",
             'pho2ECALIso': "I_{ECAL, #gamma2}",
-            'pho2CIso': "I_{ch, #gamma2}",
+            'pho2CIso': "I_{CH, #gamma2}",
             'pho2HCALIso': "I_{HCAL, #gamma2}",
             'pho2HOE': "#gamma2 H/E",
 
@@ -100,11 +100,11 @@ class Plot_Config:
             'var_dR_g1Z': "#Delta R(#gamma1, Z)",
             'var_PtaOverMh': "p_{T,a}/m_{ll#gamma#gamma}",
             'var_Pta': "p_{T,a}",
-            'var_MhMZ': "m_{ll#gamma#gamma}+m_{ll}",
+            'var_MhMZ': "m_{ll#gamma#gamma} + m_{ll}",
             'H_pt': "p_{T,H}",
             'var_PtaOverMa': "p_{T,a}/m_{#gamma#gamma}",
-            'var_MhMa': "m_{ll#gamma#gamma}+m_{#gamma#gamma}",
-            'param': "(m_{a}-m_{a,hyp})/m_{ll#gamma#gamma}"
+            'var_MhMa': "m_{ll#gamma#gamma} + m_{#gamma#gamma}",
+            'param': "(m_{a} - m_{a,hyp})/m_{ll#gamma#gamma}"
         }
 
     def SetHistStyles(self, hist, sample):

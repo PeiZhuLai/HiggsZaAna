@@ -33,6 +33,7 @@ def getArgs():
     parser.add_argument('-o', '--output', action='store', default='outputs', help='Path to the output ntuple')
     parser.add_argument('-s', '--split', action='store_true', help='Split train and test branch')
     # 修正: 使用正確型別與安全的預設值
+    parser.add_argument('--ma', type=str, default='ALP_M5', help='Searching ALP mass or True ALP mass (e.g. ALP_M5, M5, 5)')
     parser.add_argument('--chunksize', type=int, default=500000000, help='size to process at a time') 
     return  parser.parse_args()
 
@@ -534,7 +535,7 @@ def preselect(data):
 
     return data
 
-def decorate(data):
+def decorate(data, wanted_ma_value):
 
     if data.shape[0] == 0: return data
 
@@ -554,9 +555,7 @@ def decorate(data):
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 
     
     # 修正: 使用解析後的質量數值與已載入的模型；若模型不存在則回傳 NaN
-    # 原本手動 M1~M6 改為自動產生 [1,30] step=1
-    for ma in range(1, 31):
-        data[f"MVA_Score_mA_M{ma}"] = data.apply(lambda x, _ma=ma: compute_MVA_Score(x, _ma), axis=1)
+    data['MVA_Score'] = data.apply(lambda x: compute_MVA_Score(x, wanted_ma_value), axis=1)
 
     data['H_m'] = data.H_mass
     data['ALP_m'] = data.ALP_mass
@@ -672,9 +671,22 @@ def decorate(data):
 
     return data
 
+def parse_ma_to_float(ma_raw: str) -> float:
+    """
+    從 'ALP_M5'、'M5'、'5'、'15.0' 等字串解析出浮點數質量值。
+    """
+    if ma_raw is None:
+        return 5.0
+    # 抽取第一個數字（包含小數）
+    m = re.search(r'(\d+(\.\d+)?)', str(ma_raw))
+    return float(m.group(1)) if m else 5.0
+
 def main():
     
     args = getArgs()
+
+    # 解析目標 ALP 質量
+    wanted_ma_value = parse_ma_to_float(args.ma)
 
     variables = [
         'H_pt', 'H_eta', 'H_phi', 'H_mass',
@@ -707,7 +719,8 @@ def main():
     initial_events += data.shape[0]
     #data = preprocess(data)
     data = preselect(data) #TODO add cutflow
-    data = decorate(data)
+    # 修正: 傳入 wanted_ma_value 與 MODEL
+    data = decorate(data, wanted_ma_value)
     final_events += data.shape[0]
 
     indices = np.arange(len(data))
