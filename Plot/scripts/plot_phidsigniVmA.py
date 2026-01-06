@@ -281,7 +281,38 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         kind, wp = _kind_wp_from_scenario(s)
         return f"{kind} ({wp})"
 
-    c1 = ROOT.TCanvas(f"c_phid_event_{year}", "", 900, 700)
+    # NEW: derive y-range from "custom tight" graph
+    def _scenario_key(kind: str, wp: str) -> str:
+        return f"zgammas_phid_{kind}_{wp}"
+
+    def _positive_ys_from_graph(g: ROOT.TGraph) -> List[float]:
+        ys: List[float] = []
+        for i in range(int(g.GetN())):
+            x = ctypes.c_double(0.0)
+            y = ctypes.c_double(0.0)
+            g.GetPoint(i, x, y)
+            yv = float(y.value)
+            if yv > 0.0:
+                ys.append(yv)
+        return ys
+
+    _ref_key = _scenario_key("custom", "tight")
+    _ref_graph = scenario_graphs.get(_ref_key)
+
+    # fallback: keep original fixed range if reference graph missing/empty
+    y_min_frame, y_max_frame = 10.0, 200.0
+    if _ref_graph is not None:
+        _ys_ref = _positive_ys_from_graph(_ref_graph)
+        if _ys_ref:
+            _ymin = min(_ys_ref)
+            _ymax = max(_ys_ref)
+            # padding (and protect degenerate range)
+            if _ymax <= _ymin:
+                _ymax = _ymin * 2.0 if _ymin > 0 else 1.0
+            y_min_frame = max(1e-6, _ymin * 0.1)
+            y_max_frame = _ymax * 1.7
+
+    c1 = ROOT.TCanvas(f"c_phid_event_{year}", "", 800, 600)
     # NEW (safety): ensure stat box stays off on this canvas
     ROOT.gStyle.SetOptStat(0)
     ROOT.gStyle.SetOptFit(0)
@@ -313,8 +344,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     h_frame.GetYaxis().SetTitleSize(0.055)
     h_frame.GetXaxis().SetLabelSize(0.05)
     h_frame.GetYaxis().SetLabelSize(0.05)
-    h_frame.SetMinimum(10.0)
-    h_frame.SetMaximum(200.0)  # 先給個安全範圍；可再依資料自動調
+    h_frame.SetMinimum(y_min_frame)
+    h_frame.SetMaximum(y_max_frame)
 
     h_frame.Draw("AXIS")
 
@@ -397,14 +428,14 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         lat_lumi.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_png = out_dir / f"phid_significanceVmA_{year}.png"
+    out_png = out_dir / f"phid_significanceVmA_{year}.pdf"
 
     # 讓 ROOT 先完成 paint（在某些環境可降低 SaveAs 時的 legend paint 問題）
     c1.Modified()
     c1.Update()
 
     c1.SaveAs(str(out_png))
-    c1.SaveAs(str(out_png.with_suffix(".pdf")))
+    # c1.SaveAs(str(out_png.with_suffix(".pdf")))
 
     # ========== log(y) version ==========
     # 收集所有正的 y 值，避免 log scale 下出現 0/負值導致問題
@@ -421,7 +452,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         y_min_pos = min(_all_pos_ys)
         y_max_pos = max(_all_pos_ys)
 
-        c2 = ROOT.TCanvas(f"c_phid_event_{year}_logy", "", 900, 700)
+        c2 = ROOT.TCanvas(f"c_phid_event_{year}_logy", "", 800, 600)
         # NEW (safety): ensure stat box stays off on this canvas
         ROOT.gStyle.SetOptStat(0)
         ROOT.gStyle.SetOptFit(0)
@@ -436,8 +467,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         _keepalive.append(h_frame_log)
 
         h_frame_log.SetTitle("")
-        h_frame_log.SetMinimum(10)
-        h_frame_log.SetMaximum(200)
+        h_frame_log.SetMinimum(y_min_frame)
+        h_frame_log.SetMaximum(y_max_frame)
         h_frame_log.GetXaxis().SetTitle("m_{a} [GeV]")
         h_frame_log.GetYaxis().SetTitle("Significance (AMS)")
         h_frame_log.GetXaxis().SetTitleOffset(1.1)
@@ -508,11 +539,11 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             lat_lumi2.SetTextSize(0.040)
             lat_lumi2.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
 
-        out_png_log = out_dir / f"phid_significanceVmA_{year}_logy.png"
+        out_png_log = out_dir / f"phid_significanceVmA_{year}_logy.pdf"
         c2.Modified()
         c2.Update()
         c2.SaveAs(str(out_png_log))
-        c2.SaveAs(str(out_png_log.with_suffix(".pdf")))
+        # c2.SaveAs(str(out_png_log.with_suffix(".pdf")))
 
         # --- cleanup: remove only the frames we own ---
         try:

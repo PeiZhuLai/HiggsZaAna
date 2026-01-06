@@ -300,11 +300,11 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
 
     # 兩條線的外觀（固定顏色）
     scenario_style = {
-        "zgammas_w":            {"color": _root_color("#1f77b4"), "ls": 1, "ms": 20, "label": "e SIP3D < 4 Removal"},
-        "zgammas_eleip3d_w":    {"color": _root_color("#d62728"), "ls": 2, "ms": 21, "label": "e SIP3D < 4"},
+        "zgammas_ele_w":            {"color": _root_color("#1f77b4"), "ls": 1, "ms": 20, "label": "e SIP3D < 4 Removal"},
+        "zgammas_ele_eleip3d_w":    {"color": _root_color("#d62728"), "ls": 2, "ms": 21, "label": "e SIP3D < 4"},
     }
 
-    c1 = ROOT.TCanvas(f"c_w_vs_eleip3d_{year}", "", 900, 700)
+    c1 = ROOT.TCanvas(f"c_w_vs_eleip3d_{year}", "", 800, 600)
     # NEW (safety): ensure stat box stays off on this canvas
     ROOT.gStyle.SetOptStat(0)
     ROOT.gStyle.SetOptFit(0)
@@ -327,6 +327,38 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     h_frame.SetDirectory(0)
     _keepalive.append(h_frame)
 
+    # NEW: auto y-range (follow phidsigniVmA.py)
+    def _positive_ys_from_graph(g: ROOT.TGraph) -> List[float]:
+        ys: List[float] = []
+        for i in range(int(g.GetN())):
+            x = ctypes.c_double(0.0)
+            y = ctypes.c_double(0.0)
+            g.GetPoint(i, x, y)
+            yv = float(y.value)
+            if yv > 0.0:
+                ys.append(yv)
+        return ys
+
+    def _auto_yrange_from_ref_graph(ref: Optional[ROOT.TGraph]) -> Tuple[float, float]:
+        # fallback: keep original fixed range if reference graph missing/empty
+        y_min_frame, y_max_frame = 10.0, 200.0
+        if ref is None:
+            return y_min_frame, y_max_frame
+        ys = _positive_ys_from_graph(ref)
+        if not ys:
+            return y_min_frame, y_max_frame
+        ymin = min(ys)
+        ymax = max(ys)
+        if ymax <= ymin:
+            ymax = ymin * 2.0 if ymin > 0 else 1.0
+        y_min_frame = max(1e-6, ymin * 0.1)
+        y_max_frame = ymax * 1.7
+        return y_min_frame, y_max_frame
+
+    # pick a reference scenario graph (prefer first scenario in list)
+    _ref_graph = scenario_graphs.get(SCENARIOS_TO_PLOT[0]) if SCENARIOS_TO_PLOT else None
+    y_min_frame, y_max_frame = _auto_yrange_from_ref_graph(_ref_graph)
+
     h_frame.SetTitle("")
     h_frame.GetXaxis().SetTitle("m_{a} [GeV]")
     h_frame.GetYaxis().SetTitle("Significance (AMS)")
@@ -336,8 +368,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     h_frame.GetYaxis().SetTitleSize(0.055)
     h_frame.GetXaxis().SetLabelSize(0.05)
     h_frame.GetYaxis().SetLabelSize(0.05)
-    h_frame.SetMinimum(10.0)
-    h_frame.SetMaximum(200.0)  # 先給個安全範圍；可再依資料自動調
+    h_frame.SetMinimum(y_min_frame)
+    h_frame.SetMaximum(y_max_frame)
 
     h_frame.Draw("AXIS")
 
@@ -389,13 +421,13 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         lat_lumi.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_png = out_dir / f"SIP3D_significanceVmA_{year}.pdf"
+    out_pdf = out_dir / f"SIP3D_significanceVmA_{year}.pdf"
 
     # 讓 ROOT 先完成 paint（在某些環境可降低 SaveAs 時的 legend paint 問題）
     c1.Modified()
     c1.Update()
 
-    c1.SaveAs(str(out_png))
+    c1.SaveAs(str(out_pdf))
 
     # --- cleanup: remove only the frame ---
     try:
@@ -437,7 +469,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             scenario_ratio_graphs[scenario] = _g_from_xy(xs, ys)
 
     if scenario_ratio_graphs:
-        c2 = ROOT.TCanvas(f"c_effSigOverEffBkg_{year}", "", 900, 700)
+        c2 = ROOT.TCanvas(f"c_effSigOverEffBkg_{year}", "", 800, 600)
         ROOT.gStyle.SetOptStat(0)
         ROOT.gStyle.SetOptFit(0)
         c2.SetMargin(0.13, 0.04, 0.13, 0.08)

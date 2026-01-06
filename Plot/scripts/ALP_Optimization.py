@@ -230,7 +230,10 @@ def compare(hist, hist_smooth, ma):
     canv.cd()
     canv.SetLogy()
     SetgStyle()
-    canv.SetMargin(0.145, 0.04, 0.14, 0.08) # //left//right//bottom//top
+    leftMargin=0.145
+    rightMargin = 0.04
+    topMargin = 0.08
+    canv.SetMargin(leftMargin, rightMargin, 0.14, topMargin) # //left//right//bottom//top
 
     # canv.SetRightMargin(0.04)
     # canv.SetLeftMargin(0.145)
@@ -318,18 +321,19 @@ def compare(hist, hist_smooth, ma):
     latex.SetTextColor(kBlack)
     latex.SetTextFont(42)
     latex.SetTextSize(0.045)
+ 
     latex.SetTextAlign(13)
-    # latex.DrawLatex(0.73, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
-
-    latex.DrawLatex(0.67,0.97,("170.84 fb^{-1} (13.6 TeV)"))
-    
     latex.SetTextSize(0.045)  # 字體大小
     latex.SetTextFont(61)  # 粗體字 CMS 標籤
-    latex.DrawLatex(0.145, 0.969, "CMS")
+    latex.DrawLatex(leftMargin, 0.969, "CMS")
 
     latex.SetTextFont(52)  # 斜體字 Preliminary 標籤
-    latex.DrawLatex(0.235, 0.965, "Preliminary")
+    latex.DrawLatex(leftMargin + 0.09, 0.965, "Preliminary")
 
+    latex.SetTextAlign(31)
+    # latex.DrawLatex(0.73, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
+    latex.DrawLatex(1. - rightMargin, 1. - topMargin + 0.01, ("170.84 fb^{-1} (13.6 TeV)"))
+    
     # latex.DrawLatex(0.85, 0.88, r"m_{a} = %s GeV" % (ma.lstrip("M")))
 
 
@@ -691,7 +695,10 @@ def main():
                 if gROOT.FindObject("cc1"):
                     gROOT.FindObject("cc1").Close()
                 canv_sigVSscore = TCanvas("cc1", "cc1", 800, 600)
-                canv_sigVSscore.SetMargin(0.12, 0.02, 0.145, 0.08) #//left//right//bottom//top
+                leftMargin=0.12
+                rightMargin=0.02
+                topMargin=0.08
+                canv_sigVSscore.SetMargin(leftMargin, rightMargin, 0.145, topMargin) #//left//right//bottom//top
                 canv_sigVSscore.cd()
                 # gStyle.SetPadTickX(1)
                 # gStyle.SetPadTickY(1)
@@ -771,13 +778,13 @@ def main():
                 y_up = [list(significance_all_up['all'].values())[i+burden] for i in range(count)]
                 ymax = max(y_up)
                 frame = gr_err.GetHistogram()  # 现在能拿到有效的 TH1 框
-                frame.SetMaximum(5.0 * ymax)
+                frame.SetMaximum(2.0 * ymax)
                 frame.SetMinimum(y_low)
                 frame.GetXaxis().SetRangeUser(x_low, x_high)
                 gPad.Modified()
                 gPad.Update()
 
-                Line = TLine((partition_final['all'][0][0]-1)*w - 0.1, y_low, (partition_final['all'][0][0]-1)*w - 0.1, 5.0 * ymax)
+                Line = TLine((partition_final['all'][0][0]-1)*w - 0.1, y_low, (partition_final['all'][0][0]-1)*w - 0.1, 2.0 * ymax)
                 Line.SetLineStyle(7)
                 Line.SetLineWidth(3)
                 Line.SetLineColor(4)
@@ -806,17 +813,18 @@ def main():
                 latex_cut.SetTextAlign(13)
                 latex_cut.DrawLatex(0.24, 0.87, f"m_{{a}} = {sig.lstrip('M')} GeV")
 
-                # latex_cut.DrawLatex(0.76,0.97,("138 fb^{-1} (13 TeV)"))
-                latex_cut.DrawLatex(0.71,0.97,("170.84 fb^{-1} (13.6 TeV)"))
-                
                 latex_cut.SetTextSize(0.045)  # 字體大小
                 latex_cut.SetTextFont(61)  # 粗體字 CMS 標籤
-                latex_cut.DrawLatex(0.125, 0.969, "CMS")
+                latex_cut.DrawLatex(leftMargin, 0.969, "CMS")
 
                 latex_cut.SetTextFont(52)  # 斜體字 Preliminary 標籤
-                latex_cut.DrawLatex(0.215, 0.965, "Preliminary")
+                latex_cut.DrawLatex(leftMargin + 0.09, 0.965, "Preliminary") # + 0.09
 
-                canv_sigVSscore.SaveAs(options.outDir+ '/sigVSscore_' + sig + '.pdf')
+                # latex_cut.DrawLatex(0.76,0.97,("138 fb^{-1} (13 TeV)"))
+                latex_cut.SetTextAlign(31)
+                latex_cut.DrawLatex(1. - rightMargin, 1. - topMargin + 0.01,("170.84 fb^{-1} (13.6 TeV)"))
+                
+                canv_sigVSscore.SaveAs(options.outDir+ '/sigVScore_' + sig + '.pdf')
                 # canv_sigVSscore.SaveAs(options.outDir+ '/sigVSscore_' + sig + '.png')
 
         #make sigma plots

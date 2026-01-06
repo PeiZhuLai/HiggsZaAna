@@ -157,66 +157,53 @@ def _add_file_if_exists(chain, path):
 
 def _run3_build_chain(sample, ana_cfg):
     """
-    Build a TChain for run3 according to user rules:
-      - signal (M*) : only 2022preEE
-      - DYJetsToLL  : years_dyll
-      - DYGto2LG    : merge bkg_2022/years_22 and bkg_2023/years_23 sub-samples
-      - Data        : years_dyll (try /Data/mA_{mass}/{year}.root then /Data/{year}.root)
+    Build a TChain for run3 according to updated rules:
+      - 全部樣本（Data / DYJetsToLL / DYGto2LG / signal）都直接讀 era ROOT：
+          base/<sample-or-subSample>/<year>.root
+        不再使用 /mA_M*/ 子資料夾
+      - MVA score 由 branch 決定（在 plot script 端讀 MVA_Score_mA_<mass>）
     """
-    # Decide tree name (keep previous convention)
-    tree_name = "test" if ("M" in sample and sample[0] == 'M') else "inclusive"
+    tree_name = "test" if (sample in getattr(ana_cfg, "sig_names", [])) else "inclusive"
     ch = TChain(tree_name, f"chain_{sample}")
-    base = ana_cfg.sample_loc  # /eos/.../run3_BDT
+    base = ana_cfg.sample_loc
     added = 0
 
-    # 依 mva 模式決定 mA 子資料夾；預設 M1
-    use_mva = bool(getattr(ana_cfg, "mva", False))
-    mva_tag = str(getattr(ana_cfg, "mva_alp_mass", "M1")) if use_mva else "M1"
-    alp_folder = f"mA_{mva_tag}"
-
-    # Signal samples like 'M5','M15','M30'
     if sample in ana_cfg.sig_names:
-        year = "2022preEE"
-        path = os.path.join(base, f"mA_{sample}", f"{year}.root")
-        if _add_file_if_exists(ch, path):
-            added += 1
+        # signal: base/mA_<signalMass>/<year>.root (沿用你目前的信號資料夾結構)
+        # 若你的 signal 其實是 base/<signalSample>/<year>.root，請在這裡把 "mA_" 拿掉即可
+        for y in getattr(ana_cfg, "years_sig", ["2022preEE"]):
+            path = os.path.join(base, f"mA_{sample}", f"{y}.root")
+            if _add_file_if_exists(ch, path):
+                added += 1
 
     elif sample == "DYJetsToLL":
-        for y in ana_cfg.years_dyll:
-            # 改用 mA_{mva_tag}
-            path1 = os.path.join(base, "DYJetsToLL", alp_folder, f"{y}.root")
-            if _add_file_if_exists(ch, path1):
+        for y in getattr(ana_cfg, "years_dyll", []):
+            path = os.path.join(base, "DYJetsToLL", f"{y}.root")
+            if _add_file_if_exists(ch, path):
                 added += 1
 
     elif sample == "DYGto2LG":
-        # Merge sub-samples
-        # 2022 group
+        # 2022 sub-samples
         for subs in getattr(ana_cfg, "bkg_2022", []):
             for y in getattr(ana_cfg, "years_22", []):
-                path = os.path.join(base, subs, alp_folder, f"{y}.root")
+                path = os.path.join(base, subs, f"{y}.root")
                 if _add_file_if_exists(ch, path):
                     added += 1
-        # 2023 group
+        # 2023 sub-samples
         for subs in getattr(ana_cfg, "bkg_2023", []):
             for y in getattr(ana_cfg, "years_23", []):
-                path = os.path.join(base, subs, alp_folder, f"{y}.root")
+                path = os.path.join(base, subs, f"{y}.root")
                 if _add_file_if_exists(ch, path):
                     added += 1
 
     elif sample == "Data":
         for y in getattr(ana_cfg, "years_dyll", []):
-            # 先嘗試 /Data/mA_{mva_tag}/{year}.root
-            p1 = os.path.join(base, "Data", alp_folder, f"{y}.root")
-            if _add_file_if_exists(ch, p1):
-                added += 1
-                continue
-            # 後備：/Data/{year}.root
-            p2 = os.path.join(base, "Data", f"{y}.root")
-            if _add_file_if_exists(ch, p2):
+            path = os.path.join(base, "Data", f"{y}.root")
+            if _add_file_if_exists(ch, path):
                 added += 1
 
     else:
-        # Fallback: keep old structure if any unexpected name
+        # Fallback
         path = os.path.join(base, sample, "run3.root")
         if _add_file_if_exists(ch, path):
             added += 1
@@ -682,8 +669,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         # stacks['all'].SetMaximum(1e10)
         # histos['Data'].SetMaximum(1e10)
 
-        histos['Data'].SetMaximum(h_max*1e4)
-        stacks['all'].SetMaximum(h_max*1e4)
+        histos['Data'].SetMaximum(h_max*1.1e4)
+        stacks['all'].SetMaximum(h_max*1.1e4)
 
     if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
         h_max = histos['Data'].GetMaximum()
@@ -715,7 +702,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         if bdtCut:
             scaled_sig[mA].Draw('HISTSAME')
         else:
-            line_styles = [1, 5, 7, 9]
+            line_styles = [1, 2, 5, 7]
             # Run2 Paper
             for sample, i in zip(["M1", "M10", "M20", "M30"], range(4)):
             # for sample, i in zip(["M5", "M15", "M30"], range(3)):

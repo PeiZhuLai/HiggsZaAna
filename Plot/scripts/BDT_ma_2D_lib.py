@@ -9,6 +9,8 @@ from matplotlib.colors import LogNorm
 import uproot
 
 INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
+# 新增：merged BDT（同一 era 檔內含多個 mA 分支）
+INPUT_BASE_MERGED = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT/"
 
 # Year of Signal
 year_sig_2022 = ["2022preEE", "2022postEE"]
@@ -47,13 +49,15 @@ name_Data_2024 = ["Data"]
 years_sig = year_sig_2022 + year_sig_2023 + year_sig_2024
 sig_samples = name_sig_2022 + name_sig_2023 + name_sig_2024
 
-bkg_2022 = name_DYG_2022
-bkg_2023 = name_DYG_2023
-years_22 = year_DYG_2022
-years_23 = year_DYG_2023
-
-bkg_dyll = name_DYJet_2022 + name_DYJet_2023 + name_DYJet_2024
-years_dyll = years_DYJet_2022 + year_DYJet_2023 + years_DYJet_2024
+# 改：背景要把 DYG + DYJets 全部跑完（各自對應年份）
+bkg_samples_by_year = {
+    "2022preEE":  name_DYG_2022 + name_DYJet_2022,
+    "2022postEE": name_DYG_2022 + name_DYJet_2022,
+    "2023preBPix":  name_DYG_2023 + name_DYJet_2023,
+    "2023postBPix": name_DYG_2023 + name_DYJet_2023,
+    "2024": name_DYG_2024 + name_DYJet_2024,
+}
+bkg_years_all = year_DYG_2022 + year_DYG_2023 + year_DYG_2024
 #-----------------------------------------------------
 
 #-----------------------------------------------------
@@ -74,6 +78,8 @@ bkg_ma_ticks = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 
 MVA_CANDIDATES = ["MVA_Score"]
 WEIGHT_CANDIDATES = ["weight", "w"]
+# 新增：背景 merged 檔內的 MVA 分支前綴
+BKG_MVA_BRANCH_PREFIXES = ["MVA_Score_mA_M", "MVA_Score_ma_M"]
 #-----------------------------------------------------
 
 # ==== Helpers ====
@@ -151,6 +157,31 @@ def read_arrays(file_path: str):
     # 對齊長度
     n = min(len(mva), len(w))
     return mva[:n], w[:n]
+
+# 新增：從同一個 tree 讀指定 ma 的 MVA 分支（背景 merged 檔用）
+def read_mva_for_ma_from_tree(tree, ma: int):
+    """
+    Return mva numpy array for given ma from a merged-background tree.
+    Tries exact name and common uproot-suffixed variants like '.0'.
+    """
+    if tree is None:
+        return None
+
+    keys = set(tree.keys())
+    # 候選分支名（含常見的 uproot 版本尾碼）
+    cand = []
+    for pfx in BKG_MVA_BRANCH_PREFIXES:
+        base = f"{pfx}{int(ma)}"
+        cand.extend([base, base + ".0", base + ".1", base + "_0", base + "_1"])
+
+    for br in cand:
+        if br in keys:
+            try:
+                arr = tree[br].array(library="np")
+                return np.asarray(arr, dtype=np.float64)
+            except Exception:
+                return None
+    return None
 
 def build_mass_edges(masses):
     """給定離散的質量中心，產生不等寬 y-edges。"""
@@ -344,26 +375,46 @@ def make_style_previews(outdir):
 # ==== Collectors ====
 def collect_background_xyw():
     xs, ys, ws = [], [], []
-    groups = [
-        (bkg_2022, years_22),
-        (bkg_2023, years_23),
-        (bkg_dyll, years_dyll),
-    ]
     missing = 0
-    for samples, years in groups:
-        for s in samples:
-            for y in years:
-                for ma in ma_list:
-                    fpath = os.path.join(INPUT_BASE, s, f"mA_M{ma}", f"{y}.root")
-                    if not os.path.exists(fpath):
-                        missing += 1
-                        continue
-                    mva, w = read_arrays(fpath)
-                    if mva is None:
-                        continue
-                    xs.append(mva)
-                    ws.append(w)
-                    ys.append(np.full_like(mva, float(ma), dtype=np.float64))
+
+    # 改：跑完所有背景（DYG + DYJets），每個檔內含 MVA_Score_mA_M*
+    for y in bkg_years_all:
+        for s in bkg_samples_by_year.get(y, []):
+            fpath = os.path.join(INPUT_BASE_MERGED, s, f"{y}.root")
+            if not os.path.exists(fpath):
+                missing += 1
+                continue
+
+            tree = first_tree(fpath)
+            if tree is None:
+                continue
+
+            # weights（同檔共用）
+            w_all = None
+            for wv in WEIGHT_CANDIDATES:
+                if wv in tree.keys():
+                    try:
+                        w_all = np.asarray(tree[wv].array(library="np"), dtype=np.float64)
+                        break
+                    except Exception:
+                        w_all = None
+
+            for ma in ma_list:
+                mva = read_mva_for_ma_from_tree(tree, ma)
+                if mva is None:
+                    continue
+
+                if w_all is None:
+                    w = np.ones_like(mva, dtype=np.float64)
+                else:
+                    n = min(len(mva), len(w_all))
+                    mva = mva[:n]
+                    w = w_all[:n]
+
+                xs.append(mva)  # x = BDT
+                ws.append(w)
+                ys.append(np.full_like(mva, float(ma), dtype=np.float64))  # y = mA
+
     if missing > 0:
         print(f"[bkg] missing files skipped: {missing}")
     if len(xs) == 0:

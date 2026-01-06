@@ -9,7 +9,7 @@ import time  # NEW
 
 sys.path.insert(0, '%s/lib' % os.getcwd())
 from ROOT import *
-from Plot_Helper import LoadNtuples_split_by_mass, LoadNtuples, MakeStack, CreateCanvas, DrawOnCanv, SaveCanvPic, MakeLumiLabel, MakeCMSDASLabel, ScaleSignal, MakeRatioPlot, MakeLegend, Total_Unc, ScaleBkgToData
+from Plot_Helper import LoadNtuples, MakeStack, CreateCanvas, DrawOnCanv, SaveCanvPic, MakeLumiLabel, MakeCMSDASLabel, ScaleSignal, MakeRatioPlot, MakeLegend, Total_Unc, ScaleBkgToData
 from Analyzer_Helper import getMassSigma
 import Analyzer_Configs as AC
 import Plot_Configs     as PC
@@ -115,17 +115,15 @@ def SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115., si
 # 新增：偵測指定 mA 的 MVA 分支名稱（回傳第一個存在的分支，否則預設為 "MVA_Score"）
 def _resolve_mva_branch_for_mass(chain, mass_tag):
     """
-    嘗試在 TChain 上尋找對應 mA 的 MVA 分支，常見候選：
-      - MVA_Score_<M>
-      - MVA_score_<M>
-      - BDTScore_<M>
-      - BDT_<M>
-    找不到則回退為 "MVA_Score"。
+    run3 更新：同一個 era 檔內同時有多個 mA 的 MVA 分數：
+      - 優先：MVA_Score_mA_<M>  (e.g. MVA_Score_mA_M4)
+    其餘命名仍保留回退相容。
     """
     if not chain or not chain.GetListOfBranches():
         return "MVA_Score"
     br_list = chain.GetListOfBranches()
     candidates = [
+        f"MVA_Score_mA_{mass_tag}",   # NEW primary
         f"MVA_Score_{mass_tag}",
         f"MVA_score_{mass_tag}",
         f"BDTScore_{mass_tag}",
@@ -143,7 +141,6 @@ def main():
 
     analyzer_cfg = AC.Analyzer_Config('inclusive', args.year, args.region, args.mva)
 
-    # 將欲使用的 ALP mass 傳給載檔函式（mva 模式下用於路徑 ALP_{mass}）
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
 
@@ -170,10 +167,42 @@ def main():
 
 
     analyzer_cfg.Print_Config()
-    if args.mva and analyzer_cfg.year == 'run3':
-        ntuples_by_mass = LoadNtuples_split_by_mass(analyzer_cfg)
-    else:
-        ntuples = LoadNtuples(analyzer_cfg)
+
+    # NEW: 一律走 LoadNtuples（不再 split_by_mass；檔案本身就含多 mA 的 MVA branch）
+    ntuples = LoadNtuples(analyzer_cfg)
+
+    # NEW: 印出使用的樣本/背景清單，並檢查 ntuples 實際載入到哪些 sample
+    print("\n[Samples] analyzer_cfg lists:")
+    print(f"  bkg_names({len(analyzer_cfg.bkg_names)}): {analyzer_cfg.bkg_names}")
+    print(f"  sig_names({len(analyzer_cfg.sig_names)}): {analyzer_cfg.sig_names}")
+    print(f"  samp_names({len(analyzer_cfg.samp_names)}): {analyzer_cfg.samp_names}")
+    print(f"  sys_names({len(analyzer_cfg.sys_names)}): {analyzer_cfg.sys_names}")
+
+    loaded_keys = sorted(list(ntuples.keys())) if ntuples else []
+    print("\n[Samples] ntuples loaded keys:")
+    print(f"  loaded({len(loaded_keys)}): {loaded_keys}")
+
+    cfg_set = set(analyzer_cfg.samp_names)
+    loaded_set = set(loaded_keys)
+    missing_in_ntuples = sorted(list(cfg_set - loaded_set))
+    extra_in_ntuples = sorted(list(loaded_set - cfg_set))
+    if missing_in_ntuples:
+        print("\n[Warning][Samples] In cfg.samp_names but NOT loaded by LoadNtuples:")
+        print(f"  missing({len(missing_in_ntuples)}): {missing_in_ntuples}")
+    if extra_in_ntuples:
+        print("\n[Info][Samples] Loaded by LoadNtuples but NOT in cfg.samp_names:")
+        print(f"  extra({len(extra_in_ntuples)}): {extra_in_ntuples}")
+
+    # 另外特別看 bkg 是否有缺
+    bkg_expected = set([s for s in analyzer_cfg.bkg_names if s.lower() != "data"])
+    bkg_loaded = set([s for s in loaded_keys if (s.lower() != "data") and (s in analyzer_cfg.bkg_names)])
+    bkg_missing = sorted(list(bkg_expected - bkg_loaded))
+    print("\n[Samples] bkg cross-check:")
+    print(f"  expected_bkg({len(bkg_expected)}): {sorted(list(bkg_expected))}")
+    print(f"  loaded_bkg({len(bkg_loaded)}): {sorted(list(bkg_loaded))}")
+    if bkg_missing:
+        print(f"  [Warning] missing_bkg({len(bkg_missing)}): {bkg_missing}")
+
     plot_cfg = PC.Plot_Config(analyzer_cfg, args.year)
     var_names = list(plot_cfg.var_title_map.keys())
 
@@ -191,31 +220,16 @@ def main():
     # get mass region
     sigma_low, sigma_hig = getMassSigma(analyzer_cfg)
 
-    # 為每個 (sample, mA) 解析一次 MVA 分支
+    # 為每個 (sample, mA) 解析一次 MVA 分支（從同一條 chain 上找 MVA_Score_mA_<mass>）
     mva_branch_map = {}  # dict[sample][mass] -> branch_name
     if args.mva:
-        # 需要一份樣本清單；注意：信號樣本名稱就是 'M5'/'M15'/'M30'
-        def _samples_for_mass(ALP_mass):
-            return analyzer_cfg.bkg_names + [ALP_mass, 'Data']
-
-        if analyzer_cfg.year == 'run3' and 'ntuples_by_mass' in locals():
-            # 逐 mA、逐 sample 解析
+        for s in analyzer_cfg.samp_names:
+            chain = ntuples.get(s, None)
+            mva_branch_map[s] = {}
             for ALP_mass in target_masses:
-                for s in _samples_for_mass(ALP_mass):
-                    mva_branch_map.setdefault(s, {})
-                    chain = ntuples_by_mass[ALP_mass][s]
-                    br = _resolve_mva_branch_for_mass(chain, ALP_mass)
-                    mva_branch_map[s][ALP_mass] = br
-                    print(f"[MVA] sample={s:>12s} mass={ALP_mass:>3s} uses branch '{br}'")
-        else:
-            # 回退：舊邏輯（無分質量目錄）
-            for s in analyzer_cfg.samp_names:
-                chain = ntuples.get(s, None)
-                mva_branch_map[s] = {}
-                for ALP_mass in target_masses:
-                    br = _resolve_mva_branch_for_mass(chain, ALP_mass)
-                    mva_branch_map[s][ALP_mass] = br
-                    print(f"[MVA] sample={s:>12s} mass={ALP_mass:>3s} uses branch '{br}'")
+                br = _resolve_mva_branch_for_mass(chain, ALP_mass)
+                mva_branch_map[s][ALP_mass] = br
+                print(f"[MVA] sample={s:>12s} mass={ALP_mass:>3s} uses branch '{br}'")
 
 
     ### declare histograms
@@ -231,23 +245,23 @@ def main():
         histos['pho1eta'][sample]    = TH1F('pho1eta'    + '_' + sample, 'pho1eta'    + '_' + sample, 30,  -3., 3.)
         histos['pho1phi'][sample]    = TH1F('pho1phi'    + '_' + sample, 'pho1phi'    + '_' + sample, 40,  -4., 4.)
         histos['pho1R9'][sample]    = TH1F('pho1R9'    + '_' + sample, 'pho1R9'    + '_' + sample, 25,  0.1, 1.)
-        histos['pho1IetaIeta55'][sample]    = TH1F('pho1IetaIeta55'    + '_' + sample, 'pho1IetaIeta55'    + '_' + sample, 25,  0., 0.06)
-        histos['pho1ECALIso'][sample]    = TH1F('pho1ECALIso'    + '_' + sample, 'pho1ECALIso'    + '_' + sample, 40, 0., 40.)
-        histos['pho1CIso'][sample]    = TH1F('pho1CIso'    + '_' + sample, 'pho1CIso'    + '_' + sample, 40, 0., 0.4)
-        histos['pho1HCALIso'][sample]  = TH1F('pho1HCALIso'    + '_' + sample, 'pho1HCALIso'    + '_' + sample, 20, 0., 3.0)
-        histos['pho1HOE'][sample]    = TH1F('pho1HOE'    + '_' + sample, 'pho1HOE'    + '_' + sample, 20, 0., 0.032)
+        histos['pho1IetaIeta55'][sample]    = TH1F('pho1IetaIeta55'    + '_' + sample, 'pho1IetaIeta55'    + '_' + sample, 25,  0., 0.08)
+        histos['pho1ECALIso'][sample]    = TH1F('pho1ECALIso'    + '_' + sample, 'pho1ECALIso'    + '_' + sample, 50, 0., 50.)
+        histos['pho1CIso'][sample]    = TH1F('pho1CIso'    + '_' + sample, 'pho1CIso'    + '_' + sample, 35, 0., 0.35)
+        histos['pho1HCALIso'][sample]  = TH1F('pho1HCALIso'    + '_' + sample, 'pho1HCALIso'    + '_' + sample, 25, 0., 4.0)
+        histos['pho1HOE'][sample]    = TH1F('pho1HOE'    + '_' + sample, 'pho1HOE'    + '_' + sample, 25, 0., 0.01)
         histos['pho2Pt'][sample]    = TH1F('pho2Pt'    + '_' + sample, 'pho2Pt'    + '_' + sample, 22,  8., 30.)
         histos['pho2eta'][sample]    = TH1F('pho2eta'    + '_' + sample, 'pho2eta'    + '_' + sample, 30,  -3., 3.)
         histos['pho2phi'][sample]    = TH1F('pho2phi'    + '_' + sample, 'pho2phi'    + '_' + sample, 40,  -4., 4.)
         histos['pho2R9'][sample]    = TH1F('pho2R9'    + '_' + sample, 'pho2R9'    + '_' + sample, 25,  0.1, 1.)
-        histos['pho2IetaIeta55'][sample]    = TH1F('pho2IetaIeta55'    + '_' + sample, 'pho2IetaIeta55'    + '_' + sample, 25,  0., 0.06)
-        histos['pho2ECALIso'][sample]    = TH1F('pho2ECALIso'    + '_' + sample, 'pho2ECALIso'    + '_' + sample, 40, 0., 40.)
-        histos['pho2CIso'][sample]    = TH1F('pho2CIso'    + '_' + sample, 'pho2CIso'    + '_' + sample, 40, 0., 0.4)
-        histos['pho2HCALIso'][sample]    = TH1F('pho2HCALIso'    + '_' + sample, 'pho2HCALIso'    + '_' + sample, 20, 0., 3.)
-        histos['pho2HOE'][sample]    = TH1F('pho2HOE'    + '_' + sample, 'pho2HOE'    + '_' + sample, 20, 0., 0.032)
+        histos['pho2IetaIeta55'][sample]    = TH1F('pho2IetaIeta55'    + '_' + sample, 'pho2IetaIeta55'    + '_' + sample, 25,  0., 0.08)
+        histos['pho2ECALIso'][sample]    = TH1F('pho2ECALIso'    + '_' + sample, 'pho2ECALIso'    + '_' + sample, 50, 0., 50.)
+        histos['pho2CIso'][sample]    = TH1F('pho2CIso'    + '_' + sample, 'pho2CIso'    + '_' + sample, 35, 0., 0.35)
+        histos['pho2HCALIso'][sample]    = TH1F('pho2HCALIso'    + '_' + sample, 'pho2HCALIso'    + '_' + sample, 25, 0., 4.0)
+        histos['pho2HOE'][sample]    = TH1F('pho2HOE'    + '_' + sample, 'pho2HOE'    + '_' + sample, 25, 0., 0.1)
         histos['Z_m'][sample]    = TH1F('Z_m'    + '_' + sample, 'Z_m'    + '_' + sample, 80,  50., 130.)
         histos['H_m'][sample]    = TH1F('H_m'    + '_' + sample, 'H_m'    + '_' + sample, 85,  95., 180.)
-        histos['H_pt'][sample]    = TH1F('H_pt'    + '_' + sample, 'H_pt'    + '_' + sample, 160,  0., 160.)
+        histos['H_pt'][sample]    = TH1F('H_pt'    + '_' + sample, 'H_pt'    + '_' + sample, 80,  0., 160.)
         histos['ALP_m'][sample] = TH1F('ALP_m' + '_' + sample, 'ALP_m' + '_' + sample, 40, 0., 40.)
         histos['var_dR_g1g2'][sample] = TH1F('var_dR_g1g2' + '_' + sample, 'var_dR_g1g2' + '_' + sample, 25, 0., 5)
         histos['var_PtaOverMa'][sample] = TH1F('var_PtaOverMa' + '_' + sample, 'var_PtaOverMa' + '_' + sample, 25, 0., 100.)
@@ -256,7 +270,7 @@ def main():
         histos['var_PtaOverMh'][sample] = TH1F('var_PtaOverMh' + '_' + sample, 'var_PtaOverMh' + '_' + sample, 25, 0., 0.75)
         histos['var_Pta'][sample] = TH1F('var_Pta' + '_' + sample, 'var_Pta' + '_' + sample, 60, 0., 60.)
         histos['var_MhMa'][sample] = TH1F('var_MhMa' + '_' + sample, 'var_MhMa' + '_' + sample, 100, 100., 200.)
-        histos['var_MhMZ'][sample] = TH1F('var_MhMZ' + '_' + sample, 'var_MhMZ' + '_' + sample, 165, 145., 310.)
+        histos['var_MhMZ'][sample] = TH1F('var_MhMZ' + '_' + sample, 'var_MhMZ' + '_' + sample, 130, 180., 310.)
         histos['ALP_calculatedPhotonIso'][sample] = TH1F('ALP_calculatedPhotonIso' + '_' + sample, 'ALP_calculatedPhotonIso' + '_' + sample, 25, 0., 125.)
         histos['param'][sample] = TH1F('param' + '_' + sample, 'param' + '_' + sample, 25, -0.3, 0.6)
 
@@ -289,425 +303,198 @@ def main():
     # 新增：控制每個 (sample, mA) 的偵錯輸出次數
     debug_printed = {}
 
-    if args.mva and analyzer_cfg.year == 'run3' and 'ntuples_by_mass' in locals():
-        # 依 mA 迴圈：背景/Data 會自動從對應的 ALP_<mA> 目錄讀入
-        for ALP_mass in target_masses:
-            samples_this_mass = analyzer_cfg.bkg_names + [ALP_mass, 'Data']
-            for sample in samples_this_mass:
-                ntup = ntuples_by_mass[ALP_mass][sample]
-                print(f"\n\n[Mass {ALP_mass}] On sample: {sample}")
-                print('total events: %d' % ntup.GetEntries())
+    # NEW: 移除/停用 split-by-mass 的事件迴圈，統一用原本單一鏈流程
+    for sample in analyzer_cfg.samp_names:
+        ntup = ntuples[sample] # just a short name
+        print('\n\nOn sample: %s' %sample)
+        print('total events: %d' %ntup.GetEntries())
 
-                for iEvt in range(ntup.GetEntries()):
-                    ntup.GetEvent(iEvt)
-                    # if (iEvt == 10): break
+        for iEvt in range( ntup.GetEntries() ):
+    
+            ntup.GetEvent(iEvt)
+            # if (iEvt == 10): break
 
-                    if (iEvt % 100000 == 1):
-                        print("looking at event %d" % iEvt)
 
-                    if args.ele and abs(ntup.z_mumu) == 1:
-                        continue
-                    if args.mu and abs(ntup.z_ee) == 1:
-                        continue
+            if (iEvt % 100000 == 1):
+                print("looking at event %d" %iEvt)
 
-                    weight = ntup.weight
+            
+            if args.ele:
+                if abs(ntup.z_mumu) == 1: 
+                    continue
+            if args.mu:
+                if abs(ntup.z_ee) == 1: 
+                    continue
+            
 
-                    if (ntup.H_m > -90):
-                        if ntup.H_m > 180. or ntup.H_m < 95.: 
-                            continue
-                        if args.region == 1 and (ntup.H_m > 135. or ntup.H_m < 115.):
-                            continue
-                        if args.region == 2 and (ntup.H_m < 135. and ntup.H_m > 115.):
-                            continue
+            # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
+            weight = ntup.weight
 
-                        MVA_value = {}
-                        if args.mva:
-                            # 只評估目前這個 ALP_mass（你也可以改為 for ALP_mass in target_masses: 來同時評多個，
-                            # 但建議此處就用目前外層的 ALP_mass）
-                            br = mva_branch_map.get(sample, {}).get(ALP_mass, "MVA_Score")
+            if (ntup.H_m > -90):
+                if ntup.H_m>180. or ntup.H_m<95.: continue
+
+                if  args.region == 1 and (ntup.H_m>135. or ntup.H_m<115.): continue
+                if  args.region == 2 and (ntup.H_m<135. and ntup.H_m>115.): continue
+
+                MVA_value = {}
+                if args.mva:
+                    # 以各 mA 對應分支取得 MVA 分數（若分支不存在，回退 "MVA_Score"，再不行設為 -1）
+                    for ALP_mass in target_masses:
+                        br = mva_branch_map.get(sample, {}).get(ALP_mass, "MVA_Score")
+                        try:
+                            MVA_value[ALP_mass] = getattr(ntup, br)
+                        except Exception:
+                            # 兩層保險：先試指定分支，再試通用分支，最後給 -1.0
                             try:
-                                MVA_value[ALP_mass] = getattr(ntup, br)
+                                MVA_value[ALP_mass] = getattr(ntup, "MVA_Score")
                             except Exception:
-                                try:
-                                    MVA_value[ALP_mass] = getattr(ntup, "MVA_Score")
-                                except Exception:
-                                    MVA_value[ALP_mass] = -1.0
+                                MVA_value[ALP_mass] = -1.0
 
-                            if args.mva_debug:
-                                key = (sample, ALP_mass)
-                                if debug_printed.get(key, 0) < args.mva_debug_n:
-                                    print(f"[MVA-FILL] sample={sample:>10s} mA={ALP_mass:>3s} branch={br:>16s} score={MVA_value[ALP_mass]:+.4f} H_m={ntup.H_m:6.2f} w={weight: .3e} blind={(args.blind and sample=='Data')}")
-                                    debug_printed[key] = debug_printed.get(key, 0) + 1
+                        # 新增：每個 (sample, mA) 前 args.mva_debug_n 筆偵錯印出
+                        if args.mva_debug:
+                            key = (sample, ALP_mass)
+                            if debug_printed.get(key, 0) < args.mva_debug_n:
+                                print(f"[MVA-FILL] sample={sample:>10s} mA={ALP_mass:>3s} branch={br:>20s} score={MVA_value[ALP_mass]:+.4f} H_m={ntup.H_m:6.2f} w={weight: .3e}")
+                                debug_printed[key] = debug_printed.get(key, 0) + 1
 
-                            if args.cut and (MVA_value[ALP_mass] < analyzer_cfg.mvaCut[ALP_mass]):
-                                continue
+                    if args.cut:
+                        if MVA_value[args.mA] < analyzer_cfg.mvaCut[args.mA]: continue
 
-                            # 僅填充目前 ALP_mass 的 MVA 相關直方圖（名稱本就帶 mass）
-                            val = MVA_value[ALP_mass]
-                            if args.blind:
-                                if not (sample == 'Data' and val > 0.95):
-                                    histos['mvaVal_'+ALP_mass][sample].Fill(val, weight)
-                                    histos['mvaVal_larger_'+ALP_mass][sample].Fill(val, weight)
-                            else:
-                                histos['mvaVal_'+ALP_mass][sample].Fill(val, weight)
-                                histos['mvaVal_larger_'+ALP_mass][sample].Fill(val, weight)
-
-                            if ntup.H_m < (125.+sigma_hig[ALP_mass]) and ntup.H_m > (125.+sigma_low[ALP_mass]):
-                                histos['mvaVal_1sigma_'+ALP_mass][sample].Fill(val, weight)
-                                histos['mvaVal_larger_1sigma_'+ALP_mass][sample].Fill(val, weight)
-                            if ntup.H_m < (125.+sigma_hig[ALP_mass]*1.5) and ntup.H_m > (125.+sigma_low[ALP_mass]*1.5):
-                                histos['mvaVal_1P5sigma_'+ALP_mass][sample].Fill(val, weight)
-                                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample].Fill(val, weight)
-                            if ntup.H_m < (125.+sigma_hig[ALP_mass]*2.0) and ntup.H_m > (125.+sigma_low[ALP_mass]*2.0):
-                                histos['mvaVal_2sigma_'+ALP_mass][sample].Fill(val, weight)
-                                histos['mvaVal_larger_2sigma_'+ALP_mass][sample].Fill(val, weight)
-                            if ntup.H_m < (125.+sigma_hig[ALP_mass]*3.0) and ntup.H_m > (125.+sigma_low[ALP_mass]*3.0):
-                                histos['mvaVal_3sigma_'+ALP_mass][sample].Fill(val, weight)
-                                histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill(val, weight)
-
-                        # 其餘變數照舊（直方圖 key 用 sample；MVA 相關則用 '..._<mass>'）
-                        histos['pho1Pt'][sample].Fill(ntup.ALP_lead_photon_pt, weight)
-                        histos['pho1eta'][sample].Fill(ntup.ALP_lead_photon_eta, weight)
-                        histos['pho1phi'][sample].Fill(ntup.ALP_lead_photon_phi, weight)
-                        histos['pho1R9'][sample].Fill(ntup.ALP_lead_photon_r9, weight)
-                        histos['pho1IetaIeta55'][sample].Fill(ntup.ALP_lead_photon_sieie, weight)
-                        histos['pho1ECALIso'][sample].Fill(ntup.ALP_lead_photon_ecalPFClusterIso, weight)
-                        histos['pho2Pt'][sample].Fill(ntup.ALP_sublead_photon_pt, weight)
-                        histos['pho2eta'][sample].Fill(ntup.ALP_sublead_photon_eta, weight)
-                        histos['pho2phi'][sample].Fill(ntup.ALP_sublead_photon_phi, weight)
-                        histos['pho2R9'][sample].Fill(ntup.ALP_sublead_photon_r9, weight)
-                        histos['pho2IetaIeta55'][sample].Fill(ntup.ALP_sublead_photon_sieie, weight)
-                        histos['pho2ECALIso'][sample].Fill(ntup.ALP_sublead_photon_ecalPFClusterIso, weight)
-
-                        histos['pho1CIso'][sample].Fill(ntup.ALP_lead_photon_chiso, weight)
-                        histos['pho1HCALIso'][sample].Fill(ntup.ALP_lead_photon_hcalPFClusterIso, weight)
-                        histos['pho1HOE'][sample].Fill(ntup.ALP_lead_photon_hoe_PUcorr, weight)
-                        histos['pho2CIso'][sample].Fill(ntup.ALP_sublead_photon_chiso, weight)
-                        histos['pho2HCALIso'][sample].Fill(ntup.ALP_sublead_photon_hcalPFClusterIso, weight)
-                        histos['pho2HOE'][sample].Fill(ntup.ALP_sublead_photon_hoe_PUcorr, weight)
-
+                    for ALP_mass in target_masses:
                         if args.blind:
-                            if not (sample == 'Data' and (ntup.H_m < 135. and ntup.H_m > 115.)):
-                                histos['H_m'][sample].Fill(ntup.H_m, weight)
-                        else:
-                            histos['H_m'][sample].Fill(ntup.H_m, weight)
-
-                        histos['H_pt'][sample].Fill(ntup.H_pt, weight)
-                        histos['ALP_m'][sample].Fill(ntup.ALP_m, weight)
-                        histos['Z_m'][sample].Fill(ntup.Z_mass, weight)
-
-                        histos['var_dR_Za'][sample].Fill(ntup.var_dR_Za, weight)
-                        histos['var_dR_g1g2'][sample].Fill(ntup.var_dR_g1g2, weight)
-                        histos['var_dR_g1Z'][sample].Fill(ntup.var_dR_g1Z, weight)
-                        histos['var_PtaOverMa'][sample].Fill(ntup.var_PtaOverMa, weight)
-                        histos['var_PtaOverMh'][sample].Fill(ntup.var_PtaOverMh, weight)
-                        histos['var_Pta'][sample].Fill(ntup.var_Pta, weight)
-                        histos['var_MhMa'][sample].Fill(ntup.var_MhMa, weight)
-                        histos['var_MhMZ'][sample].Fill(ntup.var_MhMZ, weight)
-                        histos['ALP_calculatedPhotonIso'][sample].Fill(ntup.ALP_calculatedPhotonIso, weight)
-
-                        # param 變數
-                        if sample in analyzer_cfg.sig_names:
-                            param_val = (ntup.ALP_m - mass_list[sample]) / ntup.H_m
-                        else:
-                            param_val = (ntup.ALP_m - random.choice(list(mass_list.values()))) / ntup.H_m
-                        histos['param'][sample].Fill(param_val, weight)
-
-                        # 新增：建立非 MVA 變數的 var_map，供 sys 直方圖填充使用
-                        var_map = {
-                            'Z_m': ntup.Z_mass,
-                            'H_m': ntup.H_m,
-                            'ALP_m': ntup.ALP_m,
-                            'pho1Pt': ntup.ALP_lead_photon_pt,
-                            'pho1eta': ntup.ALP_lead_photon_eta,
-                            'pho1phi': ntup.ALP_lead_photon_phi,
-                            'pho1R9': ntup.ALP_lead_photon_r9,
-                            'pho1IetaIeta55': ntup.ALP_lead_photon_sieie,
-                            'pho1ECALIso': ntup.ALP_lead_photon_ecalPFClusterIso,
-                            'pho1CIso': ntup.ALP_lead_photon_chiso,
-                            'pho1HCALIso': ntup.ALP_lead_photon_hcalPFClusterIso,
-                            'pho1HOE': ntup.ALP_lead_photon_hoe_PUcorr,
-                            'pho2Pt': ntup.ALP_sublead_photon_pt,
-                            'pho2eta': ntup.ALP_sublead_photon_eta,
-                            'pho2phi': ntup.ALP_sublead_photon_phi,
-                            'pho2R9': ntup.ALP_sublead_photon_r9,
-                            'pho2IetaIeta55': ntup.ALP_sublead_photon_sieie,
-                            'pho2ECALIso': ntup.ALP_sublead_photon_ecalPFClusterIso,
-                            'pho2CIso': ntup.ALP_sublead_photon_chiso,
-                            'pho2HCALIso': ntup.ALP_sublead_photon_hcalPFClusterIso,
-                            'pho2HOE': ntup.ALP_sublead_photon_hoe_PUcorr,
-                            'ALP_calculatedPhotonIso': ntup.ALP_calculatedPhotonIso,
-                            'var_dR_Za': ntup.var_dR_Za,
-                            'var_dR_g1g2': ntup.var_dR_g1g2,
-                            'var_dR_g1Z': ntup.var_dR_g1Z,
-                            'var_PtaOverMh': ntup.var_PtaOverMh,
-                            'var_Pta': ntup.var_Pta,
-                            'var_MhMZ': ntup.var_MhMZ,
-                            'H_pt': ntup.H_pt,
-                            'var_PtaOverMa': ntup.var_PtaOverMa,
-                            'var_MhMa': ntup.var_MhMa,
-                            'param': param_val,
-                        }
-
-                        # systematics
-                        for sys_name in analyzer_cfg.sys_names:
-                            if sample != "Data":
-                                if sys_name =='weight_hlt_sf_up':
-                                    weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
-                                elif sys_name =='weight_hlt_sf_down':
-                                    weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
-                                elif sys_name =='weight_pu_reweight_sf_up':
-                                    weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
-                                elif sys_name =='weight_pu_reweight_sf_down':
-                                    weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
-                                elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
-                                    weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                                elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
-                                    weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                                elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
-                                    weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central
-                                elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
-                                    weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
-                                elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
-                                    weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-                                elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
-                                    weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-                                elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
-                                    weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                                elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
-                                    weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                                elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
-                                    weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
-                                elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
-                                    weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
-                                elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
-                                    weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-                                elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
-                                    weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-                                else:
-                                    weight_sys = weight
-
-                                # 填充 sys 直方圖：MVA 相關只對當前 ALP_mass 填，其餘用 var_map
-                                for var in var_names:
-                                    if var.startswith('mvaVal') and (not var.endswith('_'+ALP_mass)):
-                                        continue
-                                    if var.startswith('mvaVal'):
-                                        val_to_fill = MVA_value[ALP_mass]
-                                    else:
-                                        val_to_fill = var_map.get(var, None)
-                                    if val_to_fill is None:
-                                        continue
-                                    histos_sys[var][sample][sys_name].Fill(val_to_fill, weight_sys)
-                            else:
-                                for var in var_names:
-                                    if var.startswith('mvaVal') and (not var.endswith('_'+ALP_mass)):
-                                        continue
-                                    if var.startswith('mvaVal'):
-                                        val_to_fill = MVA_value[ALP_mass]
-                                    else:
-                                        val_to_fill = var_map.get(var, None)
-                                    if val_to_fill is None:
-                                        continue
-                                    histos_sys[var][sample][sys_name].Fill(val_to_fill, 1.)
-
-    else:
-        # 回退：原本的「不分 mA」單一鏈流程
-        for sample in analyzer_cfg.samp_names:
-            ntup = ntuples[sample] # just a short name
-            print('\n\nOn sample: %s' %sample)
-            print('total events: %d' %ntup.GetEntries())
-
-            for iEvt in range( ntup.GetEntries() ):
-        
-                ntup.GetEvent(iEvt)
-                # if (iEvt == 10): break
-
-
-                if (iEvt % 100000 == 1):
-                    print("looking at event %d" %iEvt)
-
-                
-                if args.ele:
-                    if abs(ntup.z_mumu) == 1: 
-                        continue
-                if args.mu:
-                    if abs(ntup.z_ee) == 1: 
-                        continue
-                
-
-                # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
-                weight = ntup.weight
-
-                if (ntup.H_m > -90):
-                    if ntup.H_m>180. or ntup.H_m<95.: continue
-
-                    if  args.region == 1 and (ntup.H_m>135. or ntup.H_m<115.): continue
-                    if  args.region == 2 and (ntup.H_m<135. and ntup.H_m>115.): continue
-
-                    MVA_value = {}
-                    if args.mva:
-                        # 以各 mA 對應分支取得 MVA 分數（若分支不存在，回退 "MVA_Score"，再不行設為 -1）
-                        for ALP_mass in target_masses:
-                            br = mva_branch_map.get(sample, {}).get(ALP_mass, "MVA_Score")
-                            try:
-                                MVA_value[ALP_mass] = getattr(ntup, br)
-                            except Exception:
-                                # 兩層保險：先試指定分支，再試通用分支，最後給 -1.0
-                                try:
-                                    MVA_value[ALP_mass] = getattr(ntup, "MVA_Score")
-                                except Exception:
-                                    MVA_value[ALP_mass] = -1.0
-
-                            # 新增：每個 (sample, mA) 前 args.mva_debug_n 筆偵錯印出
-                            if args.mva_debug:
-                                key = (sample, ALP_mass)
-                                if debug_printed.get(key, 0) < args.mva_debug_n:
-                                    print(f"[MVA-FILL] sample={sample:>10s} mA={ALP_mass:>3s} branch={br:>16s} score={MVA_value[ALP_mass]:+.4f} H_m={ntup.H_m:6.2f} w={weight: .3e} blind={(args.blind and sample=='Data')}")
-                                    debug_printed[key] = debug_printed.get(key, 0) + 1
-
-                        if args.cut:
-                            if MVA_value[args.mA] < analyzer_cfg.mvaCut[args.mA]: continue
-
-                        for ALP_mass in target_masses:
-                            if args.blind:
-                                if not (sample == 'Data' and MVA_value[ALP_mass] > 0.95):
-                                    histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-                                    histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-                            else:
+                            if not (sample == 'Data' and MVA_value[ALP_mass] > 0.95):
                                 histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                                 histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-
-                            if ntup.H_m<(125.+sigma_hig[ALP_mass]) and ntup.H_m>(125.+sigma_low[ALP_mass]): 
-                                histos['mvaVal_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-                                histos['mvaVal_larger_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-
-                            if ntup.H_m<(125.+sigma_hig[ALP_mass]*1.5) and ntup.H_m>(125.+sigma_low[ALP_mass]*1.5): 
-                                histos['mvaVal_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-                                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-
-                            if ntup.H_m<(125.+sigma_hig[ALP_mass]*2.) and ntup.H_m>(125.+sigma_low[ALP_mass]*2.): 
-                                histos['mvaVal_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-                                histos['mvaVal_larger_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-
-                            if ntup.H_m<(125.+sigma_hig[ALP_mass]*3.) and ntup.H_m>(125.+sigma_low[ALP_mass]*3.): 
-                                histos['mvaVal_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-                                histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
-
-                    var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa}
-                    
-                    if args.mva:
-                        var_map_mva = {}
-                        for ALP_mass in target_masses:
-                            var_map_mva['mvaVal_'+ALP_mass] = MVA_value[ALP_mass]
-                            var_map_mva['mvaVal_larger_'+ALP_mass] = MVA_value[ALP_mass]
-                            for r in ['1sigma', '1P5sigma', '2sigma', '3sigma']:
-                                var_map_mva['mvaVal_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
-                                var_map_mva['mvaVal_larger_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
-                        var_map.update(var_map_mva)
-
-                    histos['pho1Pt'][sample].Fill( ntup.ALP_lead_photon_pt, weight )
-                    histos['pho1eta'][sample].Fill( ntup.ALP_lead_photon_eta, weight )
-                    histos['pho1phi'][sample].Fill( ntup.ALP_lead_photon_phi, weight )
-                    histos['pho1R9'][sample].Fill( ntup.ALP_lead_photon_r9, weight )
-                    histos['pho1IetaIeta55'][sample].Fill( ntup.ALP_lead_photon_sieie, weight )
-                    histos['pho1ECALIso'][sample].Fill( ntup.ALP_lead_photon_ecalPFClusterIso, weight )
-                    histos['pho2Pt'][sample].Fill( ntup.ALP_sublead_photon_pt, weight )
-                    histos['pho2eta'][sample].Fill( ntup.ALP_sublead_photon_eta, weight )
-                    histos['pho2phi'][sample].Fill( ntup.ALP_sublead_photon_phi, weight )
-                    histos['pho2R9'][sample].Fill( ntup.ALP_sublead_photon_r9, weight )
-                    histos['pho2IetaIeta55'][sample].Fill( ntup.ALP_sublead_photon_sieie, weight )
-                    histos['pho2ECALIso'][sample].Fill( ntup.ALP_sublead_photon_ecalPFClusterIso, weight )
-
-                    histos['pho1CIso'][sample].Fill( ntup.ALP_lead_photon_chiso, weight)
-                    histos['pho1HCALIso'][sample].Fill( ntup.ALP_lead_photon_hcalPFClusterIso, weight)
-                    histos['pho1HOE'][sample].Fill( ntup.ALP_lead_photon_hoe_PUcorr, weight)
-                    histos['pho2CIso'][sample].Fill( ntup.ALP_sublead_photon_chiso, weight)
-                    histos['pho2HCALIso'][sample].Fill( ntup.ALP_sublead_photon_hcalPFClusterIso, weight)
-                    histos['pho2HOE'][sample].Fill( ntup.ALP_sublead_photon_hoe_PUcorr, weight)
-
-                    if args.blind:
-                        if not (sample == 'Data' and (ntup.H_m<135. and ntup.H_m>115.)): 
-                            histos['H_m'][sample].Fill( ntup.H_m, weight )
-                    else:        
-                        histos['H_m'][sample].Fill( ntup.H_m, weight )
-
-                    histos['H_pt'][sample].Fill( ntup.H_pt, weight )
-                    histos['ALP_m'][sample].Fill( ntup.ALP_m, weight )
-                    histos['Z_m'][sample].Fill( ntup.Z_mass, weight )
-
-                    histos['var_dR_Za'][sample].Fill( ntup.var_dR_Za, weight )
-                    histos['var_dR_g1g2'][sample].Fill( ntup.var_dR_g1g2, weight )
-                    histos['var_dR_g1Z'][sample].Fill( ntup.var_dR_g1Z, weight )
-                    histos['var_PtaOverMa'][sample].Fill( ntup.var_PtaOverMa, weight )
-                    histos['var_PtaOverMh'][sample].Fill( ntup.var_PtaOverMh, weight )
-                    histos['var_Pta'][sample].Fill( ntup.var_Pta, weight )
-                    histos['var_MhMa'][sample].Fill( ntup.var_MhMa, weight )
-                    histos['var_MhMZ'][sample].Fill( ntup.var_MhMZ, weight )
-                    histos['ALP_calculatedPhotonIso'][sample].Fill( ntup.ALP_calculatedPhotonIso, weight )
-
-                    param_val = {}
-                    if sample in analyzer_cfg.sig_names:
-                        param_val['param'] = (ntup.ALP_m - mass_list[sample])/ntup.H_m
-                    else:
-                        mass_random = random.choice(list(mass_list.values()))
-                        param_val['param'] = (ntup.ALP_m - mass_random)/ntup.H_m
-                    
-                    var_map.update(param_val)
-
-                    histos['param'][sample].Fill( param_val['param'], weight )
-                        
-
-                    for sys_name in analyzer_cfg.sys_names:
-                        if sample != "Data": 
-                            if sys_name =='weight_hlt_sf_up':
-                                weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
-                            elif sys_name =='weight_hlt_sf_down':
-                                weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
-                            elif sys_name =='weight_pu_reweight_sf_up':
-                                weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
-                            elif sys_name =='weight_pu_reweight_sf_down':
-                                weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
-
-                            elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
-                                weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                            elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
-                                weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                            elif sys_name =='weight_electron_iso_sf_SelectedElectron_up':
-                                weight_sys = weight * ntup.weight_electron_iso_sf_SelectedElectron_up / ntup.weight_electron_iso_sf_SelectedElectron_central                        
-                            elif sys_name =='weight_electron_iso_sf_SelectedElectron_down':
-                                weight_sys = weight * ntup.weight_electron_iso_sf_SelectedElectron_down / ntup.weight_electron_iso_sf_SelectedElectron_central
-                            elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
-                                weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central                        
-                            elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
-                                weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
-                            elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
-                                weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-                            elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
-                                weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-
-                            elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
-                                weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                            elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
-                                weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                            elif sys_name =='weight_muon_iso_sf_SelectedMuon_up':
-                                weight_sys = weight * ntup.weight_muon_iso_sf_SelectedMuon_up / ntup.weight_muon_iso_sf_SelectedMuon_central
-                            elif sys_name =='weight_muon_iso_sf_SelectedMuon_down':
-                                weight_sys = weight * ntup.weight_muon_iso_sf_SelectedMuon_down / ntup.weight_muon_iso_sf_SelectedMuon_central
-                            elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
-                                weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
-                            elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
-                                weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
-                            elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
-                                weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-                            elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
-                                weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-
-
-                            for var in var_names:
-                                histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
                         else:
-                            for var in var_names:
-                                histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
+                            histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+                            histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+
+                        if ntup.H_m<(125.+sigma_hig[ALP_mass]) and ntup.H_m>(125.+sigma_low[ALP_mass]): 
+                            histos['mvaVal_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+                            histos['mvaVal_larger_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+
+                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*1.5) and ntup.H_m>(125.+sigma_low[ALP_mass]*1.5): 
+                            histos['mvaVal_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+                            histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+
+                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*2.) and ntup.H_m>(125.+sigma_low[ALP_mass]*2.): 
+                            histos['mvaVal_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+                            histos['mvaVal_larger_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+
+                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*3.) and ntup.H_m>(125.+sigma_low[ALP_mass]*3.): 
+                            histos['mvaVal_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+                            histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
+
+                var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa}
+                
+                if args.mva:
+                    var_map_mva = {}
+                    for ALP_mass in target_masses:
+                        var_map_mva['mvaVal_'+ALP_mass] = MVA_value[ALP_mass]
+                        var_map_mva['mvaVal_larger_'+ALP_mass] = MVA_value[ALP_mass]
+                        for r in ['1sigma', '1P5sigma', '2sigma', '3sigma']:
+                            var_map_mva['mvaVal_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
+                            var_map_mva['mvaVal_larger_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
+                    var_map.update(var_map_mva)
+
+                histos['pho1Pt'][sample].Fill( ntup.ALP_lead_photon_pt, weight )
+                histos['pho1eta'][sample].Fill( ntup.ALP_lead_photon_eta, weight )
+                histos['pho1phi'][sample].Fill( ntup.ALP_lead_photon_phi, weight )
+                histos['pho1R9'][sample].Fill( ntup.ALP_lead_photon_r9, weight )
+                histos['pho1IetaIeta55'][sample].Fill( ntup.ALP_lead_photon_sieie, weight )
+                histos['pho1ECALIso'][sample].Fill( ntup.ALP_lead_photon_ecalPFClusterIso, weight )
+                histos['pho2Pt'][sample].Fill( ntup.ALP_sublead_photon_pt, weight )
+                histos['pho2eta'][sample].Fill( ntup.ALP_sublead_photon_eta, weight )
+                histos['pho2phi'][sample].Fill( ntup.ALP_sublead_photon_phi, weight )
+                histos['pho2R9'][sample].Fill( ntup.ALP_sublead_photon_r9, weight )
+                histos['pho2IetaIeta55'][sample].Fill( ntup.ALP_sublead_photon_sieie, weight )
+                histos['pho2ECALIso'][sample].Fill( ntup.ALP_sublead_photon_ecalPFClusterIso, weight )
+
+                histos['pho1CIso'][sample].Fill( ntup.ALP_lead_photon_chiso, weight)
+                histos['pho1HCALIso'][sample].Fill( ntup.ALP_lead_photon_hcalPFClusterIso, weight)
+                histos['pho1HOE'][sample].Fill( ntup.ALP_lead_photon_hoe_PUcorr, weight)
+                histos['pho2CIso'][sample].Fill( ntup.ALP_sublead_photon_chiso, weight)
+                histos['pho2HCALIso'][sample].Fill( ntup.ALP_sublead_photon_hcalPFClusterIso, weight)
+                histos['pho2HOE'][sample].Fill( ntup.ALP_sublead_photon_hoe_PUcorr, weight)
+
+                if args.blind:
+                    if not (sample == 'Data' and (ntup.H_m<135. and ntup.H_m>115.)): 
+                        histos['H_m'][sample].Fill( ntup.H_m, weight )
+                else:        
+                    histos['H_m'][sample].Fill( ntup.H_m, weight )
+
+                histos['H_pt'][sample].Fill( ntup.H_pt, weight )
+                histos['ALP_m'][sample].Fill( ntup.ALP_m, weight )
+                histos['Z_m'][sample].Fill( ntup.Z_mass, weight )
+
+                histos['var_dR_Za'][sample].Fill( ntup.var_dR_Za, weight )
+                histos['var_dR_g1g2'][sample].Fill( ntup.var_dR_g1g2, weight )
+                histos['var_dR_g1Z'][sample].Fill( ntup.var_dR_g1Z, weight )
+                histos['var_PtaOverMa'][sample].Fill( ntup.var_PtaOverMa, weight )
+                histos['var_PtaOverMh'][sample].Fill( ntup.var_PtaOverMh, weight )
+                histos['var_Pta'][sample].Fill( ntup.var_Pta, weight )
+                histos['var_MhMa'][sample].Fill( ntup.var_MhMa, weight )
+                histos['var_MhMZ'][sample].Fill( ntup.var_MhMZ, weight )
+                histos['ALP_calculatedPhotonIso'][sample].Fill( ntup.ALP_calculatedPhotonIso, weight )
+
+                param_val = {}
+                if sample in analyzer_cfg.sig_names:
+                    param_val['param'] = (ntup.ALP_m - mass_list[sample])/ntup.H_m
+                else:
+                    mass_random = random.choice(list(mass_list.values()))
+                    param_val['param'] = (ntup.ALP_m - mass_random)/ntup.H_m
+                
+                var_map.update(param_val)
+
+                histos['param'][sample].Fill( param_val['param'], weight )
+                    
+
+                for sys_name in analyzer_cfg.sys_names:
+                    if sample != "Data": 
+                        if sys_name =='weight_hlt_sf_up':
+                            weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
+                        elif sys_name =='weight_hlt_sf_down':
+                            weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
+                        elif sys_name =='weight_pu_reweight_sf_up':
+                            weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
+                        elif sys_name =='weight_pu_reweight_sf_down':
+                            weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
+                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
+                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central                        
+                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
+                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
+                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
+                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
+                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
+
+                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
+                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
+                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
+                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
+                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
+                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
+
+                        elif sys_name =='weight_photon_id_sf_SelectedPhoton_up':
+                            weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_up / ntup.weight_photon_id_sf_SelectedPhoton_central
+                        elif sys_name =='weight_photon_id_sf_SelectedPhoton_down':
+                            weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_down / ntup.weight_photon_id_sf_SelectedPhoton_central
+
+                        for var in var_names:
+                            histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
+                    else:
+                        for var in var_names:
+                            histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
                 
 
 

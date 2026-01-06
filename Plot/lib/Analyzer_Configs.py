@@ -73,7 +73,7 @@ class Analyzer_Config:
                 self.BDT_filename     = "/afs/cern.ch/work/p/pelai/HZa/ALP/Analysis_code/train_MVA/model_Za_BDT_passedEvents.pkl"
                 self.mvaCut           = {'M1':0.955, 'M2':0.98, 'M3':0.985, 'M4':0.98, 'M5':0.985, 'M6':0.99, 'M7':0.985, 'M8':0.99, 'M9':0.99, 'M10':0.99, 'M15':0.99, 'M20':0.99, 'M25':0.985, 'M30':0.98}
             elif self.year == 'run3':
-                self.sample_loc       = '/eos/home-p/pelai/HZa/root_P2Root/run3_BDT'
+                self.sample_loc       = '/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT'
                 self.out_dir          = 'plots/plots_run3UL'
                 self.root_output_name = "ALP_plot_run3_{0}.root".format(self.out_region_name)
                 # self.BDT_filename     = "/afs/cern.ch/work/p/pelai/HZa/ALP/Analysis_code/MVA/weight/UL/model_ALP_BDT_param.pkl"
@@ -101,7 +101,7 @@ class Analyzer_Config:
             self.samp_names = self.bkg_names + self.sig_names + ['Data']
             self.plot_output_path = "{0}/plot_{1}".format(self.out_dir, self.out_region_name)
             # self.sys_names  = ['CMS_eff_g_up','CMS_eff_g_dn','CMS_pileup_up','CMS_pileup_dn','CMS_eff_lep_up','CMS_eff_lep_dn']
-            self.sys_names  = ['weight_hlt_sf_up','weight_hlt_sf_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_electron_reco_sf_SelectedElectron_up', 'weight_electron_reco_sf_SelectedElectron_down', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down', 'weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down', 'weight_muon_iso_sf_SelectedMuon_up', 'weight_muon_iso_sf_SelectedMuon_down', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down']
+            self.sys_names  = ['weight_hlt_sf_up','weight_hlt_sf_down','weight_pu_reweight_sf_up','weight_pu_reweight_sf_down','weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down', 'weight_electron_reco_sf_SelectedElectron_up', 'weight_electron_reco_sf_SelectedElectron_down', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up', 'weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down', 'weight_muon_looseid_sf_SelectedMuon_up', 'weight_muon_looseid_sf_SelectedMuon_down', 'weight_muon_iso_sf_SelectedMuon_up', 'weight_muon_iso_sf_SelectedMuon_down', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up', 'weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down','weight_photon_id_sf_SelectedPhoton_up', 'weight_photon_id_sf_SelectedPhoton_down']
             # self.sys_names  = ['weight_pu_reweight_sf_up','weight_pu_reweight_sf_down'] # Too big
             # self.sys_names  = ['weight_electron_wplid_sf_SelectedElectron_up','weight_electron_wplid_sf_SelectedElectron_down']
             # self.sys_names  = ['weight_muon_looseid_sf_SelectedMuon_up','weight_muon_looseid_sf_SelectedMuon_down']

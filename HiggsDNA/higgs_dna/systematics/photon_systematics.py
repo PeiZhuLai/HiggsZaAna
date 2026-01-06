@@ -1019,7 +1019,7 @@ def photon_scale_smear_run3(events, year, is_data):
                 scale = evaluator.compound[scale_names[year]].evaluate("scale", run_arr_flattened, photons_scEta, photons_r9, photons_AbsScEta, photons_pt, photons_seedGain)
 
         scale = awkward.where(
-            (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+            (photons_AbsScEta > 2.5) | (photons_pt < 10.0),
             awkward.ones_like(photons_pt, dtype=float),
             scale,
         )
@@ -1045,7 +1045,7 @@ def photon_scale_smear_run3(events, year, is_data):
 
     rng = numpy.random.default_rng(seed=123)
     smear_val = awkward.where(
-        (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+        (photons_AbsScEta > 2.5) | (photons_pt < 10.0),
         awkward.ones_like(photons_pt, dtype=float),
         rng.normal(loc=1.0, scale=numpy.abs(smear)),
     )
@@ -1090,12 +1090,12 @@ def photon_scale_smear_run3(events, year, is_data):
         )
 
         events["Photon", "dEsigmaUp"] = photons.pt * awkward.where(
-            (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+            (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
             awkward.ones_like(smear_up_val, dtype=float),
             smear_up_val,
         )
         events["Photon", "dEsigmaDown"] = photons.pt * awkward.where(
-            (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+            (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
             awkward.ones_like(smear_down_val, dtype=float),
             smear_down_val,
         )
@@ -1131,12 +1131,12 @@ def photon_scale_smear_run3(events, year, is_data):
 
         # Apply as multiplicative scale factor on top of smeared corrected_pt
         events["Photon", "pt_ScaleUp"] = photons.corrected_pt * awkward.where(
-            (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+            (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
             awkward.ones_like(scale_up, dtype=float),
             scale_up,
         )
         events["Photon", "pt_ScaleDown"] = photons.corrected_pt * awkward.where(
-            (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+            (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
             awkward.ones_like(scale_down, dtype=float),
             scale_down,
         )
@@ -1150,14 +1150,14 @@ def photon_scale_smear_run3(events, year, is_data):
             if "up" in syst:
                 smear_up = awkward.unflatten(rng.normal(loc=1., scale=numpy.abs(smear+smear_syst)), n_photons)
                 events["Photon", "dEsigmaUp"] = photons.pt * awkward.where(
-                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
                     awkward.ones_like(smear_up, dtype=float),
                     smear_up
                 )
             elif "down" in syst:
                 smear_down = awkward.unflatten(rng.normal(loc=1., scale=numpy.abs(smear-smear_syst)), n_photons)
                 events["Photon", "dEsigmaDown"] = photons.pt * awkward.where(
-                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
                     awkward.ones_like(smear_down, dtype=float),
                     smear_down
                 )
@@ -1172,14 +1172,14 @@ def photon_scale_smear_run3(events, year, is_data):
             if "up" in syst:
                 scale_up = awkward.unflatten(scale, n_photons)
                 events["Photon", "pt_ScaleUp"] = photons.corrected_pt * awkward.where(
-                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
                     awkward.ones_like(scale_up, dtype=float),
                     1 - scale_up
                 )
             elif "down" in syst:
                 scale_down = awkward.unflatten(scale, n_photons)
                 events["Photon", "pt_ScaleDown"] = photons.corrected_pt * awkward.where(
-                    (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+                    (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
                     awkward.ones_like(scale_down, dtype=float),
                     1 - scale_down
                 )
