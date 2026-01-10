@@ -21,14 +21,25 @@ import argparse  # 新增：CLI 參數
 
 baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/cutflow/cutflow_list"
 
-outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/cutflowVmA"
+outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/preselectSigEffVmA"
 
 # 你指定要畫的 cuts（分母皆為 all）
-CUTS_TO_PLOT = ["trig_cut", "has_z_cand", "has_2g_cand", "event"]
-# JSON 裡 cutflow 的 key（用這個最通用；若你想改 ele/mu 就換 key）
-CUTFLOW_KEY = "zgammas_w"
+CUTS_TO_PLOT = ["event"]
+# JSON 裡 cutflow 的 key（分 channel）
+CUTFLOW_KEY_ELE = "zgammas_ele_w"
+CUTFLOW_KEY_MU  = "zgammas_mu_w"
 
 YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
+
+palette_hex_mu = [
+    "#540D6E", "#EE4266", "#FFB640",
+    "#3BCEAC", "#086788",
+]
+
+palette_hex_ele = [
+    "#5C7AFF", "#242038", "#59D2FE",
+    "#44E5E7", "#417B5A",
+]
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95,
@@ -52,7 +63,7 @@ def _parse_ma_from_filename(fn: str) -> Optional[int]:
     m = re.search(r"mA_M(\d+)", fn)
     return int(m.group(1)) if m else None
 
-def _load_cutflow_point(path: str) -> Optional[Tuple[str,int,Dict[str,float]]]:
+def _load_cutflow_point(path: str, channel_key: str) -> Optional[Tuple[str,int,Dict[str,float]]]:
     fn = os.path.basename(path)
     year = _parse_year_from_filename(fn)
     ma = _parse_ma_from_filename(fn)
@@ -63,7 +74,7 @@ def _load_cutflow_point(path: str) -> Optional[Tuple[str,int,Dict[str,float]]]:
             data = json.load(f)
     except Exception:
         return None
-    cf = (data.get("cutflows") or {}).get(CUTFLOW_KEY) or {}
+    cf = (data.get("cutflows") or {}).get(channel_key) or {}
     allv = cf.get("all")
     if allv is None or float(allv) <= 0:
         return None
@@ -209,7 +220,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str,float]], out_dir: Path) -> 
     lat.SetNDC()
     lat.SetTextFont(42)
     lat.SetTextSize(0.045)
-    lat.DrawLatex(0.13, 0.93, "#bf{CMS} #it{Simulation}")
+    lat.DrawLatex(0.13, 0.93, "#bf{CMS} #it{Preliminary}")
 
     # 右上角 lumi（每一年各自顯示）
     lumi_fb = _lumi_fb_for_year(year)
@@ -222,36 +233,157 @@ def _plot_year(year: str, points: Dict[int, Dict[str,float]], out_dir: Path) -> 
         lat_lumi.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_pdf = out_dir / f"cutflowVmA_{CUTFLOW_KEY}_{year}.pdf"
+    out_pdf = out_dir / f"preselectSigEffVmA_{CUTFLOW_KEY}_{year}.pdf"
+    c1.SaveAs(str(out_pdf))
+
+def _plot_channel(channel: str, store: Dict[str, Dict[int, Dict[str, float]]], palette_hex: List[str], out_dir: Path) -> None:
+    # 只畫 CUTS_TO_PLOT 的第一個（你目前是 ["event"]）
+    cut = CUTS_TO_PLOT[0]
+
+    # 準備每個 year 的 TGraph
+    graphs: Dict[str, ROOT.TGraph] = {}
+    for year in YEAR_ORDER:
+        points = store.get(year)
+        if not points:
+            continue
+        mas = sorted(points.keys())
+        xs, ys = [], []
+        for ma in mas:
+            v = points[ma].get(cut)
+            if v is None:
+                continue
+            xs.append(ma)
+            ys.append(v)
+        if len(xs) >= 1:
+            graphs[year] = _g_from_xy(xs, ys)
+
+    if not graphs:
+        return
+
+    # ---- user requested styles ----
+    line_syles = [1, 2, 3]
+    marker_styles = [20, 21, 23, 33, 34, 47, 29]
+    marker_size = [1.4, 1.3, 1.6, 1.9, 1.7, 1.6, 1.9]
+
+    # canvas / axes：用 YEAR_ORDER 第一個存在的 year 當 frame
+    first_year = next((y for y in YEAR_ORDER if y in graphs), None)
+    if first_year is None:
+        return
+    g0 = graphs[first_year]
+
+    c1 = ROOT.TCanvas(f"c_{channel}_{cut}", "", 800, 600)
+    c1.SetMargin(0.13, 0.04, 0.13, 0.08)
+    c1.SetTickx()
+    c1.SetTicky()
+
+    g0.SetTitle("")
+    g0.GetXaxis().SetTitle("m_{a} [GeV]")
+    g0.GetYaxis().SetTitle(f"Preselection Signal Efficiency (%)")
+    g0.GetXaxis().SetTitleOffset(1.1)
+    g0.GetYaxis().SetTitleOffset(1.15)
+    g0.GetXaxis().SetLimits(0, 31)
+    g0.GetXaxis().SetTitleSize(0.055)
+    g0.GetYaxis().SetTitleSize(0.055)
+    g0.GetXaxis().SetLabelSize(0.05)
+    g0.GetYaxis().SetLabelSize(0.05)
+    g0.SetMinimum(1.2)
+    g0.SetMaximum(8)
+
+    # 依 YEAR_ORDER 上色（palette 對應 YEAR_ORDER index）
+    def _col_for_year(y: str) -> int:
+        idx = YEAR_ORDER.index(y) if y in YEAR_ORDER else 0
+        hexstr = palette_hex[idx % len(palette_hex)]
+        return _root_color(hexstr)
+
+    # 依 years_present index 指定 style（line/marker/size）
+    years_present = [y for y in YEAR_ORDER if y in graphs]
+
+    def _apply_style(g: ROOT.TGraph, y: str) -> None:
+        i = years_present.index(y) if y in years_present else 0
+        col = _col_for_year(y)
+        g.SetLineColor(col)
+        g.SetMarkerColor(col)
+        g.SetLineStyle(line_syles[i % len(line_syles)])
+        g.SetMarkerStyle(marker_styles[i % len(marker_styles)])
+        g.SetMarkerSize(marker_size[i % len(marker_size)])
+        g.SetLineWidth(3)
+
+    _apply_style(g0, first_year)
+    g0.Draw("ALPC")
+
+    for year in YEAR_ORDER:
+        g = graphs.get(year)
+        if not g or year == first_year:
+            continue
+        _apply_style(g, year)
+        g.Draw("LPC SAME")
+
+    # --- legend (channel-dependent header + dynamic geometry at top-right) ---
+    channel_label = "Muon" if channel.lower().startswith("mu") else "Electron"
+    n_lines = 1 + len(years_present)  # header + years
+
+    # geometry: keep same top-right anchor, vary height with lines
+    x1, y1 = 0.95, 0.85
+    x0 = 0.63
+    line_h = 0.052
+    pad = 0.018
+    h_leg = pad + n_lines * line_h
+    y0 = max(0.14, y1 - h_leg)
+
+    leg = ROOT.TLegend(x0, y0, x1, y1)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+    leg.SetTextFont(42)
+    leg.SetTextSize(0.045)
+
+    if channel_label == "Muon":
+        header = "H #rightarrow Za #rightarrow #mu^{+}#mu^{-} + 2#gamma"
+    else:
+        header = "H #rightarrow Za #rightarrow e^{+}e^{-} + 2#gamma"
+    leg.SetHeader(header, "L")
+
+    for year in years_present:
+        leg.AddEntry(graphs[year], year, "lp")
+    leg.Draw()
+
+    lat = ROOT.TLatex()
+    lat.SetNDC()
+    lat.SetTextFont(42)
+    lat.SetTextSize(0.045)
+    lat.DrawLatex(0.13, 0.93, "#bf{CMS} #it{Simulation}")
+    x_lumi = 1.0 - c1.GetRightMargin() - 0.005
+    y_lumi = 0.92 + 0.01
+    lat.SetTextAlign(31)
+    lat.DrawLatexNDC(x_lumi, y_lumi, "13.6 TeV")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_pdf = out_dir / f"preselectSigEffVmA_{channel}_{cut}.pdf"
     c1.SaveAs(str(out_pdf))
 
 def main():
-    parser = argparse.ArgumentParser(description="Plot cutflow efficiency vs mA per year.")
-    parser.add_argument("--year", default="all", help="Year to plot (e.g. 2022preEE). Use 'all' to plot all years.")
+    parser = argparse.ArgumentParser(description="Plot cutflow efficiency vs mA.")
     args = parser.parse_args()
 
     in_dir = Path(baseDir)
     out_dir = Path(outDir)
 
-    # year -> ma -> {cut:eff}
-    store: Dict[str, Dict[int, Dict[str,float]]] = {}
+    # channel store: year -> ma -> {cut:eff}
+    store_ele: Dict[str, Dict[int, Dict[str, float]]] = {}
+    store_mu: Dict[str, Dict[int, Dict[str, float]]] = {}
 
     for p in sorted(in_dir.glob("cutflow_*.json")):
-        got = _load_cutflow_point(str(p))
-        if got is None:
-            continue
-        year, ma, effs = got
-        store.setdefault(year, {})[ma] = effs
+        got_ele = _load_cutflow_point(str(p), CUTFLOW_KEY_ELE)
+        if got_ele is not None:
+            year, ma, effs = got_ele
+            store_ele.setdefault(year, {})[ma] = effs
 
-    # 依序輸出每個年份一張（或只輸出指定年份）
-    if args.year != "all":
-        if args.year in store:
-            _plot_year(args.year, store[args.year], out_dir)
-        return
+        got_mu = _load_cutflow_point(str(p), CUTFLOW_KEY_MU)
+        if got_mu is not None:
+            year, ma, effs = got_mu
+            store_mu.setdefault(year, {})[ma] = effs
 
-    for year in YEAR_ORDER:
-        if year in store:
-            _plot_year(year, store[year], out_dir)
+    _plot_channel("electron", store_ele, palette_hex_ele, out_dir)
+    _plot_channel("muon", store_mu, palette_hex_mu, out_dir)
 
 if __name__ == "__main__":
     main()

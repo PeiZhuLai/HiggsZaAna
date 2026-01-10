@@ -1147,6 +1147,10 @@ def muon_scale_smear_run3(events, year, is_data):
     q   = awkward.to_numpy(mu_flat.charge)
     nL  = awkward.to_numpy(mu_flat.nTrackerLayers)
 
+    # NEW: log first 10 muon pt before applying corrections
+    _nprint = int(min(10, len(pt)))
+    logger.debug("[Lepton Systematics] Muon pt BEFORE scale+smear (first %d): %s", _nprint, pt[:_nprint])
+
     # ---- Scale (data & MC) ----
     pt_scale_nom = pt_scale(is_data, pt, eta, phi, q, cset, nested=False)
 
@@ -1166,6 +1170,13 @@ def muon_scale_smear_run3(events, year, is_data):
         events["Muon", "scaleDown_pt"]  = awkward.unflatten(pt_scale_dn - pt_scale_nom, n_muons)
         events["Muon", "smearUp_pt"]    = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
         events["Muon", "smearDown_pt"]  = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
+
+        # NEW: log first 10 muon pt after applying corrections (data)
+        logger.debug(
+            "[Lepton Systematics] Muon pt AFTER scale (data) (first %d): %s",
+            _nprint,
+            pt_scale_nom[:_nprint],
+        )
 
         logger.info("[Lepton Systematics] Muon scale applied (data).")
         return events
@@ -1193,6 +1204,13 @@ def muon_scale_smear_run3(events, year, is_data):
     events["Muon", "scaleDown_pt"] = awkward.unflatten(pt_scale_dn - pt_scale_nom, n_muons)
     events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup - pt_corr, n_muons)
     events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn - pt_corr, n_muons)
+
+    # NEW: log first 10 muon pt after applying corrections (MC)
+    logger.debug(
+        "[Lepton Systematics] Muon pt AFTER scale+smear (MC) (first %d): %s",
+        _nprint,
+        pt_corr[:_nprint],
+    )
 
     logger.debug("[Lepton Systematics] Muon scale+smear applied (MC).")
     return events

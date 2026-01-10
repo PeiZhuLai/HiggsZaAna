@@ -450,6 +450,13 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     # =========================
     eff_bkg = float(_BKG_EFF_BY_YEAR.get(year, 0.0))
 
+    # NEW: print the 4 numbers used for plotting (per year, per mA, per scenario)
+    # - sig_all (all)
+    # - sig_allcuts (all cuts)
+    # - sig_eff = allcuts/all
+    # - bkg_eff (year-level), plus ratio for quick validation
+    print(f"[DEBUG] year={year}  bkg_eff(allcuts/all)={eff_bkg:.6g}")
+
     scenario_ratio_graphs: Dict[str, ROOT.TGraph] = {}
     for scenario in SCENARIOS_TO_PLOT:
         xs, ys = [], []
@@ -463,8 +470,17 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             eff_sig = ac / a
             if eff_bkg <= 0.0:
                 continue
+
+            # NEW: print 4 numbers for the plot (plus ratio)
+            ratio = eff_sig / eff_bkg
+            print(
+                f"[DEBUG] year={year} mA={ma:>2d} scenario={scenario} "
+                f"sig_all={a:.6g} sig_allcuts={ac:.6g} sig_eff={eff_sig:.6g} bkg_eff={eff_bkg:.6g} "
+                f"(sig_eff/bkg_eff)={ratio:.6g}"
+            )
+
             xs.append(ma)
-            ys.append(eff_sig / eff_bkg)
+            ys.append(ratio)
         if xs:
             scenario_ratio_graphs[scenario] = _g_from_xy(xs, ys)
 
@@ -481,17 +497,49 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         frame2.SetDirectory(0)
         _keepalive2.append(frame2)
 
+        # NEW: auto y-range for frame2 (like frame1), with fallback to old fixed numbers
+        def _positive_ys_from_graph2(g: ROOT.TGraph) -> List[float]:
+            ys: List[float] = []
+            for i in range(int(g.GetN())):
+                x = ctypes.c_double(0.0)
+                y = ctypes.c_double(0.0)
+                g.GetPoint(i, x, y)
+                yv = float(y.value)
+                if yv > 0.0:
+                    ys.append(yv)
+            return ys
+
+        def _auto_yrange_effratio(ref: Optional[ROOT.TGraph]) -> Tuple[float, float]:
+            # fallback: keep old fixed range
+            y_min_frame, y_max_frame = 80.0, 220.0
+            if ref is None:
+                return y_min_frame, y_max_frame
+            ys = _positive_ys_from_graph2(ref)
+            if not ys:
+                return y_min_frame, y_max_frame
+            ymin = min(ys)
+            ymax = max(ys)
+            if ymax <= ymin:
+                ymax = ymin * 2.0 if ymin > 0 else 1.0
+            # padding similar spirit as frame1, but tuned for ratio scale
+            y_min_frame = max(1e-6, ymin * 0.8)
+            y_max_frame = ymax * 1.2
+            return y_min_frame, y_max_frame
+
+        _ref_ratio = scenario_ratio_graphs.get(SCENARIOS_TO_PLOT[0]) if SCENARIOS_TO_PLOT else None
+        y2_min, y2_max = _auto_yrange_effratio(_ref_ratio)
+
         frame2.SetTitle("")
         frame2.GetXaxis().SetTitle("m_{a} [GeV]")
-        frame2.GetYaxis().SetTitle("#varepsilon_{sig} / #varepsilon_{bkg}   (#varepsilon = all cuts / all)")
+        frame2.GetYaxis().SetTitle("#varepsilon_{sig} / #varepsilon_{bkg}")
         frame2.GetXaxis().SetTitleOffset(1.1)
         frame2.GetYaxis().SetTitleOffset(1.25)
         frame2.GetXaxis().SetTitleSize(0.055)
         frame2.GetYaxis().SetTitleSize(0.045)
         frame2.GetXaxis().SetLabelSize(0.05)
         frame2.GetYaxis().SetLabelSize(0.05)
-        frame2.SetMinimum(80.0)
-        frame2.SetMaximum(220.0)  # 視你的結果可再調
+        frame2.SetMinimum(y2_min)
+        frame2.SetMaximum(y2_max)
 
         frame2.Draw("AXIS")
 
@@ -514,7 +562,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         leg2.SetFillStyle(0)
         leg2.SetTextFont(42)
         leg2.SetTextSize(0.045)
-        leg2.AddEntry("", f"{year}   (eff_bkg={eff_bkg:.3g})", "")
+        leg2.AddEntry("", f"{year}", "")
         for scenario in SCENARIOS_TO_PLOT:
             g = scenario_ratio_graphs.get(scenario)
             if not g:

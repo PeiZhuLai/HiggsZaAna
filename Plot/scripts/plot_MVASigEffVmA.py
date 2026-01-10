@@ -24,7 +24,7 @@ ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 ma_interpolate = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
 # sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
 sig_samples = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
-INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT"
+INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT"
 optimized_BDT_Cut="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 
 YEAR = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]
@@ -70,9 +70,9 @@ OFFSET = 0.01
 MARKER_SIZE = 1.3
 LINE_WIDTH = 3
 # 新增：固定 y 軸範圍
-Y_MIN = 0.0
-Y_MAX_GROUPS = 4.5   # 3條線(2022/2023/2024)用
-Y_MAX_5YEARS = 6.2   # 5條線(逐年)用：請改成你想要的值
+Y_MIN = 39.0
+Y_MAX_GROUPS = 80   # 3條線(2022/2023/2024)用
+Y_MAX_5YEARS = 80   # 5條線(逐年)用：請改成你想要的值
 
 # 新增：error bar 最小可見門檻（單位：y 軸的百分比）
 ERR_ABS_FLOOR = 0.02   # 例如 0.02 (%)；太小會看不到
@@ -341,68 +341,107 @@ def _pick_weight_branch(t) -> Optional[str]:
 def _branch_exists(t, name: str) -> bool:
     return name in set(map(str, t.keys()))
 
+def _pick_mva_score_branch(t, sample: str) -> Optional[str]:
+    """
+    優先讀 era 內分 mA 存的 branch：MVA_Score_{sample}（e.g. MVA_Score_mA_M4）
+    若不存在則 fallback 到舊的 MVA_Score。
+    """
+    keys = set(map(str, t.keys()))
+    cand = f"MVA_Score_{sample}"
+    if cand in keys:
+        return cand
+    if "MVA_Score" in keys:
+        return "MVA_Score"
+    return None
+
 # ====== 計算某個質量的 (w_pass_mu, w_pass_ele) ======
 def _accumulate_pass_weights(ma: int,
                              sample_map: Dict[int,str],
                              mva_cuts: Dict[int,float],
-                             years: List[str]) -> Tuple[float,float,float,float]:
+                             years: List[str]) -> Tuple[float,float,float,float,float,float,float,float]:
+    """
+    回傳：
+      (sumw_pass_mu, sumw_pass_ele, sumw2_pass_mu, sumw2_pass_ele,
+       sumw_tot_mu,  sumw_tot_ele,  sumw2_tot_mu,  sumw2_tot_ele)
+    """
     if ma not in sample_map or ma not in mva_cuts:
-        return 0.0, 0.0, 0.0, 0.0
+        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
     sample = sample_map[ma]
     cut = mva_cuts[ma]
     files = _list_root_files(INPUT_BASE, sample, years)
-    w_pass_mu = 0.0
-    w_pass_ele = 0.0
-    w2_pass_mu = 0.0
-    w2_pass_ele = 0.0
+
+    w_pass_mu = w_pass_ele = 0.0
+    w2_pass_mu = w2_pass_ele = 0.0
+    w_tot_mu = w_tot_ele = 0.0
+    w2_tot_mu = w2_tot_ele = 0.0
+
     for fp in files:
         try:
             with uproot.open(fp) as f:
-                if INPUT_BASE_TREE_NAME not in f: continue
+                if INPUT_BASE_TREE_NAME not in f:
+                    continue
                 t = f[INPUT_BASE_TREE_NAME]
-                if not _branch_exists(t,"MVA_Score"): continue
+
+                mva_branch = _pick_mva_score_branch(t, sample)
+                if not mva_branch:
+                    continue
+
                 wname = _pick_weight_branch(t)
-                branches = ["MVA_Score"]
-                if wname: branches.append(wname)
-                has_mu = _branch_exists(t,"z_mumu")
-                has_ele = _branch_exists(t,"z_ee")
-                if has_mu: branches.append("z_mumu")
-                if has_ele: branches.append("z_ee")
+                branches = [mva_branch]
+                if wname:
+                    branches.append(wname)
+
+                has_mu = _branch_exists(t, "z_mumu")
+                has_ele = _branch_exists(t, "z_ee")
+                if has_mu:
+                    branches.append("z_mumu")
+                if has_ele:
+                    branches.append("z_ee")
+
                 for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
-                    mva = arrs["MVA_Score"]
-                    mask = mva >= cut
+                    mva = arrs[mva_branch]
+                    pass_mask = mva >= cut
+
                     if wname:
                         w = ak.values_astype(arrs[wname], np.float64)
                     else:
                         w = ak.ones_like(mva, dtype=np.float64)
-
-                    # 統計誤差：同時累積 sumw2
                     w2 = w * w
 
                     if has_mu:
-                        mu_mask = mask & (ak.values_astype(arrs["z_mumu"], np.int8) == 1)
-                        w_pass_mu += float(ak.sum(w[mu_mask]))
-                        w2_pass_mu += float(ak.sum(w2[mu_mask]))
+                        mu_sel = (ak.values_astype(arrs["z_mumu"], np.int8) == 1)
+                        mu_pass = pass_mask & mu_sel
+                        w_tot_mu += float(ak.sum(w[mu_sel]))
+                        w2_tot_mu += float(ak.sum(w2[mu_sel]))
+                        w_pass_mu += float(ak.sum(w[mu_pass]))
+                        w2_pass_mu += float(ak.sum(w2[mu_pass]))
+
                     if has_ele:
-                        ele_mask = mask & (ak.values_astype(arrs["z_ee"], np.int8) == 1)
-                        w_pass_ele += float(ak.sum(w[ele_mask]))
-                        w2_pass_ele += float(ak.sum(w2[ele_mask]))
+                        ele_sel = (ak.values_astype(arrs["z_ee"], np.int8) == 1)
+                        ele_pass = pass_mask & ele_sel
+                        w_tot_ele += float(ak.sum(w[ele_sel]))
+                        w2_tot_ele += float(ak.sum(w2[ele_sel]))
+                        w_pass_ele += float(ak.sum(w[ele_pass]))
+                        w2_pass_ele += float(ak.sum(w2[ele_pass]))
         except Exception:
             continue
-    return w_pass_mu, w_pass_ele, w2_pass_mu, w2_pass_ele
 
-# --- 新增：系統通道的 sumw/sumw2（用 w_eff * weight） ---
-def _accumulate_pass_sumw_systs(ma: int,
-                                sample_map: Dict[int, str],
-                                mva_cuts: Dict[int, float],
-                                years: List[str],
-                                sys_names: List[str],
-                                sys_central_names: Optional[List[str]] = None) -> Dict[str, Tuple[float, float, float, float]]:
+    return (w_pass_mu, w_pass_ele, w2_pass_mu, w2_pass_ele,
+            w_tot_mu,  w_tot_ele,  w2_tot_mu,  w2_tot_ele)
+
+# --- 新增：系統通道的 pass/total sumw/sumw2（用 w_eff） ---
+def _accumulate_sumw_systs_pass_total(ma: int,
+                                     sample_map: Dict[int, str],
+                                     mva_cuts: Dict[int, float],
+                                     years: List[str],
+                                     sys_names: List[str],
+                                     sys_central_names: Optional[List[str]] = None
+                                     ) -> Dict[str, Tuple[float, float, float, float, float, float, float, float]]:
     """
-    回傳 dict: sys_name -> (sumw_pass_mu, sumw_pass_ele, sumw2_pass_mu, sumw2_pass_ele)
-
-    w_eff 的定義沿用原本邏輯，但同時累積 sumw2 = sum(w_eff^2)，
-    讓誤差 bar 可以反映「sys 權重造成的統計波動」。
+    回傳 dict: sys_name ->
+      (sumw_pass_mu, sumw_pass_ele, sumw2_pass_mu, sumw2_pass_ele,
+       sumw_tot_mu,  sumw_tot_ele,  sumw2_tot_mu,  sumw2_tot_ele)
     """
     if ma not in sample_map or ma not in mva_cuts:
         return {}
@@ -411,7 +450,9 @@ def _accumulate_pass_sumw_systs(ma: int,
     cut = mva_cuts[ma]
     files = _list_root_files(INPUT_BASE, sample, years)
 
-    out: Dict[str, Tuple[float, float, float, float]] = {s: (0.0, 0.0, 0.0, 0.0) for s in sys_names}
+    out: Dict[str, Tuple[float, float, float, float, float, float, float, float]] = {
+        s: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) for s in sys_names
+    }
 
     base_to_central: Dict[str, str] = {}
     if sys_central_names:
@@ -425,7 +466,9 @@ def _accumulate_pass_sumw_systs(ma: int,
                 if INPUT_BASE_TREE_NAME not in f:
                     continue
                 t = f[INPUT_BASE_TREE_NAME]
-                if not _branch_exists(t, "MVA_Score"):
+
+                mva_branch = _pick_mva_score_branch(t, sample)
+                if not mva_branch:
                     continue
 
                 has_mu = _branch_exists(t, "z_mumu")
@@ -446,7 +489,7 @@ def _accumulate_pass_sumw_systs(ma: int,
                             central_branches.append(c)
                 central_branches = sorted(set(central_branches))
 
-                branches = ["MVA_Score"] + sys_branches + central_branches
+                branches = [mva_branch] + sys_branches + central_branches
                 if wname:
                     branches.append(wname)
                 if has_mu:
@@ -455,15 +498,15 @@ def _accumulate_pass_sumw_systs(ma: int,
                     branches.append("z_ee")
 
                 for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
-                    mva = arrs["MVA_Score"]
-                    mask = mva >= cut
+                    mva = arrs[mva_branch]
+                    pass_mask = mva >= cut
 
-                    mu_mask = None
-                    ele_mask = None
+                    mu_sel = None
+                    ele_sel = None
                     if has_mu:
-                        mu_mask = mask & (ak.values_astype(arrs["z_mumu"], np.int8) == 1)
+                        mu_sel = (ak.values_astype(arrs["z_mumu"], np.int8) == 1)
                     if has_ele:
-                        ele_mask = mask & (ak.values_astype(arrs["z_ee"], np.int8) == 1)
+                        ele_sel = (ak.values_astype(arrs["z_ee"], np.int8) == 1)
 
                     if wname:
                         w_nom = ak.values_astype(arrs[wname], np.float64)
@@ -472,13 +515,11 @@ def _accumulate_pass_sumw_systs(ma: int,
 
                     for s in sys_branches:
                         w_sys_raw = ak.values_astype(arrs[s], np.float64)
-
                         base = re.sub(r"_(up|down)$", "", s)
                         c_name = base_to_central.get(base) if base_to_central else None
 
                         w_eff = None
 
-                        # --- 優先 central ratio ---
                         if c_name and c_name in arrs.fields:
                             w_c = ak.values_astype(arrs[c_name], np.float64)
                             ok = ak.isfinite(w_c) & (w_c != 0) & ak.isfinite(w_sys_raw)
@@ -487,9 +528,8 @@ def _accumulate_pass_sumw_systs(ma: int,
                                 ratio = ak.where(ok, w_sys_raw / w_c, ratio)
                                 w_eff = w_nom * ratio
 
-                        # --- fallback：ratio/absolute 偵測 ---
                         if w_eff is None:
-                            probe = w_sys_raw[mask]
+                            probe = w_sys_raw[pass_mask]
                             is_ratio = False
                             try:
                                 probe = probe[ak.isfinite(probe)]
@@ -502,41 +542,53 @@ def _accumulate_pass_sumw_systs(ma: int,
                                             is_ratio = True
                             except Exception:
                                 is_ratio = False
-
                             w_eff = (w_nom * w_sys_raw) if is_ratio else w_sys_raw
 
                         w_eff2 = w_eff * w_eff
 
-                        mu_sum, ele_sum, mu_sum2, ele_sum2 = out.get(s, (0.0, 0.0, 0.0, 0.0))
-                        if mu_mask is not None:
-                            mu_sum += float(ak.sum(w_eff[mu_mask]))
-                            mu_sum2 += float(ak.sum(w_eff2[mu_mask]))
-                        if ele_mask is not None:
-                            ele_sum += float(ak.sum(w_eff[ele_mask]))
-                            ele_sum2 += float(ak.sum(w_eff2[ele_mask]))
-                        out[s] = (mu_sum, ele_sum, mu_sum2, ele_sum2)
+                        (p_mu, p_ele, p2_mu, p2_ele,
+                         t_mu, t_ele, t2_mu, t2_ele) = out.get(s, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+
+                        if mu_sel is not None:
+                            mu_pass = pass_mask & mu_sel
+                            t_mu += float(ak.sum(w_eff[mu_sel]))
+                            t2_mu += float(ak.sum(w_eff2[mu_sel]))
+                            p_mu += float(ak.sum(w_eff[mu_pass]))
+                            p2_mu += float(ak.sum(w_eff2[mu_pass]))
+
+                        if ele_sel is not None:
+                            ele_pass = pass_mask & ele_sel
+                            t_ele += float(ak.sum(w_eff[ele_sel]))
+                            t2_ele += float(ak.sum(w_eff2[ele_sel]))
+                            p_ele += float(ak.sum(w_eff[ele_pass]))
+                            p2_ele += float(ak.sum(w_eff2[ele_pass]))
+
+                        out[s] = (p_mu, p_ele, p2_mu, p2_ele, t_mu, t_ele, t2_mu, t2_ele)
         except Exception:
             continue
 
-    out = {k: v for k, v in out.items() if (v[0] != 0.0 or v[1] != 0.0)}
+    out = {k: v for k, v in out.items() if (v[0] != 0.0 or v[1] != 0.0 or v[4] != 0.0 or v[5] != 0.0)}
     return out
 
-# ====== sumw -> Aε(%) 計算 ======
-def _sumw_to_eff_percent(w_pass: float, years: List[str]) -> float:
-    lumi_fb = _lumi_fb_for_years(years)
-    denom = XS_PB * BR * lumi_fb * KEEP_FB
-    if denom <= 0:
+def _eff_percent_from_pass_total(w_pass: float, w_tot: float) -> float:
+    if w_tot <= 0:
         return 0.0
-    return 100.0 * TEST_TO_ALL * w_pass / denom
+    return 100.0 * (w_pass / w_tot)
 
-def _sumw2_to_efferr_percent(w2_pass: float, years: List[str]) -> float:
-    lumi_fb = _lumi_fb_for_years(years)
-    denom = XS_PB * BR * lumi_fb * KEEP_FB
-    if denom <= 0:
+def _stat_err_eff_percent_from_total(w_tot: float, w2_tot: float, eff_percent: float) -> float:
+    """
+    以加權等效事件數 Neff = (sumw^2)/sumw2，套用 binomial 近似：
+      sigma(e) = sqrt(e(1-e)/Neff)
+    回傳單位：百分比(%)
+    """
+    if w_tot <= 0 or w2_tot <= 0:
         return 0.0
-    if w2_pass <= 0:
+    neff = (w_tot * w_tot) / w2_tot
+    if neff <= 0:
         return 0.0
-    return 100.0 * TEST_TO_ALL * (float(np.sqrt(w2_pass)) / denom)
+    e = float(eff_percent) / 100.0
+    var = e * (1.0 - e) / neff
+    return 100.0 * float(np.sqrt(max(var, 0.0)))
 
 def _build_sumw_series(channel: str,
                        ma_order: List[int],
@@ -550,53 +602,55 @@ def _build_sumw_series(channel: str,
     - 系統誤差：對每個 systematic source 取 up/down 對 nominal 的偏移（envelope），再做 quadrature。
       這裡輸出不對稱誤差（lo/hi），最後再與統計誤差做 quadrature。
     """
+
     xs, ys, yerr_lo, yerr_hi = [], [], [], []
     for ma in ma_order:
         if ma not in sample_map or ma not in mva_cuts:
             continue
 
-        w_mu, w_ele, w2_mu, w2_ele = _accumulate_pass_weights(ma, sample_map, mva_cuts, years)
-        if channel == "muon":
-            w_use, w2_use = w_mu, w2_mu
-        else:
-            w_use, w2_use = w_ele, w2_ele
+        (w_pass_mu, w_pass_ele, w2_pass_mu, w2_pass_ele,
+         w_tot_mu,  w_tot_ele,  w2_tot_mu,  w2_tot_ele) = _accumulate_pass_weights(ma, sample_map, mva_cuts, years)
 
-        if w_use <= 0:
+        if channel == "muon":
+            w_pass, w_tot = w_pass_mu, w_tot_mu
+            w2_tot = w2_tot_mu
+        else:
+            w_pass, w_tot = w_pass_ele, w_tot_ele
+            w2_tot = w2_tot_ele
+
+        if w_tot <= 0:
             continue
 
-        eff_nom = _sumw_to_eff_percent(w_use, years)
-        stat_err = _sumw2_to_efferr_percent(w2_use, years)
+        eff_nom = _eff_percent_from_pass_total(w_pass, w_tot)
+        stat_err = _stat_err_eff_percent_from_total(w_tot, w2_tot, eff_nom)
 
         sys_names = SYS_Mu if channel == "muon" else SYS_Ele
         sys_central = SYS_Mu_central if channel == "muon" else SYS_Ele_central
-        sumw_systs = _accumulate_pass_sumw_systs(ma, sample_map, mva_cuts, years, sys_names, sys_central)
 
-        # envelope by base：分別蒐集「向上」與「向下」偏移（用正數表示幅度）
+        sumw_systs = _accumulate_sumw_systs_pass_total(
+            ma, sample_map, mva_cuts, years, sys_names, sys_central
+        )
+
         up_by_base: Dict[str, float] = {}
         dn_by_base: Dict[str, float] = {}
 
-        for sys_name, (sw_mu, sw_ele, sw2_mu, sw2_ele) in sumw_systs.items():
+        for sys_name, (p_mu, p_ele, p2_mu, p2_ele, t_mu, t_ele, t2_mu, t2_ele) in sumw_systs.items():
             if channel == "muon":
-                sw, sw2 = float(sw_mu), float(sw2_mu)
+                p, t = float(p_mu), float(t_mu)
             else:
-                sw, sw2 = float(sw_ele), float(sw2_ele)
+                p, t = float(p_ele), float(t_ele)
 
-            if sw == 0.0:
+            if t <= 0.0:
                 continue
 
-            eff_sys = _sumw_to_eff_percent(sw, years)
+            eff_sys = _eff_percent_from_pass_total(p, t)
             delta = float(eff_sys - eff_nom)
 
             base = re.sub(r"_(up|down)$", "", sys_name)
-
             if delta >= 0.0:
-                prev = up_by_base.get(base, 0.0)
-                if delta > prev:
-                    up_by_base[base] = delta
+                up_by_base[base] = max(up_by_base.get(base, 0.0), delta)
             else:
-                prev = dn_by_base.get(base, 0.0)
-                if (-delta) > prev:
-                    dn_by_base[base] = -delta
+                dn_by_base[base] = max(dn_by_base.get(base, 0.0), -delta)
 
         syst_up = float(np.sqrt(sum(v*v for v in up_by_base.values()))) if up_by_base else 0.0
         syst_dn = float(np.sqrt(sum(v*v for v in dn_by_base.values()))) if dn_by_base else 0.0
@@ -622,7 +676,6 @@ def _build_sumw_series(channel: str,
         tot_up = float(np.sqrt(stat_err*stat_err + syst_up*syst_up))
         tot_dn = float(np.sqrt(stat_err*stat_err + syst_dn*syst_dn))
 
-        # 可選：視覺化 floor（不建議用於正式不確定度）
         if USE_VIS_FLOOR:
             vis_floor = max(float(ERR_ABS_FLOOR), float(abs(eff_nom) * ERR_REL_FLOOR))
             tot_up = max(tot_up, vis_floor)
@@ -876,7 +929,7 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     # 軸（用第一條線的 axis）
     g0 = g_store[0]
     g0.GetXaxis().SetTitle("m_{a} [GeV]")
-    g0.GetYaxis().SetTitle("Efficiency #times Acceptance (%)")
+    g0.GetYaxis().SetTitle("MVA Signal Efficiency (%)")
     ax, ay = g0.GetXaxis(), g0.GetYaxis()
     for axis in (ax, ay):
         axis.CenterTitle(False)
@@ -908,32 +961,32 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     c.Update()
     c.RedrawAxis()
 
-    fname = f"sigEfficiencyVmA_{'muon' if channel_label.lower().startswith('muon') else 'ele'}_byYear{name_suffix}"
+    fname = f"MVASigEffVmA_{'muon' if channel_label.lower().startswith('muon') else 'ele'}_byYear{name_suffix}"
     out_path = out_dir / f"{fname}.pdf"
     c.SaveAs(str(out_path))
 
     # 新增：在 5years 模式把 interpolated y 寫成 JSON（每個 channel 一份）
-    if name_suffix == "_5years" and interp_payload["values"]:
-        json_name = f"{fname}_quadratic_interp_ma_points.json"
-        jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
-        json_path = jsonOutDir / json_name
-        meta = {
-            "input_years": years,
-            "mva_cut_json": optimized_BDT_Cut,
-            "input_base": INPUT_BASE,
-            "tree": INPUT_BASE_TREE_NAME,
-            "xs_pb": XS_PB,
-            "br": BR,
-            "keep_fb": KEEP_FB,
-            "test_to_all": TEST_TO_ALL,
-        }
-        try:
-            with open(json_path, "w") as jf:
-                # 重點：不要 sort_keys，不然 "10" 會又排到 "2" 前面
-                json.dump({"meta": meta, **interp_payload}, jf, indent=2, sort_keys=False)
-            print(f"[資訊] 已輸出 quadratic curve 內插點 JSON：{json_path}")
-        except Exception as e:
-            print(f"[警告] 寫出 JSON 失敗：{json_path} ({e})")
+    # if name_suffix == "_5years" and interp_payload["values"]:
+    #     json_name = f"{fname}_quadratic_interp_ma_points.json"
+    #     jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
+    #     json_path = jsonOutDir / json_name
+    #     meta = {
+    #         "input_years": years,
+    #         "mva_cut_json": optimized_BDT_Cut,
+    #         "input_base": INPUT_BASE,
+    #         "tree": INPUT_BASE_TREE_NAME,
+    #         "xs_pb": XS_PB,
+    #         "br": BR,
+    #         "keep_fb": KEEP_FB,
+    #         "test_to_all": TEST_TO_ALL,
+    #     }
+    #     try:
+    #         with open(json_path, "w") as jf:
+    #             # 重點：不要 sort_keys，不然 "10" 會又排到 "2" 前面
+    #             json.dump({"meta": meta, **interp_payload}, jf, indent=2, sort_keys=False)
+    #         print(f"[資訊] 已輸出 quadratic curve 內插點 JSON：{json_path}")
+    #     except Exception as e:
+    #         print(f"[警告] 寫出 JSON 失敗：{json_path} ({e})")
 
     return out_path
 
@@ -955,7 +1008,7 @@ def main():
     # 依 branch 名稱把 e/μ 專屬系統分開；沒有寫 electron/muon 的視為 common（兩個 channel 都要考慮）
     SYS_Ele, SYS_Mu, SYS_Ele_central, SYS_Mu_central = _split_sys_branches_by_channel(sys_updown, sys_central)
     print(f"[資訊] syst branches split: common+ele={len(SYS_Ele)} | common+mu={len(SYS_Mu)} | central(ele)={len(SYS_Ele_central)} | central(mu)={len(SYS_Mu_central)}")
-    out_dir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/signal_eff_sumw")
+    out_dir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/MVASigEffVmA")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 3. 計算並繪圖：每個年份群組各一條線 (2022/2023/2024)

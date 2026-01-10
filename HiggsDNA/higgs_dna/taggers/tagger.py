@@ -55,7 +55,9 @@ class Tagger():
         # 這些前綴的 cut_type 強制用 one_line（預設 trigeff_）
         self.cutflow_dump_one_line_prefix = tuple(cfopt.get("dump_one_line_prefix", ["trigeff_"]))
 
-        # NEW: one_line JSON (pt-binned trigeff aggregation) 去重：每個 prefix 印一次
+        # NEW: one_line JSON (pt-binned trigeff aggregation) 去重：
+        # 以前用 prefix 去重會導致「只有第一個 syst 印得出來」，其他 syst 被擋掉
+        # 改成以 (syst, prefix) 去重：每個 syst 各印一次
         self._trigeff_json_dumped = set()
 
     def select(self, events):
@@ -270,17 +272,17 @@ class Tagger():
                 yields = 0
                 individual_eff = 0
                 if weighted:
-                    # unique_values = numpy.unique(events[result].Generator_weight)
-                    # for value in unique_values:
-                    #     unique_counts = numpy.sum(events[result].Generator_weight == value)
-                    #     logger.debug("[Tagger] : Generator_weight that equals to {} is {}".format(value, unique_counts))
-                    yields = numpy.sum(events[result].Generator_weight.to_numpy().astype('float64'))
-                    if float(awkward.count(result)) > 0.:
-                        individual_eff = yields / awkward.count(result)
-                    else:
-                        individual_eff = 0.
-                    if yields > 0:
-                        individual_eff = yields / awkward.count(result)
+                    # use SF-corrected central event weight
+                    # (assumes weight_central exists for MC; for safety, fall back to Generator_weight)
+                    wbranch = "weight_central" if hasattr(events, "weight_central") else "Generator_weight"
+                    w_all = getattr(events, wbranch)
+
+                    # sum of weights after this cut
+                    yields = float(numpy.sum(w_all[result].to_numpy().astype("float64")))
+
+                    # standard weighted selection efficiency = sumw(pass) / sumw(total)
+                    sumw_total = float(numpy.sum(w_all.to_numpy().astype("float64")))
+                    individual_eff = (yields / sumw_total) if sumw_total != 0.0 else 0.0
                 else:
                     yields = numpy.sum(result)
                     if float(awkward.count(result)) > 0:
@@ -370,7 +372,7 @@ class Tagger():
         # --- one-line summary (for trigger studies etc.) ---
         if style == "one_line":
             logger.debug(
-                "[CutFlow] tagger=%s syst=%s cut_type=%s final=%s %.3f / all %.3f (=%.4f)",
+                "[CutFlow] tagger=%s syst=%s cut_type=%s final=%s %.2f / all %.2f (=%.4f)",
                 self.name, self.current_syst, cut_type, last_cut, final_y, all_y, eff
             )
 
@@ -379,11 +381,12 @@ class Tagger():
                 meta = self._trigeff_parse_cut_type(cut_type)
                 if meta:
                     prefix = f"trigeff_{meta['lep']}_{meta['ord']}_{meta['trig']}"
-                    if prefix not in self._trigeff_json_dumped:
+                    dump_key = (str(self.current_syst), prefix)
+                    if dump_key not in self._trigeff_json_dumped:
                         payload = self._trigeff_build_summary_json(prefix)
                         logger.info("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
                         logger.debug("-" * 80)
-                        self._trigeff_json_dumped.add(prefix)
+                        self._trigeff_json_dumped.add(dump_key)
 
             return
 
@@ -400,17 +403,17 @@ class Tagger():
                 step = (y / prev * 100.0) if prev > 0 else 0.0
 
             if step is None:
-                logger.debug(f"{cut:<22} : {y:>10.3f}   (all: {cum:>6.1f}%)   (step: {'-':>6})")
+                logger.debug(f"{cut:<22} : {y:>10.2f}   (all: {cum:>6.1f}%)   (step: {'-':>6})")
             else:
-                logger.debug(f"{cut:<22} : {y:>10.3f}   (all: {cum:>6.1f}%)   (step: {step:>6.1f}%)")
+                logger.debug(f"{cut:<22} : {y:>10.2f}   (all: {cum:>6.1f}%)   (step: {step:>6.1f}%)")
             prev = y
 
-        # JSON output（保留）
+        # JSON output（保留；改成兩位小數）
         payload = {
             "tagger": self.name,
             "syst": self.current_syst,
             "cut_type": cut_type,
-            "cuts": {k: float(ymap.get(k, 0.0)) for k in order},
+            "cuts": {k: round(float(ymap.get(k, 0.0)), 2) for k in order},
         }
         logger.info("CutFlow JSON %s", json.dumps(payload, separators=(",", ":")))
         logger.debug("-" * 80)

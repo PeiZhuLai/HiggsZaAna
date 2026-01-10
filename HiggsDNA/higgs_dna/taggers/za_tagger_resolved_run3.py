@@ -145,7 +145,7 @@ DEFAULT_OPTIONS = {
         # 例如: ["phid_custom_tight", "phid_official_medium", ...]
         "study_photon_id_scenarios_subset": None,
 
-        # NEW: electron ip3d scenario study
+        # NEW: electron sip3d scenario study
         "study_ele_ip3d_scenarios": True,
 
         # NEW: lepton pT-binned trigger efficiency study (phid-like)
@@ -373,13 +373,9 @@ class ZaTaggerRun3(Tagger):
             data = events.Electron[electron_cut]
         )
 
-        # NEW: event-level flag: 是否「選到的 electrons」全都通過 ip3d<4（或至少無 electron 時視為 True）
-        # rule: 若事件沒有 selected electron -> True；否則 selected electrons 需全部 ip3d<4
-        if "ip3d" in electrons.fields:
-            pass_sel_ele_ip3d = ak.fill_none(ak.all(electrons.ip3d < 4, axis=1), True)
-        else:
-            pass_sel_ele_ip3d = ak.ones_like(ak.num(events.Photon) >= 0)
-        awkward_utils.add_field(events, "pass_sel_ele_ip3d", ak.fill_none(pass_sel_ele_ip3d, False), overwrite=True)
+        # NEW: event-level flag: 是否「選到的 electrons」全都通過 sip3d<4（或至少無 electron 時視為 True）
+        pass_sel_ele_sip3d = ak.fill_none(ak.all(electrons.sip3d < 4, axis=1), True)
+        awkward_utils.add_field(events, "pass_sel_ele_sip3d", ak.fill_none(pass_sel_ele_sip3d, False), overwrite=True)
 
         # generate the index in the original array and add to electrons
         arr = ak.local_index(events.Electron["pt"], axis=1)[electron_cut]
@@ -702,20 +698,27 @@ class ZaTaggerRun3(Tagger):
         z_cand_noFSR = ak.firsts(z_cands_noFSR)
 
         # Add Z-related fields to array
-        for field in ["pt", "eta", "phi", "mass", "charge", "id", "ptE_error"]:
-            if not field in ["charge", "id", "ptE_error"]:
-                # Include FSR
+        # NOTE: sip3d only (no ip3d fallback)
+        for field in ["pt", "eta", "phi", "mass", "charge", "id", "ptE_error", "sip3d"]:
+            if field == "sip3d":
+                awkward_utils.add_field(events, "Z_lead_lepton_sip3d", ak.fill_none(z_cand.LeadLepton.sip3d, DUMMY_VALUE))
+                awkward_utils.add_field(events, "Z_sublead_lepton_sip3d", ak.fill_none(z_cand.SubleadLepton.sip3d, DUMMY_VALUE))
+                awkward_utils.add_field(events, "Z_noFSR_lead_lepton_sip3d", ak.fill_none(z_cand_noFSR.LeadLepton.sip3d, DUMMY_VALUE))
+                awkward_utils.add_field(events, "Z_noFSR_sublead_lepton_sip3d", ak.fill_none(z_cand_noFSR.SubleadLepton.sip3d, DUMMY_VALUE))
+                continue
+
+            if not field in ["charge", "id", "ptE_error", "sip3d"]:
                 awkward_utils.add_field(
                         events,
                         "Z_%s" % field,
                         ak.fill_none(getattr(z_cand.ZCand, field), DUMMY_VALUE)
                 )
-                # Without FSR
                 awkward_utils.add_field(
                     events,
                     f"Z_noFSR_{field}",
                     ak.fill_none(getattr(z_cand_noFSR.ZCand, field), DUMMY_VALUE)
                 )
+
             awkward_utils.add_field(
                     events,
                     "Z_lead_lepton_%s" % field,
@@ -980,17 +983,15 @@ class ZaTaggerRun3(Tagger):
                 weighted = weighted
             )
 
-        # NEW: electron ip3d scenario cutflow（像 phid 一樣額外註冊）
+        # NEW: electron sip3d scenario cutflow（像 phid 一樣額外註冊）
         if self.options.get("zgammas", {}).get("study_ele_ip3d_scenarios", False):
-            # 注意：這裡只研究「加上 ip3d 對事件 cutflow 的影響」，不改 nominal objects
-            # 你可以把它作為 cut2.5/cut3.5 插在你想觀察的位置（這裡放在 N_lep_sel 後面）
             for weighted in (False, True):
                 if weighted and not hasattr(events, "Generator_weight"):
                     continue
 
                 cut0 = ak.num(events.Photon) >= 0
                 cut1 = z_ee_cut
-                cut1b = cut1 & ak.fill_none(events.pass_sel_ele_ip3d, False)  # <-- ip3d scenario
+                cut1b = cut1 & ak.fill_none(events.pass_sel_ele_sip3d, False)  # <-- sip3d scenario
                 cut2 = cut1b & ele_trigger_cut
                 cut3 = cut2 & ele_trigger_pt_cut
                 cut4 = cut3 & has_z_cand
@@ -1000,14 +1001,14 @@ class ZaTaggerRun3(Tagger):
                 cut8 = cut7 & event_filter
 
                 self.register_event_cuts(
-                    names = ["all", "N_lep_sel", "ele_ip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                    names = ["all", "N_lep_sel", "ele_sip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
                     results = [cut0, cut1, cut1b, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut8],
                     events = events,
-                    cut_type = "zgammas_ele_eleip3d_w" if weighted else "zgammas_ele_eleip3d",
+                    cut_type = "zgammas_ele_elesip3d_w" if weighted else "zgammas_ele_elesip3d",
                     weighted = weighted
                 )
 
-                awkward_utils.add_field(events, "pass_allcuts_eleip3d", ak.fill_none(cut8, False), overwrite=True)
+                awkward_utils.add_field(events, "pass_allcuts_elesip3d", ak.fill_none(cut8, False), overwrite=True)
 
         # --- NEW: 一次註冊 15 種 photon ID 情境對 cutflow("all cuts") 的影響 ---
         def _scenario_has_2gamma(events_, id_key: str):

@@ -717,7 +717,7 @@ class AnalysisManager():
         out_name = "%s_%s.parquet" % (name, syst_tag)
 
         if len(events) == 0:
-            logger.info("[bold yellow]Empty events array, skipping writing to parquet.[/bold yellow]")
+            logger.debug("[bold yellow]Empty events array, skipping writing to parquet.[/bold yellow]")
             return out_name
 
         save_map = {}

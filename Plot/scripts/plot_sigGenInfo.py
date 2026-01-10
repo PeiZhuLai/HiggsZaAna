@@ -798,6 +798,158 @@ def _plot_gen_distributions_for_year(
                     norm_y_title_offset=1.45,
                 )
 
+    # ------------------------------------------------------------------
+    # NEW: GenHza_lep_pt_overlay_byFlav_{electron,muon}_{year}
+    #      只有兩條線：Lead lepton pT vs Sublead lepton pT
+    #      且「所有 mA」與（year==Run3 時）「所有 era」都合併在一起
+    # ------------------------------------------------------------------
+    byflav_nb, byflav_xl, byflav_xh = 100, 0.0, 200.0
+    byflav_specs = [
+        {
+            "flav": "electron",
+            "abs_pdg": 11,
+            "out_tag": "GenHza_lep_pt_overlay_byFlav_electron",
+            "xlabel": "Gen e P_{T} [GeV]",
+        },
+        {
+            "flav": "muon",
+            "abs_pdg": 13,
+            "out_tag": "GenHza_lep_pt_overlay_byFlav_muon",
+            "xlabel": "Gen #mu P_{T} [GeV]",
+        },
+    ]
+
+    lead_pt = arr.get("GenHzaZLeadLep_pt")
+    sub_pt  = arr.get("GenHzaZSubleadLep_pt")
+    lead_id = arr.get("GenHzaZLeadLep_pdgId")
+    sub_id  = arr.get("GenHzaZSubleadLep_pdgId")
+    w_all   = arr.get("weight")
+
+    if (lead_pt is not None and sub_pt is not None and lead_id is not None and sub_id is not None and w_all is not None
+        and lead_pt.size and sub_pt.size and lead_id.size and sub_id.size and w_all.size):
+
+        def _align3(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+            n = min(int(a.size), int(b.size), int(c.size))
+            return a[:n], b[:n], c[:n]
+
+        # align each (pt,id,w) triplet separately to avoid mismatch
+        lead_pt0, lead_id0, w0 = _align3(lead_pt, lead_id, w_all)
+        sub_pt0,  sub_id0,  w1 = _align3(sub_pt,  sub_id,  w_all)
+
+        for sp in byflav_specs:
+            abs_pdg = int(sp["abs_pdg"])
+
+            m_lead = (np.abs(lead_id0.astype(np.int64, copy=False)) == abs_pdg)
+            m_sub  = (np.abs(sub_id0.astype(np.int64, copy=False))  == abs_pdg)
+
+            x_lead, w_lead = lead_pt0[m_lead], w0[m_lead]
+            x_sub,  w_sub  = sub_pt0[m_sub],  w1[m_sub]
+
+            h_lead = _make_hist_from_np(
+                f"h_{sp['out_tag']}_{year}_lead",
+                x_lead, w_lead,
+                nbins=byflav_nb, xlow=byflav_xl, xhigh=byflav_xh,
+            )
+            h_sub = _make_hist_from_np(
+                f"h_{sp['out_tag']}_{year}_sublead",
+                x_sub, w_sub,
+                nbins=byflav_nb, xlow=byflav_xl, xhigh=byflav_xh,
+            )
+
+            # only two lines
+            _root_style_line(h_lead, _root_color("#E31A1C", fallback=ROOT.kRed+1), 20, 1)
+            _root_style_line(h_sub,  _root_color("#1F78B4", fallback=ROOT.kBlue+1), 21, 1)
+
+            hs2 = [("lead", h_lead), ("sublead", h_sub)]
+            leg2 = {"lead": "Lead", "sublead": "Sublead"}
+
+            _plot_overlay_hists(
+                year=year,
+                title=sp["out_tag"],
+                xlabel=sp["xlabel"],
+                ylabel="Events",
+                out_path=out_dir / year / f"{sp['out_tag']}_{year}.pdf",
+                hists=hs2,
+                normalize=False,
+                legend_map=leg2,
+                subtitle_lines=None,
+            )
+            _plot_overlay_hists(
+                year=year,
+                title=sp["out_tag"],
+                xlabel=sp["xlabel"],
+                ylabel="Events",
+                out_path=out_dir / year / f"{sp['out_tag']}_{year}_norm.pdf",
+                hists=hs2,
+                normalize=True,
+                legend_map=leg2,
+                subtitle_lines=None,
+                norm_left_margin=0.16,
+                norm_y_title_offset=1.45,
+            )
+
+    # ------------------------------------------------------------------
+    # NEW: GenHza_pho_pt_overlay_{year}.pdf
+    #      只有兩條線：Lead photon pT vs Sublead photon pT
+    #      且（year==Run3 時）「所有 mA + 所有 era」合併在一起
+    # ------------------------------------------------------------------
+    pho_nb, pho_xl, pho_xh = 100, 0.0, 70.0
+    lead_pho = arr.get("GenALPLeadPho_pt")
+    sub_pho  = arr.get("GenALPSubleadPho_pt")
+    w_all_pho = arr.get("weight")
+
+    if (lead_pho is not None and sub_pho is not None and w_all_pho is not None
+        and lead_pho.size and sub_pho.size and w_all_pho.size):
+
+        n0 = min(int(lead_pho.size), int(w_all_pho.size))
+        n1 = min(int(sub_pho.size),  int(w_all_pho.size))
+
+        x_lead, w_lead = lead_pho[:n0], w_all_pho[:n0]
+        x_sub,  w_sub  = sub_pho[:n1],  w_all_pho[:n1]
+
+        h_lead = _make_hist_from_np(
+            f"h_GenHza_pho_pt_overlay_{year}_lead",
+            x_lead, w_lead,
+            nbins=pho_nb, xlow=pho_xl, xhigh=pho_xh,
+        )
+        h_sub = _make_hist_from_np(
+            f"h_GenHza_pho_pt_overlay_{year}_sublead",
+            x_sub, w_sub,
+            nbins=pho_nb, xlow=pho_xl, xhigh=pho_xh,
+        )
+
+        _root_style_line(h_lead, _root_color("#E31A1C", fallback=ROOT.kRed+1), 20, 1)
+        _root_style_line(h_sub,  _root_color("#1F78B4", fallback=ROOT.kBlue+1), 21, 1)
+
+        hs_pho = [("lead", h_lead), ("sublead", h_sub)]
+        leg_pho = {"lead": "Lead", "sublead": "Sublead"}
+
+        out_tag = "GenHza_pho_pt_overlay"
+        _plot_overlay_hists(
+            year=year,
+            title=out_tag,
+            xlabel="Gen #gamma P_{T} [GeV]",
+            ylabel="Events",
+            out_path=out_dir / year / f"{out_tag}_{year}.pdf",
+            hists=hs_pho,
+            normalize=False,
+            legend_map=leg_pho,
+            subtitle_lines=None,
+        )
+        _plot_overlay_hists(
+            year=year,
+            title=out_tag,
+            xlabel="Gen #gamma P_{T} [GeV]",
+            ylabel="Events",
+            out_path=out_dir / year / f"{out_tag}_{year}_norm.pdf",
+            hists=hs_pho,
+            normalize=True,
+            legend_map=leg_pho,
+            subtitle_lines=None,
+            norm_left_margin=0.16,
+            norm_y_title_offset=1.45,
+        )
+
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
     parser.add_argument("--year", default="all", help="Year to plot (e.g. 2022preEE). Use 'all' to plot all years.")
