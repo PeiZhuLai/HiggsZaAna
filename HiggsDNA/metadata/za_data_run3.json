@@ -6,10 +6,10 @@
     },
     "tag_sequence": [
         {
-            "module_name": "higgs_dna.taggers.za_tagger_resolved_run3",
+            "module_name": "higgs_dna.taggers.za_tagger_resolved",
             "tagger": "ZaTaggerRun3",
             "kwargs": {
-                "name": "za_tagger_resolved_run3",
+                "name": "za_tagger_resolved",
                 "options": {
                     "gen_info": {
                         "calculate": true
@@ -28,7 +28,7 @@
             "Data"
         ],
         "years": [
-            "2024"
+            "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"
         ]
     },
     "variables_of_interest": [
@@ -60,7 +60,7 @@
         "Z_sublead_lepton_charge",
         "Z_sublead_lepton_id",
         "Z_sublead_lepton_ptE_error",
-        "Z_sublead_lepton_ip3d",
+        "Z_sublead_lepton_sip3d",
         "Z_noFSR_pt",
         "Z_noFSR_eta",
         "Z_noFSR_phi",
@@ -72,7 +72,7 @@
         "Z_noFSR_lead_lepton_charge",
         "Z_noFSR_lead_lepton_id",
         "Z_noFSR_lead_lepton_ptE_error",
-        "Z_noFSR_lead_lepton_ip3d",
+        "Z_noFSR_lead_lepton_sip3d",
         "Z_noFSR_sublead_lepton_pt",
         "Z_noFSR_sublead_lepton_eta",
         "Z_noFSR_sublead_lepton_phi",
@@ -80,7 +80,7 @@
         "Z_noFSR_sublead_lepton_charge",
         "Z_noFSR_sublead_lepton_id",
         "Z_noFSR_sublead_lepton_ptE_error",
-        "Z_noFSR_sublead_lepton_ip3d",
+        "Z_noFSR_sublead_lepton_sip3d",
         "ALP_pt",
         "ALP_eta",
         "ALP_phi",
@@ -288,7 +288,7 @@
         "Electron_pfRelIso03_all",
         "Electron_dxy",
         "Electron_dz",
-        "Electron_ip3d",
+        "Electron_sip3d",
         "Electron_mvaHZZIso",
         "Electron_mvaIso_WP90",
         "Electron_mvaIso_WP80",

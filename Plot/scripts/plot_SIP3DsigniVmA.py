@@ -33,10 +33,10 @@ outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/SIP3DsigniVmA"
 CUTS_TO_PLOT = ["event"]
 
 # JSON 裡 cutflow 的 key：改成只比較這兩條
-SCENARIOS_TO_PLOT = ["zgammas_ele_w", "zgammas_ele_eleip3d_w"]
+SCENARIOS_TO_PLOT = ["zgammas_ele_w", "zgammas_ele_elesip3d_w"]
 
-legend_map = { "zgammas_ele_w" : "e SIP3D Removal",
-               "zgammas_ele_eleip3d_w" : "e SIP3D"}
+legend_map = { "zgammas_ele_w" : "Removed e SIP_{3D} < 4",
+               "zgammas_ele_elesip3d_w" : "Applied e SIP_{3D} < 4"}
 
 YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
 
@@ -300,8 +300,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
 
     # 兩條線的外觀（固定顏色）
     scenario_style = {
-        "zgammas_ele_w":            {"color": _root_color("#1f77b4"), "ls": 1, "ms": 20, "label": "e SIP3D < 4 Removal"},
-        "zgammas_ele_eleip3d_w":    {"color": _root_color("#d62728"), "ls": 2, "ms": 21, "label": "e SIP3D < 4"},
+        "zgammas_ele_w":            {"color": _root_color("#d62728"), "ls": 1, "ms": 20},
+        "zgammas_ele_elesip3d_w":   {"color": _root_color("#1f77b4"), "ls": 2, "ms": 21},
     }
 
     c1 = ROOT.TCanvas(f"c_w_vs_eleip3d_{year}", "", 800, 600)
@@ -378,7 +378,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         g = scenario_graphs.get(scenario)
         if not g:
             continue
-        st = scenario_style.get(scenario, {"color": 1, "ls": 1, "ms": 20, "label": scenario})
+        st = scenario_style.get(scenario, {"color": 1, "ls": 1, "ms": 20})
 
         g.SetFillStyle(0)
         g.SetLineColor(int(st["color"]))
@@ -401,8 +401,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         g = scenario_graphs.get(scenario)
         if not g:
             continue
-        st = scenario_style.get(scenario, {"label": scenario})
-        leg.AddEntry(g, st["label"], "lp")
+        label = legend_map.get(scenario, scenario)
+        leg.AddEntry(g, label, "lp")
     leg.Draw()
 
     lat = ROOT.TLatex()
@@ -547,7 +547,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             g = scenario_ratio_graphs.get(scenario)
             if not g:
                 continue
-            st = scenario_style.get(scenario, {"color": 1, "ls": 1, "ms": 20, "label": scenario})
+            st = scenario_style.get(scenario, {"color": 1, "ls": 1, "ms": 20})
             g.SetFillStyle(0)
             g.SetLineColor(int(st["color"]))
             g.SetMarkerColor(int(st["color"]))
@@ -567,8 +567,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             g = scenario_ratio_graphs.get(scenario)
             if not g:
                 continue
-            st = scenario_style.get(scenario, {"label": scenario})
-            leg2.AddEntry(g, st["label"], "lp")
+            label = legend_map.get(scenario, scenario)
+            leg2.AddEntry(g, label, "lp")
         leg2.Draw()
 
         lat2 = ROOT.TLatex()

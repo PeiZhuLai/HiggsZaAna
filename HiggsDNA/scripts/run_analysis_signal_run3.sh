@@ -1,9 +1,0 @@
-# outdir="/eos/home-p/pelai/HZa/parquet_DNA/Sig_MC"
-# For Gen Information
-outdir="/eos/home-p/pelai/HZa/parquet_cutflow_DNA/Sig_MC"
-
-# rm -fr /eos/home-p/pelai/HZa/parquet_DNA/Sig_MC/mA_M5_2023postBPix
-# rm -fr /eos/home-p/pelai/HZa/parquet_cutflow_DNA/Sig_MC/mA_M5_2022preEE
-# rm -fr /eos/home-p/pelai/HZa/parquet_cutflow_DNA/Sig_MC/analysis_manager.pkl
-
-python scripts/run_analysis.py --config "metadata/za_signal_run3.json" --log-level "INFO" --n_cores 15 --output_dir $outdir --unretire_jobs --batch_system "condor" #--short --with_skimmed # local condor 

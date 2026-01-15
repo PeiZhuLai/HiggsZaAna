@@ -6,13 +6,13 @@
     },
     "tag_sequence": [
         {
-            "module_name": "higgs_dna.taggers.za_tagger_resolved_MStudy_run3",
+            "module_name": "higgs_dna.taggers.za_tagger_resolved_cutStudy",
             "tagger": "ZaTaggerRun3",
             "kwargs": {
                 "name": "za_tagger_resolved_run3",
                 "options": {
                     "gen_info": {
-                        "calculate": true
+                        "calculate": false
                     }
                 }
             }
@@ -47,19 +47,6 @@
                 "function": {
                     "module_name": "higgs_dna.systematics.lepton_systematics",
                     "name": "electron_WPL_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Electron",
-                "target_collections": [
-                    "SelectedElectron"
-                ]
-            },
-            "electron_iso_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "electron_ISO_sf"
                 },
                 "modify_central_weight": true,
                 "input_collection": "Electron",
@@ -119,19 +106,6 @@
                     "SelectedGenNoRecoMuon"
                 ]
             },
-            "muon_iso_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "muon_ISO_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Muon",
-                "target_collections": [
-                    "SelectedMuon"
-                ]
-            },
             "muon_reco_sf": {
                 "type": "object",
                 "method": "from_function",
@@ -144,18 +118,138 @@
                 "target_collections": [
                     "SelectedMuon"
                 ]
+            },
+            "photon_id_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "photon_zaid_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedPhoton",
+                "target_collections": [
+                    [
+                        "SelectedPhoton"
+                    ]
+                ]
             }
         },
         "independent_collections": {
+            "Photon_scale": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Photon",
+                        "pt_ScaleUp"
+                    ],
+                    "down": [
+                        "Photon",
+                        "pt_ScaleDown"
+                    ]
+                }
+            },
+            "Photon_smear": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Photon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Photon",
+                        "dEsigmaUp"
+                    ],
+                    "down": [
+                        "Photon",
+                        "dEsigmaDown"
+                    ]
+                },
+                "additive": true
+            },
+            "Electron_scale": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Electron",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Electron",
+                        "dEscaleUp"
+                    ],
+                    "down": [
+                        "Electron",
+                        "dEscaleDown"
+                    ]
+                }
+            },
+            "Electron_smear": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Electron",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Electron",
+                        "dEsigmaUp"
+                    ],
+                    "down": [
+                        "Electron",
+                        "dEsigmaDown"
+                    ]
+                },
+                "additive": true
+            },
+            "Muon_scale": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Muon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Muon",
+                        "scaleUp_pt"
+                    ],
+                    "down": [
+                        "Muon",
+                        "scaleDown_pt"
+                    ]
+                }
+            },
+            "Muon_smear": {
+                "method": "from_branch",
+                "branch_modified": [
+                    "Muon",
+                    "pt"
+                ],
+                "branches": {
+                    "up": [
+                        "Muon",
+                        "smearUp_pt"
+                    ],
+                    "down": [
+                        "Muon",
+                        "smearDown_pt"
+                    ]
+                },
+                "additive": true
+            }
         }
     },
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
         "sample_list": [
-            "mA_M5"
+            "DYGto2LG_10to100", "DYJetsToLL"
         ],
         "years": [
-            "2022preEE"
+            "2023preBPix"
         ]
     },
     "variables_of_interest": [
@@ -180,6 +274,7 @@
         "Z_lead_lepton_charge",
         "Z_lead_lepton_id",
         "Z_lead_lepton_ptE_error",
+        "Z_lead_lepton_sip3d",
         "Z_sublead_lepton_pt",
         "Z_sublead_lepton_eta",
         "Z_sublead_lepton_phi",
@@ -187,6 +282,7 @@
         "Z_sublead_lepton_charge",
         "Z_sublead_lepton_id",
         "Z_sublead_lepton_ptE_error",
+        "Z_sublead_lepton_sip3d",
         "Z_noFSR_pt",
         "Z_noFSR_eta",
         "Z_noFSR_phi",
@@ -198,6 +294,7 @@
         "Z_noFSR_lead_lepton_charge",
         "Z_noFSR_lead_lepton_id",
         "Z_noFSR_lead_lepton_ptE_error",
+        "Z_noFSR_lead_lepton_sip3d",
         "Z_noFSR_sublead_lepton_pt",
         "Z_noFSR_sublead_lepton_eta",
         "Z_noFSR_sublead_lepton_phi",
@@ -205,6 +302,7 @@
         "Z_noFSR_sublead_lepton_charge",
         "Z_noFSR_sublead_lepton_id",
         "Z_noFSR_sublead_lepton_ptE_error",
+        "Z_noFSR_sublead_lepton_sip3d",
         "ALP_pt",
         "ALP_eta",
         "ALP_phi",
@@ -285,30 +383,6 @@
         "gamma_fsr_dROverEt2",
         "gamma_fsr_muonIdx",
         "max_I_mini",
-        "GenHzgHiggs_pt",
-        "GenHzgHiggs_eta",
-        "GenHzgHiggs_phi",
-        "GenHzgHiggs_mass",
-        "GenHzgLeadGenChild_pt",
-        "GenHzgLeadGenChild_eta",
-        "GenHzgLeadGenChild_phi",
-        "GenHzgLeadGenChild_mass",
-        "GenHzgLeadGenChild_pdgId",
-        "GenHzgSubleadGenChild_pt",
-        "GenHzgSubleadGenChild_eta",
-        "GenHzgSubleadGenChild_phi",
-        "GenHzgSubleadGenChild_mass",
-        "GenHzgSubleadGenChild_pdgId",
-        "GenHzgLeadGenChildChild1_pt",
-        "GenHzgLeadGenChildChild1_eta",
-        "GenHzgLeadGenChildChild1_phi",
-        "GenHzgLeadGenChildChild1_mass",
-        "GenHzgLeadGenChildChild1_pdgId",
-        "GenHzgLeadGenChildChild1_pt",
-        "GenHzgLeadGenChildChild2_eta",
-        "GenHzgLeadGenChildChild2_phi",
-        "GenHzgLeadGenChildChild2_mass",
-        "GenHzgLeadGenChildChild2_pdgId",
         "n_leptons",
         "n_electrons",
         "n_muons",
@@ -431,6 +505,7 @@
         "Muon_highPtId",
         "Muon_ptErr",
         "Muon_genPartIdx",
+        "Muon_nTrackerLayers",
         "Electron_pt",
         "Electron_eta",
         "Electron_deltaEtaSC",
@@ -443,7 +518,7 @@
         "Electron_pfRelIso03_all",
         "Electron_dxy",
         "Electron_dz",
-        "Electron_ip3d",
+        "Electron_sip3d",
         "Electron_mvaHZZIso",
         "Electron_mvaIso_WP90",
         "Electron_mvaIso_WP80",
@@ -478,9 +553,6 @@
         "luminosityBlock",
         "fixedGridRhoAll",
         "Pileup_nTrueInt",
-        "Muon_corrected_pt",
-        "Muon_correctedUp_pt",
-        "Muon_correctedDown_pt",
         "LHEScaleWeight_Zero",
         "Photon_dEsigmaDown",
         "Photon_dEsigmaUp",
@@ -518,7 +590,48 @@
         "TrigObj_filterBits"
     ],
     "branch_map": {
-        "mc": [],
+        "mc": [
+            [
+                [
+                    "Muon",
+                    "pt"
+                ],
+                [
+                    "Muon",
+                    "corrected_pt"
+                ]
+            ],
+            [
+                [
+                    "Muon",
+                    "ptErr"
+                ],
+                [
+                    "Muon",
+                    "bsConstrainedPtErr"
+                ]
+            ],
+            [
+                [
+                    "Electron",
+                    "pt"
+                ],
+                [
+                    "Electron",
+                    "corrected_pt"
+                ]
+            ],
+            [
+                [
+                    "Photon",
+                    "pt"
+                ],
+                [
+                    "Photon",
+                    "corrected_pt"
+                ]
+            ]
+        ],
         "data": []
     }
 }

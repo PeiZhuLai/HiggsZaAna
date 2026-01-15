@@ -125,8 +125,8 @@ PHID_CUTFLOW_TYPES_W = [f"{ct}_w" for ct in PHID_CUTFLOW_TYPES]
 
 # sip3d scenario (your code uses ele_ip3d_cut key; cut_type is zgammas_eleip3d)
 SIP3D_CUTFLOW_TYPES = [
-    "zgammas_ele_eleip3d",
-    "zgammas_ele_eleip3d_w",  # keep in case it exists
+    "zgammas_ele_elesip3d",
+    "zgammas_ele_elesip3d_w",  # keep in case it exists
 ]
 
 # --- CHANGED: include PHID *_w types in default list ---
@@ -735,7 +735,8 @@ def render_cutflows(result: CutflowResult, xs_pb: Optional[float] = None, lumi_f
     for ct, cuts in result.cutflows.items():
         lines.append(f"Cut Type: {ct}")
         for cut_key, v in cuts.items():
-            vv = (v * w_scale) if "_w" in ct else v
+            # vv = (v * w_scale) if "_w" in ct else v
+            vv = v
             lines.append(f"  {label_for(ct, cut_key):35} & {format_value(ct, vv)} \\\\")
         lines.append("")
 
