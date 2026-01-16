@@ -5,8 +5,8 @@ set -Eeuo pipefail
 strip_cr() { printf '%s' "$1" | tr -d $'\r'; }
 
 # 新增：模組清單與使用說明、參數解析
-# AVAILABLE_MODULES=( dygto2lg dyjets all-bkg data sig )
-AVAILABLE_MODULES=( sig )
+AVAILABLE_MODULES=( dygto2lg dyjets all-bkg data sig )
+# AVAILABLE_MODULES=( sig )
 
 print_usage() {
   cat <<'EOF'

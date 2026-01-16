@@ -851,7 +851,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 def SaveCanvPic(canv, save_dir, save_name):
     canv.cd()
     canv.SaveAs(save_dir + '/' + save_name + '.pdf')
-    canv.SaveAs(save_dir + '/' + save_name + '.png')
+    # canv.SaveAs(save_dir + '/' + save_name + '.png')
     # print(f"[SaveCanvPic] Writing {save_name}")
     # canv.SaveAs(save_dir + '/' + save_name + '.eps')
 

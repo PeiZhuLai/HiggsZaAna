@@ -48,6 +48,16 @@ tdrstyle.setTDRStyle()
 # load the model from disk
 # model = pickle.load(open(BDT_filename, 'rb'))
 
+pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_pho1IetaIeta55', 
+'pho2Pt': '4_pho2Pt', 'pho2Pt': '5_pho2Pt', 'pho2R9': '6_pho2R9', 'pho2IetaIeta55': '7_pho2IetaIeta55',
+'pho1ECALIso': '8_pho1ECALIso', 'pho2ECALIso': '9_pho2ECALIso', 'ALP_calculatedPhotonIso': '10_ALP_calculatedPhotonIso',
+'var_dR_Za': '11_var_dR_Za', 'var_dR_g1g2': '12_var_dR_g1g2', 'var_dR_g1Z': '13_var_dR_g1Z',
+'var_PtaOverMh': '14_var_PtaOverMh', 'H_pt': '15_H_pt', 'param': '16_param', 'ALP_m': '17_ALP_m'}
+
+# NEW: 輸出檔名依 pdfName_map 排序；沒對應就用原本 var_name
+def _pdf_output_name(var_name: str) -> str:
+    return pdfName_map.get(var_name, var_name)
+
 def SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115., signal_high=135.):
     """
     只針對 histos['H_m']：
@@ -239,7 +249,7 @@ def main():
 
     for var_name in var_names:
         histos[var_name] = {}
-        
+
     for sample in analyzer_cfg.samp_names:
         histos['pho1Pt'][sample]    = TH1F('pho1Pt'    + '_' + sample, 'pho1Pt'    + '_' + sample, 42,  8., 50.)
         histos['pho1eta'][sample]    = TH1F('pho1eta'    + '_' + sample, 'pho1eta'    + '_' + sample, 30,  -3., 3.)
@@ -313,7 +323,6 @@ def main():
     
             ntup.GetEvent(iEvt)
             # if (iEvt == 10): break
-
 
             if (iEvt % 100000 == 1):
                 print("looking at event %d" %iEvt)
@@ -573,13 +582,13 @@ def main():
             DrawOnCanv(canv_log, var_name, plot_cfg, stacks, histos[var_name], scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, args.cut, args.mA, logY=True)
 
             canv_log.Write()
-            SaveCanvPic(canv_log, analyzer_cfg.plot_output_path, var_name+'_log')
+            SaveCanvPic(canv_log, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + '_log')
         else:
             canv = CreateCanvas(var_name)
             DrawOnCanv(canv, var_name, plot_cfg, stacks, histos[var_name], scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, args.cut, args.mA, logY=False)
 
             canv.Write()
-            SaveCanvPic(canv, analyzer_cfg.plot_output_path, var_name)
+            SaveCanvPic(canv, analyzer_cfg.plot_output_path, _pdf_output_name(var_name))
 
 
     
