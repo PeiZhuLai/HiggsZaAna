@@ -499,8 +499,8 @@ def _plot_gen_distributions_for_year(
 
     # CHANGED: pt overlay 改成兩張圖（Lead/Sublead），各自疊 mA 線
     overlay_pairs = [
-        (["GenALPLeadPho_pt"],    "Lead Photon P_{T} [GeV]",    100, 0.0, 70.0, "GenALP_leadPho_pt_overlay_byMA"),
-        (["GenALPSubleadPho_pt"], "Sublead Photon P_{T} [GeV]", 100, 0.0, 70.0, "GenALP_subleadPho_pt_overlay_byMA"),
+        (["GenALPLeadPho_pt"],    "Lead Photon P_{T} [GeV]",    50, 0.0, 50.0, "GenALP_leadPho_pt_overlay_byMA"),
+        (["GenALPSubleadPho_pt"], "Sublead Photon P_{T} [GeV]", 50, 0.0, 50.0, "GenALP_subleadPho_pt_overlay_byMA"),
     ]
 
     # CHANGED: 原本 lep_overlay 連續賦值會被覆蓋；改成 lead/sublead 各自的 spec（含對應 pdg branch）
@@ -509,18 +509,18 @@ def _plot_gen_distributions_for_year(
             "pt_branch": "GenHzaZLeadLep_pt",
             "pdg_branch": "GenHzaZLeadLep_pdgId",
             "xlabel": "Lead Lepton P_{T} [GeV]",
-            "nb": 100,
+            "nb": 80,
             "xl": 0.0,
-            "xh": 200.0,
+            "xh": 160.0,
             "tag_suffix": "leadLep",
         },
         {
             "pt_branch": "GenHzaZSubleadLep_pt",
             "pdg_branch": "GenHzaZSubleadLep_pdgId",
             "xlabel": "Sublead Lepton P_{T} [GeV]",
-            "nb": 100,
+            "nb": 80,
             "xl": 0.0,
-            "xh": 200.0,
+            "xh": 160.0,
             "tag_suffix": "subleadLep",
         },
     ]
@@ -803,7 +803,7 @@ def _plot_gen_distributions_for_year(
     #      只有兩條線：Lead lepton pT vs Sublead lepton pT
     #      且「所有 mA」與（year==Run3 時）「所有 era」都合併在一起
     # ------------------------------------------------------------------
-    byflav_nb, byflav_xl, byflav_xh = 100, 0.0, 200.0
+    byflav_nb, byflav_xl, byflav_xh = 80, 0.0, 160.0
     byflav_specs = [
         {
             "flav": "electron",
@@ -893,7 +893,7 @@ def _plot_gen_distributions_for_year(
     #      只有兩條線：Lead photon pT vs Sublead photon pT
     #      且（year==Run3 時）「所有 mA + 所有 era」合併在一起
     # ------------------------------------------------------------------
-    pho_nb, pho_xl, pho_xh = 100, 0.0, 70.0
+    pho_nb, pho_xl, pho_xh = 50, 0.0, 50.0
     lead_pho = arr.get("GenALPLeadPho_pt")
     sub_pho  = arr.get("GenALPSubleadPho_pt")
     w_all_pho = arr.get("weight")

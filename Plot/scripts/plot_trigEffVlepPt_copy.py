@@ -27,7 +27,7 @@ TRIG_GROUPS = {
     "ele_lead": ("trigeff_ele_lead_OR_ele", "trigeff_ele_lead_double_ele", "Electron lead"),
     "ele_sublead": ("trigeff_ele_sublead_OR_ele", "trigeff_ele_sublead_double_ele", "Electron sublead"),
     "mu_lead": ("trigeff_mu_lead_OR_mu", "trigeff_mu_lead_double_mu", "Muon lead"),
-    "mu_sublead": ("trigeff_mu_sublead_OR_mu", "trigeff_mu_lead_double_mu", "Muon sublead"),
+    "mu_sublead": ("trigeff_mu_sublead_OR_mu", "trigeff_mu_sublead_double_mu", "Muon sublead"),
 }
 
 PT_BIN_ORDER = [
@@ -100,24 +100,18 @@ def _graph_cumulative_eff_from_hist(h: ROOT.TH1) -> ROOT.TGraph:
         ys.append(100.0 * float(num) / float(tot))
     return ROOT.TGraph(len(xs), carray("d", xs), carray("d", ys))
 
-def _g_from_bins(eff_by_bin: Dict[str, float]) -> ROOT.TGraphErrors:
+def _g_from_bins(eff_by_bin: Dict[str, float]) -> ROOT.TGraph:
     from array import array as carray
     xs: List[float] = []
     ys: List[float] = []
-    exs: List[float] = []
-    eys: List[float] = []
     for b in PT_BIN_ORDER:
         if b not in eff_by_bin:
             continue
         xs.append(_ptbin_center(b))
         ys.append(float(eff_by_bin[b]) * 100.0)
-        exs.append(0.5 * PT_BIN_W)  # x-bar half width (2 GeV bins -> +/- 1 GeV)
-        eys.append(0.0)
     x = carray("d", xs)
     y = carray("d", ys)
-    ex = carray("d", exs)
-    ey = carray("d", eys)
-    return ROOT.TGraphErrors(len(xs), x, y, ex, ey)
+    return ROOT.TGraph(len(xs), x, y)
 
 # --- NEW: graph of pass_trigger per pT-bin (y = counts) ---
 def _g_pass_trigger_from_bins(bins_obj: Dict[str, Dict[str, float]]) -> ROOT.TGraph:
@@ -380,7 +374,7 @@ def _plot_or_vs_double(
     rmargin = 0.14 if has_pass else 0.04
 
     pad1 = ROOT.TPad("pad1", "", 0.0, 0.0, 1.0, 1.0)
-    pad1.SetMargin(lmargin, rmargin, 0.15, 0.08) # left, right, bottom, top
+    pad1.SetMargin(lmargin, rmargin, 0.12, 0.08)
     pad1.SetTickx()
     pad1.SetTicky(0)
     pad1.Draw()
@@ -406,17 +400,13 @@ def _plot_or_vs_double(
     g_or.GetYaxis().SetTitleSize(0.055)
     g_or.GetXaxis().SetLabelSize(0.05)
     g_or.GetYaxis().SetLabelSize(0.05)
-
-    g_or.GetXaxis().SetTitleOffset(1.2)
     g_or.GetYaxis().SetTitleOffset(1.2)
-    g_or.GetXaxis().SetLabelOffset(0.02)
 
-    _apply_style(g_or, ROOT.TColor.GetColor("#e42536"), 20, 1.2, 0)   # no line between points
-    _apply_style(g_db, ROOT.TColor.GetColor("#5790fc"), 22, 1.2, 0)  # no line between points
+    _apply_style(g_or, ROOT.kAzure + 1, 20, 1.2, 3)
+    _apply_style(g_db, ROOT.kOrange + 7, 22, 1.2, 3)
 
-    # draw points with x error bars (x-bar) and no connecting line
-    g_or.Draw("AP")          # axes + points
-    g_db.Draw("P SAME")      # points only (reuse axes)
+    g_or.Draw("ALP")
+    g_db.Draw("LP SAME")
 
     leg = ROOT.TLegend(0.24, 0.70, 0.66, 0.88)
     leg.SetBorderSize(0)
@@ -458,7 +448,7 @@ def _plot_or_vs_double(
         pad2 = ROOT.TPad("pad2", "", 0.0, 0.0, 1.0, 1.0)
         pad2.SetFillStyle(4000)
         pad2.SetFrameFillStyle(4000)
-        pad2.SetMargin(0.13, rmargin, 0.15, 0.08)
+        pad2.SetMargin(0.13, rmargin, 0.12, 0.08)
         pad2.SetTicks(0, 0)
         pad2.SetTickx()
         pad2.SetTicky(0) 
@@ -481,7 +471,7 @@ def _plot_or_vs_double(
         keep.extend([pad2, frame2])
 
         if hpass_or:
-            hpass_or.SetLineColor(ROOT.TColor.GetColor("#e42536"))
+            hpass_or.SetLineColor(ROOT.kAzure + 1)
             hpass_or.SetLineWidth(2)
             hpass_or.SetLineStyle(1)
             hpass_or.SetFillStyle(0)
@@ -489,7 +479,7 @@ def _plot_or_vs_double(
             keep.append(hpass_or)
 
         if hpass_db:
-            hpass_db.SetLineColor(ROOT.TColor.GetColor("#5790fc"))
+            hpass_db.SetLineColor(ROOT.kOrange + 7)
             hpass_db.SetLineWidth(2)
             hpass_db.SetLineStyle(2)
             hpass_db.SetFillStyle(0)
@@ -514,7 +504,7 @@ def _plot_or_vs_double(
         axis.SetLabelFont(42)
         axis.SetTitleSize(0.055)  # was 0.038
         axis.SetLabelSize(0.05)   # was 0.032
-        axis.SetTitleOffset(1.2)
+        axis.SetTitleOffset(1.1)
         axis.Draw()
 
         # redraw legend on top
@@ -547,13 +537,13 @@ def _plot_turnon_overlay(
     ymax_right: Optional[float] = None,
 ) -> None:
     c = ROOT.TCanvas(f"c_turnon_{label_left}_{title_right}".replace(" ", "_"), "", 950, 650)
-    c.SetMargin(0.13, 0.04, 0.15, 0.08)
+    c.SetMargin(0.13, 0.04, 0.12, 0.08)
     c.SetTickx()
     c.SetTicky(0)
 
     # --- NEW: secondary axis for pass_trigger ---
     pad = ROOT.TPad("pad", "", 0.0, 0.0, 1.0, 1.0)
-    pad.SetMargin(0.13, 0.10, 0.15, 0.08)  # a bit more right margin for right axis
+    pad.SetMargin(0.13, 0.10, 0.12, 0.08)  # a bit more right margin for right axis
     pad.SetTickx()
     pad.SetTicky(0)
     pad.Draw()
@@ -713,7 +703,7 @@ def _plot_combined_years_overlay(
     Input dict maps: year -> {ptBinName -> eff}
     """
     c = ROOT.TCanvas(f"c_combined_mA{ma}_{title_right}".replace(" ", "_"), "", 950, 650)
-    c.SetMargin(0.13, 0.04, 0.15, 0.08)
+    c.SetMargin(0.13, 0.04, 0.12, 0.08)
     c.SetTickx()
     c.SetTicky(0)
 
@@ -747,7 +737,7 @@ def _plot_combined_years_overlay(
         if first:
             g_or.SetTitle("")
             g_or.GetXaxis().SetTitle("p_{T} (GeV)")
-            g_or.GetYaxis().SetTitle("Trigger efficiency (%)")
+            g_or.GetYaxis().SetTitle("Trigger efficiency (\%)")
             g_or.SetMinimum(0.0)
             g_or.SetMaximum(105.0)
             g_or.GetXaxis().SetLimits(PT_XMIN, PT_XMAX)
@@ -763,7 +753,7 @@ def _plot_combined_years_overlay(
         else:
             g_or.Draw("LP SAME")
 
-        leg.AddEntry(g_or, f"{y} Sigle- OR Double-Trigger", "lp")
+        leg.AddEntry(g_or, f"{y} OR", "lp")
 
         if y in by_year_double:
             g_db = _g_from_bins(by_year_double[y])
@@ -771,7 +761,7 @@ def _plot_combined_years_overlay(
             _apply_style(g_db, col, 22, 0.9, 3)
             g_db.SetLineStyle(2)
             g_db.Draw("LP SAME")
-            leg.AddEntry(g_db, f"{y} Double Trigger", "lp")
+            leg.AddEntry(g_db, f"{y} Double", "lp")
 
     lat = ROOT.TLatex()
     lat.SetNDC()

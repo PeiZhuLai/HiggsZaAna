@@ -8,7 +8,7 @@ OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT"
 
 # 先 False，稳定后再 True
 # ===== Switches =====
-DO_SIGNAL_NOMINAL = False
+DO_SIGNAL_NOMINAL = True
 DO_SIGNAL_SYST    = True        # Systs Part1 & Part2
 DO_BKG_NOMINAL    = True
 DO_DATA_NOMINAL   = True       # 你目前注释掉 Data，可按需改 True
@@ -17,9 +17,9 @@ DO_BKG_SYST       = False       # Not Needed for Bkg now
 # 2024 DYJets in the Step 4
 
 # 系统误差类型
-# systs = ["FNUF","Material","Electron_scale","Electron_smear","Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
-systs = ["FNUF","Material","Electron_scale","Electron_smear"]
-systs = ["Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
+systs = ["FNUF","Material","Electron_scale","Electron_smear","Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
+# systs = ["FNUF","Material","Electron_scale","Electron_smear"]
+# systs = ["Muon_scale","Muon_smear","Photon_scale","Photon_smear"]
 updown = ["up","down"]
 
 # Year of Signal

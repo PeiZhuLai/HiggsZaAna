@@ -308,34 +308,59 @@ def _plot_sumw_vs_var_dR_year(
         except Exception:
             pass
 
-    # ------------------------------------------------------------------
-    # 3 gradients × 4 colors + 2 neutral = 14 colors (publication-safe)
-    # ------------------------------------------------------------------
-        palette = [
-        # Cold (blue → green)
-        ROOT.TColor.GetColor("#A6CEE3"),
-        ROOT.TColor.GetColor("#1F78B4"),
-        ROOT.TColor.GetColor("#33A02C"),
-        ROOT.TColor.GetColor("#0B5D3A"),
+    # # ------------------------------------------------------------------
+    # # 3 gradients × 4 colors + 2 neutral = 14 colors (publication-safe)
+    # # ------------------------------------------------------------------
+    #     palette = [
+    #     # Cold (blue → green)
+    #     ROOT.TColor.GetColor("#A6CEE3"),
+    #     ROOT.TColor.GetColor("#1F78B4"),
+    #     ROOT.TColor.GetColor("#33A02C"),
+    #     ROOT.TColor.GetColor("#0B5D3A"),
 
-        # Warm (orange → red)
-        ROOT.TColor.GetColor("#FDBF6F"),
-        ROOT.TColor.GetColor("#FF7F00"),
-        ROOT.TColor.GetColor("#E31A1C"),
-        ROOT.TColor.GetColor("#99000D"),
+    #     # Warm (orange → red)
+    #     ROOT.TColor.GetColor("#FDBF6F"),
+    #     ROOT.TColor.GetColor("#FF7F00"),
+    #     ROOT.TColor.GetColor("#E31A1C"),
+    #     ROOT.TColor.GetColor("#99000D"),
 
-        # Neutral (purple → blue-gray)
-        ROOT.TColor.GetColor("#CAB2D6"),
-        ROOT.TColor.GetColor("#6A3D9A"),
-        ROOT.TColor.GetColor("#5A6E8C"),
-        ROOT.TColor.GetColor("#2F3E55"),
+    #     # Neutral (purple → blue-gray)
+    #     ROOT.TColor.GetColor("#CAB2D6"),
+    #     ROOT.TColor.GetColor("#6A3D9A"),
+    #     ROOT.TColor.GetColor("#5A6E8C"),
+    #     ROOT.TColor.GetColor("#2F3E55"),
 
-        # Neutral dark (gray → black)
-        ROOT.TColor.GetColor("#BDBDBD"),
-        ROOT.TColor.GetColor("#7F7F7F"),
-        ROOT.TColor.GetColor("#4A4A4A"),
-        ROOT.TColor.GetColor("#1A1A1A"),
+    #     # Neutral dark (gray → black)
+    #     ROOT.TColor.GetColor("#BDBDBD"),
+    #     ROOT.TColor.GetColor("#7F7F7F"),
+    #     ROOT.TColor.GetColor("#4A4A4A"),
+    #     ROOT.TColor.GetColor("#1A1A1A"),
+    # ]
+
+    palette = [
+        # Cold & dark (背景用)
+        ROOT.TColor.GetColor("#0B3C5D"),  # deep navy
+        ROOT.TColor.GetColor("#1F618D"),
+        ROOT.TColor.GetColor("#2874A6"),
+        ROOT.TColor.GetColor("#3498DB"),
+        ROOT.TColor.GetColor("#5DADE2"),
+
+        # Green → cyan
+        ROOT.TColor.GetColor("#117864"),
+        ROOT.TColor.GetColor("#17A589"),
+        ROOT.TColor.GetColor("#48C9B0"),
+
+        # Purple / pink
+        ROOT.TColor.GetColor("#7D3C98"),
+        ROOT.TColor.GetColor("#C0392B"),  # dark red jump
+        ROOT.TColor.GetColor("#E74C3C"),
+
+        # Nuclear highlights (後畫王者)
+        ROOT.TColor.GetColor("#FF6F00"),  # neon orange
+        ROOT.TColor.GetColor("#FF1744"),  # hot red
+        ROOT.TColor.GetColor("#000000"),  # final boss
     ]
+
 
 
     line_syles = [1, 2, 3]
