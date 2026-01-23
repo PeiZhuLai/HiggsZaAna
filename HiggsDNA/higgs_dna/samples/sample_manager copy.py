@@ -100,41 +100,33 @@ class SampleManager():
 
 
                 if not grabbed_files:
-                    if isinstance(info["files"][year], str):  # Option 2a/3a
-                        info["files"][year] = [info["files"][year]]  # recast this as Option 2b/3b format
+                    if isinstance(info["files"][year], str): # Option 2a/3a 
+                        info["files"][year] = [info["files"][year]] # recast this as Option 2b/3b format
 
                     for path in info["files"][year]:
-                        files_dir = []  # ensure defined for all branches
-
-                        if path.startswith("root://"):  # access via xrd
+                        if path.startswith("root://"): # access via xrd
                             logger.debug("[SampleManager : get_samples] For sample '%s', year '%s', we interpreted the specified files '%s' as a directory to be accessed via xrd" % (sample, year, path))
 
+                            # Check for valid proxy
                             proxy = misc_utils.check_proxy()
                             if proxy is None:
                                 logger.exception("[CondorManager : prepare_inputs] We were not able to find grid proxy or proxy was found to be expired. Since you are accessing files through xrd, a valid proxy is necessary.")
                                 raise RuntimeError()
                             files_dir = self.get_files_from_xrd(path, is_data)
 
-                        elif os.path.exists(path):  # Option 1: local
+                        elif os.path.exists(path): # Option 1: local
                             logger.debug("[SampleManager : get_samples] For sample '%s', year '%s', we interpreted the specified files '%s' as a local directory, whose files will be grabbed with <glob>." % (sample, year, path))
                             files_dir = self.get_files_from_local_dir(path, is_data)
 
-                        elif path.endswith(("NANOAOD", "NANOAODSIM", "USER")):  # Option 3: DAS
+                        elif path.endswith("NANOAOD") or path.endswith("NANOAODSIM"): # Option 3: DAS
                             logger.debug("[SampleManager : get_samples] For sample '%s', year '%s', we interpreted the specified files '%s' as a DAS dataset, whose files will be grabbed with <dasgoclient>." % (sample, year, path))
 
+                            # Check for valid proxy
                             proxy = misc_utils.check_proxy()
                             if proxy is None:
                                 logger.exception("[CondorManager : prepare_inputs] We were not able to find grid proxy or proxy was found to be expired. Since you are accessing files through dasgoclient, a valid proxy is necessary.")
                                 raise RuntimeError()
                             files_dir = self.get_files_from_dasgoclient(path, is_data)
-
-                        else:
-                            logger.warning(
-                                "[SampleManager : get_samples] Unrecognized files path '%s' for sample '%s', year '%s'. "
-                                "Expected: xrootd path (root://...), existing local dir, or DAS dataset ending with NANOAOD/NANOAODSIM/USER. Skipping.",
-                                path, sample, year
-                            )
-                            continue
 
                         files += files_dir
                     grabbed_files = True
@@ -207,92 +199,42 @@ class SampleManager():
         with open(self.catalog_name.replace(".json", "_sample_manager_full.json"), "w") as f_out:
             json.dump(catalog_full, f_out, indent = 4)
 
-    # -----------Read T2_CN_Beijing private mc-------------------
-    def _guess_dbs_instance(self, dataset: str) -> str:
-        """
-        Heuristic:
-          - USER datasets live in prod/phys03
-          - Most centrally-produced datasets live in prod/global
-        """
-        # dataset is "three-slash" format: /A/B/C
-        if dataset.rstrip("/").endswith("/USER"):
-            return "prod/phys03"
-        return "prod/global"
 
-    def _run_das_query_json(self, query_str: str):
+    def get_files_from_dasgoclient(self, sample, is_data):
         """
-        Run dasgoclient with -json and return parsed JSON.
-        """
-        cmd = f"/cvmfs/cms.cern.ch/common/dasgoclient -query '{query_str}' -json"
-        out = metis_utils.do_cmd(cmd)
-        return json.loads(out) if out else []
-    # -----------Read T2_CN_Beijing private mc-------------------
+        Inspired by function from Nick Amin in ProjectMetis:
+        https://github.com/aminnj/ProjectMetis/blob/f9e71556cb84496731fa71dcab2dfc82b6e3022f/metis/Sample.py#L224-L236
 
-    def get_files_from_dasgoclient(self, sample, is_data, instance=None, redirector="root://xrootd-cms.infn.it"):
-        """
         Get list of files, along with number of events and size in GB for each.
 
-        Parameters
-        ----------
-        sample : str
-            DBS dataset in three-slash format, e.g.
-            "/EGamma/Run2018A.../NANOAOD" or "/.../.../USER"
-        is_data : bool
-        instance : str or None
-            "prod/global" or "prod/phys03". If None, auto-guess.
-        redirector : str
-            xrootd redirector prefix, e.g. "root://xrootd-cms.infn.it"
+        :param sample: DBS sample in "three-slash" format, e.g. "/EGamma/Run2018A.../NANOAOD"
+        :type sample: str
+        :return: dictionary of files and metadata
+        :rtype: dict
         """
-        # 1) decide instance
-        guessed = self._guess_dbs_instance(sample)
-        inst = instance or guessed
+        results = {}
 
-        # 2) build query (NOTE: instance must be inside query string for your dasgoclient)
-        #    Use "system=dbs" if you want DBS-only; but keep default to let DAS aggregate.
-        query_str = f"file dataset={sample} instance={inst}"
-
-        # 3) run
-        query = self._run_das_query_json(query_str)
-
-        # 4) fallback: if user didn't specify instance and nothing returned, try the other instance
-        if (not query) and (instance is None):
-            alt = "prod/phys03" if inst == "prod/global" else "prod/global"
-            logger.warning(f"[SampleManager] No files with instance={inst}, retry with instance={alt} for sample={sample}")
-            query_str_alt = f"file dataset={sample} instance={alt}"
-            query = self._run_das_query_json(query_str_alt)
-            inst = alt  # keep for logging
+        #cmd = "dasgoclient -query 'file dataset={}' -json".format(sample)
+        cmd = "/cvmfs/cms.cern.ch/common/dasgoclient -query 'file dataset={}' -json".format(sample)
+        query = json.loads(
+                metis_utils.do_cmd(cmd)
+        )
 
         files = []
         for j in query:
-            # Expected schema: j["file"][0] is a dict with keys: name, nevents, size
-            f = j.get("file", [None])[0]
-            if not f:
-                continue
-
-            lfn = f.get("name")
-            nevt = f.get("nevents", 0)
-            size = f.get("size", 0)
-
-            if not lfn:
-                continue
-
-            # LFN -> PFN via redirector (works for /store/... including /store/user/...)
+            f = j["file"][0]
             files.append(
-                File(
-                    name=(redirector.rstrip("/") + "/" + (lfn if lfn.startswith("/") else "/" + lfn)),
-                    is_data=is_data,
-                    n_events=int(nevt) if nevt is not None else 0,
-                    size_gb=round(float(size) * 1e-9, 2) if size is not None else 0.0,
-                )
+                    File(
+                        name = "root://xrootd-cms.infn.it/" + f["name"], # better to use xrootd-cms.infn.it instead of cmsxrootd.fnal.gov in Europe and Asia, the other is better in US. Noted in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookXrootdService#OpenwithRoot
+                        is_data = is_data,
+                        n_events = f["nevents"],
+                        size_gb = round(f["size"]*1e-9,2) 
+                    )
             )
-
         for das_file in files:
-            logger.debug(
-                "[SampleManager:get_files_from_dasgoclient] instance=%s file=%s size=%.2f GB events=%d",
-                inst, das_file.name, das_file.size_gb, das_file.n_events
-            )
-
+            logger.debug("[SampleManager : get_files_from_dasgoclient] Found file: %s, with size %.2f GB and %d events." % (das_file.name, das_file.size_gb, das_file.n_events))
         return files
+
 
     def get_files_from_wildcard(self, path, is_data):
         """
