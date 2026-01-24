@@ -1039,6 +1039,7 @@ def photon_scale_smear_run3(events, year, is_data):
             _nprint,
             corrected_pt[:_nprint],
         )
+        logger.debug("[Photon Systematics] =========================================================")
         return events
 
     # Apply smear corrections first

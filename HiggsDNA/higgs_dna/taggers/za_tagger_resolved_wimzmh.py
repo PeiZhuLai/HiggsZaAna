@@ -873,13 +873,19 @@ class ZaTaggerRun3(Tagger):
         # Make Higgs candidate-level cuts
         # Use FSR Z boson 
         h_cand = (z_cand.ZCand + alp_cand.ALPCand)
-        sel_h = (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1])
-        sel_h = ak.fill_none(sel_h, value = False)
+        sel_h_1 = (z_cand.ZCand.mass + h_cand.mass) > options["mass_sum"]
+        sel_h_2 = (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1])
+        sel_h_1 = ak.fill_none(sel_h_1, value = False)
+        sel_h_2 = ak.fill_none(sel_h_2, value = False)
+        # awkward_utils.add_field(events, "pass_1_Higgs", ak.fill_none(sel_h_2, False), overwrite=True)
+        # awkward_utils.add_field(events, "pass_ZHmass_sum", ak.fill_none(sel_h_1, False), overwrite=True)
         
         # Use No FSR Z boson 
         h_cand_noFSR = z_cand_noFSR.ZCand + alp_cand.ALPCand
-        sel_h_noFSR = (h_cand_noFSR.mass > options["mass_h"][0]) & (h_cand_noFSR.mass < options["mass_h"][1])
-        sel_h_noFSR = ak.fill_none(sel_h_noFSR, value=False)
+        sel_h_1_noFSR = (z_cand_noFSR.ZCand.mass + h_cand_noFSR.mass) > options["mass_sum"]
+        sel_h_2_noFSR = (h_cand_noFSR.mass > options["mass_h"][0]) & (h_cand_noFSR.mass < options["mass_h"][1])
+        sel_h_1_noFSR = ak.fill_none(sel_h_1_noFSR, value=False)
+        sel_h_2_noFSR = ak.fill_none(sel_h_2_noFSR, value=False)
 
         logger.debug(
             f'!!!!has H: {sum(has_z_cand & has_2gamma_cand & z_mumu_cut)} | '
@@ -917,8 +923,20 @@ class ZaTaggerRun3(Tagger):
                 n_objects = 2,
                 dummy_value = DUMMY_VALUE
             )
+
+        event_filter = (events.Flag_goodVertices & 
+                        events.Flag_globalSuperTightHalo2016Filter & 
+                        ((ak.num(events.Photon) >= 0) if "202" in self.year else events.Flag_HBHENoiseFilter) & 
+                        ((ak.num(events.Photon) >= 0) if "202" in self.year else events.Flag_HBHENoiseIsoFilter) & 
+                        events.Flag_EcalDeadCellTriggerPrimitiveFilter & 
+                        events.Flag_BadPFMuonFilter & 
+                        events.Flag_BadPFMuonDzFilter & 
+                        events.Flag_hfNoisyHitsFilter & 
+                        events.Flag_eeBadScFilter & 
+                        ((ak.num(events.Photon) >= 0) if "2016" in self.year else events.Flag_ecalBadCalibFilter) # 2016 dummy cut, all True
+                        )
         
-        all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
+        all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h_1 & sel_h_2 & event_filter #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
 
         for cut_type in ["zgammas", "zgammas_ele", "zgammas_mu", "zgammas_w", "zgammas_ele_w", "zgammas_mu_w"]:
             if "_w" in cut_type:
@@ -948,16 +966,18 @@ class ZaTaggerRun3(Tagger):
                 cut3 = cut2 & mu_trigger_pt_cut
             cut4 = cut3 & has_z_cand
             cut5 = cut4 & has_2gamma_cand
-            cut6 = cut5 & sel_h
+            cut6 = cut5 & sel_h_1
+            cut7 = cut6 & sel_h_2
+            cut8 = cut7 & event_filter
             
             if cut_type == "zgammas_ele":
-                ee_all_cut = cut6
+                ee_all_cut = cut8
             if cut_type == "zgammas_mu":
-                mm_all_cut = cut6
+                mm_all_cut = cut8
             
             self.register_event_cuts(
-                names = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h", "all cuts"],
-                results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut6],
+                names = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut8],
                 events = events,
                 cut_type = cut_type,
                 weighted = weighted
@@ -976,17 +996,19 @@ class ZaTaggerRun3(Tagger):
                 cut3 = cut2 & ele_trigger_pt_cut
                 cut4 = cut3 & has_z_cand
                 cut5 = cut4 & has_2gamma_cand
-                cut6 = cut5 & sel_h
+                cut6 = cut5 & sel_h_1
+                cut7 = cut6 & sel_h_2
+                cut8 = cut7 & event_filter
 
                 self.register_event_cuts(
-                    names = ["all", "N_lep_sel", "ele_sip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h", "all cuts"],
-                    results = [cut0, cut1, cut1b, cut2, cut3, cut4, cut5, cut6, cut6],
+                    names = ["all", "N_lep_sel", "ele_sip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                    results = [cut0, cut1, cut1b, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut8],
                     events = events,
                     cut_type = "zgammas_ele_elesip3d_w" if weighted else "zgammas_ele_elesip3d",
                     weighted = weighted
                 )
 
-                awkward_utils.add_field(events, "pass_allcuts_elesip3d", ak.fill_none(cut6, False), overwrite=True)
+                awkward_utils.add_field(events, "pass_allcuts_elesip3d", ak.fill_none(cut8, False), overwrite=True)
 
         # --- NEW: 一次註冊 15 種 photon ID 情境對 cutflow("all cuts") 的影響 ---
         def _scenario_has_2gamma(events_, id_key: str):
@@ -1042,18 +1064,20 @@ class ZaTaggerRun3(Tagger):
                     cut4 = cut3 & has_z_cand
                     cut5 = cut4 & g_kin_cut
                     cut6 = cut5 & has_2g_s
-                    cut7 = cut6 & sel_h
+                    cut7 = cut6 & sel_h_1
+                    cut8 = cut7 & sel_h_2
+                    cut9 = cut8 & event_filter
                     
                     self.register_event_cuts(
-                        names   = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "g_kin_cut", "has_2g_cand", "sel_h", "all cuts"],
-                        results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut7],
+                        names   = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "g_kin_cut", "has_2g_cand", "sel_h_1", "sel_h_2", "event", "all cuts"],
+                        results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8, cut9, cut9],
                         events  = events,
                         cut_type= f"zgammas_{id_key}",
                         weighted= weighted,
                     )
 
                 # （可選）把每個 scenario 的最終 allcuts 存成 event-level branch
-                awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut7, False), overwrite=True)
+                awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut9, False), overwrite=True)
 
         all_cuts = ee_all_cut | mm_all_cut
 

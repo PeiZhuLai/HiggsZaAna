@@ -81,7 +81,7 @@ class DuplicatedSamplesTagger(Tagger):
             cut = muon_eg_trig & numpy.logical_not(single_eg_trig | double_eg_trig) & numpy.logical_not(single_mu_trig | double_mu_trig)
         
         cut = cut>0
-        logger.debug("Duplicated_samples:  cut type %s" % cut.type)
+        # logger.debug("Duplicated_samples:  cut type %s" % cut.type)
         logger.debug("Duplicated_samples:  selected samples: %s(%s)" % (sum(cut), len(cut)))
         del data
         return cut
