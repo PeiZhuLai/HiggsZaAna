@@ -102,7 +102,7 @@ class TagSequence():
 
             events = self.run_taggers(events, syst_tag, tag_set)
             if n_taggers > 1:
-                logger.debug("[TagSequence] pre-orthogonalize: n_events=%d", len(events))
+                logger.debug("debuging: check events in run: %s",events)
                 events = self.orthogonalize_tags(events, syst_tag, tag_set)
             events = self.select_events(events, syst_tag, tag_set)
 
@@ -185,4 +185,4 @@ class TagSequence():
         return self.summary
         file_name = "summary%s.json" % self.ext
         with open("output/" + file_name, "w") as f_out:
-            json.dump(self.summary, f_out, indent=4)
+            json.dump(self.summary, f_out, indent=4) 

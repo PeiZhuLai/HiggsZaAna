@@ -689,8 +689,6 @@ class AnalysisManager():
             # # FIXME: DANGEROUS!
             # events_file = events_file[(events_file["run"]==316470) & (events_file["luminosityBlock"]==370) & (events_file["event"]==486186232)]
 
-            logger.debug("[AnalysisManager : Load samples] Sample type: %s" % events_file.type)
-
             events.append(events_file)
 
             logger.debug("[AnalysisManager : load_events] Loaded %d events from file '%s'." % (len(events_file), file))

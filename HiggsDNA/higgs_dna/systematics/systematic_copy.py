@@ -212,17 +212,8 @@ class WeightSystematic(Systematic):
                 elif isinstance(variation, tuple): # nested field in array, e.g. events.Photon.weight_syst1_up
                     name = tuple((variation[0], "weight" + "_" + self.name + "_" + variation[1])) 
                     self.branches[variation[1]] = name
-
-                # NEW: log first 10 values instead of dumping the full awkward array
-                _nprint = int(min(10, len(values)))
-                logger.debug(
-                    "[WeightSystematic : produce] WeightSystematic: %s, adding field %s to events array (first %d): %s",
-                    self.name,
-                    name,
-                    _nprint,
-                    values[:_nprint],
-                )
-
+                logger.debug("[WeightSystematic : produce] WeightSystematic: %s, adding field %s to events array" % (self.name, name))
+                logger.debug(values)
                 awkward_utils.add_field(events, name, values)
 
         for variation, branch in self.branches.items():

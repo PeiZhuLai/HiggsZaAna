@@ -1225,14 +1225,14 @@ def photon_scale_smear_run3(events, year, is_data):
                 events["Photon", "pt_ScaleUp"] = photons.corrected_pt * awkward.where(
                     (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
                     awkward.ones_like(scale_up, dtype=float),
-                    scale_up
+                    1 - scale_up
                 )
             elif "down" in syst:
                 scale_down = awkward.unflatten(scale, n_photons)
                 events["Photon", "pt_ScaleDown"] = photons.corrected_pt * awkward.where(
                     (abs(photons.eta) > 2.5) | (photons.pt < 10.0),
                     awkward.ones_like(scale_down, dtype=float),
-                    scale_down
+                    1 - scale_down
                 )
 
         # NEW: log first 10 photon pt after applying corrections (non-2024 MC)

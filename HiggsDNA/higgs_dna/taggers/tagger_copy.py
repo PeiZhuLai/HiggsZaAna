@@ -94,11 +94,9 @@ class Tagger():
 
         else:
             selection, events = self.calculate_selection(events)
+            logger.debug("after selection",events)
             self.selection[syst_tag] = selection
-            logger.debug(
-                "[Tagger] %s : event set : %s : %d (%d) events before (after) selection",
-                self.name, syst_tag, len(selection), awkward.sum(selection)
-            )
+            logger.debug("[Tagger] %s : event set : %s : %d (%d) events before (after) selection" % (self.name, syst_tag, len(selection), awkward.sum(selection)))
         
         
         # NEW: 依照配置決定哪些 cut_type 要 dump，避免 trigger study 洗版
