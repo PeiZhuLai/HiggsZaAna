@@ -30,7 +30,7 @@ from higgs_dna.utils.metis_utils import do_cmd
 from higgs_dna.taggers.duplicated_samples_tagger import DuplicatedSamplesTagger
 from higgs_dna.taggers.mc_overlap_tagger import MCOverlapTagger
 from higgs_dna.systematics.photon_systematics import photon_scale_smear_run3
-from higgs_dna.systematics.lepton_systematics import electron_scale_smear_run3, muon_scale_run3, muon_scale_smear_run3
+from higgs_dna.systematics.lepton_systematics import electron_scale_smear_run3, muon_scale_smear_run3
 from higgs_dna.systematics.jet_systematics import pt_correction_data, pt_correction_mc
 
 condor=False
@@ -688,10 +688,7 @@ class AnalysisManager():
             
             # # FIXME: DANGEROUS!
             # events_file = events_file[(events_file["run"]==316470) & (events_file["luminosityBlock"]==370) & (events_file["event"]==486186232)]
-
             events.append(events_file)
-
-            logger.debug("[AnalysisManager : load_events] Loaded %d events from file '%s'." % (len(events_file), file))
 
         events = awkward.concatenate(events)
 

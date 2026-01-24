@@ -44,8 +44,7 @@ class MCOverlapTagger(Tagger):
         elif "DYGto2LG" in file or "ZGToLLG" in file or "ZGamma2J" in file or "ZG2J" in file or "TTGJets" in file or "WGTo" in file or "WZG_" in file or "WWG_" in file or "ZZG_" in file:
             cut = self.get_n_iso_photon(data, file) > 0
         
-        # cut = cut>0
-        logger.debug("MC_overlap_samples:  cut type: %s" % cut.type)
+
         logger.debug("MC_overlap_samples: selected samples: %s(%s)" % (sum(cut), len(cut)))
         return cut
 

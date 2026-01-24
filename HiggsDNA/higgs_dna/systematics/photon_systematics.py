@@ -1190,7 +1190,7 @@ def photon_scale_smear_run3(events, year, is_data):
                 _nprint,
                 awkward.to_numpy(awkward.flatten(events["Photon", "pt_ScaleDown"]))[:_nprint],
             )
-
+        logger.debug("[Photon Systematics] =========================================================")
         return events
 
     else:
@@ -1267,6 +1267,7 @@ def photon_scale_smear_run3(events, year, is_data):
             )
 
     logger.info("[Photon Systematics] Applied Photon scale and smear corrections for year %s", year)
+    logger.debug("[Photon Systematics] =========================================================")
 
     return events
 

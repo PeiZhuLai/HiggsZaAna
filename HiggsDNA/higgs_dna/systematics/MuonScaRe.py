@@ -4,11 +4,7 @@ from scipy.special import erfinv, erf
 from random import random
 import awkward as ak
 from typing import List
-import random
 import ROOT
-
-import logging
-# logger = logging.getLogger(__name__)
 from higgs_dna.utils.logger_utils import simple_logger
 logger = simple_logger(__name__)
 
@@ -151,7 +147,8 @@ def get_rndm(eta, phi, nL, evtNr, lumiNr, cset, nested=False):
         lumiNr_f = np.repeat(np.asarray(lumiNr), nmuons)
     else:
         eta_f, phi_f, nL_f, nmuons = eta, phi, nL, np.ones_like(eta)
-        evtNr_f  = np.asarray(evtNr)
+        # Ensure event/lumi are defined for the non-nested (flat) case as well
+        evtNr_f = np.asarray(evtNr)
         lumiNr_f = np.asarray(lumiNr)
 
     mean_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 0)
@@ -159,17 +156,15 @@ def get_rndm(eta, phi, nL, evtNr, lumiNr, cset, nested=False):
     n_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 2)
     alpha_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 3)
 
-    phi_int_f = (((np.asarray(phi_f, dtype=np.float64) / math.pi) * (1 << 31 - 1) ).astype(np.int64) & 0xFFF).astype(np.uint32)
+    phi_int_f = (((np.asarray(phi_f, dtype=np.float64) / math.pi) * ((1 << 31) - 1)).astype(np.int64) & 0xFFF).astype(np.uint32)
 
     seeds = [
         SeedSequence([np.uint32(ev), np.uint32(lumi), np.uint32(phi_int)]).generate(1)[0]
-        for ev, lumi, phi_int in zip(evtNr_f, lumiNr_f, phi_int_f)
+        for ev, lumi, phi_int in zip(np.asarray(evtNr_f), np.asarray(lumiNr_f), np.asarray(phi_int_f))
     ]
 
     # get random number following the CB
     rndm_f = [ROOT.TRandom3(int(seed)).Rndm() for seed in seeds]
-    # Get away ROOT
-    # rndm_f = [random.Random(seed).random() for seed in seeds]
 
     cb_f = CrystallBall(mean_f, sigma_f, alpha_f, n_f)
 
@@ -230,7 +225,7 @@ def get_k(eta, var, cset, nested=False):
     return result
 
 
-def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 26):
+def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 5):
     if not nested:
         pt_corr = np.asarray(pt_corr)
         pt = np.asarray(pt)
@@ -245,7 +240,7 @@ def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 26):
 
     if n_pt_outside > 0:
         logger.debug(
-            f"There are {n_pt_outside} events with muon pt outside of [" + str(low_pt_threshold) + ",200] GeV. "
+            f"There are {n_pt_outside} events with muon pt outside of [{low_pt_threshold}, 200] GeV. "
             "Setting those entries to their initial value."
         )
         pt_corr = np.where(pt>200, pt, pt_corr)
@@ -261,17 +256,16 @@ def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 26):
 
     if n_nan > 0:
         logger.debug(
-            "There are %d nan entries in the corrected pt. "
+            f"There are {n_nan} NaN entries in the corrected pt. "
             "This might be due to the number of tracker layers hitting boundaries. "
-            "Setting those entries to their initial value.",
-            n_nan,
+            "Setting those entries to their initial value."
         )
         pt_corr = np.where(np.isnan(pt_corr), pt, pt_corr)
 
     return pt_corr
 
 
-def pt_resol(pt, eta, phi, nL, evtNr, lumiNr, cset, nested=False, low_pt_threshold = 26):
+def pt_resol(pt, eta, phi, nL, evtNr, lumiNr, cset, nested=False, low_pt_threshold = 5):
     """"
     Function for the calculation of the resolution correction
     Input: 
@@ -351,7 +345,7 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
 
     return pt_var
 
-def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False, low_pt_threshold = 26):
+def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False, low_pt_threshold = 5):
     """
     Function for the calculation of the scale correction
     Input:
@@ -406,23 +400,35 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
 
     if nested:
         eta_f, phi_f, nmuons = ak.flatten(eta), ak.flatten(phi), ak.num(eta)
+        pt_f = ak.flatten(pt)
     else:
-        eta_f, phi_f, pt_f, nmuons = eta, phi, pt, 1
+        eta_f, phi_f, nmuons = eta, phi, 1
+        pt_f = pt
 
     stat_a_f = cset.get("a_mc").evaluate(eta_f, phi_f, "stat")
     stat_m_f = cset.get("m_mc").evaluate(eta_f, phi_f, "stat")
     stat_rho_f = cset.get("m_mc").evaluate(eta_f, phi_f, "rho_stat")
 
     if nested:
-        stat_a, stat_m, stat_rho = ak.unflatten(stat_a_f, nmuons), ak.unflatten(stat_m_f, nmuons), ak.unflatten(stat_rho_f, nmuons)
+        stat_a = ak.unflatten(stat_a_f, nmuons)
+        stat_m = ak.unflatten(stat_m_f, nmuons)
+        stat_rho = ak.unflatten(stat_rho_f, nmuons)
+        pt_use = pt
+    else:
+        stat_a = stat_a_f
+        stat_m = stat_m_f
+        stat_rho = stat_rho_f
+        pt_use = pt_f
 
-    unc = pt*pt * (stat_m*stat_m / (pt*pt) + stat_a*stat_a + 2*charge*stat_rho*stat_m/pt*stat_a)**.5
+    unc = pt_use * pt_use * (
+        stat_m * stat_m / (pt_use * pt_use) + stat_a * stat_a + 2 * charge * stat_rho * stat_m / pt_use * stat_a
+    ) ** 0.5
 
-    pt_var = pt
+    pt_var = pt_use
 
-    if updn=="up":
+    if updn == "up":
         pt_var = pt_var + unc
-    elif updn=="dn":
+    elif updn == "dn":
         pt_var = pt_var - unc
 
     return pt_var
