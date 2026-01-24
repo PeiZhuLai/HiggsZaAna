@@ -130,15 +130,6 @@ class Job():
         self.config["summary_file"] = self.summary_file
         self.config["files"] = [file.name for file in self.inputs]
         self.config["skimmed_files"] = ["/eos/home-p/pelai/HZa/mc_NATool/"+self.config['sample']['name']+"/"+file.name.split("/")[-1].split(".")[0]+"skimmed.root" for file in self.inputs]
-        # Ensure log settings are present in the per-job config so the job executable can pick them up
-        # (support both log_level/log_file and log-level/log-file).
-        _ll = (self.config.get("log_level") or self.config.get("log-level") or os.environ.get("HIGGSDNA_LOG_LEVEL") or "INFO")
-        self.config["log_level"] = _ll
-        self.config["log-level"] = _ll
-        _lf = (self.config.get("log_file") or self.config.get("log-file"))
-        if _lf is not None:
-            self.config["log_file"] = _lf
-            self.config["log-file"] = _lf
         # self.config["skimmed_files"] = [file.name for file in self.inputs]
         if os.path.exists(self.config_file):
             logger.warning("[Job : write_config] Overwriting existing config file '%s'." % (self.config_file))
@@ -172,20 +163,24 @@ class Job():
         lines.append("import json")
         lines.append("import os")
         lines.append("from higgs_dna.utils.logger_utils import setup_logger")
+        lines.append("from higgs_dna.analysis import run_analysis")
         lines.append("")
-        lines.append("config_file = '%s'" % self.config_file)
-        lines.append("if not os.path.exists(config_file):")
-        lines.append("    config_file = os.path.split(config_file)[-1]")
+        lines.append("logger = setup_logger('DEBUG')")
+        lines.append("config_file = '%s'" % self.config_file) # start with absolute path to config file
+        lines.append("if not os.path.exists(config_file):") # in case this is a remote job, absolute path will not exist
+        lines.append("    config_file = os.path.split(config_file)[-1]") # and we should have sent a copy that is present in the job's current dir
         lines.append("with open(config_file, 'r') as f_in:")
         lines.append("    config = json.load(f_in)")
         lines.append("")
-        lines.append("log_level = (os.environ.get('HIGGSDNA_LOG_LEVEL') or config.get('log_level') or config.get('log-level') or 'INFO')")
-        lines.append("log_file  = (config.get('log_file') or config.get('log-file'))")
-        lines.append("logger = setup_logger(log_level, log_file)")
-        lines.append("logger.info(f'[job] log_level = {log_level}')")
-        lines.append("")
-        lines.append("from higgs_dna.analysis import run_analysis")
-        lines.append("run_analysis(config)")
+        # lines.append("files = config['files']")
+        # lines.append("for i in range(len(files)):")
+        # lines.append("    file = files[i]")
+        # lines.append("    localfile = os.path.join(os.getcwd(), os.path.basename(file))")
+        # lines.append("    if os.system('xrdcp \\'%s\\' \\'%s\\'' % (file, localfile)):")
+        # lines.append("        raise RuntimeError('xrdcp failed')")
+        # lines.append("    files[i] = 'file:' + localfile")
+        # lines.appendO("")
+        lines.append("run_analysis(config)") # FIXME: not compatible if another function is specified
 
         if os.path.exists(self.python_executable_file):
             logger.warning("[Job : write_python_executable] Overwriting existing python executable: %s" % (self.python_executable_file))
@@ -194,7 +189,8 @@ class Job():
             for line in lines:
                 f_out.write(line + "\n")
         self.wrote_python_executable = True
-  
+ 
+
     def monitor(self):
         """
 

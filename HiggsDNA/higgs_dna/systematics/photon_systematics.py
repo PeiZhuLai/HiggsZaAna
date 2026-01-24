@@ -956,7 +956,6 @@ def photon_scale_smear_run3(events, year, is_data):
     This function applies photon scale and smear corrections on the photon pt.
     It returns events with the corrected photon pt values.
     """
-    logger.info("[Photon Systematics] Applying Photon scale and smear corrections for year %s", year)
 
     required_fields = [
         ("Photon", "eta"), ("Photon", "pt"), ("Photon", "r9")
@@ -1183,6 +1182,7 @@ def photon_scale_smear_run3(events, year, is_data):
                     awkward.ones_like(scale_down, dtype=float),
                     1 - scale_down
                 )
+    logger.info("[Photon Systematics] Applied Photon scale and smear corrections for year %s", year)
 
     return events
 

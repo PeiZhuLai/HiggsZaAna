@@ -121,31 +121,21 @@ def parse_arguments():
 
 def main(args):
     logger = setup_logger(args.log_level, args.log_file)
-    # Make sure spawned local jobs inherit the requested log level.
-    import os as _os
-    _os.environ['HIGGSDNA_LOG_LEVEL'] = args.log_level
-
 
     if args.config is not None:
         with open(expand_path(args.config), "r") as f_in:
             args.config = json.load(f_in)
-    # Propagate CLI log settings into the analysis config so per-job configs can inherit it.
-    # Keep both styles (log_level/log_file and log-level/log-file) for backward compatibility.
-    if isinstance(args.config, dict):
-        if getattr(args, 'log_level', None) is not None:
-            args.config.setdefault('log_level', args.log_level)
-            args.config.setdefault('log-level', args.log_level)
-        if getattr(args, 'log_file', None) is not None:
-            args.config.setdefault('log_file', args.log_file)
-            args.config.setdefault('log-file', args.log_file)
-        # Also set an env var so local jobs (and any subprocesses) inherit it.
-        import os as _os
-        _os.environ.setdefault('HIGGSDNA_LOG_LEVEL', args.log_level)
-
 
     logger.debug("Running HiggsDNA analysis with config:")
 
     args = {k:v for k,v in vars(args).items() if v is not None} # throw away None-value args
+    # Normalize CLI names to AnalysisManager/job-config convention
+    # argparse creates keys 'log_level'/'log_file' but downstream expects 'log-level'/'log-file'
+    if 'log_level' in args and 'log-level' not in args:
+        args['log-level'] = args.pop('log_level')
+    if 'log_file' in args and 'log-file' not in args:
+        args['log-file'] = args.pop('log_file')
+
     analysis = AnalysisManager(**args)
     analysis.run()
 

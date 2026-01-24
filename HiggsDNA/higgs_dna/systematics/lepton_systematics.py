@@ -913,7 +913,6 @@ def electron_scale_smear_run3(events, year, is_data):
     See:
         - https://gitlab.cern.ch/cms-egamma/EgammaPostRecoTools/-/tree/master/EgammaAnalysis/ElectronTools/data/Run3
     """
-    logger.info("[Lepton Systematics] Applying Electron scale and smear corrections for year %s", year)
 
     required_fields = [
         ("Electron", "eta"), ("Electron", "pt"), ("Electron", "r9"), ("Electron", "deltaEtaSC")
@@ -1016,6 +1015,8 @@ def electron_scale_smear_run3(events, year, is_data):
     logger.debug("Electron pt Smear Up: %s", events["Electron", "dEsigmaUp"])
     logger.debug("Electron pt Smear Down: %s", events["Electron", "dEsigmaDown"])
 
+    logger.info("[Lepton Systematics] Applied Electron scale and smear corrections for year %s", year)
+
     return events
 
 ##########################
@@ -1109,7 +1110,6 @@ def muon_scale_smear_run3(events, year, is_data):
         If they are missing, we fall back to sequential indices (still deterministic
         within one pass, but not stable across different skims).
     """
-    logger.info("[Lepton Systematics] Applying Muon scale and smear corrections for year %s", year)
 
     required_fields = [("Muon", "pt"), ("Muon", "eta"), ("Muon", "phi"), ("Muon", "charge"), ("Muon", "nTrackerLayers")]
     if not is_data:
@@ -1213,4 +1213,6 @@ def muon_scale_smear_run3(events, year, is_data):
     )
 
     logger.debug("[Lepton Systematics] Muon scale+smear applied (MC).")
+    logger.info("[Lepton Systematics] Applied Muon scale and smear corrections for year %s", year)
+
     return events
