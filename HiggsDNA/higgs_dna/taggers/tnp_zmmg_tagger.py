@@ -17,8 +17,94 @@ from higgs_dna.utils import awkward_utils, misc_utils
 from higgs_dna.selections import lepton_selections, object_selections
 
 Z_MASS = 91.1876
+DUMMY_VALUE = -999.0
+
+MUON_TNP_FIELDS = [
+    "pt",
+    "eta",
+    "phi",
+    "mass",
+    "charge",
+    "ptErr",
+    "ptE_error",
+    "pfRelIso03_chg",
+    "pfRelIso03_all",
+    "miniPFRelIso_all",
+    "dxy",
+    "dz",
+    "sip3d",
+    "tightId",
+    "mediumId",
+    "looseId",
+    "highPtId",
+    "isGlobal",
+    "isTracker",
+    "nTrackerLayers",
+    "id",
+    "Idx",
+]
+
+PHOTON_TNP_FIELDS = [
+    "pt",
+    "eta",
+    "phi",
+    "mass",
+    "mvaID",
+    "energyRaw",
+    "energyErr",
+    "r9",
+    "sieie",
+    "hoe",
+    "hoe_PUcorr",
+    "hcalPFClusterIso",
+    "ecalPFClusterIso",
+    "pfRelIso03_chg",
+    "pfRelIso03_all",
+    "pfRelIso03_chg_quadratic",
+    "pfRelIso03_all_quadratic",
+    "sieip",
+    "etaWidth",
+    "phiWidth",
+    "s4",
+    "trkSumPtHollowConeDR03",
+    "trkSumPtSolidConeDR04",
+    "pfChargedIso",
+    "pfChargedIsoWorstVtx",
+    "esEffSigmaRR",
+    "esEnergyOverRawE",
+    "electronVeto",
+    "pixelSeed",
+    "isScEtaEB",
+    "isScEtaEE",
+    "electronIdx",
+    "jetIdx",
+    "genPartFlav",
+    "seedGain",
+    "origIndex",
+    "pass_ph_kinematic",
+    "pass_phid_custom_tight",
+    "pass_phid_custom_extend_tight",
+    "pass_phid_sieie_tight",
+    "pass_phid_PFECalIso_tight",
+    "pass_phid_official_tight",
+    "pass_phid_custom_medium",
+    "pass_phid_custom_extend_medium",
+    "pass_phid_sieie_medium",
+    "pass_phid_PFECalIso_medium",
+    "pass_phid_official_medium",
+    "pass_phid_custom_loose",
+    "pass_phid_custom_extend_loose",
+    "pass_phid_sieie_loose",
+    "pass_phid_PFECalIso_loose",
+    "pass_phid_official_loose",
+]
+
+P4_FIELDS = ["pt", "eta", "phi", "mass"]
 
 DEFAULT_OPTIONS = {
+    "dimuon": {
+        "lead_muon_pt": 20.0,
+    },
     "photons": copy.deepcopy(ZA_DEFAULT_OPTIONS["photons"]),
     "electrons": {
         "pt": 7.0,
@@ -68,9 +154,14 @@ class TnPZmmgTagger(Tagger):
 
         electrons = self.select_electrons_for_photon_id(events, year)
         awkward_utils.add_field(events, "SelectedElectron", electrons, overwrite=True)
+        awkward_utils.add_field(events, "n_electrons", ak.num(electrons), overwrite=True)
 
         muon_selection = self.select_muons(events.Muon, self.options["muons"])
         muons = events.Muon[muon_selection]
+        muon_idx = ak.local_index(events.Muon.pt, axis=1)[muon_selection]
+        muons = ak.with_field(muons, muon_idx, "Idx")
+        muons = ak.with_field(muons, ak.ones_like(muons.pt) * 13, "id")
+        muons = ak.with_field(muons, muons.ptErr, "ptE_error")
         muons = muons[ak.argsort(muons.pt, ascending=False, axis=1)]
         muons = ak.Array(muons, with_name="Momentum4D")
         awkward_utils.add_field(events, "SelectedMuon", muons, overwrite=True)
@@ -87,6 +178,8 @@ class TnPZmmgTagger(Tagger):
         # Keep photons close to muons for FSR; only retain the electron cleaning.
         clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
         photons = photons[clean_photon_mask]
+        photon_idx = ak.local_index(events.Photon.pt, axis=1)[photon_selection][clean_photon_mask]
+        photons = ak.with_field(photons, photon_idx, "origIndex")
         photons = photons[ak.argsort(photons.pt, ascending=False, axis=1)]
         if "mass" not in photons.fields:
             photons = ak.with_field(photons, ak.zeros_like(photons.pt), "mass")
@@ -95,6 +188,20 @@ class TnPZmmgTagger(Tagger):
 
         awkward_utils.add_field(events, "n_muons", ak.num(muons), overwrite=True)
         awkward_utils.add_field(events, "n_photons", ak.num(photons), overwrite=True)
+        awkward_utils.add_field(
+            events,
+            "n_leptons",
+            ak.num(electrons) + ak.num(muons),
+            overwrite=True,
+        )
+
+        if (not self.is_data) and "GenVtx_z" in events.fields and "PV_z" in events.fields:
+            awkward_utils.add_field(
+                events,
+                "dZ",
+                events.GenVtx_z - events.PV_z,
+                overwrite=True,
+            )
 
         dimuon_candidates = ak.combinations(
             muons,
@@ -103,6 +210,13 @@ class TnPZmmgTagger(Tagger):
         )
         os_cut = (dimuon_candidates.LeadMuon.charge * dimuon_candidates.SubleadMuon.charge) == -1
         dimuon_candidates = dimuon_candidates[os_cut]
+        dimuon_lead_pt = ak.where(
+            dimuon_candidates.LeadMuon.pt >= dimuon_candidates.SubleadMuon.pt,
+            dimuon_candidates.LeadMuon.pt,
+            dimuon_candidates.SubleadMuon.pt,
+        )
+        lead_muon_pt_cut = dimuon_lead_pt > self.options["dimuon"]["lead_muon_pt"]
+        dimuon_candidates = dimuon_candidates[lead_muon_pt_cut]
         dimuon_candidates["Dimuon"] = (
             dimuon_candidates.LeadMuon + dimuon_candidates.SubleadMuon
         )
@@ -133,6 +247,11 @@ class TnPZmmgTagger(Tagger):
             zmmg_candidates_all.SubleadMuon,
             zmmg_candidates_all.LeadMuon,
         )
+        zmmg_candidates_all["TagMuon"] = zmmg_candidates_all.FarMuon
+        zmmg_candidates_all["ProbeMuon"] = zmmg_candidates_all.NearMuon
+        zmmg_candidates_all["ProbePhoton"] = zmmg_candidates_all.ZPhoton
+        zmmg_candidates_all["TagMuonIsLead"] = ~lead_is_near
+        zmmg_candidates_all["ProbeMuonIsLead"] = lead_is_near
         zmmg_candidates_all["minMuonGammaDR"] = ak.where(
             lead_is_near,
             lead_muon_dr,
@@ -172,6 +291,7 @@ class TnPZmmgTagger(Tagger):
             & mass_sum_cut
         )
         zmmg_candidates = zmmg_candidates_all[fsr_candidate_cut]
+        # If an event has multiple mu-mu-gamma candidates, keep the one closest to the PDG Z mass.
         zmmg_candidates = zmmg_candidates[
             ak.argsort(
                 numpy.abs(zmmg_candidates.Zmmg.mass - Z_MASS),
@@ -234,25 +354,120 @@ class TnPZmmgTagger(Tagger):
         )[0]
         best_candidate = ak.firsts(zmmg_candidates[candidate_trigger_cut])
 
-        for field in ["LeadMuon", "SubleadMuon", "NearMuon", "FarMuon", "Dimuon", "ZPhoton", "Zmmg"]:
+        for field in [
+            "LeadMuon",
+            "SubleadMuon",
+            "NearMuon",
+            "FarMuon",
+            "TagMuon",
+            "ProbeMuon",
+            "Dimuon",
+            "ZPhoton",
+            "ProbePhoton",
+            "Zmmg",
+        ]:
             events[field] = best_candidate[field]
         awkward_utils.add_field(
             events,
             "minMuonGammaDR",
-            ak.fill_none(best_candidate.minMuonGammaDR, -999.0),
+            ak.fill_none(best_candidate.minMuonGammaDR, DUMMY_VALUE),
             overwrite=True,
         )
         awkward_utils.add_field(
             events,
             "farMuonGammaDR",
-            ak.fill_none(best_candidate.farMuonGammaDR, -999.0),
+            ak.fill_none(best_candidate.farMuonGammaDR, DUMMY_VALUE),
             overwrite=True,
         )
+        awkward_utils.add_field(
+            events,
+            "passing_dimuon_trigger",
+            ak.fill_none(trigger_cut, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "has_dimuon_candidate",
+            ak.fill_none(has_dimuon, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "has_photon_candidate",
+            ak.fill_none(has_photon, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "has_zmmg_candidate",
+            ak.fill_none(candidate_cut, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "pass_tnp_presel",
+            ak.fill_none(presel_cut, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "tag_muon_is_lead",
+            ak.fill_none(best_candidate.TagMuonIsLead, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "probe_muon_is_lead",
+            ak.fill_none(best_candidate.ProbeMuonIsLead, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "tag_muon_probe_photon_dr",
+            ak.fill_none(best_candidate.farMuonGammaDR, DUMMY_VALUE),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "probe_muon_probe_photon_dr",
+            ak.fill_none(best_candidate.minMuonGammaDR, DUMMY_VALUE),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "zmmg_minus_dimuon_mass",
+            ak.fill_none(best_candidate.Zmmg.mass - best_candidate.Dimuon.mass, DUMMY_VALUE),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "abs_zmmg_mass_minus_z",
+            ak.fill_none(numpy.abs(best_candidate.Zmmg.mass - Z_MASS), DUMMY_VALUE),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "z_mumu",
+            ak.fill_none(presel_cut, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "z_ee",
+            ak.zeros_like(events.run, dtype=bool),
+            overwrite=True,
+        )
+
+        self.add_flat_object_fields(events, "tag_muon", best_candidate.TagMuon, MUON_TNP_FIELDS)
+        self.add_flat_object_fields(events, "probe_muon", best_candidate.ProbeMuon, MUON_TNP_FIELDS)
+        self.add_flat_object_fields(events, "probe_photon", best_candidate.ProbePhoton, PHOTON_TNP_FIELDS)
+        self.add_flat_object_fields(events, "dimuon", best_candidate.Dimuon, P4_FIELDS)
+        self.add_flat_object_fields(events, "zmmg", best_candidate.Zmmg, P4_FIELDS)
 
         self.register_cuts(
             names=[
                 "passing dimuon HLT",
-                "OSSF dimuon",
+                "OSSF dimuon with lead mu pT > 20",
                 "photon",
                 "min dR(mu,gamma) < 0.8",
                 "dR(gamma, near muon) > 0.4",
@@ -357,6 +572,21 @@ class TnPZmmgTagger(Tagger):
             for field in fields
         }
         return ak.zip(data, with_name="Momentum4D")
+
+    def add_flat_object_fields(self, events, name, objects, fields):
+        available_fields = [field for field in fields if field in objects.fields]
+        if not available_fields:
+            return
+
+        awkward_utils.add_object_fields(
+            events=events,
+            name=name,
+            objects=ak.singletons(objects),
+            n_objects=1,
+            dummy_value=DUMMY_VALUE,
+            fields=available_fields,
+            overwrite=True,
+        )
 
     def passing_dimuon_trigger(self, events):
         trigger_cut = ak.zeros_like(events.run, dtype=bool)
