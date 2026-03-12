@@ -50,6 +50,8 @@ PHOTON_TNP_FIELDS = [
     "phi",
     "mass",
     "mvaID",
+    "mvaID_WP80",
+    "mvaID_WP90",
     "energyRaw",
     "energyErr",
     "r9",
@@ -247,11 +249,13 @@ class TnPZmmgTagger(Tagger):
             zmmg_candidates_all.SubleadMuon,
             zmmg_candidates_all.LeadMuon,
         )
-        zmmg_candidates_all["TagMuon"] = zmmg_candidates_all.FarMuon
-        zmmg_candidates_all["ProbeMuon"] = zmmg_candidates_all.NearMuon
+        zmmg_candidates_all["TagMuon1"] = zmmg_candidates_all.LeadMuon
+        zmmg_candidates_all["TagMuon2"] = zmmg_candidates_all.SubleadMuon
         zmmg_candidates_all["ProbePhoton"] = zmmg_candidates_all.ZPhoton
-        zmmg_candidates_all["TagMuonIsLead"] = ~lead_is_near
-        zmmg_candidates_all["ProbeMuonIsLead"] = lead_is_near
+        zmmg_candidates_all["LeadMuonGammaDR"] = lead_muon_dr
+        zmmg_candidates_all["SubleadMuonGammaDR"] = sublead_muon_dr
+        zmmg_candidates_all["TagMuon1IsNear"] = lead_is_near
+        zmmg_candidates_all["TagMuon2IsNear"] = ~lead_is_near
         zmmg_candidates_all["minMuonGammaDR"] = ak.where(
             lead_is_near,
             lead_muon_dr,
@@ -359,8 +363,8 @@ class TnPZmmgTagger(Tagger):
             "SubleadMuon",
             "NearMuon",
             "FarMuon",
-            "TagMuon",
-            "ProbeMuon",
+            "TagMuon1",
+            "TagMuon2",
             "Dimuon",
             "ZPhoton",
             "ProbePhoton",
@@ -411,26 +415,26 @@ class TnPZmmgTagger(Tagger):
         )
         awkward_utils.add_field(
             events,
-            "tag_muon_is_lead",
-            ak.fill_none(best_candidate.TagMuonIsLead, False),
+            "tag_muon_1_is_near",
+            ak.fill_none(best_candidate.TagMuon1IsNear, False),
             overwrite=True,
         )
         awkward_utils.add_field(
             events,
-            "probe_muon_is_lead",
-            ak.fill_none(best_candidate.ProbeMuonIsLead, False),
+            "tag_muon_2_is_near",
+            ak.fill_none(best_candidate.TagMuon2IsNear, False),
             overwrite=True,
         )
         awkward_utils.add_field(
             events,
-            "tag_muon_probe_photon_dr",
-            ak.fill_none(best_candidate.farMuonGammaDR, DUMMY_VALUE),
+            "tag_muon_1_probe_photon_dr",
+            ak.fill_none(best_candidate.LeadMuonGammaDR, DUMMY_VALUE),
             overwrite=True,
         )
         awkward_utils.add_field(
             events,
-            "probe_muon_probe_photon_dr",
-            ak.fill_none(best_candidate.minMuonGammaDR, DUMMY_VALUE),
+            "tag_muon_2_probe_photon_dr",
+            ak.fill_none(best_candidate.SubleadMuonGammaDR, DUMMY_VALUE),
             overwrite=True,
         )
         awkward_utils.add_field(
@@ -458,8 +462,67 @@ class TnPZmmgTagger(Tagger):
             overwrite=True,
         )
 
-        self.add_flat_object_fields(events, "tag_muon", best_candidate.TagMuon, MUON_TNP_FIELDS)
-        self.add_flat_object_fields(events, "probe_muon", best_candidate.ProbeMuon, MUON_TNP_FIELDS)
+        probe_photon_e_veto = best_candidate.ProbePhoton.electronVeto > self.options["photons"]["e_veto"]
+        probe_photon_pass_pixel_veto = best_candidate.ProbePhoton.pixelSeed < 0.5
+        awkward_utils.add_field(
+            events,
+            "probe_photon_e_veto",
+            ak.fill_none(probe_photon_e_veto, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "probe_photon_pass_csev",
+            ak.fill_none(probe_photon_e_veto, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "probe_photon_pass_pixel_veto",
+            ak.fill_none(probe_photon_pass_pixel_veto, False),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "probe_photon_lep_near_dR",
+            ak.fill_none(best_candidate.minMuonGammaDR, DUMMY_VALUE),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "probe_photon_lep_far_dR",
+            ak.fill_none(best_candidate.farMuonGammaDR, DUMMY_VALUE),
+            overwrite=True,
+        )
+        if int(year) < 2020:
+            awkward_utils.add_field(
+                events,
+                "probe_photon_chiso",
+                ak.fill_none(best_candidate.ProbePhoton.pfRelIso03_chg, DUMMY_VALUE),
+                overwrite=True,
+            )
+            awkward_utils.add_field(
+                events,
+                "probe_photon_alliso",
+                ak.fill_none(best_candidate.ProbePhoton.pfRelIso03_all, DUMMY_VALUE),
+                overwrite=True,
+            )
+        else:
+            awkward_utils.add_field(
+                events,
+                "probe_photon_chiso",
+                ak.fill_none(best_candidate.ProbePhoton.pfRelIso03_chg_quadratic, DUMMY_VALUE),
+                overwrite=True,
+            )
+            awkward_utils.add_field(
+                events,
+                "probe_photon_alliso",
+                ak.fill_none(best_candidate.ProbePhoton.pfRelIso03_all_quadratic, DUMMY_VALUE),
+                overwrite=True,
+            )
+
+        self.add_flat_object_fields(events, "tag_muon_1", best_candidate.TagMuon1, MUON_TNP_FIELDS)
+        self.add_flat_object_fields(events, "tag_muon_2", best_candidate.TagMuon2, MUON_TNP_FIELDS)
         self.add_flat_object_fields(events, "probe_photon", best_candidate.ProbePhoton, PHOTON_TNP_FIELDS)
         self.add_flat_object_fields(events, "dimuon", best_candidate.Dimuon, P4_FIELDS)
         self.add_flat_object_fields(events, "zmmg", best_candidate.Zmmg, P4_FIELDS)
