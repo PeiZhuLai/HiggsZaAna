@@ -8,16 +8,16 @@ echo "==============STARTED=============="
 # target="./"
 
 # Run3
-# input="/eos/home-p/pelai/HZa/parquet_DNA/"
-# target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
+input="/eos/home-p/pelai/HZa/parquet_DNA/"
+target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
 
 # Gen Info
 # input="/eos/home-p/pelai/HZa/parquet_Sig_MC_DNA/"
 # target="/eos/home-p/pelai/HZa/root_Sig_MC_P2Root/run3/"
 
 # sum Cut Study
-input="/eos/home-p/pelai/HZa/parquet_sumStudy_DNA/"
-target="/eos/home-p/pelai/HZa/root_P2Root/run3_sumStudy/"
+# input="/eos/home-p/pelai/HZa/parquet_sumStudy_DNA/"
+# target="/eos/home-p/pelai/HZa/root_P2Root/run3_sumStudy/"
 
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
@@ -117,19 +117,19 @@ process_sample_syst() {
     echo "Sample $sample completed successfully."
 }
 
-#---------------------------------------------------------------------------------------
-# 处理 signal 样本
-samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
-# samples=(mA_M5)
-type="Sig_MC"
-for sample in "${samples[@]}"; do
-    mkdir -p "$target${sample}/"
-    # 存储后台任务的进程ID列表
-    pid_list=()
+# #---------------------------------------------------------------------------------------
+# # 处理 signal 样本
+# samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
+# # samples=(mA_M5)
+# type="Sig_MC"
+# for sample in "${samples[@]}"; do
+#     mkdir -p "$target${sample}/"
+#     # 存储后台任务的进程ID列表
+#     pid_list=()
 
-    # 调用函数处理样本数据
-    process_sample "$sample" "$type"
-done
+#     # 调用函数处理样本数据
+#     process_sample "$sample" "$type"
+# done
 
 # samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 # type="Sig_MC"
@@ -171,8 +171,9 @@ done
 #  DYJetsTo2Tau
 
 # ## 处理 bkgmc 样本
-for i in {1..4};do
+# for i in {1..4};do
 # for i in {2..3};do # Sum Cut Study
+for i in 2; do # Compliment Study
     if [ "$i" = "1" ]; then
         samples=(DYGto2LG_10to50 DYGto2LG_50to100)
         years=(2022preEE 2022postEE)
@@ -203,26 +204,6 @@ for i in {1..4};do
     done
 done 
 
-# samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
-# samples=(DYGto2LG_10to50 DYGto2LG_50to100)
-# samples=(DYGto2LG_10to100)
-# samples=(DYJetsToLL)
-# type="Bkg_MC"
-# for sample in "${samples[@]}"; do
-#     for sf in "down"; do #  "up" "down"
-#         for syst in "${systs[@]}"; do
-#             mkdir -p "$target${sample}_${syst}_${sf}"
-#         done
-#         for year in "${years[@]}"; do
-#             # 存储后台任务的进程ID列表
-#             pid_list=()
-
-#             # 调用函数处理样本数据
-#             process_sample_syst "$sample" "$type" "$year" "$sf"
-#         done
-#     done
-# done
-
 # ****************************
 # ********** Data ************
 # ****************************
@@ -233,19 +214,18 @@ done
 
 # # 处理 data 样本
 
-samples=(Data)
-type="Data"
-for sample in "${samples[@]}"; do
-    mkdir -p "$target$sample"
-    # 存储后台任务的进程ID列表
-    pid_list=()
+# samples=(Data)
+# type="Data"
+# for sample in "${samples[@]}"; do
+#     mkdir -p "$target$sample"
+#     # 存储后台任务的进程ID列表
+#     pid_list=()
 
-    # 调用函数处理样本数据
-    process_sample "$sample" "$type"
-done
+#     # 调用函数处理样本数据
+#     process_sample "$sample" "$type"
+# done
 
 # Use fake photon background estimation with data-driven
-
 # mkdir -p /eos/home-j/jiehan/root/2017/skimmed_ntuples/data_med/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/data_fake/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/mc_true/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/mc_med/
 # python /afs/cern.ch/user/j/jiehan/private/HiggsZGammaAna/hzgml/scripts/apply_weight.py
 

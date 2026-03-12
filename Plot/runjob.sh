@@ -28,12 +28,10 @@ elif [ "$1" -eq 2 ]; then
     python3 $path_code/plot_variable_dataVmc.py -y run3 -m --region 1 --ln
 elif [ "$1" -eq 3 ]; then
     python3 $path_code/plot_variable_dataVmc.py -y run3 -m --region 2 --ln
-# elif [ "$1" -eq 4 ]; then
-#     python3 $path_code/plot_variable_dataVmc.py -y run3 -m
+elif [ "$1" -eq 4 ]; then
+    python3 $path_code/ALP_Optimization.py -y run3 -o $path_output/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 2
 elif [ "$1" -eq 5 ]; then
     python3 $path_code/ALP_Optimization.py -y run3 -o $path_output/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 1
-elif [ "$1" -eq 6 ]; then
-    python3 $path_code/ALP_Optimization.py -y run3 -o $path_output/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 2
 fi
 #----------------------------------------------------------------------------
 

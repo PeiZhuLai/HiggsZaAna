@@ -857,8 +857,6 @@ def _plot_gen_distributions_for_year(
             )
 
             # only two lines
-            _root_style_line(h_lead, _root_color("#E31A1C", fallback=ROOT.kRed+1), 20, 1)
-            _root_style_line(h_sub,  _root_color("#1F78B4", fallback=ROOT.kBlue+1), 21, 1)
 
             hs2 = [("lead", h_lead), ("sublead", h_sub)]
             leg2 = {"lead": "Lead", "sublead": "Sublead"}

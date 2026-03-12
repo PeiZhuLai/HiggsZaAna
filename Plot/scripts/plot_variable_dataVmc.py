@@ -49,10 +49,10 @@ tdrstyle.setTDRStyle()
 # model = pickle.load(open(BDT_filename, 'rb'))
 
 pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_pho1IetaIeta55', 
-'pho2Pt': '4_pho2Pt', 'pho2Pt': '5_pho2Pt', 'pho2R9': '6_pho2R9', 'pho2IetaIeta55': '7_pho2IetaIeta55',
-'pho1ECALIso': '8_pho1ECALIso', 'pho2ECALIso': '9_pho2ECALIso', 'ALP_calculatedPhotonIso': '10_ALP_calculatedPhotonIso',
-'var_dR_Za': '11_var_dR_Za', 'var_dR_g1g2': '12_var_dR_g1g2', 'var_dR_g1Z': '13_var_dR_g1Z',
-'var_PtaOverMh': '14_var_PtaOverMh', 'H_pt': '15_H_pt', 'param': '16_param', 'ALP_m': '17_ALP_m'}
+'pho2Pt': '4_pho2Pt', 'pho2R9': '5_pho2R9', 'pho2IetaIeta55': '6_pho2IetaIeta55',
+'pho1ECALIso': '7_pho1ECALIso', 'pho2ECALIso': '8_pho2ECALIso', 'ALP_calculatedPhotonIso': '9_ALP_calculatedPhotonIso',
+'var_dR_Za': '10_var_dR_Za', 'var_dR_g1g2': '11_var_dR_g1g2', 'var_dR_g1Z': '12_var_dR_g1Z',
+'var_PtaOverMh': '13_var_PtaOverMh', 'H_pt': '14_H_pt', 'param': '15_param', 'ALP_m': '16_ALP_m'}
 
 # NEW: 輸出檔名依 pdfName_map 排序；沒對應就用原本 var_name
 def _pdf_output_name(var_name: str) -> str:

@@ -1,7 +1,11 @@
 # 全部放 AFS，避免 EOS 限制
 initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor
 executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/run_parquet2root.sh
-log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).log
+
+# ✅ 关键：一个 cluster 一个 log（不要带 ProcId）
+log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).log
+
+# stdout/stderr 仍然可以每个 job 一份
 output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).out
 error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).err
 
@@ -15,6 +19,7 @@ request_cpus    = 1
 request_memory  = 2GB
 request_disk    = 2GB
 +JobFlavour     = "workday"
++JobBatchName   = "p2root_MVAScore"
 nice_user       = True
 
 # 用新的参数名（避开 INPUT/OUTPUT/IN/OUT）
