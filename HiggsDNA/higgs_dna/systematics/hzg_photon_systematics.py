@@ -12,70 +12,6 @@ logger = simple_logger(__name__)
 from higgs_dna.utils import awkward_utils, misc_utils
 from higgs_dna.systematics.utils import systematic_from_bins, ic_systematic_from_bins
 
-def _clib_inputs(obj):
-    """Return list of input names for correctionlib highlevel objects (Correction/CompoundCorrection)."""
-    return [v.name for v in getattr(obj, "inputs", [])]
-
-def _clib_eval(obj, args_by_name, override_order=None):
-    """
-    Evaluate a correctionlib object using its declared input order.
-    args_by_name: dict(name -> numpy array/scalar)
-    override_order: optional list of names to force a specific order.
-    """
-    order = override_order if override_order is not None else _clib_inputs(obj)
-    missing = [k for k in order if k not in args_by_name]
-    if missing:
-        raise ValueError(f"Missing inputs for correctionlib evaluate: {missing} (needed order={order})")
-    return obj.evaluate(*[args_by_name[k] for k in order])
-
-def _pick_2024_mc_scale_correction(evaluator):
-    """
-    For 2024 MC, avoid compound['Scale'] because it requires run/seedGain.
-    Try to find a non-compound scale correction that only needs photon-level inputs.
-    """
-    # Highlevel CorrectionSet supports dict-like access by key
-    for name in getattr(evaluator, "keys", lambda: [])():
-        try:
-            corr = evaluator[name]
-            ins = _clib_inputs(corr)
-        except Exception:
-            continue
-
-        # Heuristic: must accept syst and pt, and must NOT require run/seedGain (data-only)
-        if ("syst" in ins) and ("pt" in ins) and ("run" not in ins) and ("seedGain" not in ins):
-            # Prefer names that look like scale
-            if "Scale" in name or "scale" in name:
-                return name
-    # fallback: any correction matching heuristic
-    for name in getattr(evaluator, "keys", lambda: [])():
-        try:
-            corr = evaluator[name]
-            ins = _clib_inputs(corr)
-        except Exception:
-            continue
-        if ("syst" in ins) and ("pt" in ins) and ("run" not in ins) and ("seedGain" not in ins):
-            return name
-    return None
-
-def _pick_2024_mc_scale_unc_correction(evaluator, scale_corr_name, required_inputs):
-    """
-    Find a matching uncertainty correction for the chosen 2024 MC scale correction.
-    Heuristic: name contains 'unc'/'Unc'/'err' and inputs match required_inputs exactly.
-    """
-    for name in getattr(evaluator, "keys", lambda: [])():
-        if name == scale_corr_name:
-            continue
-        if not (("unc" in name.lower()) or ("err" in name.lower())):
-            continue
-        try:
-            corr = evaluator[name]
-            ins = _clib_inputs(corr)
-        except Exception:
-            continue
-        if ins == required_inputs:
-            return name
-    return None
-
 ########################
 ##### Photon ID SF #####
 ########################
@@ -90,7 +26,6 @@ PHOTON_ID_SF_FILE = {
     "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/photon.json", "higgs_dna/systematics/data/2022postEE_UL/hzg_phidvalidate_2022EE_scalefactors.json"],
     "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/photon.json"],
     "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/photon.json"],
-    "2024" : ["higgs_dna/systematics/data/2023postBPix_UL/photon.json"], # FIXME
 }
 
 PHOTON_ID_SF = {
@@ -102,8 +37,7 @@ PHOTON_ID_SF = {
     "2022preEE" : "2022Re-recoBCD",
     "2022postEE" : "2022Re-recoE+PromptFG",
     "2023preBPix" : "2023PromptC",
-    "2023postBPix" : "2023PromptD",
-    "2024" : "2023PromptD" # FIXME
+    "2023postBPix" : "2023PromptD"
 }
 
 PHOTON_ID_EVAL = {
@@ -115,8 +49,7 @@ PHOTON_ID_EVAL = {
     "2022preEE" : "Photon-ID-SF",
     "2022postEE" : "Photon-ID-SF",
     "2023preBPix" : "Photon-ID-SF",
-    "2023postBPix" : "Photon-ID-SF",
-    "2024" : "Photon-ID-SF" # FIXME
+    "2023postBPix" : "Photon-ID-SF"
 }
 
 def photon_id_sf(events, year, central_only, input_collection, working_point = "wp80"):
@@ -304,130 +237,6 @@ def photon_id_sf(events, year, central_only, input_collection, working_point = "
 
     return variations
 
-
-############################
-##### HZa Photon ID SF #####
-############################
-
-PHOTON_ID_SF_FILE = {
-    "2022preEE" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2022preEE_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2022preEE_sf.json"],
-    "2022postEE" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2022postEE_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2022postEE_sf.json"],
-    "2023preBPix" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023preBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023preBPix_sf.json"],
-    "2023postBPix" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023postBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023postBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023postBPixHole_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023postBPixHole_sf.json"],
-    "2024" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2024_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2024_sf.json"],
-}
-
-
-def photon_zaid_sf(events, year, central_only, input_collection):
-    """
-    See:
-        - https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/EGM_electron_Run2_UL/EGM_electron_2017_UL.html
-        - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
-    """
-
-    required_fields = [
-        (input_collection, "eta"), (input_collection, "pt"), (input_collection, "phi")
-    ]
-
-    missing_fields = awkward_utils.missing_fields(events, required_fields)
-
-    evaluators = []
-    for file in PHOTON_ID_SF_FILE[year]:
-        evaluators.append(_core.CorrectionSet.from_file(misc_utils.expand_path(file)))
-
-    photons = events[input_collection]
-
-    n_photons = awkward.num(photons)
-    photons_flattened = awkward.flatten(photons)
-
-    # NOTE:
-    # evaluators indexing for HZa photon ID SFs (per your PHOTON_ID_SF_FILE):
-    #   - [0] lowpt (pt < 20)
-    #   - [1] nominal (pt >= 20)
-    #   - [2] lowptHole (only for 2023postBPix, special eta/phi region)
-    #   - [3] Hole     (only for 2023postBPix, special eta/phi region)
-    if len(evaluators) < 2:
-        raise ValueError(f"[photon_zaid_sf] Expect at least 2 correction files for year={year}, got {len(evaluators)}")
-
-    # Common inputs
-    pho_eta = numpy.clip(
-        awkward.to_numpy(photons_flattened.eta),
-        -2.49999,
-        2.49999,
-    )
-    pho_pt_orig = awkward.to_numpy(photons_flattened.pt)
-    pho_phi = numpy.clip(
-        awkward.to_numpy(photons_flattened.phi),
-        -999.0,
-        999.0,
-    )
-
-    # Masks
-    pt_below_20_mask = pho_pt_orig < 20.0
-
-    # Clip pt for each regime (match JSON binning/validity)
-    pho_pt_low = numpy.clip(pho_pt_orig, 15.0, 19.999)
-    pho_pt_high = numpy.clip(pho_pt_orig, 20.0, 499.999)
-
-    # 2023postBPix special (eta,phi) "hole" region:
-    # TODO: set these to the real boundaries you want
-    HOLE_ABS_ETA_MAX = 1.566
-    HOLE_ABS_ETA_MIN = 1.444
-    HOLE_ABS_PHI_MAX = 0.0  # placeholder
-    HOLE_ABS_PHI_MIN = 0.0  # placeholder
-
-    abs_eta = numpy.abs(pho_eta)
-    abs_phi = numpy.abs(pho_phi)
-    is_hole_region = (
-        (year == "2023postBPix")
-        & (len(evaluators) >= 4)
-        & (abs_eta >= HOLE_ABS_ETA_MIN)
-        & (abs_eta < HOLE_ABS_ETA_MAX)
-        & (abs_phi >= HOLE_ABS_PHI_MIN)
-        & (abs_phi < HOLE_ABS_PHI_MAX)
-    )
-
-    def _eval_pass(evaluator, var, pt_arr):
-        # HZa JSONs shown use "sf_pass"/"unc_pass" with (pt, eta) ordering in code below
-        if var == "central":
-            return evaluator["sf_pass"].evalv(pt_arr, pho_eta)
-        if var == "up":
-            sf0 = evaluator["sf_pass"].evalv(pt_arr, pho_eta)
-            unc = evaluator["unc_pass"].evalv(pt_arr, pho_eta)
-            return sf0 + unc
-        if var == "down":
-            sf0 = evaluator["sf_pass"].evalv(pt_arr, pho_eta)
-            unc = evaluator["unc_pass"].evalv(pt_arr, pho_eta)
-            return sf0 - unc
-        raise ValueError(f"Unknown var={var}")
-
-    variations = {}
-    for var in (["central"] if central_only else ["central", "up", "down"]):
-        # Default evaluators (non-hole)
-        lowpt_val = _eval_pass(evaluators[0], var, pho_pt_low)
-        highpt_val = _eval_pass(evaluators[1], var, pho_pt_high)
-
-        sf = numpy.where(pt_below_20_mask, lowpt_val, highpt_val)
-
-        # Hole override for 2023postBPix (if provided)
-        if (year == "2023postBPix") and (len(evaluators) >= 4):
-            lowpt_hole_val = _eval_pass(evaluators[2], var, pho_pt_low)
-            highpt_hole_val = _eval_pass(evaluators[3], var, pho_pt_high)
-            sf_hole = numpy.where(pt_below_20_mask, lowpt_hole_val, highpt_hole_val)
-            sf = numpy.where(is_hole_region, sf_hole, sf)
-
-        variations[var] = awkward.unflatten(sf, n_photons)
-
-    # Keep your original acceptance sanitization: set SF=1 outside validity/acceptance
-    for var in variations.keys():
-        variations[var] = awkward.where(
-            (photons.pt < 15.0) | (photons.pt >= 500.0) | (abs(photons.eta) >= 2.5),
-            awkward.ones_like(variations[var], dtype=float),
-            variations[var],
-        )
-
-    return variations
-
 ########################
 #### Photon CSEV SF ####
 ########################
@@ -440,8 +249,7 @@ PHOTON_CSEV_EVAL = {
     "2022preEE" : "Photon-CSEV-SF",
     "2022postEE" : "Photon-CSEV-SF",
     "2023preBPix" : "Photon-CSEV-SF",
-    "2023postBPix" : "Photon-CSEV-SF",
-    "2024" : "Photon-CSEV-SF"
+    "2023postBPix" : "Photon-CSEV-SF"
 }
 
 def photon_CSEV_sf(events, year, central_only, input_collection, working_point = "MVA"):
@@ -755,10 +563,9 @@ fnuf_bins = {
     "2022postEE" : FNUF_2018,
     "2023preBPix" : FNUF_2018,
     "2023postBPix" : FNUF_2018,
-    "2024" : FNUF_2018,
 }
 
-def fnuf_unc(events, year, nominal_only, modify_nominal):
+def fnuf_unc(events, year, nominal_only, modify_nominal, loc = "all"):
     """
 
     """
@@ -774,8 +581,6 @@ def fnuf_unc(events, year, nominal_only, modify_nominal):
         raise ValueError(message) 
 
     photons = events.Photon
-
-    loc = "all"  # fixed default; previously a function argument
 
     if loc == "all":
         mask = photons.pt > 0
@@ -812,14 +617,11 @@ material_bins = {
     "2022preEE" : MATERIAL_2018,
     "2022postEE" : MATERIAL_2018,
     "2023preBPix" : MATERIAL_2018,
-    "2023postBPix" : MATERIAL_2018,
-    "2024" : MATERIAL_2018
+    "2023postBPix" : MATERIAL_2018
 }
 
-def material_unc(events, year, nominal_only, modify_nominal):
+def material_unc(events, year, nominal_only, modify_nominal, loc = "all"):
     photons = events.Photon
-
-    loc = "all"  # fixed default; previously a function argument
 
     if loc == "all":
         mask = photons.pt > 0
@@ -890,7 +692,7 @@ def photon_electron_veto_sf(events, central_only, year):
         },
         central_only = central_only
     )
-    logger.debug(variations)
+    print(variations)
     return variations
 
 #######################
@@ -927,37 +729,30 @@ def photon_mc_smear(events, r9, loc):
 
     return variations
 
-photon_scale_FILE = {
-    "2022preEE" : "jsonpog-integration/POG/EGM/2022_Summer22/photonSS_EtDependent.json",
+photon_scale_FILE = {"2022preEE" : "jsonpog-integration/POG/EGM/2022_Summer22/photonSS_EtDependent.json",
     "2022postEE" : "jsonpog-integration/POG/EGM/2022_Summer22EE/photonSS_EtDependent.json",
     "2023preBPix" : "jsonpog-integration/POG/EGM/2023_Summer23/photonSS_EtDependent.json",
-    "2023postBPix" : "jsonpog-integration/POG/EGM/2023_Summer23BPix/photonSS_EtDependent.json",
-    "2024" : "jsonpog-integration/POG/EGM/2024_Summer24/photonSS_EtDependent.json"
+    "2023postBPix" : "jsonpog-integration/POG/EGM/2023_Summer23BPix/photonSS_EtDependent.json"
 }
 
 smear_names = {
-    "2022preEE" : "EGMSmearAndSyst_PhoPTsplit_2022preEE",
-    "2022postEE" : "EGMSmearAndSyst_PhoPTsplit_2022postEE",
-    "2023preBPix" : "EGMSmearAndSyst_PhoPTsplit_2023preBPIX",
-    "2023postBPix" : "EGMSmearAndSyst_PhoPTsplit_2023postBPIX",
-    "2024" : "EGMSmearAndSyst_PhoPT_2024"
+    "2022preEE" : "SmearAndSyst",
+    "2022postEE" : "SmearAndSyst",
+    "2023preBPix" : "SmearAndSyst",
+    "2023postBPix" : "SmearAndSyst"
 }
 
 scale_names = {
-    "2022preEE" : "EGMScale_Compound_Pho_2022preEE",
-    "2022postEE" : "EGMScale_Compound_Pho_2022postEE",
-    "2023preBPix" : "EGMScale_Compound_Pho_2023preBPIX",
-    "2023postBPix" : "EGMScale_Compound_Pho_2023postBPIX",
-    "2024" : "Scale",  # fix: compound_corrections.name in 2024 JSON is "Scale"
+    "2022preEE" : "Scale",
+    "2022postEE" : "Scale",
+    "2023preBPix" : "Scale",
+    "2023postBPix" : "Scale"
 }
 
 def photon_scale_smear_run3(events, year, is_data):
     """
-    Align implementation with hzg_photon_systematics.py:
-      - data: apply scale -> corrected_pt, corrected_energyErr then return
-      - MC: apply smear central -> corrected_pt, corrected_energyErr
-            + smear_up/down -> dEsigmaUp/Down and energyErr_dEsigmaUp/Down
-            + scale_up/down -> pt_ScaleUp/Down and energyErr_ScaleUp/Down
+    This function applies photon scale and smear corrections on the photon pt.
+    It returns events with the corrected photon pt values.
     """
     logger.info("[Photon Systematics] Applying photon scale and smear corrections for year %s", year)
 
@@ -965,18 +760,17 @@ def photon_scale_smear_run3(events, year, is_data):
         ("Photon", "eta"), ("Photon", "pt"), ("Photon", "r9")
     ]
     if is_data:
-        required_fields.append(("run"))
+        required_fields.append(("run",))
         required_fields.append(("Photon", "seedGain"))
 
     missing_fields = awkward_utils.missing_fields(events, required_fields)
+
     if missing_fields:
         logger.warning(
-            "[Photon Systematics] Photon scale and smear corrections will not be applied, because the following fields are missing: %s",
-            str(missing_fields),
+            "[Photon Systematics] Photon scale and smear corrections will not be applied, because the following fields are missing: %s" % str(missing_fields)
         )
         return events
 
-    # Use the same evaluator choice pattern as hzg_photon_systematics.py
     if is_data:
         evaluator = correctionlib.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
     else:
@@ -991,155 +785,86 @@ def photon_scale_smear_run3(events, year, is_data):
     photons_pt = awkward.to_numpy(photons_flattened.pt)
     photons_r9 = awkward.to_numpy(photons_flattened.r9)
     photons_energyerr = awkward.to_numpy(photons_flattened.energyErr)
-
-    # NEW: log first 10 photon pt before applying corrections
-    _nprint = int(min(10, len(photons_pt)))
-    logger.debug(
-        "[Photon Systematics] Photon pt BEFORE scale+smear (first %d): %s",
-        _nprint,
-        photons_pt[:_nprint],
-    )
-
     if is_data:
         photons_seedGain = awkward.to_numpy(photons_flattened.seedGain)
         run_arr_flattened = numpy.repeat(awkward.to_numpy(events.run), n_photons)
 
-        if year == "2024":
-            scale = awkward.where(
-                (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
-                awkward.ones_like(photons_pt, dtype=float),
-                evaluator.compound[scale_names[year]].evaluate(
-                    "scale",
-                    run_arr_flattened,
-                    photons_scEta,
-                    photons_r9,
-                    photons_pt,
-                    photons_seedGain,
-                ),
-            )
-        else:
-            scale = awkward.where(
-                (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
-                awkward.ones_like(photons_pt, dtype=float),
-                evaluator.compound[scale_names[year]].evaluate(
-                    "scale",
-                    run_arr_flattened,
-                    photons_scEta,
-                    photons_r9,
-                    photons_AbsScEta,
-                    photons_pt,
-                    photons_seedGain,
-                ),
-            )
-                        
+    if is_data:
+        scale = awkward.where(
+            (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+            awkward.ones_like(photons_pt, dtype=float),
+            evaluator.compound[scale_names[year]].evaluate("scale", run_arr_flattened, photons_scEta, photons_r9, photons_pt, photons_seedGain)
+        )
         corrected_pt = awkward.to_numpy(photons_pt * scale)
         events["Photon", "corrected_pt"] = awkward.unflatten(corrected_pt, n_photons)
+        print("Photon pt before scale corrections:", photons.pt)
+        print("Photon pt after scale corrections:", events["Photon", "corrected_pt"])
 
-        # NEW: log first 10 photon pt after applying corrections (data: scale only)
-        logger.debug(
-            "[Photon Systematics] Photon pt AFTER scale (data) (first %d): %s",
-            _nprint,
-            corrected_pt[:_nprint],
-        )
-
-        # NOTE: match hzg: smear is evaluated on corrected_pt and energyErr updated accordingly, scaled by scale
-        evaluator_smear = _core.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
+    # Apply smear corrections first
+    if is_data:
+        evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
         smear = awkward.where(
             (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
             awkward.zeros_like(photons_pt, dtype=float),
-            evaluator_smear[smear_names[year]].evalv("smear", corrected_pt, photons_r9, photons_AbsScEta),
+            evaluator[smear_names[year]].evalv("smear", corrected_pt, photons_r9, photons_AbsScEta)
         )
-        corrected_energyErr = numpy.sqrt((photons_energyerr) ** 2 + (photons_pt * numpy.cosh(photons_scEta) * smear) ** 2) * scale
+        corrected_energyErr = numpy.sqrt((photons_energyerr)**2 + (photons_pt * numpy.cosh(photons_scEta) * smear)**2) * scale
         events["Photon", "corrected_energyErr"] = awkward.unflatten(corrected_energyErr, n_photons)
+        print("Photon energy err correction:", photons.energyErr)
+        print("Photon energy err correction:", events["Photon", "corrected_energyErr"])
         return events
 
-    # --- MC branch: apply central smear ---
     smear = awkward.where(
-        (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
-        awkward.zeros_like(photons_pt, dtype=float),
-        evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_AbsScEta),
-    )
+            (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+            awkward.zeros_like(photons_pt, dtype=float),
+            evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_AbsScEta)
+        )
     rng = numpy.random.default_rng(seed=123)
     smear_val = awkward.where(
         (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
         awkward.ones_like(photons_pt, dtype=float),
-        rng.normal(loc=1.0, scale=numpy.abs(smear)),
+        rng.normal(loc=1., scale=numpy.abs(smear))
     )
-
+    
+    # Apply central smear correction to photon pt
     corrected_pt = photons_pt * smear_val
-    corrected_energyErr = numpy.sqrt((photons_energyerr) ** 2 + (photons_pt * numpy.cosh(photons_scEta) * smear) ** 2) * smear_val
+    corrected_energyErr = numpy.sqrt((photons_energyerr)**2 + (photons_pt * numpy.cosh(photons_scEta) * smear)**2) * smear_val
 
-    # NEW: log first 10 photon pt after applying corrections (MC: central smear)
-    logger.debug(
-        "[Photon Systematics] Photon pt AFTER smear (MC) (first %d): %s",
-        _nprint,
-        awkward.to_numpy(corrected_pt)[:_nprint],
-    )
-
-    # --- MC branch: smear systematics ---
+    # Calculate smear systematics
     for syst in ["smear_up", "smear_down"]:
         smear_syst = awkward.where(
             (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
             awkward.zeros_like(photons_pt, dtype=float),
-            evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta),
+            evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta)
         )
 
         smear_syst_val = awkward.where(
             (abs(photons_AbsScEta) > 3.0) | (photons_pt < 20.0),
             awkward.ones_like(photons_pt, dtype=float),
-            rng.normal(loc=1.0, scale=numpy.abs(smear_syst)),
+            rng.normal(loc=1., scale=numpy.abs(smear_syst))
         )
-        events["Photon", "dEsigma" + syst.replace("smear_", "").capitalize()] = (
-            photons.pt * awkward.unflatten(smear_syst_val, n_photons)
-        )
-        events["Photon", "energyErr_dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(
-            numpy.sqrt((photons_energyerr) ** 2 + (photons_pt * numpy.cosh(photons_scEta) * smear_syst) ** 2) * smear_syst_val,
-            n_photons,
-        )
-
-    # write central
+        events["Photon", "dEsigma" + syst.replace("smear_", "").capitalize()] = photons.pt * awkward.unflatten(smear_syst_val, n_photons)
+        events["Photon", "energyErr_dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(numpy.sqrt((photons_energyerr)**2 + (photons_pt * numpy.cosh(photons_scEta) * smear_syst)**2) * smear_syst_val, n_photons)
+      
+    print("Photon pt before smear corrections:", photons.pt)
     events["Photon", "corrected_pt"] = awkward.unflatten(corrected_pt, n_photons)
     events["Photon", "corrected_energyErr"] = awkward.unflatten(corrected_energyErr, n_photons)
     photons = events["Photon"]
 
-    # --- MC branch: scale systematics (match hzg: evaluated from the same correction name as smear) ---
+    # Calculate scale systematics
     for syst in ["scale_up", "scale_down"]:
         scale = awkward.where(
             (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
             awkward.ones_like(photons.pt, dtype=float),
-            awkward.unflatten(
-                evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta),
-                n_photons,
-            ),
+            awkward.unflatten(evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta), n_photons)
         )
         events["Photon", "pt_Scale" + syst.replace("scale_", "").capitalize()] = photons.corrected_pt * scale
         events["Photon", "energyErr_Scale" + syst.replace("scale_", "").capitalize()] = photons.corrected_energyErr * scale
 
-    # NEW: log systematics branches (match photon_systematics_copy.py style; first 10)
-    if ("Photon" in events.fields) and ("dEsigmaUp" in events["Photon"].fields):
-        logger.debug(
-            "[Photon Systematics] Photon pt Smear Up (dEsigmaUp) (first %d): %s",
-            _nprint,
-            awkward.to_numpy(awkward.flatten(events["Photon", "dEsigmaUp"]))[:_nprint],
-        )
-    if ("Photon" in events.fields) and ("dEsigmaDown" in events["Photon"].fields):
-        logger.debug(
-            "[Photon Systematics] Photon pt Smear Down (dEsigmaDown) (first %d): %s",
-            _nprint,
-            awkward.to_numpy(awkward.flatten(events["Photon", "dEsigmaDown"]))[:_nprint],
-        )
-    if ("Photon" in events.fields) and ("pt_ScaleUp" in events["Photon"].fields):
-        logger.debug(
-            "[Photon Systematics] Photon pt Scale Up (pt_ScaleUp) (first %d): %s",
-            _nprint,
-            awkward.to_numpy(awkward.flatten(events["Photon", "pt_ScaleUp"]))[:_nprint],
-        )
-    if ("Photon" in events.fields) and ("pt_ScaleDown" in events["Photon"].fields):
-        logger.debug(
-            "[Photon Systematics] Photon pt Scale Down (pt_ScaleDown) (first %d): %s",
-            _nprint,
-            awkward.to_numpy(awkward.flatten(events["Photon", "pt_ScaleDown"]))[:_nprint],
-        )
+    print("Photon pt after scale and smear corrections:", events["Photon", "corrected_pt"])
+    print("Photon pt Scale Up:", events["Photon", "pt_ScaleUp"])
+    print("Photon pt Scale Down:", events["Photon", "pt_ScaleDown"])
+    print("Photon pt Smear Up:", events["Photon", "dEsigmaUp"])
+    print("Photon pt Smear Down:", events["Photon", "dEsigmaDown"])
 
     return events
-

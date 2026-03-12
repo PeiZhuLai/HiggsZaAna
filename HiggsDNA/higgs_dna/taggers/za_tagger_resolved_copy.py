@@ -556,9 +556,6 @@ class ZaTaggerRun3(Tagger):
         z_ee_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 11, False)
         z_mumu_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 13, False)
 
-        # NEW: 取最佳 noFSR Z 候選（後面填 branch 會用到）
-        z_cand_noFSR = ak.firsts(z_cands_noFSR)
-
         # 修正 electrons 和 muons（包含 FSR）
         # electrons_withFSR = self.assign_fsr_photon(electrons, FSRphotons)
         electrons_withFSR = electrons
@@ -809,7 +806,7 @@ class ZaTaggerRun3(Tagger):
         # ------------------------------------------------------------
 
         # Add ALP-related fields
-        for field in ["pt", "eta", "phi", "mass", "electronVeto", "energyRaw", "energyErr", "r9", "sieie", "hoe", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "mvaID"]:
+        for field in ["pt", "eta", "phi", "mass", "electronVeto", "energyRaw", "energyErr", "r9", "sieie", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "energyErr"]:
             if field in ["pt","eta","phi","mass"]:
                 awkward_utils.add_field(
                     events,
@@ -836,82 +833,6 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(events, "ALP_sublead_photon_chiso",  alp_cand.SubleadPhoton.pfRelIso03_chg_quadratic) #run3
             awkward_utils.add_field(events, "ALP_sublead_photon_alliso",  alp_cand.SubleadPhoton.pfRelIso03_all_quadratic) #run3
         
-        # NEW: ALP lead/sublead photon 與 Z lead/sublead lepton 的最近 dR（取兩個 lepton 中較小者）
-        # 用 event-level branch 組 Momentum4D，避免處理複雜的 jagged/索引情況
-        alp_lead_pho_p4 = ak.zip(
-            {
-                "pt":   ak.fill_none(events.ALP_lead_photon_pt, 0.0),
-                "eta":  ak.fill_none(events.ALP_lead_photon_eta, 0.0),
-                "phi":  ak.fill_none(events.ALP_lead_photon_phi, 0.0),
-                "mass": ak.zeros_like(ak.fill_none(events.ALP_lead_photon_pt, 0.0)),
-            },
-            with_name="Momentum4D",
-        )
-        alp_sub_pho_p4 = ak.zip(
-            {
-                "pt":   ak.fill_none(events.ALP_sublead_photon_pt, 0.0),
-                "eta":  ak.fill_none(events.ALP_sublead_photon_eta, 0.0),
-                "phi":  ak.fill_none(events.ALP_sublead_photon_phi, 0.0),
-                "mass": ak.zeros_like(ak.fill_none(events.ALP_sublead_photon_pt, 0.0)),
-            },
-            with_name="Momentum4D",
-        )
-        z_lead_lep_p4 = ak.zip(
-            {
-                "pt":   ak.fill_none(events.Z_lead_lepton_pt, 0.0),
-                "eta":  ak.fill_none(events.Z_lead_lepton_eta, 0.0),
-                "phi":  ak.fill_none(events.Z_lead_lepton_phi, 0.0),
-                "mass": ak.zeros_like(ak.fill_none(events.Z_lead_lepton_pt, 0.0)),
-            },
-            with_name="Momentum4D",
-        )
-        z_sub_lep_p4 = ak.zip(
-            {
-                "pt":   ak.fill_none(events.Z_sublead_lepton_pt, 0.0),
-                "eta":  ak.fill_none(events.Z_sublead_lepton_eta, 0.0),
-                "phi":  ak.fill_none(events.Z_sublead_lepton_phi, 0.0),
-                "mass": ak.zeros_like(ak.fill_none(events.Z_sublead_lepton_pt, 0.0)),
-            },
-            with_name="Momentum4D",
-        )
-
-        # 有效性：需要 Z cand 與 ALP cand (用 pt != DUMMY_VALUE 當 guard)
-        has_valid_z   = (ak.fill_none(events.Z_pt, DUMMY_VALUE) != DUMMY_VALUE)
-        has_valid_alp = (ak.fill_none(events.ALP_pt, DUMMY_VALUE) != DUMMY_VALUE)
-        valid_dr = ak.fill_none(has_valid_z & has_valid_alp, False)
-
-        lead_dr_min = ak.where(
-            valid_dr,
-            ak.min(
-                ak.concatenate(
-                    [
-                        alp_lead_pho_p4.deltaR(z_lead_lep_p4)[:, None],
-                        alp_lead_pho_p4.deltaR(z_sub_lep_p4)[:, None],
-                    ],
-                    axis=1,
-                ),
-                axis=1,
-            ),
-            DUMMY_VALUE,
-        )
-        sub_dr_min = ak.where(
-            valid_dr,
-            ak.min(
-                ak.concatenate(
-                    [
-                        alp_sub_pho_p4.deltaR(z_lead_lep_p4)[:, None],
-                        alp_sub_pho_p4.deltaR(z_sub_lep_p4)[:, None],
-                    ],
-                    axis=1,
-                ),
-                axis=1,
-            ),
-            DUMMY_VALUE,
-        )
-
-        awkward_utils.add_field(events, "ALP_lead_photon_lep_near_dR", ak.fill_none(lead_dr_min, DUMMY_VALUE), overwrite=True)
-        awkward_utils.add_field(events, "ALP_sublead_photon_lep_near_dR", ak.fill_none(sub_dr_min, DUMMY_VALUE), overwrite=True)
-
         # Gamma candidate 
         gamma_cand = ak.firsts(photons)
         gamma_mvaID_WPL = ((gamma_cand.isScEtaEB & (gamma_cand.mvaID > self.options["photons"]["mvaID_barrel"])) | (gamma_cand.isScEtaEE & (gamma_cand.mvaID > self.options["photons"]["mvaID_endcap"])))
@@ -969,6 +890,24 @@ class ZaTaggerRun3(Tagger):
                 ak.fill_none(getattr(h_cand_noFSR, field), DUMMY_VALUE)
             )
 
+        # additional leptons
+        leptons = ak.concatenate([electrons, muons], axis = 1)
+        max_I_mini = ak.fill_none(ak.max(leptons.miniPFRelIso_all, axis = 1), 9999)
+        awkward_utils.add_field(events, "max_I_mini", max_I_mini)
+        
+        veto_Z_leptons = (leptons.pt != events.Z_lead_lepton_pt) & (leptons.pt != events.Z_sublead_lepton_pt)
+        additional_leptons = leptons[veto_Z_leptons]       
+        additional_leptons = additional_leptons[ak.argsort(additional_leptons.pt, ascending=False, axis=1)]
+
+        for objects, name in zip([additional_leptons], ["additional_lepton"]):
+            awkward_utils.add_object_fields(
+                events = events,
+                name = name,
+                objects = objects,
+                n_objects = 2,
+                dummy_value = DUMMY_VALUE
+            )
+        
         all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
 
         for cut_type in ["zgammas", "zgammas_ele", "zgammas_mu", "zgammas_w", "zgammas_ele_w", "zgammas_mu_w"]:

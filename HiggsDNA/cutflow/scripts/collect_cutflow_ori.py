@@ -141,7 +141,9 @@ LABELS_COMMON = {
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
     "g_kin_cut": "Photon Kinematic Cuts",
     "has_2g_cand": r"$N_{\gamma}\geq 2$",
-    "sel_h": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
+    "sel_h_2": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "event": "Event Filtering",
     "all cuts": "Total Baseline Events",
 }
 
@@ -156,7 +158,9 @@ LABELS_COMMON_ele_ip3d = {
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
     "g_kin_cut": "Photon Kinematic Cuts",
     "has_2g_cand": r"$N_{\gamma}\geq 2$",
-    "sel_h": r"$95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
+    "sel_h_2": r"$95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "event": "Event Filtering",
     "all cuts": "Total Baseline Events",
 }
 # -----------------------------

@@ -759,8 +759,8 @@ def electron_ISO_sf(events, year, central_only, input_collection):
             syst_normal = numpy.sqrt((syst_data_normal/(1-sf_mc_normal))**2 + (syst_mc_normal/(1-sf_mc_normal)*sf_normal)**2)
             
             # Calculate uncertainties for hole regions
-            syst_data_hole = evaluator_hole["systdata"].evalv(ele_pt, ele_eta)
-            syst_mc_hole = evaluator_hole["systmc"].evalv(ele_pt, ele_eta)
+            syst_data_hole = evaluator["systdata"].evalv(ele_pt, ele_eta)
+            syst_mc_hole = evaluator["systmc"].evalv(ele_pt, ele_eta)
             syst_hole = numpy.sqrt((syst_data_hole/(1-sf_mc_hole))**2 + (syst_mc_hole/(1-sf_mc_hole)*sf_hole)**2)
             
             # Combine uncertainties based on the hole mask
@@ -945,6 +945,7 @@ def electron_scale_smear_run3(events, year, is_data):
 
     # NEW: log first 10 electron pt before applying corrections (smear/scale)
     _nprint = int(min(10, len(electrons_pt)))
+    logger.debug("[Lepton Systematics] =========================================================")
     logger.debug(
         "[Lepton Systematics] Electron pt BEFORE scale+smear (first %d): %s",
         _nprint,
@@ -972,18 +973,74 @@ def electron_scale_smear_run3(events, year, is_data):
                 electrons_pt,
                 electrons_seedGain,
             )
+            # NEW: also compute scale up/down
+            scale_up = evaluator.compound[electron_scale_names[year]].evaluate(
+                "scale_up",
+                run_arr_flattened,
+                electrons_scEta,
+                electrons_r9,
+                electrons_pt,
+                electrons_seedGain,
+            )
+            scale_down = evaluator.compound[electron_scale_names[year]].evaluate(
+                "scale_down",
+                run_arr_flattened,
+                electrons_scEta,
+                electrons_r9,
+                electrons_pt,
+                electrons_seedGain,
+            )
         else:
-            scale = evaluator.compound[electron_scale_names[year]].evaluate("scale", run_arr_flattened, electrons_scEta, electrons_r9, electrons_AbsScEta, electrons_pt, electrons_seedGain)
+            scale = evaluator.compound[electron_scale_names[year]].evaluate(
+                "scale", run_arr_flattened, electrons_scEta, electrons_r9, electrons_AbsScEta, electrons_pt, electrons_seedGain
+            )
+            # NEW: also compute scale up/down
+            scale_up = evaluator.compound[electron_scale_names[year]].evaluate(
+                "scale_up", run_arr_flattened, electrons_scEta, electrons_r9, electrons_AbsScEta, electrons_pt, electrons_seedGain
+            )
+            scale_down = evaluator.compound[electron_scale_names[year]].evaluate(
+                "scale_down", run_arr_flattened, electrons_scEta, electrons_r9, electrons_AbsScEta, electrons_pt, electrons_seedGain
+            )
 
         scale = awkward.where(
             (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
             awkward.ones_like(electrons_pt, dtype=float),
             scale
         )
+        # NEW: apply same validity mask to up/down
+        scale_up = awkward.where(
+            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            awkward.ones_like(electrons_pt, dtype=float),
+            scale_up
+        )
+        scale_down = awkward.where(
+            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            awkward.ones_like(electrons_pt, dtype=float),
+            scale_down
+        )
+
         corrected_pt = awkward.to_numpy(electrons_pt * scale)
         events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
+
+        # NEW: pt scale up/down for logging (data)
+        corrected_pt_up = awkward.to_numpy(electrons_pt * scale_up)
+        corrected_pt_down = awkward.to_numpy(electrons_pt * scale_down)
+
         logger.debug("[Lepton Systematics] Electron pt before scale correction (data): %s", electrons.pt)
         logger.debug("[Lepton Systematics] Electron pt after scale correction (data): %s", corrected_pt)
+
+        # NEW: print pt scale up/down (first 10)
+        logger.debug(
+            "[Lepton Systematics] Electron pt Scale Up (data) (first %d): %s",
+            _nprint,
+            corrected_pt_up[:_nprint],
+        )
+        logger.debug(
+            "[Lepton Systematics] Electron pt Scale Down (data) (first %d): %s",
+            _nprint,
+            corrected_pt_down[:_nprint],
+        )
+
         logger.debug("[Lepton Systematics] =========================================================")
         return events
 
@@ -993,29 +1050,40 @@ def electron_scale_smear_run3(events, year, is_data):
     smear_val = awkward.where(
         (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
         awkward.ones_like(electrons_pt, dtype=float),
-        rng.normal(loc=1., scale=numpy.abs(smear))
+        rng.normal(loc=1.0, scale=numpy.abs(smear)),
     )
-    
-    # Apply central smear correction to electron pt
-    corrected_pt = awkward.to_numpy(electrons_pt * smear_val)
 
-    # Calculate smear systematics
+    # Central smeared pt
+    corrected_pt = awkward.to_numpy(electrons_pt * smear_val)
+    events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
+
+    # Calculate smear systematics: store DELTA wrt central corrected_pt (match naming dEsigma*)
     for syst in ["smear_up", "smear_down"]:
         smear_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_AbsScEta)
         smear_val_syst = awkward.where(
             (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
             awkward.ones_like(electrons_pt, dtype=float),
-            rng.normal(loc=1., scale=numpy.abs(smear_syst))
+            rng.normal(loc=1.0, scale=numpy.abs(smear_syst)),
         )
-        events["Electron", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(corrected_pt * smear_val_syst, n_electrons)
+        pt_syst = awkward.to_numpy(electrons_pt * smear_val_syst)
+        events["Electron", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(
+            pt_syst - corrected_pt,  # delta wrt central
+            n_electrons,
+        )
 
-    events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
-    electrons = events["Electron"]
-
-    # Calculate scale systematics
+    # Calculate scale systematics: apply multiplicative factor on central smeared pt
     for syst in ["scale_up", "scale_down"]:
         scale_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_AbsScEta)
-        events["Electron", "dEscale" + syst.replace("scale_", "").capitalize()] = awkward.unflatten(corrected_pt * scale_syst, n_electrons)
+        scale_factor = awkward.where(
+            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            awkward.ones_like(electrons_pt, dtype=float),
+            scale_syst,
+        )
+        pt_syst = awkward.to_numpy(corrected_pt * scale_factor)
+        events["Electron", "dEscale" + syst.replace("scale_", "").capitalize()] = awkward.unflatten(
+            pt_syst - corrected_pt,  # delta wrt central
+            n_electrons,
+        )
 
     logger.debug(
         "[Lepton Systematics] Electron pt AFTER scale+smear (first %d): %s",
@@ -1032,6 +1100,19 @@ def electron_scale_smear_run3(events, year, is_data):
         _nprint,
         awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleDown"]))[:_nprint],
     )
+
+    # NEW: also print absolute pt for scale up/down (central + delta)
+    logger.debug(
+        "[Lepton Systematics] Electron pt Scale Up (abs pt) (first %d): %s",
+        _nprint,
+        (corrected_pt[:_nprint] + awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleUp"]))[:_nprint]),
+    )
+    logger.debug(
+        "[Lepton Systematics] Electron pt Scale Down (abs pt) (first %d): %s",
+        _nprint,
+        (corrected_pt[:_nprint] + awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleDown"]))[:_nprint]),
+    )
+
     logger.debug(
         "[Lepton Systematics] Electron pt Smear Up (dEsigmaUp) (first %d): %s",
         _nprint,
@@ -1041,6 +1122,18 @@ def electron_scale_smear_run3(events, year, is_data):
         "[Lepton Systematics] Electron pt Smear Down (dEsigmaDown) (first %d): %s",
         _nprint,
         awkward.to_numpy(awkward.flatten(events["Electron", "dEsigmaDown"]))[:_nprint],
+    )
+
+    # NEW: also print absolute pt for smear up/down (central + delta)
+    logger.debug(
+        "[Lepton Systematics] Electron pt Smear Up (abs pt) (first %d): %s",
+        _nprint,
+        (corrected_pt[:_nprint] + awkward.to_numpy(awkward.flatten(events["Electron", "dEsigmaUp"]))[:_nprint]),
+    )
+    logger.debug(
+        "[Lepton Systematics] Electron pt Smear Down (abs pt) (first %d): %s",
+        _nprint,
+        (corrected_pt[:_nprint] + awkward.to_numpy(awkward.flatten(events["Electron", "dEsigmaDown"]))[:_nprint]),
     )
 
     logger.info("[Lepton Systematics] Applied Electron scale and smear corrections for year %s", year)

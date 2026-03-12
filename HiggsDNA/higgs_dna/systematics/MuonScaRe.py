@@ -225,7 +225,7 @@ def get_k(eta, var, cset, nested=False):
     return result
 
 
-def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 5):
+def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 26):
     if not nested:
         pt_corr = np.asarray(pt_corr)
         pt = np.asarray(pt)
@@ -265,7 +265,7 @@ def filter_boundaries(pt_corr, pt, nested, low_pt_threshold = 5):
     return pt_corr
 
 
-def pt_resol(pt, eta, phi, nL, evtNr, lumiNr, cset, nested=False, low_pt_threshold = 5):
+def pt_resol(pt, eta, phi, nL, evtNr, lumiNr, cset, nested=False, low_pt_threshold = 26):
     """"
     Function for the calculation of the resolution correction
     Input: 
@@ -345,7 +345,7 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
 
     return pt_var
 
-def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False, low_pt_threshold = 5):
+def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False, low_pt_threshold = 26):
     """
     Function for the calculation of the scale correction
     Input:

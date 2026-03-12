@@ -961,7 +961,7 @@ def photon_scale_smear_run3(events, year, is_data):
         ("Photon", "eta"), ("Photon", "pt"), ("Photon", "r9")
     ]
     if is_data:
-        required_fields.append(("run",))
+        required_fields.append(("run"))
         required_fields.append(("Photon", "seedGain"))
 
     missing_fields = awkward_utils.missing_fields(events, required_fields)
@@ -1194,7 +1194,6 @@ def photon_scale_smear_run3(events, year, is_data):
         return events
 
     else:
-        # ...existing code computing dEsigmaUp/Down...
         for syst in ["smear_up", "smear_down"]:
             smear_syst = evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta)
             

@@ -945,6 +945,7 @@ def electron_scale_smear_run3(events, year, is_data):
 
     # NEW: log first 10 electron pt before applying corrections (smear/scale)
     _nprint = int(min(10, len(electrons_pt)))
+    logger.debug("[Lepton Systematics] =========================================================")
     logger.debug(
         "[Lepton Systematics] Electron pt BEFORE scale+smear (first %d): %s",
         _nprint,
@@ -984,6 +985,7 @@ def electron_scale_smear_run3(events, year, is_data):
         events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
         logger.debug("[Lepton Systematics] Electron pt before scale correction (data): %s", electrons.pt)
         logger.debug("[Lepton Systematics] Electron pt after scale correction (data): %s", corrected_pt)
+        logger.debug("[Lepton Systematics] =========================================================")
         return events
 
     # Apply smear corrections first
@@ -1006,9 +1008,8 @@ def electron_scale_smear_run3(events, year, is_data):
             awkward.ones_like(electrons_pt, dtype=float),
             rng.normal(loc=1., scale=numpy.abs(smear_syst))
         )
-        events["Electron", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(corrected_pt * (smear_val_syst - 1), n_electrons)
+        events["Electron", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(corrected_pt * smear_val_syst, n_electrons)
 
-    logger.debug("Electron pt before smear correction: %s", electrons.pt)
     events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
     electrons = events["Electron"]
 
@@ -1017,7 +1018,6 @@ def electron_scale_smear_run3(events, year, is_data):
         scale_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_AbsScEta)
         events["Electron", "dEscale" + syst.replace("scale_", "").capitalize()] = awkward.unflatten(corrected_pt * scale_syst, n_electrons)
 
-    logger.debug("[Lepton Systematics] Electron scale and smear corrections applied successfully")
     logger.debug(
         "[Lepton Systematics] Electron pt AFTER scale+smear (first %d): %s",
         _nprint,
@@ -1045,6 +1045,7 @@ def electron_scale_smear_run3(events, year, is_data):
     )
 
     logger.info("[Lepton Systematics] Applied Electron scale and smear corrections for year %s", year)
+    logger.debug("[Lepton Systematics] =========================================================")
 
     return events
 
@@ -1059,70 +1060,6 @@ MUON_SCALE_FILE = {
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/muon_scale_2023postBPix.json",
     "2024" : "higgs_dna/systematics/data/2024_UL/muon_scale_2024.json"
 }
-
-def muon_scale_run3(events, year, is_data):
-    """
-    Apply muon scale corrections for Run3 data only.
-    Based on MuonScaRe package.
-    
-    See:
-        - https://github.com/CMS-MUO-POG/MuonScaRe
-    """
-    logger.info("[Lepton Systematics] Applying Muon scale corrections for year %s", year)
-
-    required_fields = [
-        ("Muon", "eta"), ("Muon", "pt"), ("Muon", "phi"), ("Muon", "charge")
-    ]
-
-    missing_fields = awkward_utils.missing_fields(events, required_fields)
-
-    if missing_fields:
-        logger.warning(
-            "[Lepton Systematics] Muon scale corrections will not be applied, because the following fields are missing: %s" % str(missing_fields)
-        )
-        return events
-
-    # Only apply to data
-    if not is_data:
-        logger.info("[Lepton Systematics] Muon scale corrections are only applied to data, skipping MC")
-        return events
-
-    evaluator = correctionlib.CorrectionSet.from_file(misc_utils.expand_path(MUON_SCALE_FILE[year]))
-
-    muons = events["Muon"]
-    n_muons = awkward.num(muons)
-    muons_flattened = awkward.flatten(muons)
-
-    muon_pt = awkward.to_numpy(muons_flattened.pt)
-    muon_eta = awkward.to_numpy(muons_flattened.eta)
-    muon_phi = awkward.to_numpy(muons_flattened.phi)
-    muon_charge = awkward.to_numpy(muons_flattened.charge)
-
-    # Get scale correction parameters from correctionlib
-    a_data = evaluator["a_data"].evaluate(muon_eta, muon_phi, "nom")
-    m_data = evaluator["m_data"].evaluate(muon_eta, muon_phi, "nom")
-
-    # Apply scale correction: pt_corr = 1 / (m/pt + charge * a)
-    pt_corr = 1.0 / (m_data / muon_pt + muon_charge * a_data)
-
-    # Filter boundaries: only apply corrections for pt in [26, 200] GeV
-    pt_corr = numpy.where((muon_pt < 26) | (muon_pt > 200), muon_pt, pt_corr)
-    
-    # Filter out NaN entries
-    pt_corr = numpy.where(numpy.isnan(pt_corr), muon_pt, pt_corr)
-    
-    # # Additional safety check: reject unreasonable corrections
-    # pt_ratio = pt_corr / muon_pt
-    # pt_corr = numpy.where((pt_ratio > 2) | (pt_ratio < 0.1) | (pt_corr < 0), muon_pt, pt_corr)
-
-    # Store corrected pt
-    events["Muon", "corrected_pt"] = awkward.unflatten(pt_corr, n_muons)
-    
-    logger.info("[Lepton Systematics] Muon pt before scale correction (data): mean = %.2f", awkward.mean(muons.pt))
-    logger.info("[Lepton Systematics] Muon pt after scale correction (data): mean = %.2f", awkward.mean(events["Muon", "corrected_pt"]))
-
-    return events
-
 
 def muon_scale_smear_run3(events, year, is_data):
     """Apply Run-3 muon momentum scale (data & MC) and resolution smearing (MC).
@@ -1185,18 +1122,19 @@ def muon_scale_smear_run3(events, year, is_data):
 
     # Scale systematics (Up/Down) — meaningful for both data and MC in MuonScaRe
     try:
-        pt_scale_up = pt_scale_var(pt, eta, phi, q, "up", cset, nested=False)
-        pt_scale_dn = pt_scale_var(pt, eta, phi, q, "dn", cset, nested=False)
-    except Exception:
-        # If the JSON doesn't provide scale variations, set to nominal
+        pt_scale_up = pt_scale_var(pt_scale_nom, eta, phi, q, "up", cset, nested=False)
+        pt_scale_dn = pt_scale_var(pt_scale_nom, eta, phi, q, "dn", cset, nested=False)
+    except Exception as e:
+        # If scale variations are not available (or MuonScaRe implementation errors), fall back to nominal
+        logger.debug("[Lepton Systematics] pt_scale_var failed; falling back to nominal. year=%s, err=%s", year, str(e))
         pt_scale_up = pt_scale_nom
         pt_scale_dn = pt_scale_nom
 
     if is_data:
         # Data: scale only
         events["Muon", "corrected_pt"] = awkward.unflatten(pt_scale_nom, n_muons)
-        events["Muon", "scaleUp_pt"]    = awkward.unflatten(pt_scale_up - pt_scale_nom, n_muons)
-        events["Muon", "scaleDown_pt"]  = awkward.unflatten(pt_scale_dn - pt_scale_nom, n_muons)
+        events["Muon", "scaleUp_pt"]    = awkward.unflatten(pt_scale_up, n_muons)
+        events["Muon", "scaleDown_pt"]  = awkward.unflatten(pt_scale_dn, n_muons)
         events["Muon", "smearUp_pt"]    = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
         events["Muon", "smearDown_pt"]  = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
 
@@ -1206,6 +1144,7 @@ def muon_scale_smear_run3(events, year, is_data):
             _nprint,
             pt_scale_nom[:_nprint],
         )
+        logger.debug("[Lepton Systematics] =========================================================")
 
         logger.info("[Lepton Systematics] Muon scale applied (data).")
         return events
@@ -1229,19 +1168,39 @@ def muon_scale_smear_run3(events, year, is_data):
     events["Muon", "corrected_pt"] = awkward.unflatten(pt_corr, n_muons)
 
 
-    events["Muon", "scaleUp_pt"]   = awkward.unflatten(pt_scale_up - pt_scale_nom, n_muons)
-    events["Muon", "scaleDown_pt"] = awkward.unflatten(pt_scale_dn - pt_scale_nom, n_muons)
-    events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup - pt_corr, n_muons)
-    events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn - pt_corr, n_muons)
+    events["Muon", "scaleUp_pt"]   = awkward.unflatten(pt_scale_up, n_muons)
+    events["Muon", "scaleDown_pt"] = awkward.unflatten(pt_scale_dn, n_muons)
+    events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup, n_muons)
+    events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn, n_muons)
 
-    # NEW: log first 10 muon pt after applying corrections (MC)
+    # NEW: align MC printing style with electron scale+smear logs
     logger.debug(
         "[Lepton Systematics] Muon pt AFTER scale+smear (MC) (first %d): %s",
         _nprint,
         pt_corr[:_nprint],
     )
+    logger.debug(
+        "[Lepton Systematics] Muon pt Scale Up (scaleUp_pt) (first %d): %s",
+        _nprint,
+        awkward.to_numpy(awkward.flatten(events["Muon", "scaleUp_pt"]))[:_nprint],
+    )
+    logger.debug(
+        "[Lepton Systematics] Muon pt Scale Down (scaleDown_pt) (first %d): %s",
+        _nprint,
+        awkward.to_numpy(awkward.flatten(events["Muon", "scaleDown_pt"]))[:_nprint],
+    )
+    logger.debug(
+        "[Lepton Systematics] Muon pt Smear Up (smearUp_pt) (first %d): %s",
+        _nprint,
+        awkward.to_numpy(awkward.flatten(events["Muon", "smearUp_pt"]))[:_nprint],
+    )
+    logger.debug(
+        "[Lepton Systematics] Muon pt Smear Down (smearDown_pt) (first %d): %s",
+        _nprint,
+        awkward.to_numpy(awkward.flatten(events["Muon", "smearDown_pt"]))[:_nprint],
+    )
 
-    logger.debug("[Lepton Systematics] Muon scale+smear applied (MC).")
     logger.info("[Lepton Systematics] Applied Muon scale and smear corrections for year %s", year)
+    logger.debug("[Lepton Systematics] =========================================================")
 
     return events
