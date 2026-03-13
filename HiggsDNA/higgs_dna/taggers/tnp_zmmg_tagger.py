@@ -468,18 +468,21 @@ class TnPZmmgTagger(Tagger):
             overwrite=True,
         )
 
-        probe_photon_e_veto = best_candidate.ProbePhoton.electronVeto > self.options["photons"]["e_veto"]
+        probe_photon_e_veto_value = best_candidate.ProbePhoton.electronVeto
+        probe_photon_pass_csev = (
+            best_candidate.ProbePhoton.electronVeto > self.options["photons"]["e_veto"]
+        )
         probe_photon_pass_pixel_veto = best_candidate.ProbePhoton.pixelSeed < 0.5
         awkward_utils.add_field(
             events,
             "probe_photon_e_veto",
-            ak.fill_none(probe_photon_e_veto, False),
+            ak.fill_none(probe_photon_e_veto_value, DUMMY_VALUE),
             overwrite=True,
         )
         awkward_utils.add_field(
             events,
             "probe_photon_pass_csev",
-            ak.fill_none(probe_photon_e_veto, False),
+            ak.fill_none(probe_photon_pass_csev, False),
             overwrite=True,
         )
         awkward_utils.add_field(
@@ -625,7 +628,7 @@ class TnPZmmgTagger(Tagger):
         return all_cuts
 
     def select_photons(self, photons, electrons, rho, year):
-        return ZaTaggerRun3.select_photons(
+        _, photons_with_flags = ZaTaggerRun3.select_photons(
             self,
             photons=photons,
             options=self.options["photons"],
@@ -633,6 +636,37 @@ class TnPZmmgTagger(Tagger):
             rho=rho,
             year=year,
         )
+
+        photon_selection = (
+            photons_with_flags.pass_ph_kinematic
+            & photons_with_flags.pass_phid_custom_tight
+        )
+
+        photon_ele_idx = ak.where(
+            ak.num(photons_with_flags.electronIdx, axis=1) == 0,
+            ak.ones_like(photons_with_flags.pt) * -1,
+            photons_with_flags.electronIdx,
+        )
+        new_pho = ak.unflatten(
+            ak.unflatten(
+                ak.flatten(photon_ele_idx),
+                [1] * ak.sum(ak.num(photon_ele_idx)),
+            ),
+            ak.num(photon_ele_idx, axis=1),
+        )
+        new_ele = ak.broadcast_arrays(
+            electrons.Idx[:, None],
+            new_pho,
+            depth_limit=2,
+        )[0]
+        eg_overlap_cut = ~ak.where(
+            ak.is_none(electrons.Idx),
+            ak.broadcast_arrays(photons_with_flags.electronIdx, False)[1],
+            ak.flatten(ak.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1),
+        )
+
+        photon_selection = photon_selection & eg_overlap_cut
+        return photon_selection, photons_with_flags
 
     def choose_object(self, condition, first, second):
         fields = first.fields
