@@ -159,6 +159,19 @@ class TnPZmmgTagger(Tagger):
             ak.fill_none(rho, 0.0),
             overwrite=True,
         )
+        if "PV_z" in events.fields:
+            awkward_utils.add_field(
+                events,
+                "PV",
+                ak.fill_none(events.PV_z, DUMMY_VALUE),
+                overwrite=True,
+            )
+            awkward_utils.add_field(
+                events,
+                "PV_z",
+                ak.fill_none(events.PV_z, DUMMY_VALUE),
+                overwrite=True,
+            )
 
         electrons = self.select_electrons_for_photon_id(events, year)
         awkward_utils.add_field(events, "SelectedElectron", electrons, overwrite=True)
