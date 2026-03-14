@@ -4,7 +4,7 @@ echo "==============STARTED=============="
 
 # Run3
 input="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/"
-target="/eos/home-p/pelai/HZa/root_P2Root/tnp_zmmg_run3/"
+target="/eos/home-p/pelai/HZa/root_P2Root/run3_tnp_zmmg/"
 
 # years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
@@ -149,11 +149,12 @@ process_sample_syst() {
 #  DYJetsTo2Tau
 
 # ## 处理 bkgmc 样本
-# for i in {2..3};do
-for i in 2; do # Compliment Study
+for i in {1..2};do
+# for i in 2; do # Compliment Study
     if [ "$i" = "1" ]; then
         samples=(DYJetsToLL_MLM)
-        years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
+        # years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
+        years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
 
     elif [ "$i" = "2" ]; then
         samples=(DYJetsToLL)
@@ -186,16 +187,16 @@ done
 
 # # 处理 data 样本
 
-# samples=(Data_tnp_zmmg)
-# type="Data_tnp_zmmg"
-# for sample in "${samples[@]}"; do
-#     mkdir -p "$target$sample"
-#     # 存储后台任务的进程ID列表
-#     pid_list=()
+samples=(Data_tnp_zmmg)
+type="data"
+for sample in "${samples[@]}"; do
+    mkdir -p "$target$sample"
+    # 存储后台任务的进程ID列表
+    pid_list=()
 
-#     # 调用函数处理样本数据
-#     process_sample "$sample" "$type"
-# done
+    # 调用函数处理样本数据
+    process_sample "$sample" "$type"
+done
 
 # Use fake photon background estimation with data-driven
 # mkdir -p /eos/home-j/jiehan/root/2017/skimmed_ntuples/data_med/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/data_fake/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/mc_true/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/mc_med/
