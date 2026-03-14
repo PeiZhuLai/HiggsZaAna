@@ -16,6 +16,8 @@ EVENT_SOURCE_COLUMNS = [
     "weight_central",
     "fixedGridRhoAll",
     "rho",
+    "PV",
+    "PV_z",
     "dZ",
     "pass_tnp_presel",
     "passing_dimuon_trigger",
@@ -97,6 +99,8 @@ REQUESTED_SOURCE_COLUMNS = list(
 )
 
 OPTIONAL_SOURCE_COLUMNS = {
+    "PV",
+    "PV_z",
     "dZ",
     "probe_photon_genPartFlav",
 }
@@ -173,6 +177,7 @@ def build_egm_compatible_dataframe(data, keep_all):
     output = data.copy() if keep_all else pd.DataFrame(index=data.index)
 
     rho = first_existing_series(data, ["rho", "fixedGridRhoAll"], 0.0)
+    pv = first_existing_series(data, ["PV", "PV_z"], np.nan)
     weight = source_series(data, "weight_central", 1.0)
     tag_pt = source_series(data, "dimuon_pt", np.nan)
     tag_eta = source_series(data, "dimuon_eta", np.nan)
@@ -193,6 +198,8 @@ def build_egm_compatible_dataframe(data, keep_all):
     alias_series(output, "fixedGridRhoAll", source_series(data, "fixedGridRhoAll", rho))
     alias_series(output, "rho", rho)
     alias_series(output, "event_rho", rho)
+    alias_series(output, "PV", pv)
+    alias_series(output, "PV_z", source_series(data, "PV_z", pv))
     alias_series(output, "event_met_pfmet", 0.0)
     alias_series(output, "event_met_pfphi", 0.0)
     alias_series(output, "dZ", source_series(data, "dZ", 0.0))
