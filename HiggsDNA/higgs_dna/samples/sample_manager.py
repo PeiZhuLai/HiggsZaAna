@@ -225,7 +225,43 @@ class SampleManager():
         """
         cmd = f"/cvmfs/cms.cern.ch/common/dasgoclient -query '{query_str}' -json"
         out = metis_utils.do_cmd(cmd)
-        return json.loads(out) if out else []
+        if not out:
+            return []
+
+        payload = self._extract_json_payload(out)
+        try:
+            return json.loads(payload) if payload else []
+        except json.JSONDecodeError:
+            logger.error(
+                "[SampleManager] Failed to parse DAS JSON for query '%s'. Raw output was:\n%s",
+                query_str,
+                out,
+            )
+            raise
+
+    def _extract_json_payload(self, raw_output: str) -> str:
+        """
+        dasgoclient occasionally prefixes/suffixes its JSON output with warning text.
+        Strip that noise and return the JSON payload only.
+        """
+        raw_output = raw_output.strip()
+        if not raw_output:
+            return raw_output
+
+        for opener, closer in (("[", "]"), ("{", "}")):
+            start = raw_output.find(opener)
+            end = raw_output.rfind(closer)
+            if start == -1 or end == -1 or end < start:
+                continue
+
+            payload = raw_output[start : end + 1]
+            try:
+                json.loads(payload)
+                return payload
+            except json.JSONDecodeError:
+                continue
+
+        return raw_output
     # -----------Read T2_CN_Beijing private mc-------------------
 
     def get_files_from_dasgoclient(self, sample, is_data, instance=None, redirector="root://xrootd-cms.infn.it"):
