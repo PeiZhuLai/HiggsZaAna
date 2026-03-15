@@ -1,13 +1,33 @@
 {
   "include": [
-    "HiggsDNA",
-    "scripts"
+    "*.py",
+    "HiggsDNA/*.py",
+    "HiggsDNA/higgs_dna",
+    "HiggsDNA/scripts",
+    "HiggsDNA/tests",
+    "HiggsDNA/bonus",
+    "HiggsDNA/check_area",
+    "HiggsDNA/examples",
+    "HiggsDNA/cutflow/scripts",
+    "HiggsDNA/cutflow/scripts_old",
+    "HiggsDNA/jsonpog-integration/examples",
+    "HiggsDNA/jsonpog-integration/script"
+  ],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "HiggsDNA"
+      ]
+    }
   ],
   "exclude": [
     "**/__pycache__",
     "**/.git",
     "**/.mypy_cache",
     "**/.pytest_cache",
+    "**/.venv",
+    "**/venv",
     ".vscode",
     "**/*.root",
     "**/*.pdf",
@@ -26,6 +46,11 @@
     "data",
     "logs",
     "build",
-    "dist"
+    "dist",
+    "HiggsDNA/addition",
+    "HiggsDNA/cutflow/cutflow_list",
+    "HiggsDNA/eos_logs",
+    "HiggsDNA/jsonpog-integration/POG",
+    "HiggsDNA/metadata"
   ]
 }
