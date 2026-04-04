@@ -341,6 +341,19 @@ def _pick_weight_branch(t) -> Optional[str]:
 def _branch_exists(t, name: str) -> bool:
     return name in set(map(str, t.keys()))
 
+def _pick_mva_score_branch(t, sample: str) -> Optional[str]:
+    """
+    優先讀 per-sample 的 MVA branch：MVA_Score_{sample}（e.g. MVA_Score_mA_M20）
+    若不存在則 fallback 到舊格式的 MVA_Score。
+    """
+    keys = set(map(str, t.keys()))
+    cand = f"MVA_Score_{sample}"
+    if cand in keys:
+        return cand
+    if "MVA_Score" in keys:
+        return "MVA_Score"
+    return None
+
 # ====== 計算某個質量的 (w_pass_mu, w_pass_ele) ======
 def _accumulate_pass_weights(ma: int,
                              sample_map: Dict[int,str],
@@ -360,16 +373,17 @@ def _accumulate_pass_weights(ma: int,
             with uproot.open(fp) as f:
                 if INPUT_BASE_TREE_NAME not in f: continue
                 t = f[INPUT_BASE_TREE_NAME]
-                if not _branch_exists(t,"MVA_Score"): continue
+                mva_branch = _pick_mva_score_branch(t, sample)
+                if not mva_branch: continue
                 wname = _pick_weight_branch(t)
-                branches = ["MVA_Score"]
+                branches = [mva_branch]
                 if wname: branches.append(wname)
                 has_mu = _branch_exists(t,"z_mumu")
                 has_ele = _branch_exists(t,"z_ee")
                 if has_mu: branches.append("z_mumu")
                 if has_ele: branches.append("z_ee")
                 for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
-                    mva = arrs["MVA_Score"]
+                    mva = arrs[mva_branch]
                     mask = mva >= cut
                     if wname:
                         w = ak.values_astype(arrs[wname], np.float64)
@@ -425,7 +439,8 @@ def _accumulate_pass_sumw_systs(ma: int,
                 if INPUT_BASE_TREE_NAME not in f:
                     continue
                 t = f[INPUT_BASE_TREE_NAME]
-                if not _branch_exists(t, "MVA_Score"):
+                mva_branch = _pick_mva_score_branch(t, sample)
+                if not mva_branch:
                     continue
 
                 has_mu = _branch_exists(t, "z_mumu")
@@ -446,7 +461,7 @@ def _accumulate_pass_sumw_systs(ma: int,
                             central_branches.append(c)
                 central_branches = sorted(set(central_branches))
 
-                branches = ["MVA_Score"] + sys_branches + central_branches
+                branches = [mva_branch] + sys_branches + central_branches
                 if wname:
                     branches.append(wname)
                 if has_mu:
@@ -455,7 +470,7 @@ def _accumulate_pass_sumw_systs(ma: int,
                     branches.append("z_ee")
 
                 for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
-                    mva = arrs["MVA_Score"]
+                    mva = arrs[mva_branch]
                     mask = mva >= cut
 
                     mu_mask = None
