@@ -8,7 +8,7 @@ target="/eos/home-p/pelai/HZa/root_P2Root/run3_tnp_zmmg/"
 
 # years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
-systs=("FNUF" "Material" "Electron_scale" "Electron_smear" "Muon_scale" "Muon_smear" "Photon_scale" "Photon_smear")
+# systs=("FNUF" "Material" "Electron_scale" "Electron_smear" "Muon_scale" "Muon_smear" "Photon_scale" "Photon_smear")
 # systs=("FNUF" "Material" "Scale" "Smearing" "JER" "JES" "MET_JES" "MET_Unclustered" "Muon_pt")
 
 # 函数定义：执行命令并处理错误
@@ -149,17 +149,17 @@ process_sample_syst() {
 #  DYJetsTo2Tau
 
 # ## 处理 bkgmc 样本
-for i in {1..2};do
+for i in {1..3};do
 # for i in 2; do # Compliment Study
     if [ "$i" = "1" ]; then
         samples=(DYJetsToLL_MLM)
-        # years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
-        years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+        years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
+        # years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
 
     elif [ "$i" = "2" ]; then
         samples=(DYJetsToLL)
-        # years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
-        years=(2022preEE 2023preBPix 2023postBPix)
+        years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+        # years=(2022preEE 2023preBPix 2023postBPix)
 
     elif [ "$i" = "3" ]; then
         samples=(DYJetsTo2Mu)
