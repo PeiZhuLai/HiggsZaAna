@@ -54,7 +54,9 @@ for mA in sorted(sig_map.keys()):
 
 latex_table = (
     "\\begin{table}[h]\n"
-    "\\centering\n"
+    "\\begin{center}\n"
+    "\\topcaption{Approximate mean significance for different numbers of categories, and its improvement as a function of the number of categories.}\n"
+    "\\label{tab:significanceVcat}\n"
     "\\begin{tabular}{cccc}\n"
     "\\hline\n"
     "$m_a$ [GeV] & \multicolumn{2}{c}{Significance} & Improvement \\\ \n"
@@ -65,7 +67,7 @@ latex_table = (
     + ("\n" if rows else "")
     + "\\hline\n"
     "\\end{tabular}\n"
-    "\\caption{\label{tab:widgets} Approximate mean significance for different numbers of categories, and its improvement as a function of the number of categories.}\n"
+    "\\end{center}\n"
     "\\end{table}"
 )
 

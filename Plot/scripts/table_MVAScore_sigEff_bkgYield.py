@@ -40,16 +40,19 @@ for mA in mAs:
 os.makedirs(os.path.dirname(output_latex), exist_ok=True)
 latex_table = (
     "\\begin{table}[h]\n"
-    "\\centering\n"
-    "\\begin{tabular}{cccc}\n"
+    "\\begin{center}\n"
+    "\\topcaption{Summary of the minimum BDT output value, signal efficiency, and smoothed MC background yields with respect to a selection on the BDT output for each nominal signal hypothesis.}\n"
+    "\\label{tab:boundary}\n"
+    "\\small\n"
+    "\\begin{tabular}{|c|c|c|c|}\n"
     "\\hline\n"
-    "$m_a$ [GeV] & \\makecell{Min. BDT \\\ output values} & \\makecell{Signal efficiencies \\\ w.r.t. BDT selection} & \\makecell{Smoothed MC background yeilds \\\ w.r.t. BDT selection}\\\\\n"
+    "$m_a$ [GeV] & \\makecell[c]{Min. BDT \\\\ output value} & \\makecell[c]{Signal efficiency \\\\ w.r.t. BDT selection} & \\makecell[c]{Smoothed MC background yields \\\\ w.r.t. BDT selection}\\\\\n"
     "\\hline\n"
     + ("\n".join(rows) if rows else "")
     + ("\n" if rows else "")
     + "\\hline\n"
     "\\end{tabular}\n"
-    "\\caption{Summary of the minimum BDT output value,signal efficiency, and smoothed MC background yields with respect to a selection on BDT output for each nominal signal hypothesis.}\n"
+    "\\end{center}\n"
     "\\end{table}\n"
 )
 
