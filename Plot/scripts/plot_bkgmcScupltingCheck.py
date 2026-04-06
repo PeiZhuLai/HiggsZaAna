@@ -401,7 +401,7 @@ def _draw_mass_plot(
     legend.SetFillColor(0)
     legend.SetTextFont(42)
     legend.SetTextSize(0.04)
-    legend.AddEntry(histos["Data"], "Data (SR blinded)", "PE")
+    legend.AddEntry(histos["Data"], "Data", "PE")
     for sample in analyzer_cfg.bkg_names:
         legend.AddEntry(histos[sample], BKG_LABELS.get(sample, sample), "f")
     legend.AddEntry(stat_abs, "Stat. Unc.", "f")
@@ -413,7 +413,7 @@ def _draw_mass_plot(
     tag.SetNDC()
     tag.SetTextFont(42)
     tag.SetTextSize(0.045)
-    tag.DrawLatex(0.20, 0.84, f"BDT cut for m_{{a}} = {mass} GeV")
+    tag.DrawLatex(0.20, 0.84, f"After BDT Cut m_{{a}} = {mass} GeV")
 
     CMS_lumi.cmsText = "CMS"
     CMS_lumi.extraText = "Preliminary"
