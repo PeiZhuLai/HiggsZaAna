@@ -324,6 +324,8 @@ def _draw_mass_plot(
     plot_cfg: Plot_Config,
     output_dir: Path,
     logy: bool = False,
+    show_signal: bool = True,
+    name_suffix: str = "",
 ) -> None:
     _style_histograms(histos, plot_cfg, analyzer_cfg)
 
@@ -340,7 +342,7 @@ def _draw_mass_plot(
     ratio = MakeRatioPlot(histos["Data"], bkg_total, f"H_m_mA_{mass}")
     stat_abs, stat_norm = Get_StatUnc(bkg_total)
 
-    signal_sample = _signal_sample_name(mass)
+    signal_sample = _signal_sample_name(mass) if show_signal else None
     signal_hist = None
     if signal_sample and signal_sample in histos and histos[signal_sample].Integral() > 0.0:
         signal_hist = histos[signal_sample].Clone(f"h_sig_draw_{signal_sample}_mA_{mass}")
@@ -441,7 +443,7 @@ def _draw_mass_plot(
     Draw_unc(stat_norm, TColor.GetColor("#404040"), alpha=0.90, fill_style=3354)
     ratio.Draw("PZ SAME")
 
-    save_name = f"bkgmcScupltingCheck_mA{mass:02d}"
+    save_name = f"bkgmcScupltingCheck_mA{mass:02d}{name_suffix}"
     if logy:
         save_name += "_log"
     SaveCanvPic(canvas, str(output_dir), save_name)
@@ -560,8 +562,11 @@ def main():
 
     mva_cut_path = _resolve_mva_cut_json(args.mva_cut_json)
     output_dir = _resolve_output_dir(args.output_dir)
+    output_dir_bkg_only = output_dir / "bkgOnly"
+    output_dir_bkg_only.mkdir(parents=True, exist_ok=True)
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
     print(f"[Output] Plot directory: {output_dir}")
+    print(f"[Output] Bkg-only directory: {output_dir_bkg_only}")
 
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
@@ -599,6 +604,18 @@ def main():
             plot_cfg=plot_cfg,
             output_dir=output_dir,
             logy=args.ln,
+            show_signal=True,
+            name_suffix="",
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos[mass],
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dir_bkg_only,
+            logy=args.ln,
+            show_signal=False,
+            name_suffix="_bkgOnly",
         )
 
     print("Done")
