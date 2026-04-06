@@ -366,12 +366,15 @@ def _draw_mass_plot(
     upper_pad.SetTickx(1)
     upper_pad.SetTicky(1)
 
-    ymax = max(histos["Data"].GetMaximum(), bkg_total.GetMaximum(), signal_hist.GetMaximum() if signal_hist else 0.0)
-    if ymax <= 0.0:
-        ymax = 1.0
+    peak_ref = bkg_total.GetMaximum()
+    if signal_hist:
+        peak_ref = max(peak_ref, signal_hist.GetMaximum())
+    if peak_ref <= 0.0:
+        peak_ref = 1.0
+    ymax = peak_ref * 1.4
 
     histos["Data"].SetMinimum(1e-2 if logy else 0.0)
-    histos["Data"].SetMaximum(ymax * (1.0e4 if logy else 1.4))
+    histos["Data"].SetMaximum(ymax)
     if logy:
         upper_pad.SetLogy()
 
@@ -385,7 +388,7 @@ def _draw_mass_plot(
     histos["Data"].GetYaxis().SetTitleOffset(1.15)
 
     stack.SetMinimum(1e-2 if logy else 0.0)
-    stack.SetMaximum(ymax * (1.0e4 if logy else 1.4))
+    stack.SetMaximum(ymax)
     stack.Draw("HIST SAME")
 
     Draw_unc(stat_abs, TColor.GetColor("#404040"), alpha=0.90, fill_style=3354)
