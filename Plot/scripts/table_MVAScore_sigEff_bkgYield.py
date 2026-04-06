@@ -46,7 +46,7 @@ latex_table = (
     "\\small\n"
     "\\begin{tabular}{|c|c|c|c|}\n"
     "\\hline\n"
-    "$m_a$ [GeV] & \\makecell[c]{Min. BDT \\\\ output value} & \\makecell[c]{Signal efficiency \\\\ w.r.t. BDT selection} & \\makecell[c]{Smoothed MC background yields \\\\ w.r.t. BDT selection}\\\\\n"
+    "$m_a$ [GeV] & \\shortstack[c]{Min. BDT \\\\ output value} & \\shortstack[c]{Signal efficiency \\\\ w.r.t. BDT selection} & \\shortstack[c]{Smoothed MC background yields \\\\ w.r.t. BDT selection}\\\\\n"
     "\\hline\n"
     + ("\n".join(rows) if rows else "")
     + ("\n" if rows else "")
