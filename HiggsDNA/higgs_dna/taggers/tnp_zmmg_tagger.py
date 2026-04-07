@@ -34,6 +34,7 @@ MUON_TNP_FIELDS = [
     "dz",
     "sip3d",
     "tightId",
+    "mediumPromptId",
     "mediumId",
     "looseId",
     "highPtId",
@@ -105,7 +106,10 @@ P4_FIELDS = ["pt", "eta", "phi", "mass"]
 
 DEFAULT_OPTIONS = {
     "dimuon": {
-        "lead_muon_pt": 20.0,
+        "single_muon_lead_pt": 25.0,
+        "single_muon_sublead_pt": 4.0,
+        "double_muon_lead_pt": 20.0,
+        "double_muon_sublead_pt": 10.0,
     },
     "photons": copy.deepcopy(ZA_DEFAULT_OPTIONS["photons"]),
     "electrons": {
@@ -121,14 +125,20 @@ DEFAULT_OPTIONS = {
         "mass_sum_max": 180.0,
     },
     "muons": {
-        "pt": 10.0,
+        "pt": 4.0,
         "eta": 2.4,
         "pfRelIso03_chg": 0.2,
     },
-    "trigger": [
-        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8",
-        "HLT_Mu19_TrkIsoVVL_Mu9_TrkIsoVVL_DZ_Mass8",
-    ],
+    "trigger": {
+        "single_muon": [
+            "HLT_IsoMu24",
+        ],
+        "double_muon": [
+            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL",
+            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ",
+            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8",
+        ],
+    },
 }
 
 
@@ -236,8 +246,27 @@ class TnPZmmgTagger(Tagger):
             dimuon_candidates.LeadMuon.pt,
             dimuon_candidates.SubleadMuon.pt,
         )
-        lead_muon_pt_cut = dimuon_lead_pt > self.options["dimuon"]["lead_muon_pt"]
-        dimuon_candidates = dimuon_candidates[lead_muon_pt_cut]
+        dimuon_sublead_pt = ak.where(
+            dimuon_candidates.LeadMuon.pt >= dimuon_candidates.SubleadMuon.pt,
+            dimuon_candidates.SubleadMuon.pt,
+            dimuon_candidates.LeadMuon.pt,
+        )
+        single_trigger_cut, double_trigger_cut, trigger_cut = self.get_dimuon_trigger_decisions(events)
+        single_trigger_broadcast = ak.broadcast_arrays(single_trigger_cut, dimuon_lead_pt)[0]
+        double_trigger_broadcast = ak.broadcast_arrays(double_trigger_cut, dimuon_lead_pt)[0]
+        single_muon_pt_cut = (
+            (dimuon_lead_pt > self.options["dimuon"]["single_muon_lead_pt"])
+            & (dimuon_sublead_pt > self.options["dimuon"]["single_muon_sublead_pt"])
+        )
+        double_muon_pt_cut = (
+            (dimuon_lead_pt > self.options["dimuon"]["double_muon_lead_pt"])
+            & (dimuon_sublead_pt > self.options["dimuon"]["double_muon_sublead_pt"])
+        )
+        trigger_dependent_muon_pt_cut = (
+            (single_trigger_broadcast & single_muon_pt_cut)
+            | (double_trigger_broadcast & double_muon_pt_cut)
+        )
+        dimuon_candidates = dimuon_candidates[trigger_dependent_muon_pt_cut]
         dimuon_candidates["Dimuon"] = (
             dimuon_candidates.LeadMuon + dimuon_candidates.SubleadMuon
         )
@@ -323,7 +352,6 @@ class TnPZmmgTagger(Tagger):
             )
         ]
 
-        trigger_cut = self.passing_dimuon_trigger(events)
         has_dimuon = ak.num(dimuon_candidates) >= 1
         has_photon = ak.num(photons) >= 1
         candidate_cut = ak.num(zmmg_candidates) >= 1
@@ -552,7 +580,7 @@ class TnPZmmgTagger(Tagger):
         self.register_cuts(
             names=[
                 "passing dimuon HLT",
-                "OSSF dimuon with lead mu pT > 20",
+                "OSSF dimuon with trigger-dependent mu pT",
                 "photon",
                 "min dR(mu,gamma) < 0.8",
                 "dR(gamma, near muon) > 0.4",
@@ -627,13 +655,24 @@ class TnPZmmgTagger(Tagger):
     def select_muons(self, muons, options):
         pt_cut = muons.pt > options["pt"]
         eta_cut = numpy.abs(muons.eta) < options["eta"]
-        id_cut = muons.tightId == True
+        if "mediumPromptId" in muons.fields:
+            id_cut = muons.mediumPromptId == True
+            id_name = "mediumPrompt ID"
+        elif "mediumId" in muons.fields:
+            logger.warning(
+                "[TnPZmmgTagger] Muon.mediumPromptId is unavailable; falling back to Muon.mediumId."
+            )
+            id_cut = muons.mediumId == True
+            id_name = "medium ID (fallback)"
+        else:
+            logger.error("[TnPZmmgTagger] Neither Muon.mediumPromptId nor Muon.mediumId is available.")
+            raise RuntimeError("Muon.mediumPromptId is required for the Zmmg TnP muon selection.")
         iso_cut = muons.pfRelIso03_chg < options["pfRelIso03_chg"]
 
         all_cuts = pt_cut & eta_cut & id_cut & iso_cut
 
         self.register_cuts(
-            names=["pt", "eta", "tight ID", "pfRelIso03_chg", "all"],
+            names=["pt", "eta", id_name, "pfRelIso03_chg", "all"],
             results=[pt_cut, eta_cut, id_cut, iso_cut, all_cuts],
             cut_type="muon",
         )
@@ -705,12 +744,30 @@ class TnPZmmgTagger(Tagger):
         )
 
     def passing_dimuon_trigger(self, events):
-        trigger_cut = ak.zeros_like(events.run, dtype=bool)
+        return self.get_dimuon_trigger_decisions(events)[2]
 
+    def get_dimuon_trigger_decisions(self, events):
         trigger_paths = self.options["trigger"]
-        if isinstance(trigger_paths, dict):
+        if isinstance(trigger_paths, dict) and not (
+            "single_muon" in trigger_paths or "double_muon" in trigger_paths
+        ):
             year = self.get_analysis_year(events)
-            trigger_paths = trigger_paths.get(year, trigger_paths.get("default", []))
+            trigger_paths = trigger_paths.get(year, trigger_paths.get("default", trigger_paths))
+
+        if isinstance(trigger_paths, dict):
+            single_muon_paths = trigger_paths.get("single_muon", [])
+            double_muon_paths = trigger_paths.get("double_muon", [])
+        else:
+            single_muon_paths = [hlt for hlt in trigger_paths if "IsoMu" in hlt]
+            double_muon_paths = [hlt for hlt in trigger_paths if hlt not in single_muon_paths]
+
+        single_trigger_cut = self._evaluate_trigger_paths(events, single_muon_paths)
+        double_trigger_cut = self._evaluate_trigger_paths(events, double_muon_paths)
+        trigger_cut = single_trigger_cut | double_trigger_cut
+        return single_trigger_cut, double_trigger_cut, trigger_cut
+
+    def _evaluate_trigger_paths(self, events, trigger_paths):
+        trigger_cut = ak.zeros_like(events.run, dtype=bool)
 
         for hlt in trigger_paths:
             if hlt in events.fields:
