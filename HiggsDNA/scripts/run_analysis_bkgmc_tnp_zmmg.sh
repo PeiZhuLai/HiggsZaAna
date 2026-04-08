@@ -1,6 +1,59 @@
-outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/mc"
+#!/usr/bin/env bash
+set -euo pipefail
 
-# rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/mc/job_1
-# rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/mc/analysis_manager.pkl
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_dir="$(cd "${script_dir}/.." && pwd)"
+cd "${repo_dir}"
 
-python scripts/run_analysis.py --config "metadata/za_mc_tnp_zmmg_run3.json" --log-level "INFO" --n_cores 10 --output_dir $outdir --unretire_jobs --batch_system "condor" #--short #--with_skimmed DEBUG INFO #--batch_system "local" condor
+outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_tnp_zmmg/mc}"
+config="${CONFIG:-metadata/za_mc_tnp_zmmg_run3.json}"
+log_level="${LOG_LEVEL:-INFO}"
+n_cores="${N_CORES:-10}"
+batch_system="${BATCH_SYSTEM:-condor}"
+sample_list="${SAMPLE_LIST:-DYJetsToLL,DYJetsTo2Mu,DYJetsToLL_MLM}"
+years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
+clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
+unretire_jobs="${UNRETIRE_JOBS:-1}"
+short="${SHORT:-0}"
+dry_run="${DRY_RUN:-0}"
+
+if [[ "${clean_analysis_state}" == "1" ]]; then
+    rm -f "${outdir}/analysis_manager.pkl" "${outdir}/analysis_manager_temp.pkl"
+fi
+
+cmd=(
+    python
+    scripts/run_analysis.py
+    --config "${config}"
+    --log-level "${log_level}"
+    --n_cores "${n_cores}"
+    --output_dir "${outdir}"
+    --batch_system "${batch_system}"
+)
+
+if [[ "${unretire_jobs}" == "1" ]]; then
+    cmd+=(--unretire_jobs)
+fi
+
+if [[ "${short}" == "1" ]]; then
+    cmd+=(--short)
+fi
+
+if [[ -n "${sample_list}" ]]; then
+    cmd+=(--sample_list "${sample_list}")
+fi
+
+if [[ -n "${years}" ]]; then
+    cmd+=(--years "${years}")
+fi
+
+cmd+=("$@")
+
+if [[ "${dry_run}" == "1" ]]; then
+    printf 'Command: '
+    printf '%q ' "${cmd[@]}"
+    printf '\n'
+    exit 0
+fi
+
+"${cmd[@]}"
