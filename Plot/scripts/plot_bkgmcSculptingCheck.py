@@ -2,6 +2,7 @@ import argparse
 import json
 import re
 import sys
+import time
 from array import array
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -401,6 +402,13 @@ def _build_uniform_bin_edges(xmin: float, xmax: float, step: float) -> List[floa
     return [xmin + step * idx for idx in range(n_steps + 1)]
 
 
+def _format_elapsed_hms(elapsed_seconds: float) -> str:
+    total_seconds = int(round(elapsed_seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
+
+
 def _sideband_integral(hist, signal_low: float = BLIND_LOW, signal_high: float = BLIND_HIGH) -> float:
     axis = hist.GetXaxis()
     nbins = axis.GetNbins()
@@ -759,6 +767,8 @@ def _fill_histograms(
 
 
 def main():
+    start_time = time.time()
+
     parser = argparse.ArgumentParser(description="Plot background mH sculpting after MVA cuts for mA = 1..30.")
     parser.add_argument("-y", "--Year", dest="year", default="run3", help="Only run3 is supported.")
     parser.add_argument("--mva-cut-json", default=DEFAULT_MVA_CUT_JSON, help="Path to MVA cut JSON.")
@@ -866,6 +876,8 @@ def main():
             channel_mode=channel_mode,
         )
 
+    elapsed = time.time() - start_time
+    print(f"Total runtime: {_format_elapsed_hms(elapsed)}")
     print("Done")
 
 
