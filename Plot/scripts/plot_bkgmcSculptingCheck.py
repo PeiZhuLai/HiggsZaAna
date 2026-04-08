@@ -2,8 +2,9 @@ import argparse
 import json
 import re
 import sys
+from array import array
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import ROOT
 
@@ -38,6 +39,9 @@ BLIND_HIGH = 135.0
 H_M_NBINS = 85
 H_M_XMIN = 95.0
 H_M_XMAX = 180.0
+H_M_BIN2_WIDTH = 2.0
+H_M_BIN2_XMAX = 181.0
+SIGNAL_DRAW_SCALE = 0.5
 BKG_LABELS = {"DYJetsToLL": "Z + jets", "DYGto2LG": "Z + #gamma"}
 
 
@@ -226,6 +230,101 @@ def _signal_sample_name(ma: int) -> Optional[str]:
     return f"M{ma}" if ma in SIGNAL_MASSES else None
 
 
+def _nearest_anchor_mass(mass: int) -> int:
+    return min(SIGNAL_MASSES, key=lambda anchor: abs(anchor - int(mass)))
+
+
+def _find_bracketing_anchors(mass: int) -> Tuple[int, int]:
+    target = int(mass)
+    anchors = sorted(SIGNAL_MASSES)
+    if target <= anchors[0]:
+        return anchors[0], anchors[0]
+    if target >= anchors[-1]:
+        return anchors[-1], anchors[-1]
+    for left, right in zip(anchors[:-1], anchors[1:]):
+        if left <= target <= right:
+            return left, right
+    raise ValueError(f"Cannot find bracketing anchors for mA={mass}")
+
+
+def _resolve_signal_components(mass: int) -> List[Dict[str, float]]:
+    target = int(mass)
+    if target in SIGNAL_MASSES:
+        return [{"anchor_mass": target, "shape_weight": 1.0}]
+
+    left, right = _find_bracketing_anchors(target)
+    if left == right:
+        return [{"anchor_mass": left, "shape_weight": 1.0}]
+
+    weight_left = float(right - target) / float(right - left)
+    weight_right = float(target - left) / float(right - left)
+    return [
+        {"anchor_mass": left, "shape_weight": weight_left},
+        {"anchor_mass": right, "shape_weight": weight_right},
+    ]
+
+
+def _build_signal_overlay(
+    mass: int,
+    histos: Dict[str, TH1F],
+    plot_cfg: Plot_Config,
+) -> Tuple[Optional[TH1F], Optional[str]]:
+    components = _resolve_signal_components(mass)
+    signal_hist = None
+    legend_label = None
+    legend_parts = []
+
+    for idx, component in enumerate(components):
+        anchor_mass = int(component["anchor_mass"])
+        weight = float(component["shape_weight"])
+        sample = _signal_sample_name(anchor_mass)
+        if not sample or sample not in histos:
+            continue
+
+        source_hist = histos[sample]
+        if source_hist.GetEntries() <= 0 and source_hist.Integral() <= 0.0:
+            continue
+
+        temp_hist = source_hist.Clone(f"h_sig_component_mA_{mass}_{sample}_{idx}")
+        temp_hist.SetDirectory(0)
+        temp_hist.Scale(weight)
+
+        if signal_hist is None:
+            signal_hist = temp_hist.Clone(f"h_sig_draw_mA_{mass}")
+            signal_hist.SetDirectory(0)
+        else:
+            signal_hist.Add(temp_hist)
+
+        legend_parts.append(f"{anchor_mass}({weight:.2f})")
+
+    if signal_hist is None:
+        return None, None
+
+    nearest_sample = _signal_sample_name(_nearest_anchor_mass(mass))
+    if nearest_sample:
+        signal_hist.SetLineColor(plot_cfg.colors[nearest_sample])
+    signal_hist.SetLineWidth(4)
+    signal_hist.SetFillStyle(0)
+    signal_hist.SetFillColor(0)
+
+    if len(components) > 1:
+        signal_hist.SetLineStyle(2)
+        legend_label = (
+            f"m_{{a}} = {mass} GeV mix[{', '.join(legend_parts)}] #times {SIGNAL_DRAW_SCALE:.1f}"
+        )
+    else:
+        signal_hist.SetLineStyle(1)
+        legend_label = f"m_{{a}} = {mass} GeV #times {SIGNAL_DRAW_SCALE:.1f}"
+
+    signal_hist.Scale(SIGNAL_DRAW_SCALE)
+    return signal_hist, legend_label
+
+
+def _build_uniform_bin_edges(xmin: float, xmax: float, step: float) -> List[float]:
+    n_steps = int(round((xmax - xmin) / step))
+    return [xmin + step * idx for idx in range(n_steps + 1)]
+
+
 def _sideband_integral(hist, signal_low: float = BLIND_LOW, signal_high: float = BLIND_HIGH) -> float:
     axis = hist.GetXaxis()
     nbins = axis.GetNbins()
@@ -327,30 +426,37 @@ def _draw_mass_plot(
     show_signal: bool = True,
     name_suffix: str = "",
 ) -> None:
-    _style_histograms(histos, plot_cfg, analyzer_cfg)
+    draw_histos: Dict[str, TH1F] = {}
+    draw_tag = name_suffix if name_suffix else "_nominal"
+    for sample, hist in histos.items():
+        cloned = hist.Clone(f"{hist.GetName()}_draw_{mass}{draw_tag}_{sample}")
+        cloned.SetDirectory(0)
+        draw_histos[sample] = cloned
 
-    scale = _scale_bkg_to_data_sideband(histos, analyzer_cfg)
+    _style_histograms(draw_histos, plot_cfg, analyzer_cfg)
+
+    scale = _scale_bkg_to_data_sideband(draw_histos, analyzer_cfg)
     if abs(scale - 1.0) > 1e-12:
         print(f"[mA={mass:02d}] Applied sideband scale factor = {scale:.4f}")
 
-    bkg_total = _clone_total_bkg(histos, analyzer_cfg, f"h_bkg_total_mA_{mass}")
+    bkg_total = _clone_total_bkg(draw_histos, analyzer_cfg, f"h_bkg_total_mA_{mass}")
     if bkg_total is None or bkg_total.Integral() <= 0.0:
         print(f"[mA={mass:02d}] Background is empty after MVA cut. Skip plot.")
         return
 
-    stack = _make_stack(histos, analyzer_cfg, f"mH_mA_{mass}")
-    ratio = MakeRatioPlot(histos["Data"], bkg_total, f"H_m_mA_{mass}")
+    stack = _make_stack(draw_histos, analyzer_cfg, f"mH_mA_{mass}")
+    ratio = MakeRatioPlot(draw_histos["Data"], bkg_total, f"H_m_mA_{mass}")
     stat_abs, stat_norm = Get_StatUnc(bkg_total)
 
-    signal_sample = _signal_sample_name(mass) if show_signal else None
     signal_hist = None
-    if signal_sample and signal_sample in histos and histos[signal_sample].Integral() > 0.0:
-        signal_hist = histos[signal_sample].Clone(f"h_sig_draw_{signal_sample}_mA_{mass}")
-        signal_hist.SetDirectory(0)
-        signal_hist.SetLineColor(plot_cfg.colors[signal_sample])
-        signal_hist.SetLineWidth(4)
-        signal_hist.SetFillStyle(0)
-        signal_hist.SetFillColor(0)
+    signal_legend_label = None
+    if show_signal:
+        signal_hist, signal_legend_label = _build_signal_overlay(mass, draw_histos, plot_cfg)
+        if signal_hist:
+            print(
+                f"[mA={mass:02d}] signal draw integral={signal_hist.Integral():.3f}"
+                + (f" label={signal_legend_label}" if signal_legend_label else "")
+            )
 
     canvas = TCanvas(f"canv_mA_{mass}{'_log' if logy else ''}", "", 800, 800)
     canvas.SetBottomMargin(0.012)
@@ -373,19 +479,19 @@ def _draw_mass_plot(
         peak_ref = 1.0
     ymax = peak_ref * 1.4
 
-    histos["Data"].SetMinimum(1e-2 if logy else 0.0)
-    histos["Data"].SetMaximum(ymax)
+    draw_histos["Data"].SetMinimum(1e-2 if logy else 0.0)
+    draw_histos["Data"].SetMaximum(ymax)
     if logy:
         upper_pad.SetLogy()
 
-    histos["Data"].Draw("PE")
-    histos["Data"].GetXaxis().SetLabelSize(0.0)
-    histos["Data"].GetXaxis().SetTitleOffset(0.95)
-    histos["Data"].GetYaxis().SetTitle(f"Events / {histos['Data'].GetBinWidth(1):.2f} GeV")
-    histos["Data"].GetYaxis().SetTitleSize(0.07)
-    histos["Data"].GetYaxis().SetLabelSize(0.055)
-    histos["Data"].GetYaxis().SetTitleFont(42)
-    histos["Data"].GetYaxis().SetTitleOffset(1.15)
+    draw_histos["Data"].Draw("PE")
+    draw_histos["Data"].GetXaxis().SetLabelSize(0.0)
+    draw_histos["Data"].GetXaxis().SetTitleOffset(0.95)
+    draw_histos["Data"].GetYaxis().SetTitle(f"Events / {draw_histos['Data'].GetBinWidth(1):.2f} GeV")
+    draw_histos["Data"].GetYaxis().SetTitleSize(0.07)
+    draw_histos["Data"].GetYaxis().SetLabelSize(0.055)
+    draw_histos["Data"].GetYaxis().SetTitleFont(42)
+    draw_histos["Data"].GetYaxis().SetTitleOffset(1.15)
 
     stack.SetMinimum(1e-2 if logy else 0.0)
     stack.SetMaximum(ymax)
@@ -396,8 +502,8 @@ def _draw_mass_plot(
     if signal_hist:
         signal_hist.Draw("HIST SAME")
 
-    histos["Data"].Draw("PE SAME")
-    histos["Data"].Draw("AXIS SAME")
+    draw_histos["Data"].Draw("PE SAME")
+    draw_histos["Data"].Draw("AXIS SAME")
 
     legend = TLegend(0.58, 0.60, 0.95, 0.87)
     ROOT.SetOwnership(legend, False)
@@ -406,12 +512,13 @@ def _draw_mass_plot(
     legend.SetFillColor(0)
     legend.SetTextFont(42)
     legend.SetTextSize(0.04)
-    legend.AddEntry(histos["Data"], "Data", "PE")
+    legend.AddEntry(draw_histos["Data"], "Data", "PE")
     for sample in analyzer_cfg.bkg_names:
-        legend.AddEntry(histos[sample], BKG_LABELS.get(sample, sample), "f")
+        if sample in draw_histos:
+            legend.AddEntry(draw_histos[sample], BKG_LABELS.get(sample, sample), "f")
     legend.AddEntry(stat_abs, "Stat. Unc.", "f")
-    if signal_hist:
-        legend.AddEntry(signal_hist, f"m_{{a}} = {mass} GeV", "l")
+    if signal_hist and signal_legend_label:
+        legend.AddEntry(signal_hist, signal_legend_label, "l")
     legend.Draw("SAME")
 
     tag = ROOT.TLatex()
@@ -452,18 +559,35 @@ def _draw_mass_plot(
     SaveCanvPic(canvas, str(output_dir), save_name)
 
 
-def _book_histograms(analyzer_cfg: Analyzer_Config) -> Dict[int, Dict[str, TH1F]]:
+def _book_histograms(
+    analyzer_cfg: Analyzer_Config,
+    sample_names: Optional[List[str]] = None,
+    bin_edges: Optional[List[float]] = None,
+    nbins: int = H_M_NBINS,
+    xmin: float = H_M_XMIN,
+    xmax: float = H_M_XMAX,
+) -> Dict[int, Dict[str, TH1F]]:
     histos: Dict[int, Dict[str, TH1F]] = {}
+    samples = sample_names or analyzer_cfg.samp_names
+    root_edges = array("d", bin_edges) if bin_edges is not None else None
     for mass in TARGET_MASSES:
         histos[mass] = {}
-        for sample in analyzer_cfg.samp_names:
-            hist = TH1F(
-                f"H_m_mA_{mass}_{sample}",
-                f"H_m_mA_{mass}_{sample}",
-                H_M_NBINS,
-                H_M_XMIN,
-                H_M_XMAX,
-            )
+        for sample in samples:
+            if root_edges is not None:
+                hist = TH1F(
+                    f"H_m_mA_{mass}_{sample}",
+                    f"H_m_mA_{mass}_{sample}",
+                    len(root_edges) - 1,
+                    root_edges,
+                )
+            else:
+                hist = TH1F(
+                    f"H_m_mA_{mass}_{sample}",
+                    f"H_m_mA_{mass}_{sample}",
+                    nbins,
+                    xmin,
+                    xmax,
+                )
             hist.Sumw2()
             hist.SetDirectory(0)
             histos[mass][sample] = hist
@@ -475,16 +599,17 @@ def _fill_histograms(
     analyzer_cfg: Analyzer_Config,
     mva_cuts: Dict[int, float],
     histos: Dict[int, Dict[str, TH1F]],
+    extra_histos: Optional[List[Dict[int, Dict[str, TH1F]]]],
     blind: bool,
     only_ele: bool,
     only_mu: bool,
 ) -> None:
     mva_branch_map: Dict[str, Dict[int, Optional[str]]] = {}
+    extra_histos = extra_histos or []
     for sample in analyzer_cfg.samp_names:
-        masses_to_use = TARGET_MASSES if sample in analyzer_cfg.bkg_names or sample == "Data" else []
-        signal_mass = _parse_ma(sample)
-        if signal_mass in TARGET_MASSES:
-            masses_to_use = [signal_mass]
+        masses_to_use = TARGET_MASSES if (
+            sample in analyzer_cfg.bkg_names or sample == "Data" or sample in analyzer_cfg.sig_names
+        ) else []
 
         branch_map = {}
         for mass in masses_to_use:
@@ -542,6 +667,10 @@ def _fill_histograms(
                     continue
 
                 histos[mass][sample].Fill(h_mass, weight)
+                for hist_set in extra_histos:
+                    hist = hist_set.get(mass, {}).get(sample)
+                    if hist is not None:
+                        hist.Fill(h_mass, weight)
 
 
 def main():
@@ -566,10 +695,13 @@ def main():
     mva_cut_path = _resolve_mva_cut_json(args.mva_cut_json)
     output_dir = _resolve_output_dir(args.output_dir)
     output_dir_bkg_only = output_dir / "bkgOnly"
+    output_dir_bkg_only_bin2 = output_dir / "bkgOnly_bin2GeV"
     output_dir_bkg_only.mkdir(parents=True, exist_ok=True)
+    output_dir_bkg_only_bin2.mkdir(parents=True, exist_ok=True)
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
     print(f"[Output] Plot directory: {output_dir}")
     print(f"[Output] Bkg-only directory: {output_dir_bkg_only}")
+    print(f"[Output] Bkg-only 2 GeV directory: {output_dir_bkg_only_bin2}")
 
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
@@ -580,11 +712,17 @@ def main():
     ntuples = LoadNtuples(analyzer_cfg)
 
     histos = _book_histograms(analyzer_cfg)
+    histos_bkg_only_bin2 = _book_histograms(
+        analyzer_cfg,
+        sample_names=analyzer_cfg.bkg_names + ["Data"],
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN2_XMAX, H_M_BIN2_WIDTH),
+    )
     _fill_histograms(
         ntuples=ntuples,
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
+        extra_histos=[histos_bkg_only_bin2],
         blind=args.blind,
         only_ele=args.ele,
         only_mu=args.mu,
@@ -619,6 +757,16 @@ def main():
             logy=args.ln,
             show_signal=False,
             name_suffix="_bkgOnly",
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos_bkg_only_bin2[mass],
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dir_bkg_only_bin2,
+            logy=args.ln,
+            show_signal=False,
+            name_suffix="_bkgOnly_bin2GeV",
         )
 
     print("Done")
