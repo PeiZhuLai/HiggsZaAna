@@ -25,10 +25,22 @@ import tdrstyle
 
 DEFAULT_MVA_CUT_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 DEFAULT_OUTPUT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/bkgmcScupltingCheck"
+DEFAULT_SIGEFF_ELE_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/sigEfficiencyVmA_ele_byYear_5years_quadratic_interp_ma_points.json"
+DEFAULT_SIGEFF_MU_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/sigEfficiencyVmA_muon_byYear_5years_quadratic_interp_ma_points.json"
 LOCAL_MVA_CUT_CANDIDATES = [
     PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/HiggsZaAna/Plot/output/MVAcut_points_run3.json",
     PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/optimize_alias/MVAcut_points_run3.json",
     PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/selection_alias/MVAcut_points_run3.json",
+]
+LOCAL_SIGEFF_ELE_CANDIDATES = [
+    PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/HiggsZaAna/Plot/output/sigEfficiencyVmA_ele_byYear_5years_quadratic_interp_ma_points.json",
+    PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/optimize_alias/sigEfficiencyVmA_ele_byYear_5years_quadratic_interp_ma_points.json",
+    PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/selection_alias/sigEfficiencyVmA_ele_byYear_5years_quadratic_interp_ma_points.json",
+]
+LOCAL_SIGEFF_MU_CANDIDATES = [
+    PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/HiggsZaAna/Plot/output/sigEfficiencyVmA_muon_byYear_5years_quadratic_interp_ma_points.json",
+    PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/optimize_alias/sigEfficiencyVmA_muon_byYear_5years_quadratic_interp_ma_points.json",
+    PLOT_DIR.parent.parent / "AN-25-172/figure_ALP/run3/selection_alias/sigEfficiencyVmA_muon_byYear_5years_quadratic_interp_ma_points.json",
 ]
 LOCAL_OUTPUT_DIR = PLOT_DIR / "plots" / "bkgmcScupltingCheck"
 
@@ -39,10 +51,18 @@ BLIND_HIGH = 135.0
 H_M_NBINS = 85
 H_M_XMIN = 95.0
 H_M_XMAX = 180.0
-H_M_BIN2_WIDTH = 2.0
-H_M_BIN2_XMAX = 181.0
+H_M_BIN_COARSE_WIDTH = 5.0
+H_M_BIN_COARSE_XMAX = 180.0
 SIGNAL_DRAW_SCALE = 0.5
+LUMI_MAP = {
+    "2022preEE": 7.98,
+    "2022postEE": 26.70,
+    "2023preBPix": 17.79,
+    "2023postBPix": 9.45,
+    "2024": 108.95,
+}
 BKG_LABELS = {"DYJetsToLL": "Z + jets", "DYGto2LG": "Z + #gamma"}
+_EFF_CACHE: Dict[str, dict] = {}
 
 
 def _to_int(value) -> Optional[int]:
@@ -207,6 +227,47 @@ def _resolve_output_dir(user_path: str) -> Path:
     raise OSError("Failed to create any output directory.")
 
 
+def _resolve_sig_eff_json(channel_mode: str) -> Path:
+    if channel_mode == "ele":
+        candidates = [Path(DEFAULT_SIGEFF_ELE_JSON), *LOCAL_SIGEFF_ELE_CANDIDATES]
+    elif channel_mode == "mu":
+        candidates = [Path(DEFAULT_SIGEFF_MU_JSON), *LOCAL_SIGEFF_MU_CANDIDATES]
+    else:
+        raise ValueError(f"Unsupported efficiency channel: {channel_mode}")
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(
+        f"Cannot find signal efficiency JSON for channel={channel_mode}. Tried:\n  - "
+        + "\n  - ".join(str(path) for path in candidates)
+    )
+
+
+def _load_sig_eff_payload(channel_mode: str) -> dict:
+    if channel_mode not in _EFF_CACHE:
+        with open(_resolve_sig_eff_json(channel_mode), "r") as handle:
+            _EFF_CACHE[channel_mode] = json.load(handle)
+    return _EFF_CACHE[channel_mode]
+
+
+def _signal_efficiency_for_mass(mass: int, channel_mode: str, years: List[str]) -> float:
+    def _weighted(channel_key: str) -> float:
+        payload = _load_sig_eff_payload(channel_key)
+        total = 0.0
+        for year in years:
+            total += LUMI_MAP[year] * float(payload["values"][year][str(int(mass))])
+        return total
+
+    if channel_mode == "ele":
+        return _weighted("ele")
+    if channel_mode == "mu":
+        return _weighted("mu")
+    if channel_mode == "inclusive":
+        return _weighted("ele") + _weighted("mu")
+    raise ValueError(f"Unsupported plot channel mode: {channel_mode}")
+
+
 def _resolve_mva_branch_for_mass(chain, mass_tag: str) -> Optional[str]:
     if not chain or not chain.GetListOfBranches():
         return None
@@ -267,7 +328,10 @@ def _resolve_signal_components(mass: int) -> List[Dict[str, float]]:
 def _build_signal_overlay(
     mass: int,
     histos: Dict[str, TH1F],
+    all_histos: Dict[int, Dict[str, TH1F]],
     plot_cfg: Plot_Config,
+    channel_mode: str,
+    years: List[str],
 ) -> Tuple[Optional[TH1F], Optional[str]]:
     components = _resolve_signal_components(mass)
     signal_hist = None
@@ -300,23 +364,35 @@ def _build_signal_overlay(
     if signal_hist is None:
         return None, None
 
-    nearest_sample = _signal_sample_name(_nearest_anchor_mass(mass))
+    nearest_anchor = _nearest_anchor_mass(mass)
+    nearest_sample = _signal_sample_name(nearest_anchor)
     if nearest_sample:
         signal_hist.SetLineColor(plot_cfg.colors[nearest_sample])
     signal_hist.SetLineWidth(4)
     signal_hist.SetFillStyle(0)
     signal_hist.SetFillColor(0)
 
+    ref_hist = all_histos.get(nearest_anchor, {}).get(nearest_sample) if nearest_sample else None
+    ref_yield = ref_hist.Integral() if ref_hist else 0.0
+    eff_target = _signal_efficiency_for_mass(mass, channel_mode, years)
+    eff_nearest = _signal_efficiency_for_mass(nearest_anchor, channel_mode, years)
+    eff_scale = (eff_target / eff_nearest) if eff_nearest > 0.0 else 0.0
+    target_yield = ref_yield * eff_scale * SIGNAL_DRAW_SCALE
+    current_yield = signal_hist.Integral()
+    if current_yield > 0.0:
+        signal_hist.Scale(target_yield / current_yield)
+    else:
+        signal_hist.Scale(0.0)
+
     if len(components) > 1:
         signal_hist.SetLineStyle(2)
         legend_label = (
-            f"m_{{a}} = {mass} GeV mix[{', '.join(legend_parts)}] #times {SIGNAL_DRAW_SCALE:.1f}"
+            f"m_{{a}} = {mass} GeV mix[{', '.join(legend_parts)}] norm@{nearest_anchor} eff #times {SIGNAL_DRAW_SCALE:.1f}"
         )
     else:
         signal_hist.SetLineStyle(1)
-        legend_label = f"m_{{a}} = {mass} GeV #times {SIGNAL_DRAW_SCALE:.1f}"
+        legend_label = f"m_{{a}} = {mass} GeV eff #times {SIGNAL_DRAW_SCALE:.1f}"
 
-    signal_hist.Scale(SIGNAL_DRAW_SCALE)
     return signal_hist, legend_label
 
 
@@ -419,12 +495,14 @@ def _configure_needed_branches(chain, needed_branches: List[str]) -> None:
 def _draw_mass_plot(
     mass: int,
     histos: Dict[str, TH1F],
+    all_histos: Dict[int, Dict[str, TH1F]],
     analyzer_cfg: Analyzer_Config,
     plot_cfg: Plot_Config,
     output_dir: Path,
     logy: bool = False,
     show_signal: bool = True,
     name_suffix: str = "",
+    channel_mode: str = "inclusive",
 ) -> None:
     draw_histos: Dict[str, TH1F] = {}
     draw_tag = name_suffix if name_suffix else "_nominal"
@@ -451,7 +529,14 @@ def _draw_mass_plot(
     signal_hist = None
     signal_legend_label = None
     if show_signal:
-        signal_hist, signal_legend_label = _build_signal_overlay(mass, draw_histos, plot_cfg)
+        signal_hist, signal_legend_label = _build_signal_overlay(
+            mass,
+            draw_histos,
+            all_histos,
+            plot_cfg,
+            channel_mode,
+            getattr(analyzer_cfg, "years_sig", []),
+        )
         if signal_hist:
             print(
                 f"[mA={mass:02d}] signal draw integral={signal_hist.Integral():.3f}"
@@ -695,13 +780,13 @@ def main():
     mva_cut_path = _resolve_mva_cut_json(args.mva_cut_json)
     output_dir = _resolve_output_dir(args.output_dir)
     output_dir_bkg_only = output_dir / "bkgOnly"
-    output_dir_bkg_only_bin2 = output_dir / "bkgOnly_bin2GeV"
+    output_dir_bkg_only_bin5 = output_dir / "bkgOnly_bin5GeV"
     output_dir_bkg_only.mkdir(parents=True, exist_ok=True)
-    output_dir_bkg_only_bin2.mkdir(parents=True, exist_ok=True)
+    output_dir_bkg_only_bin5.mkdir(parents=True, exist_ok=True)
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
     print(f"[Output] Plot directory: {output_dir}")
     print(f"[Output] Bkg-only directory: {output_dir_bkg_only}")
-    print(f"[Output] Bkg-only 2 GeV directory: {output_dir_bkg_only_bin2}")
+    print(f"[Output] Bkg-only 5 GeV directory: {output_dir_bkg_only_bin5}")
 
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
@@ -710,19 +795,25 @@ def main():
     analyzer_cfg.plot_output_path = str(output_dir)
     plot_cfg = Plot_Config(analyzer_cfg, args.year)
     ntuples = LoadNtuples(analyzer_cfg)
+    if args.ele:
+        channel_mode = "ele"
+    elif args.mu:
+        channel_mode = "mu"
+    else:
+        channel_mode = "inclusive"
 
     histos = _book_histograms(analyzer_cfg)
-    histos_bkg_only_bin2 = _book_histograms(
+    histos_bkg_only_bin5 = _book_histograms(
         analyzer_cfg,
         sample_names=analyzer_cfg.bkg_names + ["Data"],
-        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN2_XMAX, H_M_BIN2_WIDTH),
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
     )
     _fill_histograms(
         ntuples=ntuples,
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
-        extra_histos=[histos_bkg_only_bin2],
+        extra_histos=[histos_bkg_only_bin5],
         blind=args.blind,
         only_ele=args.ele,
         only_mu=args.mu,
@@ -741,32 +832,38 @@ def main():
         _draw_mass_plot(
             mass=mass,
             histos=histos[mass],
+            all_histos=histos,
             analyzer_cfg=analyzer_cfg,
             plot_cfg=plot_cfg,
             output_dir=output_dir,
             logy=args.ln,
             show_signal=True,
             name_suffix="",
+            channel_mode=channel_mode,
         )
         _draw_mass_plot(
             mass=mass,
             histos=histos[mass],
+            all_histos=histos,
             analyzer_cfg=analyzer_cfg,
             plot_cfg=plot_cfg,
             output_dir=output_dir_bkg_only,
             logy=args.ln,
             show_signal=False,
             name_suffix="_bkgOnly",
+            channel_mode=channel_mode,
         )
         _draw_mass_plot(
             mass=mass,
-            histos=histos_bkg_only_bin2[mass],
+            histos=histos_bkg_only_bin5[mass],
+            all_histos=histos_bkg_only_bin5,
             analyzer_cfg=analyzer_cfg,
             plot_cfg=plot_cfg,
-            output_dir=output_dir_bkg_only_bin2,
+            output_dir=output_dir_bkg_only_bin5,
             logy=args.ln,
             show_signal=False,
-            name_suffix="_bkgOnly_bin2GeV",
+            name_suffix="_bkgOnly_bin5GeV",
+            channel_mode=channel_mode,
         )
 
     print("Done")
