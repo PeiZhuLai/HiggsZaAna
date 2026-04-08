@@ -341,8 +341,6 @@ def _build_signal_overlay(
 ) -> Tuple[Optional[TH1F], Optional[str]]:
     components = _resolve_signal_components(mass, shape_mode=shape_mode)
     signal_hist = None
-    legend_label = None
-    legend_parts = []
 
     for idx, component in enumerate(components):
         anchor_mass = int(component["anchor_mass"])
@@ -364,8 +362,6 @@ def _build_signal_overlay(
             signal_hist.SetDirectory(0)
         else:
             signal_hist.Add(temp_hist)
-
-        legend_parts.append(f"{anchor_mass}({weight:.2f})")
 
     if signal_hist is None:
         return None, None
@@ -392,15 +388,9 @@ def _build_signal_overlay(
 
     if shape_mode == "mixture" and len(components) > 1:
         signal_hist.SetLineStyle(2)
-        legend_label = (
-            f"m_{{a}} = {mass} GeV mix[{', '.join(legend_parts)}] norm@{nearest_anchor} eff #times {signal_scale:.1f}"
-        )
     else:
         signal_hist.SetLineStyle(1)
-        if int(mass) in SIGNAL_MASSES:
-            legend_label = f"m_{{a}} = {mass} GeV eff #times {signal_scale:.1f}"
-        else:
-            legend_label = f"m_{{a}} = {mass} GeV shape@{nearest_anchor} eff #times {signal_scale:.1f}"
+    legend_label = f"m_{{a}} = {mass} GeV"
 
     return signal_hist, legend_label
 
@@ -586,6 +576,7 @@ def _draw_mass_plot(
 
     draw_histos["Data"].SetMinimum(1e-2 if logy else 0.0)
     draw_histos["Data"].SetMaximum(ymax)
+    draw_histos["Data"].GetXaxis().SetRangeUser(H_M_XMIN, H_M_XMAX)
     if logy:
         upper_pad.SetLogy()
 
@@ -652,6 +643,7 @@ def _draw_mass_plot(
     lower_pad.SetTickx(1)
     lower_pad.SetTicky(1)
 
+    ratio.GetXaxis().SetLimits(H_M_XMIN, H_M_XMAX)
     ratio.GetXaxis().SetTitle(plot_cfg.var_title_map["H_m"])
     ratio.GetXaxis().SetTitleOffset(1.0)
     ratio.Draw("APZ SAME")
