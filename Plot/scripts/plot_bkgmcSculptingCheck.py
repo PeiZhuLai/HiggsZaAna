@@ -55,6 +55,7 @@ H_M_XMAX = 180.0
 H_M_BIN_COARSE_WIDTH = 5.0
 H_M_BIN_COARSE_XMAX = 180.0
 SIGNAL_DRAW_SCALE = 0.5
+SIGNAL_DRAW_SCALE_NEAREST_BIN5 = 0.2
 LUMI_MAP = {
     "2022preEE": 7.98,
     "2022postEE": 26.70,
@@ -309,8 +310,10 @@ def _find_bracketing_anchors(mass: int) -> Tuple[int, int]:
     raise ValueError(f"Cannot find bracketing anchors for mA={mass}")
 
 
-def _resolve_signal_components(mass: int) -> List[Dict[str, float]]:
+def _resolve_signal_components(mass: int, shape_mode: str = "mixture") -> List[Dict[str, float]]:
     target = int(mass)
+    if shape_mode == "nearest":
+        return [{"anchor_mass": _nearest_anchor_mass(target), "shape_weight": 1.0}]
     if target in SIGNAL_MASSES:
         return [{"anchor_mass": target, "shape_weight": 1.0}]
 
@@ -333,8 +336,10 @@ def _build_signal_overlay(
     plot_cfg: Plot_Config,
     channel_mode: str,
     years: List[str],
+    shape_mode: str = "mixture",
+    signal_scale: float = SIGNAL_DRAW_SCALE,
 ) -> Tuple[Optional[TH1F], Optional[str]]:
-    components = _resolve_signal_components(mass)
+    components = _resolve_signal_components(mass, shape_mode=shape_mode)
     signal_hist = None
     legend_label = None
     legend_parts = []
@@ -378,21 +383,24 @@ def _build_signal_overlay(
     eff_target = _signal_efficiency_for_mass(mass, channel_mode, years)
     eff_nearest = _signal_efficiency_for_mass(nearest_anchor, channel_mode, years)
     eff_scale = (eff_target / eff_nearest) if eff_nearest > 0.0 else 0.0
-    target_yield = ref_yield * eff_scale * SIGNAL_DRAW_SCALE
+    target_yield = ref_yield * eff_scale * signal_scale
     current_yield = signal_hist.Integral()
     if current_yield > 0.0:
         signal_hist.Scale(target_yield / current_yield)
     else:
         signal_hist.Scale(0.0)
 
-    if len(components) > 1:
+    if shape_mode == "mixture" and len(components) > 1:
         signal_hist.SetLineStyle(2)
         legend_label = (
-            f"m_{{a}} = {mass} GeV mix[{', '.join(legend_parts)}] norm@{nearest_anchor} eff #times {SIGNAL_DRAW_SCALE:.1f}"
+            f"m_{{a}} = {mass} GeV mix[{', '.join(legend_parts)}] norm@{nearest_anchor} eff #times {signal_scale:.1f}"
         )
     else:
         signal_hist.SetLineStyle(1)
-        legend_label = f"m_{{a}} = {mass} GeV eff #times {SIGNAL_DRAW_SCALE:.1f}"
+        if int(mass) in SIGNAL_MASSES:
+            legend_label = f"m_{{a}} = {mass} GeV eff #times {signal_scale:.1f}"
+        else:
+            legend_label = f"m_{{a}} = {mass} GeV shape@{nearest_anchor} eff #times {signal_scale:.1f}"
 
     return signal_hist, legend_label
 
@@ -511,6 +519,8 @@ def _draw_mass_plot(
     show_signal: bool = True,
     name_suffix: str = "",
     channel_mode: str = "inclusive",
+    signal_shape_mode: str = "mixture",
+    signal_scale: float = SIGNAL_DRAW_SCALE,
 ) -> None:
     draw_histos: Dict[str, TH1F] = {}
     draw_tag = name_suffix if name_suffix else "_nominal"
@@ -544,6 +554,8 @@ def _draw_mass_plot(
             plot_cfg,
             channel_mode,
             getattr(analyzer_cfg, "years_sig", []),
+            shape_mode=signal_shape_mode,
+            signal_scale=signal_scale,
         )
         if signal_hist:
             print(
@@ -789,14 +801,20 @@ def main():
 
     mva_cut_path = _resolve_mva_cut_json(args.mva_cut_json)
     output_dir = _resolve_output_dir(args.output_dir)
+    output_dir_signal_mixture = output_dir / "signalShapeMixture"
     output_dir_bkg_only = output_dir / "bkgOnly"
     output_dir_bkg_only_bin5 = output_dir / "bkgOnly_bin5GeV"
+    output_dir_signal_nearest_bin5 = output_dir / "signalNearest_bin5GeV"
+    output_dir_signal_mixture.mkdir(parents=True, exist_ok=True)
     output_dir_bkg_only.mkdir(parents=True, exist_ok=True)
     output_dir_bkg_only_bin5.mkdir(parents=True, exist_ok=True)
+    output_dir_signal_nearest_bin5.mkdir(parents=True, exist_ok=True)
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
     print(f"[Output] Plot directory: {output_dir}")
+    print(f"[Output] Signal mixture directory: {output_dir_signal_mixture}")
     print(f"[Output] Bkg-only directory: {output_dir_bkg_only}")
     print(f"[Output] Bkg-only 5 GeV directory: {output_dir_bkg_only_bin5}")
+    print(f"[Output] Signal nearest 5 GeV directory: {output_dir_signal_nearest_bin5}")
 
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
@@ -818,12 +836,16 @@ def main():
         sample_names=analyzer_cfg.bkg_names + ["Data"],
         bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
     )
+    histos_signal_nearest_bin5 = _book_histograms(
+        analyzer_cfg,
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
+    )
     _fill_histograms(
         ntuples=ntuples,
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
-        extra_histos=[histos_bkg_only_bin5],
+        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5],
         blind=args.blind,
         only_ele=args.ele,
         only_mu=args.mu,
@@ -845,11 +867,13 @@ def main():
             all_histos=histos,
             analyzer_cfg=analyzer_cfg,
             plot_cfg=plot_cfg,
-            output_dir=output_dir,
+            output_dir=output_dir_signal_mixture,
             logy=args.ln,
             show_signal=True,
             name_suffix="",
             channel_mode=channel_mode,
+            signal_shape_mode="mixture",
+            signal_scale=SIGNAL_DRAW_SCALE,
         )
         _draw_mass_plot(
             mass=mass,
@@ -874,6 +898,20 @@ def main():
             show_signal=False,
             name_suffix="_bkgOnly_bin5GeV",
             channel_mode=channel_mode,
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos_signal_nearest_bin5[mass],
+            all_histos=histos_signal_nearest_bin5,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dir_signal_nearest_bin5,
+            logy=args.ln,
+            show_signal=True,
+            name_suffix="_signalNearest_bin5GeV",
+            channel_mode=channel_mode,
+            signal_shape_mode="nearest",
+            signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
         )
 
     elapsed = time.time() - start_time
