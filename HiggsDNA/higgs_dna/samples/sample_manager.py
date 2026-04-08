@@ -51,15 +51,26 @@ class SampleManager():
             info = self.catalog[sample]
             # Loop through years and create a separate Sample object for each year
             for year in self.years:
+                # Skip unsupported sample/year pairs before looking up xs/bf.
+                if year not in info["files"].keys():
+                    logger.warning("[SampleManager : get_samples] Could not find any information about 'files' in samples catalog for sample '%s', year '%s'." % (sample, year))
+                    continue
+
                 # Get xs and bf info
                 if "xs" in info.keys():
                     if isinstance(info["xs"], dict): # different xs for different years
+                        if year not in info["xs"].keys():
+                            logger.warning("[SampleManager : get_samples] Could not find any information about 'xs' in samples catalog for sample '%s', year '%s'. Skipping this sample/year pair." % (sample, year))
+                            continue
                         xs = info["xs"][year]
                     else:
                         xs = info["xs"]
 
                     if "bf" in info.keys():
                         if isinstance(info["bf"], dict): # different bf for different years
+                            if year not in info["bf"].keys():
+                                logger.warning("[SampleManager : get_samples] Could not find any information about 'bf' in samples catalog for sample '%s', year '%s'. Skipping this sample/year pair." % (sample, year))
+                                continue
                             bf = info["bf"][year]
                         else:
                             bf = info["bf"]
@@ -79,9 +90,6 @@ class SampleManager():
                 
                 # Get input files
                 files = []
-                if year not in info["files"].keys():
-                    logger.warning("[SampleManager : get_samples] Could not find any information about 'files' in samples catalog for sample '%s', year '%s'." % (sample, year))
-                    continue
 
                 self.samples[sample][year] = {}
 
