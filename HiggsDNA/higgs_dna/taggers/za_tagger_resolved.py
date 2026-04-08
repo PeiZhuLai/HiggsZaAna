@@ -829,7 +829,7 @@ class ZaTaggerRun3(Tagger):
         # ------------------------------------------------------------
 
         # Add ALP-related fields
-        for field in ["pt", "eta", "phi", "mass", "electronVeto", "energyRaw", "energyErr", "r9", "sieie", "hoe", "hoe_PUcorr", "hcalPFClusterIso", "ecalPFClusterIso", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "mvaID"]:
+        for field in ["pt", "eta", "phi", "mass", "electronVeto", "energyRaw", "energyErr", "r9", "sieie", "hoe", "hoe_PUcorr", "hcalPFClusterIso", "hcalPFClusterIso_PUcorr", "ecalPFClusterIso", "ecalPFClusterIso_PUcorr", "chiso_PUcorr", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "mvaID"]:
             if field in ["pt","eta","phi","mass"]:
                 awkward_utils.add_field(
                     events,
@@ -1351,6 +1351,44 @@ class ZaTaggerRun3(Tagger):
                 # 回退：不修正，避免因少數奇怪 event 造成整體崩潰
                 ecalPFClusterIso_forID = photons.ecalPFClusterIso
 
+        def _apply_quadratic_ea_corr(iso_values, ea_prefix):
+            corrected = iso_values
+            eta_regions = [
+                (((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0)),   f"{ea_prefix}_EA_EB_1"),
+                (((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442)), f"{ea_prefix}_EA_EB_2"),
+                (((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0)), f"{ea_prefix}_EA_EE_1"),
+                (((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2)),   f"{ea_prefix}_EA_EE_2"),
+                (((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3)),   f"{ea_prefix}_EA_EE_3"),
+                (((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4)),   f"{ea_prefix}_EA_EE_4"),
+                (((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5)),   f"{ea_prefix}_EA_EE_5"),
+            ]
+            for eta_mask, option_key in eta_regions:
+                corrected = ak.where(
+                    eta_mask,
+                    iso_values
+                    - rho * options[option_key][0]
+                    - rho**2 * options[option_key][1],
+                    corrected,
+                )
+            return corrected
+
+        hcalPFClusterIso_PUcorr = photons.hcalPFClusterIso
+        ecalPFClusterIso_PUcorr = photons.ecalPFClusterIso
+        chiso_PUcorr = photons.pfRelIso03_chg
+
+        if int(year) > 2020:
+            hcalPFClusterIso_PUcorr = _apply_quadratic_ea_corr(
+                photons.hcalPFClusterIso, "PFHCalIso"
+            )
+            ecalPFClusterIso_PUcorr = _apply_quadratic_ea_corr(
+                ecalPFClusterIso_forID, "PFECalIso"
+            )
+            chiso_PUcorr = photons.pfRelIso03_chg_quadratic
+
+        photons = ak.with_field(photons, hcalPFClusterIso_PUcorr, "hcalPFClusterIso_PUcorr")
+        photons = ak.with_field(photons, ecalPFClusterIso_PUcorr, "ecalPFClusterIso_PUcorr")
+        photons = ak.with_field(photons, chiso_PUcorr, "chiso_PUcorr")
+
         if int(year) < 2020:
             phid_custom_tight = ak.ones_like(photons.pt) # all true, dummy TODO
             phid_official_tight = ak.ones_like(photons.pt) # all true, dummy TODO
@@ -1376,8 +1414,8 @@ class ZaTaggerRun3(Tagger):
             hoe_endcap_cut = photons.hoe_PUcorr < options["tight_hoe_endcap"]
 
             ''' 2. Rho corrected PF charged hadron isolation '''
-            PFChIso_barrel_cut = photons.pfRelIso03_chg_quadratic < options["tight_PFChIso_barrel"]
-            PFChIso_endcap_cut = photons.pfRelIso03_chg_quadratic < options["tight_PFChIso_endcap"]
+            PFChIso_barrel_cut = photons.chiso_PUcorr < options["tight_PFChIso_barrel"]
+            PFChIso_endcap_cut = photons.chiso_PUcorr < options["tight_PFChIso_endcap"]
 
             ''' 3. Rho corrected PF HCal isolation '''
             # quadratic EA corrections in Run3 : https://indico.cern.ch/event/1204277/contributions/5064356/attachments/2538496/4369369/CutBasedPhotonID_20221031.pdf
@@ -1387,17 +1425,13 @@ class ZaTaggerRun3(Tagger):
             PFHCalIso_barrel_cut = (
                 ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
                 & (
-                    (photons.hcalPFClusterIso
-                    - rho * options["PFHCalIso_EA_EB_1"][0]
-                    - rho**2 * options["PFHCalIso_EA_EB_1"][1])
+                    photons.hcalPFClusterIso_PUcorr
                     < parabola_cut
                 )
             ) | (
                 ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
                 & (
-                    (photons.hcalPFClusterIso
-                    - rho * options["PFHCalIso_EA_EB_2"][0]
-                    - rho**2 * options["PFHCalIso_EA_EB_2"][1])
+                    photons.hcalPFClusterIso_PUcorr
                     < parabola_cut
                 )
             )
@@ -1409,45 +1443,35 @@ class ZaTaggerRun3(Tagger):
                 (
                     ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
                     & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_1"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_1"][1])
+                        photons.hcalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
                     & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_2"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_2"][1])
+                        photons.hcalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
                     & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_3"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_3"][1])
+                        photons.hcalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
                     & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_4"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_4"][1])
+                        photons.hcalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
                     & (
-                        photons.hcalPFClusterIso
-                        - (rho * options["PFHCalIso_EA_EE_5"][0])
-                        - (rho**2 * options["PFHCalIso_EA_EE_5"][1])
+                        photons.hcalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
@@ -1465,17 +1489,13 @@ class ZaTaggerRun3(Tagger):
             PFECalIso_barrel_cut = (
                 ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
                 & (
-                    (ecalPFClusterIso_forID
-                    - rho * options["PFECalIso_EA_EB_1"][0]
-                    - rho**2 * options["PFECalIso_EA_EB_1"][1])
+                    photons.ecalPFClusterIso_PUcorr
                     < parabola_cut
                 )
             ) | (
                 ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
                 & (
-                    (ecalPFClusterIso_forID
-                    - rho * options["PFECalIso_EA_EB_2"][0]
-                    - rho**2 * options["PFECalIso_EA_EB_2"][1])
+                    photons.ecalPFClusterIso_PUcorr
                     < parabola_cut
                 )
             )
@@ -1487,45 +1507,35 @@ class ZaTaggerRun3(Tagger):
                 (
                     ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
                     & (
-                        ecalPFClusterIso_forID
-                        - (rho * options["PFECalIso_EA_EE_1"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_1"][1])
+                        photons.ecalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
                     & (
-                        ecalPFClusterIso_forID
-                        - (rho * options["PFECalIso_EA_EE_2"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_2"][1])
+                        photons.ecalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
                     & (
-                        ecalPFClusterIso_forID
-                        - (rho * options["PFECalIso_EA_EE_3"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_3"][1])
+                        photons.ecalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
                     & (
-                        ecalPFClusterIso_forID
-                        - (rho * options["PFECalIso_EA_EE_4"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_4"][1])
+                        photons.ecalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
                 | (
                     ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
                     & (
-                        ecalPFClusterIso_forID
-                        - (rho * options["PFECalIso_EA_EE_5"][0])
-                        - (rho**2 * options["PFECalIso_EA_EE_5"][1])
+                        photons.ecalPFClusterIso_PUcorr
                         < parabola_cut
                     )
                 )
@@ -1552,37 +1562,37 @@ class ZaTaggerRun3(Tagger):
                 hoe_endcap = photons.hoe_PUcorr < options[f"{wp}_hoe_endcap"]
 
                 # PFChIso
-                ch_barrel = photons.pfRelIso03_chg_quadratic < options[f"{wp}_PFChIso_barrel"]
-                ch_endcap = photons.pfRelIso03_chg_quadratic < options[f"{wp}_PFChIso_endcap"]
+                ch_barrel = photons.chiso_PUcorr < options[f"{wp}_PFChIso_barrel"]
+                ch_endcap = photons.chiso_PUcorr < options[f"{wp}_PFChIso_endcap"]
 
                 # PFHCalIso (quadratic threshold + EA corrections)
                 c1, c2, c3 = options[f"{wp}_PFHCalIso_barrel"]
                 thr_b = c1 + c2 * photons.pt + c3 * photons.pt**2
                 pfh_b = (
                     ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EB_1"][0] - rho**2 * options["PFHCalIso_EA_EB_1"][1]) < thr_b)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_b)
                 ) | (
                     ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EB_2"][0] - rho**2 * options["PFHCalIso_EA_EB_2"][1]) < thr_b)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_b)
                 )
 
                 c1, c2, c3 = options[f"{wp}_PFHCalIso_endcap"]
                 thr_e = c1 + c2 * photons.pt + c3 * photons.pt**2
                 pfh_e = (
                     ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_1"][0] - rho**2 * options["PFHCalIso_EA_EE_1"][1]) < thr_e)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_e)
                 ) | (
                     ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_2"][0] - rho**2 * options["PFHCalIso_EA_EE_2"][1]) < thr_e)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_e)
                 ) | (
                     ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_3"][0] - rho**2 * options["PFHCalIso_EA_EE_3"][1]) < thr_e)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_e)
                 ) | (
                     ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_4"][0] - rho**2 * options["PFHCalIso_EA_EE_4"][1]) < thr_e)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_e)
                 ) | (
                     ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
-                    & ((photons.hcalPFClusterIso - rho * options["PFHCalIso_EA_EE_5"][0] - rho**2 * options["PFHCalIso_EA_EE_5"][1]) < thr_e)
+                    & (photons.hcalPFClusterIso_PUcorr < thr_e)
                 )
 
                 # sieie
@@ -1594,29 +1604,29 @@ class ZaTaggerRun3(Tagger):
                 thr_ec_b = c1 + c2 * photons.pt
                 pfe_b = (
                     ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EB_1"][0] - rho**2 * options["PFECalIso_EA_EB_1"][1]) < thr_ec_b)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_b)
                 ) | (
                     ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EB_2"][0] - rho**2 * options["PFECalIso_EA_EB_2"][1]) < thr_ec_b)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_b)
                 )
 
                 c1, c2 = options[f"{wp}_PFECalIso_endcap"]
                 thr_ec_e = c1 + c2 * photons.pt
                 pfe_e = (
                     ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_1"][0] - rho**2 * options["PFECalIso_EA_EE_1"][1]) < thr_ec_e)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_2"][0] - rho**2 * options["PFECalIso_EA_EE_2"][1]) < thr_ec_e)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_3"][0] - rho**2 * options["PFECalIso_EA_EE_3"][1]) < thr_ec_e)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_4"][0] - rho**2 * options["PFECalIso_EA_EE_4"][1]) < thr_ec_e)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_e)
                 ) | (
                     ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
-                    & ((ecalPFClusterIso_forID - rho * options["PFECalIso_EA_EE_5"][0] - rho**2 * options["PFECalIso_EA_EE_5"][1]) < thr_ec_e)
+                    & (photons.ecalPFClusterIso_PUcorr < thr_ec_e)
                 )
 
                 hoe = (photons.isScEtaEB & hoe_barrel) | (photons.isScEtaEE & hoe_endcap)
