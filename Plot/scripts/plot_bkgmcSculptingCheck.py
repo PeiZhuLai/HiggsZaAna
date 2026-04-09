@@ -67,6 +67,22 @@ LUMI_MAP = {
 }
 BKG_LABELS = {"DYJetsToLL": "Z + jets", "DYGto2LG": "Z + #gamma"}
 _EFF_CACHE: Dict[str, dict] = {}
+SIGNAL_COLOR_HEX = {
+    "M1": "#2563EB",
+    "M2": "#5EEAD4",
+    "M3": "#2DD4BF",
+    "M4": "#10B981",
+    "M5": "#22C55E",
+    "M6": "#84CC16",
+    "M7": "#A3E635",
+    "M8": "#D9F99D",
+    "M9": "#FDE047",
+    "M10": "#EAB308",
+    "M15": "#DC2626",
+    "M20": "#DB2777",
+    "M25": "#6D28D9",
+    "M30": "#111827",
+}
 
 
 def _to_int(value) -> Optional[int]:
@@ -295,6 +311,15 @@ def _signal_sample_name(ma: int) -> Optional[str]:
     return f"M{ma}" if ma in SIGNAL_MASSES else None
 
 
+def _signal_color(sample_name: Optional[str]) -> int:
+    if not sample_name:
+        return ROOT.kMagenta + 1
+    color_hex = SIGNAL_COLOR_HEX.get(sample_name)
+    if color_hex:
+        return TColor.GetColor(color_hex)
+    return ROOT.kMagenta + 1
+
+
 def _nearest_anchor_mass(mass: int) -> int:
     return min(SIGNAL_MASSES, key=lambda anchor: abs(anchor - int(mass)))
 
@@ -370,8 +395,7 @@ def _build_signal_overlay(
 
     nearest_anchor = _nearest_anchor_mass(mass)
     nearest_sample = _signal_sample_name(nearest_anchor)
-    if nearest_sample:
-        signal_hist.SetLineColor(plot_cfg.colors[nearest_sample])
+    signal_hist.SetLineColor(_signal_color(nearest_sample))
     signal_hist.SetLineWidth(4)
     signal_hist.SetFillStyle(0)
     signal_hist.SetFillColor(0)
@@ -474,7 +498,7 @@ def _style_histograms(histos: Dict[str, TH1F], plot_cfg: Plot_Config, analyzer_c
             hist.SetLineColor(plot_cfg.colors[sample])
             hist.SetLineWidth(1)
         elif sample in analyzer_cfg.sig_names:
-            hist.SetLineColor(plot_cfg.colors[sample])
+            hist.SetLineColor(_signal_color(sample))
             hist.SetLineWidth(4)
             hist.SetFillStyle(0)
             hist.SetFillColor(0)
