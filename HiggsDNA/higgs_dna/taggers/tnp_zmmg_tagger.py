@@ -121,7 +121,7 @@ DEFAULT_OPTIONS = {
         "far_muon_pt": 20.0,
         "dimuon_mass_min": 35.0,
         "photon_mva_min": -0.7,
-        "zmmg_mass": [60.0, 120.0],
+        "zmmg_mass": [80.0, 100.0],
         "mass_sum_max": 180.0,
     },
     "muons": {
@@ -587,7 +587,7 @@ class TnPZmmgTagger(Tagger):
                 "pT_far > 20",
                 "m_mumu > 35",
                 "photon ID MVA > -0.7",
-                "60 < m_mumugamma < 120",
+                "80 < m_mumugamma < 100",
                 "m_mumu + m_mumugamma < 180",
                 "all",
             ],
