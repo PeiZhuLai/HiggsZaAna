@@ -5,6 +5,13 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_dir}"
 
+# Keep ROOT/cling isolated from user-site Python packages and stray include paths.
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH
+unset CPATH
+unset CPLUS_INCLUDE_PATH
+unset C_INCLUDE_PATH
+
 outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_tnp_zmmg/mc}"
 config="${CONFIG:-metadata/za_mc_tnp_zmmg_run3.json}"
 log_level="${LOG_LEVEL:-INFO}"
@@ -22,7 +29,7 @@ if [[ "${clean_analysis_state}" == "1" ]]; then
 fi
 
 cmd=(
-    python
+    python -s
     scripts/run_analysis.py
     --config "${config}"
     --log-level "${log_level}"
