@@ -416,7 +416,7 @@ def _build_signal_overlay(
         signal_hist.SetLineStyle(2)
     else:
         signal_hist.SetLineStyle(1)
-    legend_label = f"m_{{a}} = {mass} GeV"
+    legend_label = f"m_{{a}} = {mass} GeV #times {signal_scale:.1f}"
 
     return signal_hist, legend_label
 
