@@ -67,6 +67,7 @@ LUMI_MAP = {
 }
 BKG_LABELS = {"DYJetsToLL": "Z + jets", "DYGto2LG": "Z + #gamma"}
 _EFF_CACHE: Dict[str, dict] = {}
+DATA_MARKER_SIZE = 1.3
 SIGNAL_COLOR_HEX = {
     "M1": "#2563EB",
     "M2": "#5EEAD4",
@@ -490,7 +491,7 @@ def _style_histograms(histos: Dict[str, TH1F], plot_cfg: Plot_Config, analyzer_c
     for sample, hist in histos.items():
         if sample == "Data":
             hist.SetMarkerStyle(20)
-            hist.SetMarkerSize(1.0)
+            hist.SetMarkerSize(DATA_MARKER_SIZE)
             hist.SetLineColor(ROOT.kBlack)
             hist.SetLineWidth(2)
         elif sample in analyzer_cfg.bkg_names:
@@ -560,6 +561,7 @@ def _draw_mass_plot(
 
     stack = _make_stack(draw_histos, analyzer_cfg, f"mH_mA_{mass}")
     ratio = MakeRatioPlot(draw_histos["Data"], bkg_total, f"H_m_mA_{mass}")
+    ratio.SetMarkerSize(DATA_MARKER_SIZE)
     stat_abs, stat_norm = Get_StatUnc(bkg_total)
 
     signal_hist = None
