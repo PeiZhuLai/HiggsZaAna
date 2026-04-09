@@ -11,6 +11,7 @@ unset PYTHONPATH
 unset CPATH
 unset CPLUS_INCLUDE_PATH
 unset C_INCLUDE_PATH
+export PYTHONPATH="${repo_dir}"
 
 outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/data"
 
