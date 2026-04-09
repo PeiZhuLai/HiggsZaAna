@@ -17,4 +17,12 @@ else
 fi
 unset __conda_setup
 
-python PYTHON_FILE
+# Keep ROOT/cling isolated from user-site Python packages and stray include paths.
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH
+unset CPATH
+unset CPLUS_INCLUDE_PATH
+unset C_INCLUDE_PATH
+export PYTHONPATH="HIGGSDNA_BASE"
+
+python -s PYTHON_FILE

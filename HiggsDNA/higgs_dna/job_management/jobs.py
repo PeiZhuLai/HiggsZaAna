@@ -364,6 +364,7 @@ class CondorJob(Job):
         replacement_map = {}
         replacement_map["PYTHON_FILE"] = self.job_python_executable_file
         replacement_map["SUMMARY_FILE"] = self.job_summary_file
+        replacement_map["HIGGSDNA_BASE"] = self.hdna_base
         if self.host_params["needs_copy_proxy"]:
             replacement_map["GRID_PROXY"] = os.path.split(self.proxy)[-1]
 

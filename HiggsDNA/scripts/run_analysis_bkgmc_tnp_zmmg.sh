@@ -22,6 +22,7 @@ sample_list="${SAMPLE_LIST:-DYJetsToLL,DYJetsTo2Mu,DYJetsToLL_MLM}"
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
+reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
 short="${SHORT:-0}"
 dry_run="${DRY_RUN:-0}"
 
@@ -41,6 +42,10 @@ cmd=(
 
 if [[ "${unretire_jobs}" == "1" ]]; then
     cmd+=(--unretire_jobs)
+fi
+
+if [[ "${reconfigure_jobs}" == "1" ]]; then
+    cmd+=(--reconfigure_jobs)
 fi
 
 if [[ "${short}" == "1" ]]; then
