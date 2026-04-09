@@ -25,13 +25,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--mh",
         type=float,
-        default=125.2,
+        default=125.38,
         help="Higgs boson mass in GeV.",
     )
     parser.add_argument(
         "--mz",
         type=float,
-        default=91.2,
+        default=91.18,
         help="Z boson mass in GeV.",
     )
     parser.add_argument(
@@ -43,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--gamma-sm",
         type=float,
-        default=3.2e-3,
+        default=4.1e-3,
         help="SM Higgs width in GeV.",
     )
     parser.add_argument(
