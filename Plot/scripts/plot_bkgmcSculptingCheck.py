@@ -54,6 +54,8 @@ H_M_XMIN = 95.0
 H_M_XMAX = 180.0
 H_M_BIN_COARSE_WIDTH = 5.0
 H_M_BIN_COARSE_XMAX = 180.0
+H_M_BIN_SIGNAL_OVERLAY_WIDTH = 2.0
+H_M_BIN_SIGNAL_OVERLAY_XMAX = 181.0
 SIGNAL_DRAW_SCALE = 0.5
 SIGNAL_DRAW_SCALE_NEAREST_BIN5 = 0.2
 LUMI_MAP = {
@@ -511,6 +513,8 @@ def _draw_mass_plot(
     channel_mode: str = "inclusive",
     signal_shape_mode: str = "mixture",
     signal_scale: float = SIGNAL_DRAW_SCALE,
+    signal_source_histos: Optional[Dict[str, TH1F]] = None,
+    signal_source_all_histos: Optional[Dict[int, Dict[str, TH1F]]] = None,
 ) -> None:
     draw_histos: Dict[str, TH1F] = {}
     draw_tag = name_suffix if name_suffix else "_nominal"
@@ -537,10 +541,12 @@ def _draw_mass_plot(
     signal_hist = None
     signal_legend_label = None
     if show_signal:
+        signal_input_histos = signal_source_histos if signal_source_histos is not None else draw_histos
+        signal_input_all_histos = signal_source_all_histos if signal_source_all_histos is not None else all_histos
         signal_hist, signal_legend_label = _build_signal_overlay(
             mass,
-            draw_histos,
-            all_histos,
+            signal_input_histos,
+            signal_input_all_histos,
             plot_cfg,
             channel_mode,
             getattr(analyzer_cfg, "years_sig", []),
@@ -832,12 +838,21 @@ def main():
         analyzer_cfg,
         bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
     )
+    histos_signal_nearest_overlay_2gev = _book_histograms(
+        analyzer_cfg,
+        sample_names=analyzer_cfg.sig_names,
+        bin_edges=_build_uniform_bin_edges(
+            H_M_XMIN,
+            H_M_BIN_SIGNAL_OVERLAY_XMAX,
+            H_M_BIN_SIGNAL_OVERLAY_WIDTH,
+        ),
+    )
     _fill_histograms(
         ntuples=ntuples,
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
-        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5],
+        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_overlay_2gev],
         blind=args.blind,
         only_ele=args.ele,
         only_mu=args.mu,
@@ -904,6 +919,8 @@ def main():
             channel_mode=channel_mode,
             signal_shape_mode="nearest",
             signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
+            signal_source_histos=histos_signal_nearest_overlay_2gev[mass],
+            signal_source_all_histos=histos_signal_nearest_overlay_2gev,
         )
 
     elapsed = time.time() - start_time
