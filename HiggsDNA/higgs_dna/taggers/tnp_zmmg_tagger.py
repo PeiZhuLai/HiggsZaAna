@@ -127,7 +127,7 @@ DEFAULT_OPTIONS = {
     "muons": {
         "pt": 4.0,
         "eta": 2.4,
-        "pfRelIso03_chg": 0.2,
+        "pfRelIso03_chg_quadratic": 0.2,
     },
     "trigger": {
         "single_muon": [
