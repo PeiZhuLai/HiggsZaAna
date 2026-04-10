@@ -619,7 +619,7 @@ class AnalysisManager():
                     )
                 else:
                     events_file = photon_scale_smear_run3(events_file, year, is_data)
-                events_file = electron_scale_smear_run3(events_file, year, is_data)
+                    events_file = electron_scale_smear_run3(events_file, year, is_data)
                 events_file = muon_scale_smear_run3(events_file, year, is_data)
 
                 # events_file = muon_scale_smear_run3(events_file, year, is_data)
