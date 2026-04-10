@@ -680,6 +680,26 @@ class TnPZmmgTagger(Tagger):
         return all_cuts
 
     def select_photons(self, photons, electrons, rho, year):
+        if int(year) > 2020:
+            if (
+                "pfRelIso03_chg" not in photons.fields
+                and "pfRelIso03_chg_quadratic" in photons.fields
+            ):
+                photons = ak.with_field(
+                    photons,
+                    photons.pfRelIso03_chg_quadratic,
+                    "pfRelIso03_chg",
+                )
+            if (
+                "pfRelIso03_all" not in photons.fields
+                and "pfRelIso03_all_quadratic" in photons.fields
+            ):
+                photons = ak.with_field(
+                    photons,
+                    photons.pfRelIso03_all_quadratic,
+                    "pfRelIso03_all",
+                )
+
         _, photons_with_flags = ZaTaggerRun3.select_photons(
             self,
             photons=photons,

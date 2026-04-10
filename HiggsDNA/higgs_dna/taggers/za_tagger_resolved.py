@@ -1374,9 +1374,17 @@ class ZaTaggerRun3(Tagger):
 
         hcalPFClusterIso_PUcorr = photons.hcalPFClusterIso
         ecalPFClusterIso_PUcorr = photons.ecalPFClusterIso
-        chiso_PUcorr = photons.pfRelIso03_chg
+        if "pfRelIso03_chg" in photons.fields:
+            chiso_PUcorr = photons.pfRelIso03_chg
+        elif "pfRelIso03_chg_quadratic" in photons.fields:
+            chiso_PUcorr = photons.pfRelIso03_chg_quadratic
+        else:
+            raise AttributeError("Photon is missing both 'pfRelIso03_chg' and 'pfRelIso03_chg_quadratic'.")
 
         if int(year) > 2020:
+            photons = ak.with_field(photons, photons.pfRelIso03_chg_quadratic, "pfRelIso03_chg")
+            if "pfRelIso03_all_quadratic" in photons.fields:
+                photons = ak.with_field(photons, photons.pfRelIso03_all_quadratic, "pfRelIso03_all")
             hcalPFClusterIso_PUcorr = _apply_quadratic_ea_corr(
                 photons.hcalPFClusterIso, "PFHCalIso"
             )
