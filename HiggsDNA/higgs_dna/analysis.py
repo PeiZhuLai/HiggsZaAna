@@ -541,6 +541,15 @@ class AnalysisManager():
         return {}
 
     @staticmethod
+    def skip_photon_scale_smear(config):
+        for tag_config in config.get("tag_sequence", []):
+            if tag_config.get("tagger") == "TnPZmmgTagger":
+                return True
+            if tag_config.get("module_name", "").endswith("tnp_zmmg_tagger"):
+                return True
+        return False
+
+    @staticmethod
     def load_events(config):
         """
         Load all branches in ``branches`` from "Events" tree from all nanoAODs in ``files`` into a single zipped ``awkward.Array``.
@@ -561,6 +570,7 @@ class AnalysisManager():
         branches = config["branches"]
         is_data = config["sample"]["is_data"]
         year = config["sample"]["year"]
+        skip_photon_scale_smear = AnalysisManager.skip_photon_scale_smear(config)
 
         with_skimmed = config.get("with_skimmed", False)
         skimmed_files_paths = config.get("skimmed_files", []) # Get paths, default to empty list
@@ -603,7 +613,12 @@ class AnalysisManager():
                 events_file = events_file[overlap_cut]
 
             if int(year[:4]) > 2020:
-                events_file = photon_scale_smear_run3(events_file, year, is_data)
+                if skip_photon_scale_smear:
+                    logger.info(
+                        "[AnalysisManager : LoadEvents] Skipping photon scale/smear for zmmg tag-and-probe."
+                    )
+                else:
+                    events_file = photon_scale_smear_run3(events_file, year, is_data)
                 events_file = electron_scale_smear_run3(events_file, year, is_data)
                 events_file = muon_scale_smear_run3(events_file, year, is_data)
 

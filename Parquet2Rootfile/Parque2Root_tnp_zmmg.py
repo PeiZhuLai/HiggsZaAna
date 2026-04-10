@@ -18,6 +18,7 @@ EVENT_SOURCE_COLUMNS = [
     "rho",
     "PV",
     "PV_z",
+    "event_nPV",
     "dZ",
     "pass_tnp_presel",
     "passing_dimuon_trigger",
@@ -82,6 +83,7 @@ PROBE_PHOTON_SOURCE_COLUMNS = [
     "probe_photon_pixelSeed",
     "probe_photon_pass_csev",
     "probe_photon_pass_pixel_veto",
+    "probe_photon_pass_mva_min",
     "probe_photon_isScEtaEB",
     "probe_photon_isScEtaEE",
     "probe_photon_lep_near_dR",
@@ -187,6 +189,7 @@ def build_egm_compatible_dataframe(data, keep_all):
     probe_phi = source_series(data, "probe_photon_phi", np.nan)
     probe_csev = source_series(data, "probe_photon_pass_csev", False)
     probe_pixel_veto = source_series(data, "probe_photon_pass_pixel_veto", False)
+    probe_mva_min = source_series(data, "probe_photon_pass_mva_min", False)
     probe_gen_part_flav = source_series(data, "probe_photon_genPartFlav", 1)
 
     alias_series(output, "run", source_series(data, "run", 0))
@@ -200,6 +203,7 @@ def build_egm_compatible_dataframe(data, keep_all):
     alias_series(output, "event_rho", rho)
     alias_series(output, "PV", pv)
     alias_series(output, "PV_z", source_series(data, "PV_z", pv))
+    alias_series(output, "event_nPV", source_series(data, "event_nPV", np.nan))
     alias_series(output, "event_met_pfmet", 0.0)
     alias_series(output, "event_met_pfphi", 0.0)
     alias_series(output, "dZ", source_series(data, "dZ", 0.0))
@@ -354,6 +358,8 @@ def build_egm_compatible_dataframe(data, keep_all):
     alias_series(output, "ph_passElectronVeto", probe_csev)
     alias_series(output, "ph_passCSEV", probe_csev)
     alias_series(output, "ph_passPixelVeto", probe_pixel_veto)
+    alias_series(output, "probe_photon_pass_mva_min", probe_mva_min)
+    alias_series(output, "ph_passMVAMin", probe_mva_min)
     alias_series(
         output,
         "ph_electronVeto",

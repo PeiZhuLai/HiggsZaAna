@@ -157,6 +157,7 @@ class TnPZmmgTagger(Tagger):
     def calculate_selection(self, events):
         year = self.get_analysis_year(events)
         rho = self.get_rho(events)
+        event_npv = self.get_event_npv(events)
         awkward_utils.add_field(
             events,
             "fixedGridRhoAll",
@@ -167,6 +168,12 @@ class TnPZmmgTagger(Tagger):
             events,
             "rho",
             ak.fill_none(rho, 0.0),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
+            "event_nPV",
+            ak.fill_none(event_npv, DUMMY_VALUE),
             overwrite=True,
         )
         if "PV_z" in events.fields:
@@ -323,7 +330,6 @@ class TnPZmmgTagger(Tagger):
         )
         far_pt_cut = zmmg_candidates_all.FarMuon.pt > self.options["fsr"]["far_muon_pt"]
         dimuon_mass_cut = zmmg_candidates_all.Dimuon.mass > self.options["fsr"]["dimuon_mass_min"]
-        photon_mva_cut = zmmg_candidates_all.ZPhoton.mvaID > self.options["fsr"]["photon_mva_min"]
         zmmg_mass_cut = (
             zmmg_candidates_all.Zmmg.mass > self.options["fsr"]["zmmg_mass"][0]
         ) & (
@@ -338,7 +344,6 @@ class TnPZmmgTagger(Tagger):
             & near_dr_min_cut
             & far_pt_cut
             & dimuon_mass_cut
-            & photon_mva_cut
             & zmmg_mass_cut
             & mass_sum_cut
         )
@@ -372,17 +377,6 @@ class TnPZmmgTagger(Tagger):
                 ]
             ) >= 1
         )
-        photon_mva_event_cut = photon_cut & (
-            ak.num(
-                zmmg_candidates_all[
-                    near_dr_max_cut
-                    & near_dr_min_cut
-                    & far_pt_cut
-                    & dimuon_mass_cut
-                    & photon_mva_cut
-                ]
-            ) >= 1
-        )
         zmmg_mass_event_cut = photon_cut & (
             ak.num(
                 zmmg_candidates_all[
@@ -390,7 +384,6 @@ class TnPZmmgTagger(Tagger):
                     & near_dr_min_cut
                     & far_pt_cut
                     & dimuon_mass_cut
-                    & photon_mva_cut
                     & zmmg_mass_cut
                 ]
             ) >= 1
@@ -534,6 +527,15 @@ class TnPZmmgTagger(Tagger):
         )
         awkward_utils.add_field(
             events,
+            "probe_photon_pass_mva_min",
+            ak.fill_none(
+                best_candidate.ProbePhoton.mvaID > self.options["fsr"]["photon_mva_min"],
+                False,
+            ),
+            overwrite=True,
+        )
+        awkward_utils.add_field(
+            events,
             "probe_photon_lep_near_dR",
             ak.fill_none(best_candidate.minMuonGammaDR, DUMMY_VALUE),
             overwrite=True,
@@ -586,7 +588,6 @@ class TnPZmmgTagger(Tagger):
                 "dR(gamma, near muon) > 0.4",
                 "pT_far > 20",
                 "m_mumu > 35",
-                "photon ID MVA > -0.7",
                 "80 < m_mumugamma < 100",
                 "m_mumu + m_mumugamma < 180",
                 "all",
@@ -599,7 +600,6 @@ class TnPZmmgTagger(Tagger):
                 near_dr_min_event_cut,
                 far_pt_event_cut,
                 dimuon_mass_event_cut,
-                photon_mva_event_cut,
                 zmmg_mass_event_cut,
                 mass_sum_event_cut,
                 presel_cut,
@@ -635,6 +635,18 @@ class TnPZmmgTagger(Tagger):
             raise RuntimeError(message)
 
         return ak.ones_like(events.run, dtype=numpy.float64)
+
+    def get_event_npv(self, events):
+        if "PV_npvsGood" in events.fields:
+            return events.PV_npvsGood
+        if "PV_npvs" in events.fields:
+            return events.PV_npvs
+        if "PV" in events.fields and hasattr(events.PV, "fields"):
+            if "npvsGood" in events.PV.fields:
+                return events.PV.npvsGood
+            if "npvs" in events.PV.fields:
+                return events.PV.npvs
+        return ak.ones_like(events.run, dtype=numpy.float64) * DUMMY_VALUE
 
     def select_electrons_for_photon_id(self, events, year):
         electron_cut = lepton_selections.select_electrons(
@@ -712,6 +724,7 @@ class TnPZmmgTagger(Tagger):
         photon_selection = (
             photons_with_flags.pass_ph_kinematic
             & photons_with_flags.pass_phid_custom_tight
+            & photons_with_flags.isScEtaEB
         )
 
         photon_ele_idx = ak.where(
