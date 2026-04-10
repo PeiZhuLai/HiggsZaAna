@@ -18,6 +18,7 @@ from higgs_dna.selections import lepton_selections, object_selections
 
 Z_MASS = 91.1876
 DUMMY_VALUE = -999.0
+DEFAULT_MUON_PFRELISO03_CHG = 0.2
 
 MUON_TNP_FIELDS = [
     "pt",
@@ -127,7 +128,7 @@ DEFAULT_OPTIONS = {
     "muons": {
         "pt": 4.0,
         "eta": 2.4,
-        "pfRelIso03_chg_quadratic": 0.2,
+        "pfRelIso03_chg": DEFAULT_MUON_PFRELISO03_CHG,
     },
     "trigger": {
         "single_muon": [
@@ -671,7 +672,10 @@ class TnPZmmgTagger(Tagger):
         eta_cut = numpy.abs(muons.eta) < options["eta"]
         iso_threshold = options.get(
             "pfRelIso03_chg",
-            DEFAULT_OPTIONS["muons"]["pfRelIso03_chg"],
+            options.get(
+                "pfRelIso03_chg_quadratic",
+                DEFAULT_MUON_PFRELISO03_CHG,
+            ),
         )
         if "mediumPromptId" in muons.fields:
             id_cut = muons.mediumPromptId == True
@@ -689,6 +693,10 @@ class TnPZmmgTagger(Tagger):
             logger.warning(
                 "[TnPZmmgTagger] Muon isolation threshold is missing in options; falling back to the default pfRelIso03_chg < %.3f.",
                 iso_threshold,
+            )
+        elif "pfRelIso03_chg_quadratic" in options:
+            logger.warning(
+                "[TnPZmmgTagger] Found legacy muon isolation option 'pfRelIso03_chg_quadratic'; using it as the pfRelIso03_chg threshold."
             )
         if "pfRelIso03_chg" not in muons.fields:
             logger.error("[TnPZmmgTagger] Muon.pfRelIso03_chg is unavailable in the input NanoAOD.")
