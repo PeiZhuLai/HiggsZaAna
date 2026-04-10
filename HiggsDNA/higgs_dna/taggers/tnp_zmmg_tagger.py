@@ -143,11 +143,13 @@ DEFAULT_OPTIONS = {
 
 
 class TnPZmmgTagger(Tagger):
-    def __init__(self, name="TnPZmmgTagger", options={}, is_data=None, year=None):
+    def __init__(self, name="TnPZmmgTagger", options=None, is_data=None, year=None):
         super(TnPZmmgTagger, self).__init__(name, options, is_data, year)
 
+        if options is None:
+            options = {}
         if not options:
-            self.options = DEFAULT_OPTIONS
+            self.options = copy.deepcopy(DEFAULT_OPTIONS)
         else:
             self.options = misc_utils.update_dict(
                 original=DEFAULT_OPTIONS,
@@ -667,6 +669,10 @@ class TnPZmmgTagger(Tagger):
     def select_muons(self, muons, options):
         pt_cut = muons.pt > options["pt"]
         eta_cut = numpy.abs(muons.eta) < options["eta"]
+        iso_threshold = options.get(
+            "pfRelIso03_chg",
+            DEFAULT_OPTIONS["muons"]["pfRelIso03_chg"],
+        )
         if "mediumPromptId" in muons.fields:
             id_cut = muons.mediumPromptId == True
             id_name = "mediumPrompt ID"
@@ -679,7 +685,15 @@ class TnPZmmgTagger(Tagger):
         else:
             logger.error("[TnPZmmgTagger] Neither Muon.mediumPromptId nor Muon.mediumId is available.")
             raise RuntimeError("Muon.mediumPromptId is required for the Zmmg TnP muon selection.")
-        iso_cut = muons.pfRelIso03_chg < options["pfRelIso03_chg"]
+        if "pfRelIso03_chg" not in options:
+            logger.warning(
+                "[TnPZmmgTagger] Muon isolation threshold is missing in options; falling back to the default pfRelIso03_chg < %.3f.",
+                iso_threshold,
+            )
+        if "pfRelIso03_chg" not in muons.fields:
+            logger.error("[TnPZmmgTagger] Muon.pfRelIso03_chg is unavailable in the input NanoAOD.")
+            raise RuntimeError("Muon.pfRelIso03_chg is required for the Zmmg TnP muon selection.")
+        iso_cut = muons.pfRelIso03_chg < iso_threshold
 
         all_cuts = pt_cut & eta_cut & id_cut & iso_cut
 
