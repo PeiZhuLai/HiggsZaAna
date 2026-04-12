@@ -8,6 +8,7 @@ import glob
 import pyarrow
 import datetime
 import sys
+import re
 from tqdm import tqdm
 
 import logging
@@ -424,23 +425,29 @@ class CondorManager(JobsManager):
                 
                 # submit all jobs
                 results = do_cmd("condor_submit %s" % submit_file).split("\n")
-                n_submitted = 0
+                submitted_clusters = []
                 for line in results:
-                    if "1 job(s) submitted to cluster" in line:
-                        n_submitted += 1
+                    match = re.search(r"(\d+)\s+job\(s\)\s+submitted\s+to\s+cluster\s+(\d+)", line)
+                    if match is not None:
+                        submitted_clusters.append(
+                                (int(match.group(1)), match.group(2))
+                        )
+
+                n_submitted = sum(n_jobs for n_jobs, _ in submitted_clusters)
 
                 # Check if they were submitted successfully
                 if n_submitted == len(chunk):
                     logger.info("[CondorManager : submit_to_batch] Submitted %d jobs." % n_submitted)
 
                 else:
-                    logger.exception("[CondorManager : submit_to_batch] We found %d jobs to submit, but only %d were successfully submitted." % (len(jobs_to_submit), n_submitted))
+                    logger.error("[CondorManager : submit_to_batch] condor_submit output for chunk %d:\n%s", i, "\n".join(results))
+                    logger.exception("[CondorManager : submit_to_batch] We found %d jobs to submit in chunk %d, but only %d were successfully submitted." % (len(chunk), i, n_submitted))
                     raise RuntimeError()
 
                 # Assign cluster id's to jobs
-                for line in results:
-                    if "1 job(s) submitted to cluster" in line:
-                        jobs_to_submit[idx].cluster_id = line.split("cluster")[-1][:-1].strip()
+                for n_jobs, cluster_id in submitted_clusters:
+                    for _ in range(n_jobs):
+                        jobs_to_submit[idx].cluster_id = cluster_id
                         jobs_to_submit[idx].n_attempts += 1
                         self.job_map[jobs_to_submit[idx].cluster_id] = None
                         idx += 1
