@@ -43,10 +43,15 @@ process_sample() {
         command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_tnp_zmmg.py "
         command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
         if [ "$type" = "Data" ]; then
-            command+="-o ${target}Data/${year}.root"
+            output_path="${target}Data/${year}.root"
         else
-            command+="-o ${target}${sample}/${year}.root"
+            output_path="${target}${sample}/${year}.root"
         fi
+        if [ -f "$output_path" ]; then
+            echo "Removing existing output: $output_path"
+            rm -f "$output_path"
+        fi
+        command+="-o ${output_path}"
         
         if [ "$type" = "Sig_MC" ]; then
             command+=" --split"
@@ -74,9 +79,14 @@ process_sample_syst() {
     
     for syst in "${systs[@]}"; do
         corr="${syst}_${uod}"
+        output_path="${target}${sample}_${syst}_${uod}/${year}.root"
+        if [ -f "$output_path" ]; then
+            echo "Removing existing output: $output_path"
+            rm -f "$output_path"
+        fi
         command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_tnp_zmmg.py "
         command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
-        command+="-o ${target}${sample}_${syst}_${uod}/${year}.root"
+        command+="-o ${output_path}"
         
         if [ "$type" = "Sig_MC" ]; then
             command+=" --split"
