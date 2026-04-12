@@ -785,18 +785,27 @@ class TnPZmmgTagger(Tagger):
 
     def add_flat_object_fields(self, events, name, objects, fields):
         available_fields = [field for field in fields if field in objects.fields]
-        if not available_fields:
-            return
+        if available_fields:
+            awkward_utils.add_object_fields(
+                events=events,
+                name=name,
+                objects=ak.singletons(objects),
+                n_objects=1,
+                dummy_value=DUMMY_VALUE,
+                fields=available_fields,
+                overwrite=True,
+            )
 
-        awkward_utils.add_object_fields(
-            events=events,
-            name=name,
-            objects=ak.singletons(objects),
-            n_objects=1,
-            dummy_value=DUMMY_VALUE,
-            fields=available_fields,
-            overwrite=True,
-        )
+        derived_fields = [
+            field for field in fields if field not in available_fields and hasattr(objects, field)
+        ]
+        for field in derived_fields:
+            awkward_utils.add_field(
+                events,
+                f"{name}_{field}",
+                ak.fill_none(getattr(objects, field), DUMMY_VALUE),
+                overwrite=True,
+            )
 
     def passing_dimuon_trigger(self, events):
         return self.get_dimuon_trigger_decisions(events)[2]
