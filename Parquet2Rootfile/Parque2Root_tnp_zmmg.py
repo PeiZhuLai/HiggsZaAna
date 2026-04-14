@@ -9,6 +9,27 @@ import uproot
 
 TREE_PATH = "tnpPhoIDs/fitter_tree"
 
+# histUtils.cpp directly binds pair_mass to a C++ float buffer via SetBranchAddress.
+# Keep this branch as float32 in the ROOT output to match that expectation.
+ROOT_DTYPE_OVERRIDES = {
+    "pair_mass": np.float32,
+}
+
+# Other branches are accessed through TTreeFormula, so they only need to be present
+# and numeric rather than matching one exact C++ primitive type.
+HISTUTILS_FORMULA_COLUMNS = (
+    "totWeight",
+    "ph_passElectronVeto",
+    "ph_r9",
+    "ph_et",
+    "event_nPV",
+    "event_met_pfmet",
+    "event_met_pfphi",
+    "tag_Ele_pt",
+    "tag_Ele_phi",
+    "mcTrue",
+)
+
 EVENT_SOURCE_COLUMNS = [
     "run",
     "event",
@@ -431,7 +452,39 @@ def sanitize_dataframe(data):
 
 
 def dataframe_to_tree_payload(data):
-    return {column: data[column].to_numpy() for column in data.columns}
+    payload = {}
+    for column in data.columns:
+        values = data[column].to_numpy()
+        target_dtype = ROOT_DTYPE_OVERRIDES.get(column)
+        if target_dtype is not None:
+            values = values.astype(target_dtype, copy=False)
+        payload[column] = values
+    return payload
+
+
+def validate_histutils_payload(payload):
+    issues = []
+
+    pair_mass = payload.get("pair_mass")
+    if pair_mass is None:
+        issues.append("missing required branch 'pair_mass'")
+    elif pair_mass.dtype != np.dtype(np.float32):
+        issues.append(
+            "branch 'pair_mass' must be float32 for libPython/histUtils.cpp, "
+            f"got {pair_mass.dtype}"
+        )
+
+    for column in HISTUTILS_FORMULA_COLUMNS:
+        values = payload.get(column)
+        if values is None:
+            issues.append(f"missing formula branch '{column}'")
+            continue
+        if values.dtype.kind not in "biuf":
+            issues.append(
+                f"formula branch '{column}' must be numeric, got {values.dtype}"
+            )
+
+    return issues
 
 
 def write_output(output_path, data, split):
@@ -439,6 +492,12 @@ def write_output(output_path, data, split):
         os.remove(output_path)
 
     payload = dataframe_to_tree_payload(data)
+    compatibility_issues = validate_histutils_payload(payload)
+    if compatibility_issues:
+        raise RuntimeError(
+            "histUtils compatibility check failed: "
+            + "; ".join(compatibility_issues)
+        )
 
     with uproot.recreate(output_path) as root_file:
         root_file[TREE_PATH] = payload
@@ -475,6 +534,9 @@ def main():
     print(f"Written events: {len(data)}")
     print(f"Written branches: {len(data.columns)}")
     print(f"Primary tree: {TREE_PATH}")
+    print(
+        "histUtils compatibility checks passed for pair_mass and formula branches."
+    )
 
     if missing_columns:
         print(
