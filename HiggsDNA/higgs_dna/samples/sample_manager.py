@@ -249,23 +249,22 @@ class SampleManager():
 
     def _extract_json_payload(self, raw_output: str) -> str:
         """
-        dasgoclient occasionally prefixes/suffixes its JSON output with warning text.
-        Strip that noise and return the JSON payload only.
+        dasgoclient output is not always a clean standalone JSON document. In
+        practice it may contain leading warnings, a preceding "null", or even
+        multiple concatenated JSON documents. Find the first decodable JSON
+        object/array and return exactly that slice.
         """
         raw_output = raw_output.strip()
         if not raw_output:
             return raw_output
 
-        for opener, closer in (("[", "]"), ("{", "}")):
-            start = raw_output.find(opener)
-            end = raw_output.rfind(closer)
-            if start == -1 or end == -1 or end < start:
-                continue
+        decoder = json.JSONDecoder()
+        candidate_starts = [idx for idx, char in enumerate(raw_output) if char in "[{"]
 
-            payload = raw_output[start : end + 1]
+        for start in candidate_starts:
             try:
-                json.loads(payload)
-                return payload
+                _, end = decoder.raw_decode(raw_output[start:])
+                return raw_output[start : start + end]
             except json.JSONDecodeError:
                 continue
 
