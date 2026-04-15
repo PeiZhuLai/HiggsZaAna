@@ -9,15 +9,10 @@ vector.register_awkward()
 logger = logging.getLogger(__name__)
 
 from higgs_dna.taggers.tagger import Tagger
-from higgs_dna.taggers.za_tagger_resolved import (
-    ZaTaggerRun3,
-)
 from higgs_dna.utils import awkward_utils, misc_utils
-from higgs_dna.selections import lepton_selections, object_selections
 
 Z_MASS = 91.1876
 DUMMY_VALUE = -999.0
-DEFAULT_MUON_PFRELISO03_CHG = 0.2
 
 MUON_TNP_FIELDS = [
     "pt",
@@ -27,7 +22,6 @@ MUON_TNP_FIELDS = [
     "charge",
     "ptErr",
     "ptE_error",
-    "pfRelIso03_chg",
     "pfRelIso03_all",
     "miniPFRelIso_all",
     "dxy",
@@ -86,20 +80,6 @@ PHOTON_TNP_FIELDS = [
     "origIndex",
     "pass_ph_kinematic",
     "pass_phid_custom_tight",
-    "pass_phid_custom_extend_tight",
-    "pass_phid_sieie_tight",
-    "pass_phid_PFECalIso_tight",
-    "pass_phid_official_tight",
-    "pass_phid_custom_medium",
-    "pass_phid_custom_extend_medium",
-    "pass_phid_sieie_medium",
-    "pass_phid_PFECalIso_medium",
-    "pass_phid_official_medium",
-    "pass_phid_custom_loose",
-    "pass_phid_custom_extend_loose",
-    "pass_phid_sieie_loose",
-    "pass_phid_PFECalIso_loose",
-    "pass_phid_official_loose",
 ]
 
 P4_FIELDS = ["pt", "eta", "phi", "mass"]
@@ -118,28 +98,6 @@ DEFAULT_OPTIONS = {
             [0.0, 1.4442],
             [1.566, 2.5],
         ],
-        "mvaID_barrel": -0.4,
-        "mvaID_endcap": -0.58,
-        "loose_hoe_barrel": 0.129991,
-        "loose_hoe_endcap": 0.153428,
-        "loose_PFChIso_barrel": 1.88518,
-        "loose_PFChIso_endcap": 1.65396,
-        "loose_PFHCalIso_barrel": [6.34397, 0.0100547, 5.78332e-05],
-        "loose_PFHCalIso_endcap": [1.85881, 0.0116989, 7.47603e-05],
-        "loose_sieie_barrel": 0.0114521,
-        "loose_sieie_endcap": 0.0276744,
-        "loose_PFECalIso_barrel": [0.703789, 0.000652035],
-        "loose_PFECalIso_endcap": [6.61585, 0.000195486],
-        "medium_hoe_barrel": 0.0583054,
-        "medium_hoe_endcap": 0.00518075,
-        "medium_PFChIso_barrel": 0.939289,
-        "medium_PFChIso_endcap": 0.970286,
-        "medium_PFHCalIso_barrel": [2.18903, 0.0100547, 5.78332e-05],
-        "medium_PFHCalIso_endcap": [0.0336699, 0.0116989, 7.47603e-05],
-        "medium_sieie_barrel": 0.0100086,
-        "medium_sieie_endcap": 0.0268736,
-        "medium_PFECalIso_barrel": [0.227697, 0.000652035],
-        "medium_PFECalIso_endcap": [1.124, 0.000195486],
         "tight_hoe_barrel": 0.0417588,
         "tight_hoe_endcap": 0.00254267,
         "tight_PFChIso_barrel": 0.316306,
@@ -180,23 +138,19 @@ DEFAULT_OPTIONS = {
         "PFHCalIso_EA_EE_5": [0.36531, -0.000439],
         "e_veto": 0.5,
     },
-    "electrons": {
-        "pt": 7.0,
-    },
-    "fsr": {
-        "min_muon_gamma_dr": 0.8,
-        "near_muon_gamma_dr_min": 0.4,
+        "fsr": {
+            "min_muon_gamma_dr": 0.8,
+            "near_muon_gamma_dr_min": 0.4,
         "far_muon_pt": 20.0,
         "dimuon_mass_min": 35.0,
         "photon_mva_min": -0.7,
         "zmmg_mass": [80.0, 100.0],
         "mass_sum_max": 180.0,
     },
-    "muons": {
-        "pt": 4.0,
-        "eta": 2.4,
-        "pfRelIso03_chg": DEFAULT_MUON_PFRELISO03_CHG,
-    },
+        "muons": {
+            "pt": 4.0,
+            "eta": 2.4,
+        },
     "trigger": {
         "single_muon": [
             "HLT_IsoMu24",
@@ -260,10 +214,6 @@ class TnPZmmgTagger(Tagger):
                 overwrite=True,
             )
 
-        electrons = self.select_electrons_for_photon_id(events, year)
-        awkward_utils.add_field(events, "SelectedElectron", electrons, overwrite=True)
-        awkward_utils.add_field(events, "n_electrons", ak.num(electrons), overwrite=True)
-
         muon_selection = self.select_muons(events.Muon, self.options["muons"])
         muons = events.Muon[muon_selection]
         muon_idx = ak.local_index(events.Muon.pt, axis=1)[muon_selection]
@@ -276,17 +226,13 @@ class TnPZmmgTagger(Tagger):
 
         photon_selection, photons_with_flags = self.select_photons(
             photons=events.Photon,
-            electrons=electrons,
             rho=rho,
             year=year,
         )
         awkward_utils.add_field(events, "Photon", photons_with_flags, overwrite=True)
 
         photons = events.Photon[photon_selection]
-        # Keep photons close to muons for FSR; only retain the electron cleaning.
-        clean_photon_mask = ak.fill_none(object_selections.delta_R(photons, electrons, 0.3), True)
-        photons = photons[clean_photon_mask]
-        photon_idx = ak.local_index(events.Photon.pt, axis=1)[photon_selection][clean_photon_mask]
+        photon_idx = ak.local_index(events.Photon.pt, axis=1)[photon_selection]
         photons = ak.with_field(photons, photon_idx, "origIndex")
         photons = photons[ak.argsort(photons.pt, ascending=False, axis=1)]
         if "mass" not in photons.fields:
@@ -296,12 +242,6 @@ class TnPZmmgTagger(Tagger):
 
         awkward_utils.add_field(events, "n_muons", ak.num(muons), overwrite=True)
         awkward_utils.add_field(events, "n_photons", ak.num(photons), overwrite=True)
-        awkward_utils.add_field(
-            events,
-            "n_leptons",
-            ak.num(electrons) + ak.num(muons),
-            overwrite=True,
-        )
 
         if (not self.is_data) and "GenVtx_z" in events.fields and "PV_z" in events.fields:
             awkward_utils.add_field(
@@ -718,32 +658,9 @@ class TnPZmmgTagger(Tagger):
                 return events.PV.npvs
         return ak.ones_like(events.run, dtype=numpy.float64) * DUMMY_VALUE
 
-    def select_electrons_for_photon_id(self, events, year):
-        electron_cut = lepton_selections.select_electrons(
-            electrons=events.Electron,
-            options=self.options["electrons"],
-            clean={},
-            name="SelectedElectron",
-            tagger=self,
-            year=year,
-        )
-
-        electrons = events.Electron[electron_cut]
-        electron_idx = ak.local_index(events.Electron.pt, axis=1)[electron_cut]
-        electron_idx = ak.mask(electron_idx, ak.num(electron_idx) > 0)
-        electrons = ak.with_field(electrons, electron_idx, "Idx")
-        return electrons
-
     def select_muons(self, muons, options):
         pt_cut = muons.pt > options["pt"]
         eta_cut = numpy.abs(muons.eta) < options["eta"]
-        iso_threshold = options.get(
-            "pfRelIso03_chg",
-            options.get(
-                "pfRelIso03_chg_quadratic",
-                DEFAULT_MUON_PFRELISO03_CHG,
-            ),
-        )
         if "mediumPromptId" in muons.fields:
             id_cut = muons.mediumPromptId == True
             id_name = "mediumPrompt ID"
@@ -756,31 +673,18 @@ class TnPZmmgTagger(Tagger):
         else:
             logger.error("[TnPZmmgTagger] Neither Muon.mediumPromptId nor Muon.mediumId is available.")
             raise RuntimeError("Muon.mediumPromptId is required for the Zmmg TnP muon selection.")
-        if "pfRelIso03_chg" not in options:
-            logger.warning(
-                "[TnPZmmgTagger] Muon isolation threshold is missing in options; falling back to the default pfRelIso03_chg < %.3f.",
-                iso_threshold,
-            )
-        elif "pfRelIso03_chg_quadratic" in options:
-            logger.warning(
-                "[TnPZmmgTagger] Found legacy muon isolation option 'pfRelIso03_chg_quadratic'; using it as the pfRelIso03_chg threshold."
-            )
-        if "pfRelIso03_chg" not in muons.fields:
-            logger.error("[TnPZmmgTagger] Muon.pfRelIso03_chg is unavailable in the input NanoAOD.")
-            raise RuntimeError("Muon.pfRelIso03_chg is required for the Zmmg TnP muon selection.")
-        iso_cut = muons.pfRelIso03_chg < iso_threshold
 
-        all_cuts = pt_cut & eta_cut & id_cut & iso_cut
+        all_cuts = pt_cut & eta_cut & id_cut
 
         self.register_cuts(
-            names=["pt", "eta", id_name, "pfRelIso03_chg", "all"],
-            results=[pt_cut, eta_cut, id_cut, iso_cut, all_cuts],
+            names=["pt", "eta", id_name, "all"],
+            results=[pt_cut, eta_cut, id_cut, all_cuts],
             cut_type="muon",
         )
 
         return all_cuts
 
-    def select_photons(self, photons, electrons, rho, year):
+    def select_photons(self, photons, rho, year):
         if int(year) > 2020:
             if (
                 "pfRelIso03_chg" not in photons.fields
@@ -801,11 +705,9 @@ class TnPZmmgTagger(Tagger):
                     "pfRelIso03_all",
                 )
 
-        _, photons_with_flags = ZaTaggerRun3.select_photons(
-            self,
+        _, photons_with_flags = self._select_photons_with_flags(
             photons=photons,
             options=self.options["photons"],
-            electrons=electrons,
             rho=rho,
             year=year,
         )
@@ -813,34 +715,126 @@ class TnPZmmgTagger(Tagger):
         photon_selection = (
             photons_with_flags.pass_ph_kinematic
             & photons_with_flags.pass_phid_custom_tight
-            & photons_with_flags.isScEtaEB
         )
-
-        photon_ele_idx = ak.where(
-            ak.num(photons_with_flags.electronIdx, axis=1) == 0,
-            ak.ones_like(photons_with_flags.pt) * -1,
-            photons_with_flags.electronIdx,
-        )
-        new_pho = ak.unflatten(
-            ak.unflatten(
-                ak.flatten(photon_ele_idx),
-                [1] * ak.sum(ak.num(photon_ele_idx)),
-            ),
-            ak.num(photon_ele_idx, axis=1),
-        )
-        new_ele = ak.broadcast_arrays(
-            electrons.Idx[:, None],
-            new_pho,
-            depth_limit=2,
-        )[0]
-        eg_overlap_cut = ~ak.where(
-            ak.is_none(electrons.Idx),
-            ak.broadcast_arrays(photons_with_flags.electronIdx, False)[1],
-            ak.flatten(ak.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1),
-        )
-
-        photon_selection = photon_selection & eg_overlap_cut
         return photon_selection, photons_with_flags
+
+    def _select_photons_with_flags(self, photons, options, rho, year):
+        no_cut = photons.pt > 0
+        pt_cut = photons.pt > options["pt"]
+        eta_cut = photons.isScEtaEB | photons.isScEtaEE
+
+        ph_kinemtaic = pt_cut & eta_cut
+        photons = ak.with_field(photons, ph_kinemtaic, "pass_ph_kinematic")
+
+        phid_custom_tight = []
+
+        rho_broadcasted, _ = ak.broadcast_arrays(rho, photons.pt)
+        rho = rho_broadcasted
+        photon_abs_eta = numpy.abs(photons.eta)
+
+        def _apply_quadratic_ea_corr(iso_values, ea_prefix):
+            corrected = iso_values
+            eta_regions = [
+                (((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0)), f"{ea_prefix}_EA_EB_1"),
+                (((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442)), f"{ea_prefix}_EA_EB_2"),
+                (((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0)), f"{ea_prefix}_EA_EE_1"),
+                (((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2)), f"{ea_prefix}_EA_EE_2"),
+                (((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3)), f"{ea_prefix}_EA_EE_3"),
+                (((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4)), f"{ea_prefix}_EA_EE_4"),
+                (((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5)), f"{ea_prefix}_EA_EE_5"),
+            ]
+            for eta_mask, option_key in eta_regions:
+                corrected = ak.where(
+                    eta_mask,
+                    iso_values - rho * options[option_key][0] - rho**2 * options[option_key][1],
+                    corrected,
+                )
+            return corrected
+
+        hcalPFClusterIso_PUcorr = photons.hcalPFClusterIso
+        if "pfRelIso03_chg" in photons.fields:
+            chiso_PUcorr = photons.pfRelIso03_chg
+        elif "pfRelIso03_chg_quadratic" in photons.fields:
+            chiso_PUcorr = photons.pfRelIso03_chg_quadratic
+        else:
+            raise AttributeError(
+                "Photon is missing both 'pfRelIso03_chg' and 'pfRelIso03_chg_quadratic'."
+            )
+
+        if int(year) > 2020:
+            photons = ak.with_field(photons, photons.pfRelIso03_chg_quadratic, "pfRelIso03_chg")
+            if "pfRelIso03_all_quadratic" in photons.fields:
+                photons = ak.with_field(photons, photons.pfRelIso03_all_quadratic, "pfRelIso03_all")
+            hcalPFClusterIso_PUcorr = _apply_quadratic_ea_corr(
+                photons.hcalPFClusterIso, "PFHCalIso"
+            )
+            chiso_PUcorr = photons.pfRelIso03_chg_quadratic
+
+        photons = ak.with_field(photons, hcalPFClusterIso_PUcorr, "hcalPFClusterIso_PUcorr")
+        photons = ak.with_field(photons, chiso_PUcorr, "chiso_PUcorr")
+
+        if int(year) < 2020:
+            phid_custom_tight = ak.ones_like(photons.pt)
+        elif int(year) > 2020:
+            hoe_barrel_cut = photons.hoe_PUcorr < options["tight_hoe_barrel"]
+            hoe_endcap_cut = photons.hoe_PUcorr < options["tight_hoe_endcap"]
+
+            PFChIso_barrel_cut = photons.chiso_PUcorr < options["tight_PFChIso_barrel"]
+            PFChIso_endcap_cut = photons.chiso_PUcorr < options["tight_PFChIso_endcap"]
+
+            coef_1, coef_2, coef_3 = options["tight_PFHCalIso_barrel"]
+            parabola_cut = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt**2
+            PFHCalIso_barrel_cut = (
+                ((photon_abs_eta > 0.0) & (photon_abs_eta < 1.0))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            ) | (
+                ((photon_abs_eta > 1.0) & (photon_abs_eta < 1.4442))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            )
+
+            coef_1, coef_2, coef_3 = options["tight_PFHCalIso_endcap"]
+            parabola_cut = coef_1 + coef_2 * photons.pt + coef_3 * photons.pt**2
+            PFHCalIso_endcap_cut = (
+                ((photon_abs_eta > 1.566) & (photon_abs_eta < 2.0))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            ) | (
+                ((photon_abs_eta > 2.0) & (photon_abs_eta < 2.2))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            ) | (
+                ((photon_abs_eta > 2.2) & (photon_abs_eta < 2.3))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            ) | (
+                ((photon_abs_eta > 2.3) & (photon_abs_eta < 2.4))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            ) | (
+                ((photon_abs_eta > 2.4) & (photon_abs_eta < 2.5))
+                & (photons.hcalPFClusterIso_PUcorr < parabola_cut)
+            )
+
+            hoe_cut = (photons.isScEtaEB & hoe_barrel_cut) | (photons.isScEtaEE & hoe_endcap_cut)
+            PFChIso_cut = (photons.isScEtaEB & PFChIso_barrel_cut) | (
+                photons.isScEtaEE & PFChIso_endcap_cut
+            )
+            PFHCalIso_cut = (photons.isScEtaEB & PFHCalIso_barrel_cut) | (
+                photons.isScEtaEE & PFHCalIso_endcap_cut
+            )
+
+            phid_custom_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut
+
+        photons = ak.with_field(photons, phid_custom_tight, "pass_phid_custom_tight")
+
+        id_cut = phid_custom_tight
+
+        cut_results = [no_cut, pt_cut, eta_cut, id_cut]
+        all_cuts = photons.pt > 0
+        for i, cut in enumerate(cut_results):
+            all_cuts = all_cuts & cut
+            if i == 0:
+                cut_results[i] = ak.sum(cut, axis=1) > 1
+            else:
+                cut_results[i] = (ak.sum(cut, axis=1) > 1) & cut_results[i - 1]
+
+        return all_cuts, photons
 
     def choose_object(self, condition, first, second):
         fields = first.fields
