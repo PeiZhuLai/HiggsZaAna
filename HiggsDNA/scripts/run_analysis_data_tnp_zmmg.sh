@@ -27,11 +27,11 @@ cmd=(
     --n_cores 10
     --output_dir "$outdir"
     --unretire_jobs
-    --batch_system "local"
+    --batch_system "condor"
 )
 
 if [[ "${reconfigure_jobs}" == "1" ]]; then
     cmd+=(--reconfigure_jobs)
 fi
 
-"${cmd[@]}" --short #--batch_system "local" "condor" INFO DEBUG #--with_skimmed
+"${cmd[@]}" #--short #--batch_system "local" "condor" INFO DEBUG #--with_skimmed

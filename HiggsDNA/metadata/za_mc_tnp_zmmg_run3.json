@@ -31,94 +31,9 @@
                 "requires_branches": [
                     "Pileup_nTrueInt"
                 ]
-            },
-            "hlt_sf": {
-                "type": "event",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.HLT_systematics",
-                    "name": "HLT_sf"
-                },
-                "modify_central_weight": true
-            },
-            "muon_looseid_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "muon_LooseID_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Muon",
-                "target_collections": [
-                    "SelectedMuon"
-                ]
-            },
-            "muon_reco_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.lepton_systematics",
-                    "name": "muon_reco_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "Muon",
-                "target_collections": [
-                    "SelectedMuon"
-                ]
-            },
-            "photon_id_sf": {
-                "type": "object",
-                "method": "from_function",
-                "function": {
-                    "module_name": "higgs_dna.systematics.photon_systematics",
-                    "name": "photon_zaid_sf"
-                },
-                "modify_central_weight": true,
-                "input_collection": "SelectedPhoton",
-                "target_collections": [
-                    [
-                        "SelectedPhoton"
-                    ]
-                ]
             }
         },
         "independent_collections": {
-            "Photon_scale": {
-                "method": "from_branch",
-                "branch_modified": [
-                    "Photon",
-                    "pt"
-                ],
-                "branches": {
-                    "up": [
-                        "Photon",
-                        "pt_ScaleUp"
-                    ],
-                    "down": [
-                        "Photon",
-                        "pt_ScaleDown"
-                    ]
-                }
-            },
-            "Photon_smear": {
-                "method": "from_branch",
-                "branch_modified": [
-                    "Photon",
-                    "pt"
-                ],
-                "branches": {
-                    "up": [
-                        "Photon",
-                        "dEsigmaUp"
-                    ],
-                    "down": [
-                        "Photon",
-                        "dEsigmaDown"
-                    ]
-                },
-                "additive": true
-            },
             "Muon_scale": {
                 "method": "from_branch",
                 "branch_modified": [

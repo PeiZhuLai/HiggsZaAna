@@ -141,7 +141,7 @@ class Job():
             self.config["log-file"] = _lf
         # self.config["skimmed_files"] = [file.name for file in self.inputs]
         if os.path.exists(self.config_file):
-            logger.warning("[Job : write_config] Overwriting existing config file '%s'." % (self.config_file))
+            logger.debug("[Job : write_config] Overwriting existing config file '%s'." % (self.config_file))
         with open(self.config_file, "w") as f_out:
             json.dump(self.config, f_out, sort_keys = True, indent = 4)
         self.wrote_config = True
@@ -188,7 +188,7 @@ class Job():
         lines.append("run_analysis(config)")
 
         if os.path.exists(self.python_executable_file):
-            logger.warning("[Job : write_python_executable] Overwriting existing python executable: %s" % (self.python_executable_file))
+            logger.debug("[Job : write_python_executable] Overwriting existing python executable: %s" % (self.python_executable_file))
 
         with open(self.python_executable_file, "w") as f_out:
             for line in lines:
