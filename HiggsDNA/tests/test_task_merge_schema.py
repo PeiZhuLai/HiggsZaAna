@@ -2,6 +2,8 @@ import os
 import tempfile
 import unittest
 
+import awkward as ak
+import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
@@ -124,6 +126,43 @@ class TestTaskMergeSchema(unittest.TestCase):
                     task_name="unit",
                     syst_tag="nominal",
                 )
+
+    def test_merge_schema_normalizes_awkward_extension_types(self):
+        with tempfile.TemporaryDirectory(prefix="task-merge-schema-ext-") as tmpdir:
+            path_native = os.path.join(tmpdir, "job_native.parquet")
+            path_ext = os.path.join(tmpdir, "job_ext.parquet")
+
+            pq.write_table(
+                pa.table(
+                    {
+                        "fixedGridRhoAll": pa.array([10.0], type=pa.float32()),
+                        "event_nPV": pa.array([12], type=pa.uint8()),
+                    }
+                ),
+                path_native,
+            )
+            pq.write_table(
+                ak.to_arrow_table(
+                    ak.Array(
+                        {
+                            "fixedGridRhoAll": np.array([11.0], dtype=np.float32),
+                            "event_nPV": np.array([13], dtype=np.uint8),
+                        }
+                    ),
+                    extensionarray=True,
+                ),
+                path_ext,
+            )
+
+            merged_schema = _get_merged_output_schema(
+                [path_native, path_ext],
+                is_data=True,
+                task_name="unit",
+                syst_tag="Muon_scale_down",
+            )
+
+            self.assertEqual(merged_schema.field("fixedGridRhoAll").type, pa.float32())
+            self.assertEqual(merged_schema.field("event_nPV").type, pa.uint8())
 
 
 if __name__ == "__main__":

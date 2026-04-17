@@ -14,6 +14,10 @@ from tqdm import tqdm
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
+from awkward._connect.pyarrow.table_conv import (
+    awkward_arrow_field_to_native,
+    convert_awkward_arrow_table_to_native,
+)
 
 import logging
 # logger = logging.getLogger(__name__)
@@ -41,10 +45,34 @@ def _replace_or_add_field(schema, field):
     return schema.append(field)
 
 
+def _normalize_arrow_field(field):
+    native_field = awkward_arrow_field_to_native(field)
+    if isinstance(native_field.type, pa.BaseExtensionType):
+        native_field = pa.field(
+            native_field.name,
+            native_field.type.storage_type,
+            nullable=native_field.nullable,
+        )
+    return native_field
+
+
+def _normalize_arrow_schema(schema):
+    return pa.schema(
+        [_normalize_arrow_field(field) for field in schema],
+        metadata=schema.metadata,
+    )
+
+
+def _normalize_arrow_table(table):
+    if any(isinstance(field.type, pa.BaseExtensionType) for field in table.schema):
+        table = convert_awkward_arrow_table_to_native(table)
+    return table
+
+
 def _iter_parquet_row_groups(path):
     parquet_file = pq.ParquetFile(path)
     for row_group_idx in range(parquet_file.num_row_groups):
-        yield parquet_file.read_row_group(row_group_idx)
+        yield _normalize_arrow_table(parquet_file.read_row_group(row_group_idx))
 
 
 def _default_column_for_missing_field(field, length):
@@ -66,6 +94,7 @@ def _is_weight_like_field(field_name):
 
 
 def _normalize_schema_for_merge(schema, is_data):
+    schema = _normalize_arrow_schema(schema)
     if is_data:
         return schema
 
