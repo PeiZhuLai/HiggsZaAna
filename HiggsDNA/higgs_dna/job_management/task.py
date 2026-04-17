@@ -11,6 +11,9 @@ import awkward
 import numpy
 import sys
 from tqdm import tqdm
+import pyarrow as pa
+import pyarrow.compute as pc
+import pyarrow.parquet as pq
 
 import logging
 # logger = logging.getLogger(__name__)
@@ -22,6 +25,20 @@ from higgs_dna.utils import awkward_utils
 from higgs_dna.utils.misc_utils import create_chunks
 from higgs_dna.utils.progress_bar import ProgressBar
 from higgs_dna.constants import CENTRAL_WEIGHT
+
+
+def _replace_or_add_column(table, name, column):
+    column_idx = table.schema.get_field_index(name)
+    if column_idx >= 0:
+        return table.set_column(column_idx, name, column)
+    return table.append_column(name, column)
+
+
+def _iter_parquet_row_groups(path):
+    parquet_file = pq.ParquetFile(path)
+    for row_group_idx in range(parquet_file.num_row_groups):
+        yield parquet_file.read_row_group(row_group_idx)
+
 
 class Task():
     """
@@ -342,39 +359,70 @@ class Task():
             if not outputs:
                 continue
             
-            merged_output = self.output_dir + "/merged_%s.parquet" % (syst_tag) 
+            merged_output = self.output_dir + "/merged_%s.parquet" % (syst_tag)
             self.merged_outputs[syst_tag] = merged_output
-            merged_events = []
+            logger.info(
+                "[Task : merge_outputs] Task '%s' : streaming merge of %d parquet files into '%s'.",
+                self.name,
+                len(outputs),
+                merged_output,
+            )
 
-            # FIXME : merging could be improved so that we avoid merging huge numbers of events into a single file and instead split them across multiple files
-            for output in outputs:
-                merged_events.append(awkward.from_parquet(output))
+            if os.path.exists(merged_output):
+                os.remove(merged_output)
 
-            logger.debug("[Task : merge_outputs] Task '%s' : merging %d outputs into file '%s'." % (self.name, len(outputs), merged_output))
+            writer = None
+            writer_schema = None
+            try:
+                for output_idx, output in enumerate(outputs, start=1):
+                    if output_idx == 1 or output_idx == len(outputs) or output_idx % 25 == 0:
+                        logger.info(
+                            "[Task : merge_outputs] Task '%s' : processing parquet %d/%d for syst '%s'.",
+                            self.name,
+                            output_idx,
+                            len(outputs),
+                            syst_tag,
+                        )
 
-            merged_events = awkward.concatenate(merged_events)
-            if not self.config["sample"]["is_data"]:
-                logger.debug("[Task : merge_outputs] Task '%s' : Applying scale1fb and lumi. Scaling central weight branch '%s' in output file '%s' by scale1fb (%.13f) times lumi (%.2f). Adding branch '%s' in output file which has no lumi scaling applied." % (self.name, CENTRAL_WEIGHT, merged_output, self.scale1fb, self.lumi, CENTRAL_WEIGHT + "_no_lumi"))
-                #logger.debug(f"[Task : sumWeight is {self.phys_summary['sum_weights']}]")
-                #logger.debug(f"[Task : typical central weight is {merged_events['weight_central']}]")
+                    for table in _iter_parquet_row_groups(output):
+                        if not self.config["sample"]["is_data"]:
+                            logger.debug(
+                                "[Task : merge_outputs] Task '%s' : scaling central weight branch '%s' for syst '%s' by scale1fb (%.13f) times lumi (%.2f).",
+                                self.name,
+                                CENTRAL_WEIGHT,
+                                syst_tag,
+                                self.scale1fb,
+                                self.lumi,
+                            )
+                            central_weight = pc.cast(table.column(CENTRAL_WEIGHT), pa.float64())
+                            central_weight_scaled = pc.multiply(
+                                central_weight,
+                                pa.scalar(self.scale1fb * self.lumi, type=pa.float64()),
+                            )
+                            central_weight_no_lumi = pc.multiply(
+                                central_weight,
+                                pa.scalar(self.scale1fb, type=pa.float64()),
+                            )
+                            table = _replace_or_add_column(table, CENTRAL_WEIGHT, central_weight_scaled)
+                            table = _replace_or_add_column(
+                                table,
+                                CENTRAL_WEIGHT + "_no_lumi",
+                                central_weight_no_lumi,
+                            )
 
-                central_weight = merged_events[CENTRAL_WEIGHT].to_numpy().astype('float64') * self.scale1fb * self.lumi
-                central_weight_no_lumi = merged_events[CENTRAL_WEIGHT].to_numpy().astype('float64') * self.scale1fb
+                        if writer is None:
+                            writer_schema = table.schema
+                            writer = pq.ParquetWriter(merged_output, writer_schema)
+                        elif not table.schema.equals(writer_schema):
+                            raise RuntimeError(
+                                "Schema mismatch while merging task '%s' syst '%s': '%s' does not match the first parquet schema."
+                                % (self.name, syst_tag, output)
+                            )
 
-                awkward_utils.add_field(
-                        events = merged_events,
-                        name = CENTRAL_WEIGHT,
-                        data = central_weight,
-                        overwrite = True
-                )
-                awkward_utils.add_field(
-                        events = merged_events,
-                        name = CENTRAL_WEIGHT + "_no_lumi",
-                        data = central_weight_no_lumi,
-                        overwrite = False # merging and scale1fb application should always be done from unmerged files, which should not have this branch already. If they somehow do have the branch, that is a bad sign something is going wrong...
-                )
-
-            awkward.to_parquet(merged_events, merged_output)
+                        writer.write_table(table)
+            finally:
+                if writer is not None:
+                    writer.close()
 
         self.wrote_process_ids = False
         self.wrote_years = False
