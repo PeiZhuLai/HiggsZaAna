@@ -34,10 +34,129 @@ def _replace_or_add_column(table, name, column):
     return table.append_column(name, column)
 
 
+def _replace_or_add_field(schema, field):
+    field_idx = schema.get_field_index(field.name)
+    if field_idx >= 0:
+        return schema.set(field_idx, field)
+    return schema.append(field)
+
+
 def _iter_parquet_row_groups(path):
     parquet_file = pq.ParquetFile(path)
     for row_group_idx in range(parquet_file.num_row_groups):
         yield parquet_file.read_row_group(row_group_idx)
+
+
+def _default_column_for_missing_field(field, length):
+    """
+    Fill missing scalar numeric/boolean branches with a neutral value to preserve the
+    pre-streaming merge behavior, and fall back to typed nulls for everything else.
+    """
+    if pa.types.is_boolean(field.type):
+        return pa.array([True] * length, type=field.type)
+    if pa.types.is_integer(field.type):
+        return pa.array([1] * length, type=field.type)
+    if pa.types.is_floating(field.type):
+        return pa.array([1.0] * length, type=field.type)
+    return pa.nulls(length, type=field.type)
+
+
+def _is_weight_like_field(field_name):
+    return field_name.startswith("weight_") or field_name == CENTRAL_WEIGHT + "_no_lumi"
+
+
+def _normalize_schema_for_merge(schema, is_data):
+    if is_data:
+        return schema
+
+    normalized_schema = schema
+    for field in schema:
+        if _is_weight_like_field(field.name):
+            normalized_schema = _replace_or_add_field(
+                normalized_schema,
+                pa.field(field.name, pa.float64()),
+            )
+    return normalized_schema
+
+
+def _schema_conflict_details(paths, schemas):
+    field_types = {}
+    for path, schema in zip(paths, schemas):
+        for field in schema:
+            field_types.setdefault(field.name, {})
+            field_types[field.name].setdefault(str(field.type), [])
+            field_types[field.name][str(field.type)].append(path)
+
+    details = []
+    for name, types in field_types.items():
+        if len(types) <= 1:
+            continue
+        formatted_types = []
+        for type_name, type_paths in types.items():
+            basenames = [os.path.basename(path) for path in type_paths[:2]]
+            suffix = "" if len(type_paths) <= 2 else ", ..."
+            formatted_types.append("%s in %s%s" % (type_name, ", ".join(basenames), suffix))
+        details.append("%s -> %s" % (name, "; ".join(formatted_types)))
+
+    if not details:
+        return ""
+
+    return " Conflicting fields: %s." % (" | ".join(details[:5]))
+
+
+def _get_merged_output_schema(paths, is_data, task_name, syst_tag):
+    schemas = [
+        _normalize_schema_for_merge(pq.ParquetFile(path).schema_arrow, is_data)
+        for path in paths
+    ]
+    try:
+        merged_schema = pa.unify_schemas(schemas)
+    except (pa.ArrowInvalid, pa.ArrowTypeError) as exc:
+        raise RuntimeError(
+            "Schema mismatch while merging task '%s' syst '%s': could not unify parquet schemas.%s"
+            % (task_name, syst_tag, _schema_conflict_details(paths, schemas))
+        ) from exc
+
+    if not is_data:
+        merged_schema = _replace_or_add_field(
+            merged_schema,
+            pa.field(CENTRAL_WEIGHT, pa.float64()),
+        )
+        merged_schema = _replace_or_add_field(
+            merged_schema,
+            pa.field(CENTRAL_WEIGHT + "_no_lumi", pa.float64()),
+        )
+
+    return merged_schema
+
+
+def _normalize_table_to_schema(table, target_schema, task_name, syst_tag, output_path):
+    arrays = []
+    for field in target_schema:
+        column_idx = table.schema.get_field_index(field.name)
+        if column_idx < 0:
+            logger.warning(
+                "[Task : merge_outputs] Task '%s' : output '%s' is missing field '%s' for syst '%s'. Filling with default values.",
+                task_name,
+                output_path,
+                field.name,
+                syst_tag,
+            )
+            arrays.append(_default_column_for_missing_field(field, len(table)))
+            continue
+
+        column = table.column(column_idx)
+        if not column.type.equals(field.type):
+            try:
+                column = pc.cast(column, field.type)
+            except (pa.ArrowInvalid, pa.ArrowTypeError) as exc:
+                raise RuntimeError(
+                    "Schema mismatch while merging task '%s' syst '%s': field '%s' in '%s' has type '%s', expected '%s'."
+                    % (task_name, syst_tag, field.name, output_path, column.type, field.type)
+                ) from exc
+        arrays.append(column)
+
+    return pa.Table.from_arrays(arrays, schema=target_schema)
 
 
 class Task():
@@ -361,6 +480,12 @@ class Task():
             
             merged_output = self.output_dir + "/merged_%s.parquet" % (syst_tag)
             self.merged_outputs[syst_tag] = merged_output
+            merged_schema = _get_merged_output_schema(
+                outputs,
+                self.config["sample"]["is_data"],
+                self.name,
+                syst_tag,
+            )
             logger.info(
                 "[Task : merge_outputs] Task '%s' : streaming merge of %d parquet files into '%s'.",
                 self.name,
@@ -410,12 +535,20 @@ class Task():
                                 central_weight_no_lumi,
                             )
 
+                        table = _normalize_table_to_schema(
+                            table,
+                            merged_schema,
+                            self.name,
+                            syst_tag,
+                            output,
+                        )
+
                         if writer is None:
-                            writer_schema = table.schema
+                            writer_schema = merged_schema
                             writer = pq.ParquetWriter(merged_output, writer_schema)
                         elif not table.schema.equals(writer_schema):
                             raise RuntimeError(
-                                "Schema mismatch while merging task '%s' syst '%s': '%s' does not match the first parquet schema."
+                                "Schema mismatch while merging task '%s' syst '%s': normalized schema for '%s' still does not match the merge schema."
                                 % (self.name, syst_tag, output)
                             )
 
