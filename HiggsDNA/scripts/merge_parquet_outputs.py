@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -118,9 +119,19 @@ def discover_task_dirs(root: Path, task_filters: list[str]) -> list[Path]:
     return task_dirs
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    with path.open("r") as handle:
-        return json.load(handle)
+def load_json(path: Path, *, retries: int = 1, retry_delay: float = 0.2) -> dict[str, Any]:
+    last_error = None
+    for attempt in range(retries):
+        try:
+            with path.open("r") as handle:
+                return json.load(handle)
+        except (json.JSONDecodeError, OSError) as exc:
+            last_error = exc
+            if attempt + 1 < retries:
+                time.sleep(retry_delay)
+
+    assert last_error is not None
+    raise last_error
 
 
 def find_first_json(task_dir: Path, pattern: str) -> Path | None:
@@ -143,39 +154,43 @@ def infer_year(task_name: str, sample_config: dict[str, Any]) -> str | None:
 def collect_task_metadata(task_dir: Path) -> dict[str, Any]:
     task_name = task_dir.name
     config_path = find_first_json(task_dir, "*_config_job*.json")
-    config = load_json(config_path) if config_path is not None else {}
+    config = load_json(config_path, retries=3) if config_path is not None else {}
     sample = config.get("sample", {})
     is_data = bool(sample.get("is_data", False))
     summaries = sorted(task_dir.glob("job_*/*_summary_job*.json"))
 
     outputs_by_syst: dict[str, list[Path]] = defaultdict(list)
     sum_weights = 0.0
+    bad_summaries: list[Path] = []
 
-    if summaries:
-        for summary_path in summaries:
-            summary = load_json(summary_path)
-            sum_weights += float(summary.get("sum_weights", 0.0))
-            selected = summary.get("n_events_selected", {})
-            for syst_tag, output_name in summary.get("outputs", {}).items():
-                if int(selected.get(syst_tag, 0)) <= 0:
-                    continue
-                output_path = Path(output_name)
-                if not output_path.is_absolute():
-                    output_path = summary_path.parent / output_path
-                if output_path.exists():
-                    outputs_by_syst[syst_tag].append(output_path)
-                else:
-                    LOGGER.warning(
-                        "Task '%s' summary references missing parquet '%s'.",
-                        task_name,
-                        output_path,
-                    )
-    else:
-        for parquet_path in sorted(task_dir.glob("job_*/output_job_*_*.parquet")):
-            match = OUTPUT_PATTERN.match(parquet_path.name)
-            if match is None:
-                continue
-            outputs_by_syst[match.group(1)].append(parquet_path)
+    for parquet_path in sorted(task_dir.glob("job_*/output_job_*_*.parquet")):
+        match = OUTPUT_PATTERN.match(parquet_path.name)
+        if match is None:
+            continue
+        outputs_by_syst[match.group(1)].append(parquet_path)
+
+    for summary_path in summaries:
+        try:
+            summary = load_json(summary_path, retries=3)
+        except (json.JSONDecodeError, OSError) as exc:
+            bad_summaries.append(summary_path)
+            LOGGER.warning(
+                "Task '%s' has unreadable summary '%s': %s. Continuing without it.",
+                task_name,
+                summary_path,
+                exc,
+            )
+            continue
+
+        sum_weights += float(summary.get("sum_weights", 0.0))
+
+    if bad_summaries and not is_data:
+        LOGGER.warning(
+            "Task '%s' skipped %d unreadable summary file(s). "
+            "If this task still needs a fresh MC merge, scale1fb may be underestimated.",
+            task_name,
+            len(bad_summaries),
+        )
 
     metadata = {
         "task_name": task_name,
@@ -188,6 +203,7 @@ def collect_task_metadata(task_dir: Path) -> dict[str, Any]:
         "process_id": sample.get("process_id"),
         "year": infer_year(task_name, sample),
         "sum_weights": sum_weights,
+        "bad_summaries": [str(path) for path in bad_summaries],
         "outputs_by_syst": dict(outputs_by_syst),
     }
 
