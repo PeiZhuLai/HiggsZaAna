@@ -307,11 +307,10 @@ class Task():
         :type job_map: dict
         """
         if self.complete:
-            for syst_tag, output in self.merged_outputs.items():
-                if not os.path.exists(output):
-                    logger.warning("[Task : process] A file may have been deleted. Task '%s' was marked as complete, but output '%s' is not present." % (self.name, output))
-            if not self.merged_output_files:
-                self.merge_outputs()
+            if self.merged_output_files:
+                for syst_tag, output in self.merged_outputs.items():
+                    if not os.path.exists(output):
+                        logger.warning("[Task : process] A file may have been deleted. Task '%s' was marked as complete, but output '%s' is not present." % (self.name, output))
             return
 
         # Check status of all jobs
@@ -491,9 +490,6 @@ class Task():
         self.summary["performance"] = self.performance
         self.pbar.update(job_summary, self.performance, self.phys_summary)
 
-        if self.complete:
-            self.merge_outputs()
-
 
     def merge_outputs(self):
         """
@@ -584,7 +580,17 @@ class Task():
                         writer.write_table(table)
             finally:
                 if writer is not None:
+                    logger.info(
+                        "[Task : merge_outputs] Task '%s' : closing merged parquet for syst '%s'.",
+                        self.name,
+                        syst_tag,
+                    )
                     writer.close()
+                    logger.info(
+                        "[Task : merge_outputs] Task '%s' : finished merged parquet for syst '%s'.",
+                        self.name,
+                        syst_tag,
+                    )
 
         self.wrote_process_ids = False
         self.wrote_years = False

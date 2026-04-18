@@ -77,8 +77,8 @@ class JobsManager():
 
 
     def complete(self):
-        """Check if all Tasks are complete."""
-        return all([(task.complete and task.merged_output_files) for task in self.tasks])
+        """Check if all Tasks have finished running their jobs."""
+        return all([task.complete for task in self.tasks])
 
 
     def submit_jobs(self, summarize = True, dry_run = False):
@@ -174,6 +174,12 @@ class JobsManager():
         self.outputs = {} # dictionary to order outputs by syst_tag (systematics with independent collections)
 
         for task in self.tasks:
+            if not task.merged_output_files:
+                logger.info(
+                    "[JobsManager : merge_outputs] Merging per-job outputs for task '%s' before sample-level merge.",
+                    task.name,
+                )
+                task.merge_outputs()
             task.add_process_id()
             task.add_year()
             for syst_tag, merged_output in task.merged_outputs.items():

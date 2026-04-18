@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from types import SimpleNamespace
 
 import awkward as ak
 import numpy as np
@@ -9,6 +10,7 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 from higgs_dna.constants import CENTRAL_WEIGHT
+from higgs_dna.job_management.managers import JobsManager
 from higgs_dna.job_management.task import (
     _get_merged_output_schema,
     _iter_parquet_row_groups,
@@ -163,6 +165,14 @@ class TestTaskMergeSchema(unittest.TestCase):
 
             self.assertEqual(merged_schema.field("fixedGridRhoAll").type, pa.float32())
             self.assertEqual(merged_schema.field("event_nPV").type, pa.uint8())
+
+    def test_jobs_manager_complete_only_depends_on_task_completion(self):
+        manager = object.__new__(JobsManager)
+        manager.tasks = [
+            SimpleNamespace(complete=True, merged_output_files=False),
+            SimpleNamespace(complete=True, merged_output_files=True),
+        ]
+        self.assertTrue(JobsManager.complete(manager))
 
 
 if __name__ == "__main__":
