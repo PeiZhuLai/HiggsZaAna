@@ -505,6 +505,21 @@ class Task():
             
             merged_output = self.output_dir + "/merged_%s.parquet" % (syst_tag)
             self.merged_outputs[syst_tag] = merged_output
+            if os.path.exists(merged_output) and not getattr(self, "remerge", False):
+                logger.info(
+                    "[Task : merge_outputs] Task '%s' : merged output '%s' already exists for syst '%s', skipping.",
+                    self.name,
+                    merged_output,
+                    syst_tag,
+                )
+                continue
+            elif os.path.exists(merged_output) and getattr(self, "remerge", False):
+                logger.info(
+                    "[Task : merge_outputs] Task '%s' : merged output '%s' already exists for syst '%s', but remerge is enabled so it will be overwritten.",
+                    self.name,
+                    merged_output,
+                    syst_tag,
+                )
             merged_schema = _get_merged_output_schema(
                 outputs,
                 self.config["sample"]["is_data"],

@@ -175,6 +175,7 @@ class JobsManager():
 
         for task in self.tasks:
             if not task.merged_output_files:
+                task.remerge = self.remerge
                 logger.info(
                     "[JobsManager : merge_outputs] Merging per-job outputs for task '%s' before sample-level merge.",
                     task.name,

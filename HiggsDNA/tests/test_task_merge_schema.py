@@ -12,6 +12,7 @@ import pyarrow.parquet as pq
 from higgs_dna.constants import CENTRAL_WEIGHT
 from higgs_dna.job_management.managers import JobsManager
 from higgs_dna.job_management.task import (
+    Task,
     _get_merged_output_schema,
     _iter_parquet_row_groups,
     _normalize_table_to_schema,
@@ -173,6 +174,50 @@ class TestTaskMergeSchema(unittest.TestCase):
             SimpleNamespace(complete=True, merged_output_files=True),
         ]
         self.assertTrue(JobsManager.complete(manager))
+
+    def test_task_merge_outputs_skips_existing_merged_files(self):
+        with tempfile.TemporaryDirectory(prefix="task-merge-skip-") as tmpdir:
+            input_path = os.path.join(tmpdir, "job_1_nominal.parquet")
+            merged_path = os.path.join(tmpdir, "merged_nominal.parquet")
+
+            pq.write_table(
+                pa.table(
+                    {
+                        "event": pa.array([1], type=pa.int64()),
+                        CENTRAL_WEIGHT: pa.array([1.0], type=pa.float64()),
+                    }
+                ),
+                input_path,
+            )
+            pq.write_table(
+                pa.table(
+                    {
+                        "event": pa.array([999], type=pa.int64()),
+                        CENTRAL_WEIGHT: pa.array([999.0], type=pa.float64()),
+                    }
+                ),
+                merged_path,
+            )
+
+            task = object.__new__(Task)
+            task.name = "unit"
+            task.output_dir = tmpdir
+            task.outputs = {"nominal": [input_path]}
+            task.merged_outputs = {}
+            task.config = {"sample": {"is_data": False}}
+            task.scale1fb = 1.0
+            task.lumi = 1.0
+            task.wrote_process_ids = True
+            task.wrote_years = True
+            task.merged_output_files = False
+            task.remerge = False
+
+            Task.merge_outputs(task)
+
+            merged = pq.read_table(merged_path)
+            self.assertEqual(merged.column("event").to_pylist(), [999])
+            self.assertTrue(task.merged_output_files)
+            self.assertEqual(task.merged_outputs["nominal"], merged_path)
 
 
 if __name__ == "__main__":
