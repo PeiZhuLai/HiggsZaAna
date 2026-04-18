@@ -227,6 +227,53 @@ def build_constant_column(value: Any, length: int) -> pa.Array:
     return pa.array([value] * length, type=scalar.type)
 
 
+def validate_parquet_file(
+    path: Path,
+    *,
+    retries: int = 1,
+    retry_delay: float = 0.2,
+) -> bool:
+    last_error = None
+    for attempt in range(retries):
+        try:
+            pq.ParquetFile(path)
+            return True
+        except (pa.ArrowInvalid, OSError) as exc:
+            last_error = exc
+            if attempt + 1 < retries:
+                time.sleep(retry_delay)
+
+    assert last_error is not None
+    raise last_error
+
+
+def filter_valid_parquet_inputs(
+    inputs: list[Path],
+    *,
+    task_name: str,
+    syst_tag: str,
+) -> tuple[list[Path], list[Path]]:
+    valid_inputs: list[Path] = []
+    bad_inputs: list[Path] = []
+
+    for path in inputs:
+        try:
+            validate_parquet_file(path, retries=3)
+        except (pa.ArrowInvalid, OSError) as exc:
+            bad_inputs.append(path)
+            LOGGER.warning(
+                "Task '%s' has unreadable parquet '%s' for syst '%s': %s. Skipping it.",
+                task_name,
+                path,
+                syst_tag,
+                exc,
+            )
+            continue
+        valid_inputs.append(path)
+
+    return valid_inputs, bad_inputs
+
+
 def merge_parquet_files(
     inputs: list[Path],
     output_path: Path,
@@ -271,8 +318,29 @@ def merge_parquet_files(
     if dry_run:
         return True
 
+    valid_inputs, bad_inputs = filter_valid_parquet_inputs(
+        inputs,
+        task_name=task_name,
+        syst_tag=syst_tag,
+    )
+    if bad_inputs:
+        LOGGER.warning(
+            "Task '%s' skipped %d unreadable parquet file(s) for syst '%s'.",
+            task_name,
+            len(bad_inputs),
+            syst_tag,
+        )
+
+    if not valid_inputs:
+        LOGGER.warning(
+            "Task '%s' has no readable parquet inputs left for syst '%s'; skipping merge.",
+            task_name,
+            syst_tag,
+        )
+        return False
+
     merged_schema = _get_merged_output_schema(
-        [str(path) for path in inputs],
+        [str(path) for path in valid_inputs],
         is_data=not promote_weight_fields,
         task_name=task_name,
         syst_tag=syst_tag,
@@ -291,55 +359,64 @@ def merge_parquet_files(
 
     writer = None
     try:
-        for index, input_path in enumerate(inputs, start=1):
-            if index == 1 or index == len(inputs) or index % 25 == 0:
+        for index, input_path in enumerate(valid_inputs, start=1):
+            if index == 1 or index == len(valid_inputs) or index % 25 == 0:
                 LOGGER.info(
                     "Task '%s' : processing parquet %d/%d for syst '%s'.",
                     task_name,
                     index,
-                    len(inputs),
+                    len(valid_inputs),
                     syst_tag,
                 )
 
-            for table in _iter_parquet_row_groups(str(input_path)):
-                if scale_weights:
-                    central_weight = pc.cast(table.column(CENTRAL_WEIGHT), pa.float64())
-                    table = _replace_or_add_column(
-                        table,
-                        CENTRAL_WEIGHT,
-                        pc.multiply(
-                            central_weight,
-                            pa.scalar(scale1fb * lumi, type=pa.float64()),
-                        ),
-                    )
-                    table = _replace_or_add_column(
-                        table,
-                        CENTRAL_WEIGHT + "_no_lumi",
-                        pc.multiply(
-                            central_weight,
-                            pa.scalar(scale1fb, type=pa.float64()),
-                        ),
-                    )
-
-                if extra_fields:
-                    for name, value in extra_fields.items():
+            try:
+                for table in _iter_parquet_row_groups(str(input_path)):
+                    if scale_weights:
+                        central_weight = pc.cast(table.column(CENTRAL_WEIGHT), pa.float64())
                         table = _replace_or_add_column(
                             table,
-                            name,
-                            build_constant_column(value, len(table)),
+                            CENTRAL_WEIGHT,
+                            pc.multiply(
+                                central_weight,
+                                pa.scalar(scale1fb * lumi, type=pa.float64()),
+                            ),
+                        )
+                        table = _replace_or_add_column(
+                            table,
+                            CENTRAL_WEIGHT + "_no_lumi",
+                            pc.multiply(
+                                central_weight,
+                                pa.scalar(scale1fb, type=pa.float64()),
+                            ),
                         )
 
-                table = _normalize_table_to_schema(
-                    table,
-                    merged_schema,
-                    task_name,
-                    syst_tag,
-                    str(input_path),
-                )
+                    if extra_fields:
+                        for name, value in extra_fields.items():
+                            table = _replace_or_add_column(
+                                table,
+                                name,
+                                build_constant_column(value, len(table)),
+                            )
 
-                if writer is None:
-                    writer = pq.ParquetWriter(str(output_path), merged_schema)
-                writer.write_table(table)
+                    table = _normalize_table_to_schema(
+                        table,
+                        merged_schema,
+                        task_name,
+                        syst_tag,
+                        str(input_path),
+                    )
+
+                    if writer is None:
+                        writer = pq.ParquetWriter(str(output_path), merged_schema)
+                    writer.write_table(table)
+            except (pa.ArrowInvalid, OSError) as exc:
+                LOGGER.warning(
+                    "Task '%s' encountered a read error while streaming parquet '%s' for syst '%s': %s. Skipping the rest of this file.",
+                    task_name,
+                    input_path,
+                    syst_tag,
+                    exc,
+                )
     finally:
         if writer is not None:
             LOGGER.info(
@@ -445,8 +522,26 @@ def merge_task_outputs_to_root(
             )
             continue
 
+        valid_inputs, bad_inputs = filter_valid_parquet_inputs(
+            inputs,
+            task_name=root.name,
+            syst_tag=syst_tag,
+        )
+        if bad_inputs:
+            LOGGER.warning(
+                "Root merge skipped %d unreadable task-level parquet file(s) for syst '%s'.",
+                len(bad_inputs),
+                syst_tag,
+            )
+        if not valid_inputs:
+            LOGGER.warning(
+                "Root merge has no readable task-level parquet inputs left for syst '%s'; skipping.",
+                syst_tag,
+            )
+            continue
+
         merged_schema = _get_merged_output_schema(
-            [str(path) for path in inputs],
+            [str(path) for path in valid_inputs],
             is_data=not promote_weight_fields,
             task_name=root.name,
             syst_tag=syst_tag,
@@ -463,34 +558,42 @@ def merge_task_outputs_to_root(
 
         writer = None
         try:
-            for index, input_path in enumerate(inputs, start=1):
-                if index == 1 or index == len(inputs) or index % 25 == 0:
+            for index, input_path in enumerate(valid_inputs, start=1):
+                if index == 1 or index == len(valid_inputs) or index % 25 == 0:
                     LOGGER.info(
                         "Root merge: processing parquet %d/%d for syst '%s'.",
                         index,
-                        len(inputs),
+                        len(valid_inputs),
                         syst_tag,
                     )
 
-                for table in _iter_parquet_row_groups(str(input_path)):
-                    for name, value in per_file_fields[input_path].items():
-                        table = _replace_or_add_column(
+                try:
+                    for table in _iter_parquet_row_groups(str(input_path)):
+                        for name, value in per_file_fields[input_path].items():
+                            table = _replace_or_add_column(
+                                table,
+                                name,
+                                build_constant_column(value, len(table)),
+                            )
+
+                        table = _normalize_table_to_schema(
                             table,
-                            name,
-                            build_constant_column(value, len(table)),
+                            merged_schema,
+                            root.name,
+                            syst_tag,
+                            str(input_path),
                         )
 
-                    table = _normalize_table_to_schema(
-                        table,
-                        merged_schema,
-                        root.name,
+                        if writer is None:
+                            writer = pq.ParquetWriter(str(merged_path), merged_schema)
+                        writer.write_table(table)
+                except (pa.ArrowInvalid, OSError) as exc:
+                    LOGGER.warning(
+                        "Root merge encountered a read error while streaming parquet '%s' for syst '%s': %s. Skipping the rest of this file.",
+                        input_path,
                         syst_tag,
-                        str(input_path),
+                        exc,
                     )
-
-                    if writer is None:
-                        writer = pq.ParquetWriter(str(merged_path), merged_schema)
-                    writer.write_table(table)
         finally:
             if writer is not None:
                 writer.close()
