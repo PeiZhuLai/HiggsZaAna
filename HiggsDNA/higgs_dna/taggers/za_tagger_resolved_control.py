@@ -763,10 +763,6 @@ class ZaTaggerRun3(Tagger):
                 ak.fill_none(z_cand_noFSR.SubleadLepton[field], DUMMY_VALUE)
             )
 
-        # Make gamma candidate-level cuts
-        has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
-        # awkward_utils.add_field(events, "pass_1_ALP", ak.fill_none(has_2gamma_cand, False), overwrite=True)
-
         # ------------------------------------------------------------
         # 重新以 index 方式構建 gamma pairs（保留原本邏輯但加入索引）
         # ------------------------------------------------------------
@@ -790,6 +786,20 @@ class ZaTaggerRun3(Tagger):
             "LeadOrigIndex": lead_orig,
             "SubleadOrigIndex": sub_orig
         })
+
+        if int(self.year[:4]) > 2020:
+            gamma_pairs = gamma_pairs[
+                (~gamma_pairs.LeadPhoton.pass_PFHCalIso_tight)
+                | (~gamma_pairs.SubleadPhoton.pass_PFHCalIso_tight)
+            ]
+
+        has_2gamma_cand = ak.num(gamma_pairs) >= 1
+        awkward_utils.add_field(
+            events,
+            "pass_reverse_PFHCalIso_control",
+            ak.fill_none(has_2gamma_cand, False),
+            overwrite=True,
+        )
 
         # 依照 leadPhoton pt 排序並取第一個（最高 lead pt）
         gamma_pairs = gamma_pairs[ak.argsort(gamma_pairs.LeadPhoton.pt, ascending=False, axis=1)]
@@ -1285,6 +1295,8 @@ class ZaTaggerRun3(Tagger):
         phid_sieie_tight = []
         phid_PFECalIso_tight = []
         phid_official_tight = []
+        phid_reverse_PFHCalIso_baseline_tight = []
+        pass_PFHCalIso_tight = []
 
         phid_custom_mediate = []
         phid_custom_extend_mediate = []
@@ -1400,6 +1412,8 @@ class ZaTaggerRun3(Tagger):
         if int(year) < 2020:
             phid_custom_tight = ak.ones_like(photons.pt) # all true, dummy TODO
             phid_official_tight = ak.ones_like(photons.pt) # all true, dummy TODO
+            phid_reverse_PFHCalIso_baseline_tight = phid_custom_tight
+            pass_PFHCalIso_tight = photons.pt > -1
 
             # NEW: 補齊 medium/loose（Run2 先 dummy all-true，避免欄位缺失）
             phid_custom_mediate = ak.ones_like(photons.pt)
@@ -1557,6 +1571,8 @@ class ZaTaggerRun3(Tagger):
             sieie_cut = (photons.isScEtaEB & sieie_barrel_cut) | (photons.isScEtaEE & sieie_endcap_cut)
             PFECalIso_cut = (photons.isScEtaEB & PFECalIso_barrel_cut) | (photons.isScEtaEE & PFECalIso_endcap_cut)
 
+            pass_PFHCalIso_tight = PFHCalIso_cut
+            phid_reverse_PFHCalIso_baseline_tight = hoe_cut & PFChIso_cut
             phid_custom_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut
             phid_custom_extend_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut
             phid_sieie_tight = sieie_cut
@@ -1685,9 +1701,16 @@ class ZaTaggerRun3(Tagger):
         photons = ak.with_field(photons, phid_sieie_loose, "pass_phid_sieie_loose")
         photons = ak.with_field(photons, phid_PFECalIso_loose, "pass_phid_PFECalIso_loose")
         photons = ak.with_field(photons, phid_official_loose, "pass_phid_official_loose")
+        photons = ak.with_field(photons, pass_PFHCalIso_tight, "pass_PFHCalIso_tight")
+        photons = ak.with_field(photons, ~pass_PFHCalIso_tight, "fail_PFHCalIso_tight")
+        photons = ak.with_field(
+            photons,
+            phid_reverse_PFHCalIso_baseline_tight,
+            "pass_phid_reverse_PFHCalIso_baseline_tight",
+        )
 
-        # Custom Photon ID（nominal 用哪個，仍照你現在的策略；study 用 flags 另外算）
-        id_cut = phid_custom_tight
+        # Control region: 保留 nominal 其他 ID，PFHCalIso 改到 pair-level 反選
+        id_cut = phid_reverse_PFHCalIso_baseline_tight
 
 
         # electron veto
