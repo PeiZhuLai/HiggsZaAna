@@ -35,12 +35,12 @@ python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --
 ## ALP Optimization 1 category
 python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1
 
-## MVA ScoreVmA
-python $scriptsDir/BDT_ma_2D_lib.py
-
 ## Signal efficinecy after MVA cut
 python3 $scriptsDir/collect_MVAcut_points_run3.py
 python3 $scriptsDir/signal_eff_sumw.py
+
+## MVA ScoreVmA
+python $scriptsDir/BDT_ma_2D_lib.py
 
 ## MVAScore signal efficiency and background yield table
 python3 $scriptsDir/table_MVAScore_sigEff_bkgYield.py
