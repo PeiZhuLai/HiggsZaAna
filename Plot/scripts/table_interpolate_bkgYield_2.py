@@ -35,7 +35,7 @@ latex_table = (
     + ("\n" if rows else "")
     + "\\hline\n"
     "\\end{tabular}\n"
-    "\\caption{Summary of the smoothed MC background yields with respect to different BDT boundary selections for each intermediate signal hypothesis. Nominal means the boundary is selected at the same point as the closest nominal mass point. Left and right mean the boundary is selected from the left and right sides of the nominal mass point, respectively.}\n"
+    "\\caption{Summary of the smoothed MC background yields with respect to different BDT threshold for each intermediate signal hypothesis. Nominal means the threshold is selected at the same point as the closest nominal mass point. Left and right mean the threshold is selected from the smaller ALP mass threshold and larger ALP mass threshold sides of the nominal mass point, respectively.}\n"
     "\\end{table}\n"
 )
 

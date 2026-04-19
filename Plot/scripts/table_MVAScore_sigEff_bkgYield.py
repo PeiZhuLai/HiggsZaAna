@@ -41,12 +41,12 @@ os.makedirs(os.path.dirname(output_latex), exist_ok=True)
 latex_table = (
     "\\begin{table}[h]\n"
     "\\begin{center}\n"
-    "\\topcaption{Summary of the minimum BDT output value, signal efficiency, and smoothed MC background yields with respect to a selection on the BDT output for each nominal signal hypothesis.}\n"
+    "\\topcaption{Summary of the optimized BDT threshold, signal efficiency, and smoothed MC background yields with respect to a selection on the BDT output for each nominal signal hypothesis.}\n"
     "\\label{tab:boundary}\n"
     "\\small\n"
     "\\begin{tabular}{|c|c|c|c|}\n"
     "\\hline\n"
-    "$m_a$ [GeV] & \\shortstack[c]{Min. BDT \\\\ output value} & \\shortstack[c]{Signal efficiency \\\\ w.r.t. BDT selection} & \\shortstack[c]{Smoothed MC background yields \\\\ w.r.t. BDT selection}\\\\\n"
+    "$m_a$ [GeV] & \\shortstack[c]{Optimized\\\\ BDT threshold} & \\shortstack[c]{Signal efficiency \\\\ w.r.t. BDT threshold} & \\shortstack[c]{Smoothed MC background yields \\\\ w.r.t. BDT threshold}\\\\\n"
     "\\hline\n"
     + ("\n".join(rows) if rows else "")
     + ("\n" if rows else "")

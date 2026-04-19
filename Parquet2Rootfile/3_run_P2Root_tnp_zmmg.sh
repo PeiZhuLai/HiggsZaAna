@@ -158,7 +158,7 @@ process_sample_syst() {
 #  DYJetsTo2Mu
 #  DYJetsTo2Tau
 
-# ## 处理 bkgmc 样本
+## 处理 bkgmc 样本
 for i in {1..3};do
 # for i in 2; do # Compliment Study
     if [ "$i" = "1" ]; then
@@ -199,6 +199,7 @@ done
 
 samples=(Data_tnp_zmmg)
 type="data"
+years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 for sample in "${samples[@]}"; do
     mkdir -p "$target$sample"
     # 存储后台任务的进程ID列表
