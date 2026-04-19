@@ -962,7 +962,7 @@ def photon_scale_smear_run3(events, year, is_data):
     logger.info("[Photon Systematics] Applying photon scale and smear corrections for year %s", year)
 
     required_fields = [
-        ("Photon", "eta"), ("Photon", "pt"), ("Photon", "r9")
+        ("Photon", "eta"), ("Photon", "pt"), ("Photon", "r9"), ("Photon", "energyErr")
     ]
     if is_data:
         required_fields.append(("run"))
@@ -991,6 +991,8 @@ def photon_scale_smear_run3(events, year, is_data):
     photons_pt = awkward.to_numpy(photons_flattened.pt)
     photons_r9 = awkward.to_numpy(photons_flattened.r9)
     photons_energyerr = awkward.to_numpy(photons_flattened.energyErr)
+    photons_smear_eta = photons_scEta if year == "2024" else photons_AbsScEta
+    photon_pt_min = 10.0
 
     # NEW: log first 10 photon pt before applying corrections
     _nprint = int(min(10, len(photons_pt)))
@@ -1006,7 +1008,7 @@ def photon_scale_smear_run3(events, year, is_data):
 
         if year == "2024":
             scale = awkward.where(
-                (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+                (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
                 awkward.ones_like(photons_pt, dtype=float),
                 evaluator.compound[scale_names[year]].evaluate(
                     "scale",
@@ -1019,7 +1021,7 @@ def photon_scale_smear_run3(events, year, is_data):
             )
         else:
             scale = awkward.where(
-                (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+                (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
                 awkward.ones_like(photons_pt, dtype=float),
                 evaluator.compound[scale_names[year]].evaluate(
                     "scale",
@@ -1045,9 +1047,9 @@ def photon_scale_smear_run3(events, year, is_data):
         # NOTE: match hzg: smear is evaluated on corrected_pt and energyErr updated accordingly, scaled by scale
         evaluator_smear = _core.CorrectionSet.from_file(misc_utils.expand_path(photon_scale_FILE[year]))
         smear = awkward.where(
-            (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+            (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
             awkward.zeros_like(photons_pt, dtype=float),
-            evaluator_smear[smear_names[year]].evalv("smear", corrected_pt, photons_r9, photons_AbsScEta),
+            evaluator_smear[smear_names[year]].evalv("smear", corrected_pt, photons_r9, photons_smear_eta),
         )
         corrected_energyErr = numpy.sqrt((photons_energyerr) ** 2 + (photons_pt * numpy.cosh(photons_scEta) * smear) ** 2) * scale
         events["Photon", "corrected_energyErr"] = awkward.unflatten(corrected_energyErr, n_photons)
@@ -1055,13 +1057,13 @@ def photon_scale_smear_run3(events, year, is_data):
 
     # --- MC branch: apply central smear ---
     smear = awkward.where(
-        (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+        (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
         awkward.zeros_like(photons_pt, dtype=float),
-        evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_AbsScEta),
+        evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_smear_eta),
     )
     rng = numpy.random.default_rng(seed=123)
     smear_val = awkward.where(
-        (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+        (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
         awkward.ones_like(photons_pt, dtype=float),
         rng.normal(loc=1.0, scale=numpy.abs(smear)),
     )
@@ -1079,13 +1081,13 @@ def photon_scale_smear_run3(events, year, is_data):
     # --- MC branch: smear systematics ---
     for syst in ["smear_up", "smear_down"]:
         smear_syst = awkward.where(
-            (photons_AbsScEta > 3.0) | (photons_pt < 20.0),
+            (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
             awkward.zeros_like(photons_pt, dtype=float),
-            evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta),
+            evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_smear_eta),
         )
 
         smear_syst_val = awkward.where(
-            (abs(photons_AbsScEta) > 3.0) | (photons_pt < 20.0),
+            (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
             awkward.ones_like(photons_pt, dtype=float),
             rng.normal(loc=1.0, scale=numpy.abs(smear_syst)),
         )
@@ -1105,10 +1107,10 @@ def photon_scale_smear_run3(events, year, is_data):
     # --- MC branch: scale systematics (match hzg: evaluated from the same correction name as smear) ---
     for syst in ["scale_up", "scale_down"]:
         scale = awkward.where(
-            (abs(photons.eta) > 3.0) | (photons.pt < 20.0),
+            (abs(photons.eta) > 3.0) | (photons.pt < photon_pt_min),
             awkward.ones_like(photons.pt, dtype=float),
             awkward.unflatten(
-                evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_AbsScEta),
+                evaluator[smear_names[year]].evalv(syst, photons_pt, photons_r9, photons_smear_eta),
                 n_photons,
             ),
         )
@@ -1142,4 +1144,3 @@ def photon_scale_smear_run3(events, year, is_data):
         )
 
     return events
-

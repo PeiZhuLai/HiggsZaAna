@@ -942,6 +942,8 @@ def electron_scale_smear_run3(events, year, is_data):
     electrons_AbsScEta = numpy.abs(electrons_scEta)
     electrons_pt = awkward.to_numpy(electrons_flattened.pt)
     electrons_r9 = awkward.to_numpy(electrons_flattened.r9)
+    electrons_smear_eta = electrons_scEta if year == "2024" else electrons_AbsScEta
+    electron_pt_min = 10.0
 
     # NEW: log first 10 electron pt before applying corrections (smear/scale)
     _nprint = int(min(10, len(electrons_pt)))
@@ -1003,18 +1005,18 @@ def electron_scale_smear_run3(events, year, is_data):
             )
 
         scale = awkward.where(
-            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
             awkward.ones_like(electrons_pt, dtype=float),
             scale
         )
         # NEW: apply same validity mask to up/down
         scale_up = awkward.where(
-            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
             awkward.ones_like(electrons_pt, dtype=float),
             scale_up
         )
         scale_down = awkward.where(
-            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
             awkward.ones_like(electrons_pt, dtype=float),
             scale_down
         )
@@ -1045,10 +1047,10 @@ def electron_scale_smear_run3(events, year, is_data):
         return events
 
     # Apply smear corrections first
-    smear = evaluator[electron_smear_names[year]].evalv("smear", electrons_pt, electrons_r9, electrons_AbsScEta)
+    smear = evaluator[electron_smear_names[year]].evalv("smear", electrons_pt, electrons_r9, electrons_smear_eta)
     rng = numpy.random.default_rng(seed=8011)
     smear_val = awkward.where(
-        (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+        (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
         awkward.ones_like(electrons_pt, dtype=float),
         rng.normal(loc=1.0, scale=numpy.abs(smear)),
     )
@@ -1059,9 +1061,9 @@ def electron_scale_smear_run3(events, year, is_data):
 
     # Calculate smear systematics: store DELTA wrt central corrected_pt (match naming dEsigma*)
     for syst in ["smear_up", "smear_down"]:
-        smear_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_AbsScEta)
+        smear_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_smear_eta)
         smear_val_syst = awkward.where(
-            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
             awkward.ones_like(electrons_pt, dtype=float),
             rng.normal(loc=1.0, scale=numpy.abs(smear_syst)),
         )
@@ -1073,9 +1075,9 @@ def electron_scale_smear_run3(events, year, is_data):
 
     # Calculate scale systematics: apply multiplicative factor on central smeared pt
     for syst in ["scale_up", "scale_down"]:
-        scale_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_AbsScEta)
+        scale_syst = evaluator[electron_smear_names[year]].evalv(syst, electrons_pt, electrons_r9, electrons_smear_eta)
         scale_factor = awkward.where(
-            (electrons_AbsScEta > 3.0) | (electrons_pt < 20.0),
+            (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
             awkward.ones_like(electrons_pt, dtype=float),
             scale_syst,
         )
@@ -1227,8 +1229,8 @@ def muon_scale_smear_run3(events, year, is_data):
         events["Muon", "corrected_pt"] = awkward.unflatten(pt_scale_nom, n_muons)
         events["Muon", "scaleUp_pt"]    = awkward.unflatten(pt_scale_up, n_muons)
         events["Muon", "scaleDown_pt"]  = awkward.unflatten(pt_scale_dn, n_muons)
-        events["Muon", "smearUp_pt"]    = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
-        events["Muon", "smearDown_pt"]  = awkward.unflatten(numpy.zeros_like(pt_scale_nom), n_muons)
+        events["Muon", "smearUp_pt"]    = awkward.unflatten(pt_scale_nom, n_muons)
+        events["Muon", "smearDown_pt"]  = awkward.unflatten(pt_scale_nom, n_muons)
 
         # NEW: log first 10 muon pt after applying corrections (data)
         logger.debug(
