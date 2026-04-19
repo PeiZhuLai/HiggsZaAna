@@ -41,6 +41,9 @@ def select_objects(objects, cuts={}, clean={}, name="none", tagger=None):
     for cut, value in cuts.items():
         mask = None
 
+        if value is None:
+            continue
+
         if cut == "pt":
             mask = obj.pt > value
             cut_names.append(f"pt > {value:.2f}")
@@ -53,7 +56,7 @@ def select_objects(objects, cuts={}, clean={}, name="none", tagger=None):
             mask = abs(obj.eta + obj.deltaEtaSC) <= value
             cut_names.append(f"|{cut}| <= {value:.2f}")
 
-        elif cut in ["pfRelIso03_all", "pfRelIso03_chg", "sip3d"]:
+        elif cut in ["pfRelIso03_all", "pfRelIso03_chg", "pfRelIso04_all", "sip3d"]:
             mask = obj[cut] < value
             cut_names.append(f"{cut} < {value:.2f}")
 
@@ -340,4 +343,3 @@ so in the photons collection, where you don't simply want the nearest photon, bu
     base_objects["%sdR" % name] = base_objects.deltaR(base_best_target)
 
     return base_objects
-

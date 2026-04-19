@@ -43,6 +43,7 @@ PT_BIN_ORDER = [
 PT_XMIN = 8.0
 PT_XMAX = 102.0
 PT_BIN_W = 2.0
+ONE_SIGMA_CL = 0.682689492137086
 
 def _lumi_fb_for_year(year: str) -> Optional[float]:
     v = lumiMap.get(year)
@@ -100,24 +101,109 @@ def _graph_cumulative_eff_from_hist(h: ROOT.TH1) -> ROOT.TGraph:
         ys.append(100.0 * float(num) / float(tot))
     return ROOT.TGraph(len(xs), carray("d", xs), carray("d", ys))
 
-def _g_from_bins(eff_by_bin: Dict[str, float]) -> ROOT.TGraphErrors:
+def _binom_eff_errors(pass_count: float, total_count: float) -> Tuple[float, float, float]:
+    if total_count <= 0.0:
+        return 0.0, 0.0, 0.0
+
+    passed = max(0.0, min(float(pass_count), float(total_count)))
+    total = float(total_count)
+    eff = passed / total
+
+    passed_i = int(round(passed))
+    total_i = int(round(total))
+    if abs(passed - passed_i) < 1e-6 and abs(total - total_i) < 1e-6 and total_i > 0:
+        low = float(ROOT.TEfficiency.ClopperPearson(total_i, passed_i, ONE_SIGMA_CL, False))
+        high = float(ROOT.TEfficiency.ClopperPearson(total_i, passed_i, ONE_SIGMA_CL, True))
+        return eff, max(0.0, eff - low), max(0.0, high - eff)
+
+    stat = (eff * max(0.0, 1.0 - eff) / total) ** 0.5
+    return eff, stat, stat
+
+def _g_from_bins(eff_by_bin: Dict[str, float]) -> ROOT.TGraphAsymmErrors:
     from array import array as carray
     xs: List[float] = []
     ys: List[float] = []
-    exs: List[float] = []
-    eys: List[float] = []
+    exl: List[float] = []
+    exh: List[float] = []
+    eyl: List[float] = []
+    eyh: List[float] = []
     for b in PT_BIN_ORDER:
         if b not in eff_by_bin:
             continue
         xs.append(_ptbin_center(b))
         ys.append(float(eff_by_bin[b]) * 100.0)
-        exs.append(0.5 * PT_BIN_W)  # x-bar half width (2 GeV bins -> +/- 1 GeV)
-        eys.append(0.0)
+        exl.append(0.5 * PT_BIN_W)  # x-bar half width (2 GeV bins -> +/- 1 GeV)
+        exh.append(0.5 * PT_BIN_W)
+        eyl.append(0.0)
+        eyh.append(0.0)
     x = carray("d", xs)
     y = carray("d", ys)
-    ex = carray("d", exs)
-    ey = carray("d", eys)
-    return ROOT.TGraphErrors(len(xs), x, y, ex, ey)
+    return ROOT.TGraphAsymmErrors(
+        len(xs),
+        x,
+        y,
+        carray("d", exl),
+        carray("d", exh),
+        carray("d", eyl),
+        carray("d", eyh),
+    )
+
+def _g_from_bin_records(bins_obj: Dict[str, Dict[str, float]]) -> ROOT.TGraphAsymmErrors:
+    from array import array as carray
+
+    xs: List[float] = []
+    ys: List[float] = []
+    exl: List[float] = []
+    exh: List[float] = []
+    eyl: List[float] = []
+    eyh: List[float] = []
+
+    for b in PT_BIN_ORDER:
+        rec = bins_obj.get(b)
+        if not isinstance(rec, dict):
+            continue
+
+        if "in_bin" in rec and "pass_trigger" in rec:
+            eff, err_low, err_high = _binom_eff_errors(
+                float(rec["pass_trigger"]),
+                float(rec["in_bin"]),
+            )
+        elif "eff" in rec:
+            eff = float(rec["eff"])
+            err_low = 0.0
+            err_high = 0.0
+        else:
+            continue
+
+        xs.append(_ptbin_center(b))
+        ys.append(100.0 * eff)
+        exl.append(0.5 * PT_BIN_W)
+        exh.append(0.5 * PT_BIN_W)
+        eyl.append(100.0 * err_low)
+        eyh.append(100.0 * err_high)
+
+    x = carray("d", xs)
+    y = carray("d", ys)
+    return ROOT.TGraphAsymmErrors(
+        len(xs),
+        x,
+        y,
+        carray("d", exl),
+        carray("d", exh),
+        carray("d", eyl),
+        carray("d", eyh),
+    )
+
+def _make_eff_graph(
+    *,
+    eff_by_bin: Dict[str, float],
+    bins_obj: Optional[Dict[str, Dict[str, float]]] = None,
+) -> ROOT.TGraphAsymmErrors:
+    if bins_obj:
+        g = _g_from_bin_records(bins_obj)
+        if g.GetN() > 0:
+            return g
+    return _g_from_bins(eff_by_bin)
 
 # --- NEW: graph of pass_trigger per pT-bin (y = counts) ---
 def _g_pass_trigger_from_bins(bins_obj: Dict[str, Dict[str, float]]) -> ROOT.TGraph:
@@ -386,8 +472,8 @@ def _plot_or_vs_double(
     pad1.Draw()
     pad1.cd()
 
-    g_or = _g_from_bins(eff_or)
-    g_db = _g_from_bins(eff_double)
+    g_or = _make_eff_graph(eff_by_bin=eff_or, bins_obj=bins_or)
+    g_db = _make_eff_graph(eff_by_bin=eff_double, bins_obj=bins_double)
 
     g_or.SetTitle("")
     g_or.GetXaxis().SetTitle(x_title if x_title else "p_{T} [GeV]")
@@ -411,8 +497,8 @@ def _plot_or_vs_double(
     g_or.GetYaxis().SetTitleOffset(1.2)
     g_or.GetXaxis().SetLabelOffset(0.02)
 
-    _apply_style(g_or, ROOT.TColor.GetColor("#e42536"), 20, 1.2, 0)   # no line between points
-    _apply_style(g_db, ROOT.TColor.GetColor("#5790fc"), 22, 1.2, 0)  # no line between points
+    _apply_style(g_or, ROOT.TColor.GetColor("#e42536"), 20, 1.2, 2)
+    _apply_style(g_db, ROOT.TColor.GetColor("#5790fc"), 22, 1.2, 2)
 
     # draw points with x error bars (x-bar) and no connecting line
     g_or.Draw("AP")          # axes + points
@@ -704,6 +790,8 @@ def _plot_combined_years_overlay(
     title_right: str,
     by_year_or: Dict[str, Dict[str, float]],
     by_year_double: Dict[str, Dict[str, float]],
+    by_year_or_bins: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None,
+    by_year_double_bins: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None,
     out_path: Path,
 ) -> None:
     """
@@ -739,10 +827,13 @@ def _plot_combined_years_overlay(
         if y not in by_year_or:
             continue
 
-        g_or = _g_from_bins(by_year_or[y])
+        g_or = _make_eff_graph(
+            eff_by_bin=by_year_or[y],
+            bins_obj=(by_year_or_bins or {}).get(y),
+        )
         keep.append(g_or)
         col = year_colors.get(y, ROOT.kBlack)
-        _apply_style(g_or, col, 20, 0.9, 3)
+        _apply_style(g_or, col, 20, 0.9, 2)
 
         if first:
             g_or.SetTitle("")
@@ -766,9 +857,12 @@ def _plot_combined_years_overlay(
         leg.AddEntry(g_or, f"{y} Sigle- OR Double-Trigger", "lp")
 
         if y in by_year_double:
-            g_db = _g_from_bins(by_year_double[y])
+            g_db = _make_eff_graph(
+                eff_by_bin=by_year_double[y],
+                bins_obj=(by_year_double_bins or {}).get(y),
+            )
             keep.append(g_db)
-            _apply_style(g_db, col, 22, 0.9, 3)
+            _apply_style(g_db, col, 22, 0.9, 2)
             g_db.SetLineStyle(2)
             g_db.Draw("LP SAME")
             leg.AddEntry(g_db, f"{y} Double Trigger", "lp")
@@ -814,6 +908,7 @@ def main() -> None:
     args = parser.parse_args()
 
     ROOT.gROOT.SetBatch(True)
+    ROOT.gStyle.SetEndErrorSize(6)
 
     out_dir = Path(args.out)
 
@@ -1052,11 +1147,17 @@ def main() -> None:
             for _, (k_or, k_db, label) in TRIG_GROUPS.items():
                 by_year_or: Dict[str, Dict[str, float]] = {}
                 by_year_db: Dict[str, Dict[str, float]] = {}
+                by_year_or_bins: Dict[str, Dict[str, Dict[str, float]]] = {}
+                by_year_db_bins: Dict[str, Dict[str, Dict[str, float]]] = {}
                 for y in by_year:
                     te = by_year[y]
                     if k_or in te and k_db in te:
                         by_year_or[y] = te[k_or]
                         by_year_db[y] = te[k_db]
+                        if k_or in store_bins.get(y, {}).get(ma, {}):
+                            by_year_or_bins[y] = store_bins[y][ma][k_or]
+                        if k_db in store_bins.get(y, {}).get(ma, {}):
+                            by_year_db_bins[y] = store_bins[y][ma][k_db]
                 if not by_year_or:
                     continue
 
@@ -1066,6 +1167,8 @@ def main() -> None:
                     title_right=label,
                     by_year_or=by_year_or,
                     by_year_double=by_year_db,
+                    by_year_or_bins=by_year_or_bins if by_year_or_bins else None,
+                    by_year_double_bins=by_year_db_bins if by_year_db_bins else None,
                     out_path=out_pdf,
                 )
 

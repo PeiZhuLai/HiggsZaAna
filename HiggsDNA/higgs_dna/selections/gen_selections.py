@@ -5,6 +5,18 @@ vector.register_awkward()
 
 from higgs_dna.utils import awkward_utils
 
+
+def _add_costheta_fields(gen_child_pairs):
+    for object_name in [
+        "GenParent",
+        "LeadGenChild",
+        "SubleadGenChild",
+        "LeadGenChildChild1",
+        "LeadGenChildChild2",
+    ]:
+        gen_child_pairs[(object_name, "costheta")] = gen_child_pairs[object_name].costheta
+    return gen_child_pairs
+
 def select_x_to_yz(gen_part, x_pdgId, y_pdgId, z_pdgId):
     """
     Return all x->yz decays, sorted by x_pt.
@@ -70,6 +82,7 @@ def select_x_to_yz(gen_part, x_pdgId, y_pdgId, z_pdgId):
     gen_child_pairs_legacy[("GenParent", "dR")] = gen_child_pairs_legacy.LeadGenChild.deltaR(gen_child_pairs_legacy.SubleadGenChild)
     gen_child_pairs_legacy[("GenParent", "Child_1_Id")] = abs(gen_child_pairs_legacy.LeadGenChild.pdgId)
     gen_child_pairs_legacy[("GenParent", "Child_2_Id")] = abs(gen_child_pairs_legacy.SubleadGenChild.pdgId)
+    gen_child_pairs_legacy = _add_costheta_fields(gen_child_pairs_legacy)
     if awkward.any(awkward.num(gen_child_pairs_legacy) >= 2):
         gen_child_pairs_legacy = gen_child_pairs_legacy[
             awkward.argsort(gen_child_pairs_legacy.GenParent.pt, ascending=False, axis=1)
@@ -93,6 +106,7 @@ def select_x_to_yz(gen_part, x_pdgId, y_pdgId, z_pdgId):
     empty_like = awkward.pad_none(gen_child_pairs_direct.LeadGenChild, 0, axis=1)  # empty list per event
     gen_child_pairs_direct["LeadGenChildChild1"] = empty_like
     gen_child_pairs_direct["LeadGenChildChild2"] = empty_like
+    gen_child_pairs_direct = _add_costheta_fields(gen_child_pairs_direct)
 
     if awkward.any(awkward.num(gen_child_pairs_direct) >= 2):
         gen_child_pairs_direct = gen_child_pairs_direct[

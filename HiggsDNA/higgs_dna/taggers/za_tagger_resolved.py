@@ -168,6 +168,13 @@ DEFAULT_OPTIONS = {
         # NEW: electron sip3d scenario study
         "study_ele_ip3d_scenarios": True,
 
+        # Study replacing nominal muon isolation with pfRelIso04_all < 0.2
+        "study_mu_iso04_replacement": True,
+        "study_mu_iso04_cut": 0.2,
+
+        # Study removing nominal muon sip3d cut
+        "study_mu_no_sip3d_replacement": True,
+
         # NEW: lepton pT-binned trigger efficiency study (phid-like)
         "study_lep_trigger_eff_ptbins": True,
         # bins: [low0, low1, ..., last_low, +inf)
@@ -358,6 +365,83 @@ class ZaTaggerRun3(Tagger):
         n_iso_photons = ak.num(iso_photons)
         awkward_utils.add_field(events, "n_iso_photons", n_iso_photons, overwrite=True)
 
+    def _build_best_z_candidates(self, electrons, muons):
+        ee_pairs = ak.combinations(electrons, 2, fields=["LeadLepton", "SubleadLepton"])
+        ee_pairs = ee_pairs[(ee_pairs.LeadLepton.charge * ee_pairs.SubleadLepton.charge) == -1]
+
+        mm_pairs = ak.combinations(muons, 2, fields=["LeadLepton", "SubleadLepton"])
+        mm_pairs = mm_pairs[(mm_pairs.LeadLepton.charge * mm_pairs.SubleadLepton.charge) == -1]
+
+        z_cands = ak.concatenate([ee_pairs, mm_pairs], axis=1)
+        z_cands["ZCand"] = z_cands.LeadLepton + z_cands.SubleadLepton
+        z_cands = z_cands[ak.argsort(abs(z_cands.ZCand.mass - 91.1876), axis=1)]
+
+        best_z = ak.firsts(z_cands)
+        z_ee_cut = ak.fill_none(best_z.LeadLepton.id == 11, False)
+        z_mumu_cut = ak.fill_none(best_z.LeadLepton.id == 13, False)
+        return z_cands, best_z, z_ee_cut, z_mumu_cut
+
+    def _build_trigger_pt_cuts(
+        self,
+        electrons,
+        muons,
+        single_ele_trigger_cut,
+        double_ele_trigger_cut,
+        single_mu_trigger_cut,
+        double_mu_trigger_cut,
+    ):
+        lead_ele_pt = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0.0)
+        sublead_ele_pt = ak.fill_none(ak.pad_none(electrons.pt, 2, axis=1)[:, 1], 0.0)
+        lead_mu_pt = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0.0)
+        sublead_mu_pt = ak.fill_none(ak.pad_none(muons.pt, 2, axis=1)[:, 1], 0.0)
+
+        if self.year is not None:
+            year = self.year[:4]
+            e_cut = lead_ele_pt > self.options["lead_ele_pt"][year]
+            m_cut = lead_mu_pt > self.options["lead_mu_pt"][year]
+        else:
+            e_cut = lead_ele_pt > 25
+            m_cut = lead_mu_pt > 20
+
+        ee_cut = (lead_ele_pt > 25) & (sublead_ele_pt > 15)
+        mm_cut = (lead_mu_pt > 20) & (sublead_mu_pt > 10)
+
+        ele_trigger_pt_cut = (single_ele_trigger_cut & e_cut) | (double_ele_trigger_cut & ee_cut)
+        mu_trigger_pt_cut = (single_mu_trigger_cut & m_cut) | (double_mu_trigger_cut & mm_cut)
+        trigger_pt_cut = ele_trigger_pt_cut | mu_trigger_pt_cut
+
+        return {
+            "lead_ele_pt": lead_ele_pt,
+            "sublead_ele_pt": sublead_ele_pt,
+            "lead_mu_pt": lead_mu_pt,
+            "sublead_mu_pt": sublead_mu_pt,
+            "ele_trigger_pt_cut": ele_trigger_pt_cut,
+            "mu_trigger_pt_cut": mu_trigger_pt_cut,
+            "trigger_pt_cut": trigger_pt_cut,
+        }
+
+    def _register_sequential_event_cutflow(self, events, cut_type, steps, weighted=False):
+        names = ["all"]
+        results = [ak.num(events.Photon) >= 0]
+        running = results[0]
+
+        for name, mask in steps:
+            running = running & ak.fill_none(mask, False)
+            names.append(name)
+            results.append(running)
+
+        names.append("all cuts")
+        results.append(running)
+
+        self.register_event_cuts(
+            names=names,
+            results=results,
+            events=events,
+            cut_type=cut_type,
+            weighted=weighted,
+        )
+        return running
+
     def produce_and_select_zgammas(self, events, rho, options):
         """
         Perform diphoton preselection.
@@ -416,6 +500,49 @@ class ZaTaggerRun3(Tagger):
             name = "SelectedMuon",
             data = events.Muon[muon_cut]
         )
+
+        muons_iso04 = None
+        if options.get("study_mu_iso04_replacement", False):
+            # Study path only: keep nominal muon cut unchanged, rebuild an alternative
+            # selection where pfRelIso03_all is replaced by pfRelIso04_all.
+            muon_iso04_options = dict(self.options["muons"])
+            muon_iso04_options["pfRelIso03_all"] = None
+            muon_iso04_options["pfRelIso04_all"] = options.get("study_mu_iso04_cut", 0.2)
+
+            muon_iso04_cut = lepton_selections.select_muons(
+                muons = events.Muon,
+                options = muon_iso04_options,
+                clean = {},
+                name = "SelectedMuonIso04",
+                tagger = self
+            )
+
+            muons_iso04 = awkward_utils.add_field(
+                events = events,
+                name = "SelectedMuonIso04",
+                data = events.Muon[muon_iso04_cut]
+            )
+
+        muons_nosip3d = None
+        if options.get("study_mu_no_sip3d_replacement", False):
+            # Study path only: keep nominal muon cut unchanged, rebuild an alternative
+            # selection where the muon sip3d requirement is removed.
+            muon_nosip3d_options = dict(self.options["muons"])
+            muon_nosip3d_options["sip3d"] = None
+
+            muon_nosip3d_cut = lepton_selections.select_muons(
+                muons = events.Muon,
+                options = muon_nosip3d_options,
+                clean = {},
+                name = "SelectedMuonNoSip3d",
+                tagger = self
+            )
+
+            muons_nosip3d = awkward_utils.add_field(
+                events = events,
+                name = "SelectedMuonNoSip3d",
+                data = events.Muon[muon_nosip3d_cut]
+            )
 
         if not self.is_data:
             # gen mu not reco
@@ -492,8 +619,42 @@ class ZaTaggerRun3(Tagger):
         )
         FSRphotons = ak.with_field(FSRphotons, ak.ones_like(FSRphotons.pt) * 0.0, "mass")
 
+        FSRphotons_iso04 = None
+        if muons_iso04 is not None:
+            # Keep the photon side nominal and only rebuild the muon-dependent study path.
+            FSRphoton_selection_iso04 = self.select_FSRphotons(
+                    FSRphotons = events.FsrPhoton,
+                    electrons = electrons,
+                    muons = muons_iso04,
+                    photons = photons,
+                    options = self.options["FSRphotons"]
+            )
+            FSRphotons_iso04 = events.FsrPhoton[FSRphoton_selection_iso04]
+            FSRphotons_iso04 = ak.with_field(FSRphotons_iso04, ak.ones_like(FSRphotons_iso04.pt) * 0.0, "mass")
+
+        FSRphotons_nosip3d = None
+        if muons_nosip3d is not None:
+            FSRphoton_selection_nosip3d = self.select_FSRphotons(
+                    FSRphotons = events.FsrPhoton,
+                    electrons = electrons,
+                    muons = muons_nosip3d,
+                    photons = photons,
+                    options = self.options["FSRphotons"]
+            )
+            FSRphotons_nosip3d = events.FsrPhoton[FSRphoton_selection_nosip3d]
+            FSRphotons_nosip3d = ak.with_field(FSRphotons_nosip3d, ak.ones_like(FSRphotons_nosip3d.pt) * 0.0, "mass")
+
         # Add object fields to events array
-        for objects, name in zip([electrons, muons], ["electron", "muon"]):
+        object_fields = [
+            (electrons, "electron"),
+            (muons, "muon"),
+        ]
+        if muons_iso04 is not None:
+            object_fields.append((muons_iso04, "muon_iso04"))
+        if muons_nosip3d is not None:
+            object_fields.append((muons_nosip3d, "muon_nosip3d"))
+
+        for objects, name in object_fields:
             awkward_utils.add_object_fields(
                 events = events,
                 name = name,
@@ -514,6 +675,11 @@ class ZaTaggerRun3(Tagger):
         # N_mu_cut = n_muons>=2
         awkward_utils.add_field(events, "n_muons", n_muons, overwrite=True)
 
+        if muons_iso04 is not None:
+            awkward_utils.add_field(events, "n_muons_iso04", ak.fill_none(ak.num(muons_iso04), 0), overwrite=True)
+        if muons_nosip3d is not None:
+            awkward_utils.add_field(events, "n_muons_nosip3d", ak.fill_none(ak.num(muons_nosip3d), 0), overwrite=True)
+
         n_leptons = n_electrons + n_muons
         # N_e_mu_cut = N_e_cut | N_mu_cut
         awkward_utils.add_field(events, "n_leptons", n_leptons, overwrite=True)
@@ -526,23 +692,48 @@ class ZaTaggerRun3(Tagger):
         electrons = ak.with_field(electrons, ak.ones_like(electrons.pt) * 11, "id")
         # electrons = ak.with_field(electrons, ak.ones_like(electrons.pt) * 0.00051099895, "mass")
         muons = ak.with_field(muons, ak.ones_like(muons.pt) * 13, "id")
+        if muons_iso04 is not None:
+            muons_iso04 = ak.with_field(muons_iso04, ak.ones_like(muons_iso04.pt) * 13, "id")
+        if muons_nosip3d is not None:
+            muons_nosip3d = ak.with_field(muons_nosip3d, ak.ones_like(muons_nosip3d.pt) * 13, "id")
 
         # leptons ptE_error
         electrons = ak.with_field(electrons, electrons.energyErr, "ptE_error")
         muons = ak.with_field(muons, muons.ptErr, "ptE_error")
+        if muons_iso04 is not None:
+            muons_iso04 = ak.with_field(muons_iso04, muons_iso04.ptErr, "ptE_error")
+        if muons_nosip3d is not None:
+            muons_nosip3d = ak.with_field(muons_nosip3d, muons_nosip3d.ptErr, "ptE_error")
 
         # Sort objects by pt
         photons = photons[ak.argsort(photons.pt, ascending=False, axis=1)]
         electrons = electrons[ak.argsort(electrons.pt, ascending=False, axis=1)]
         muons = muons[ak.argsort(muons.pt, ascending=False, axis=1)]
+        if muons_iso04 is not None:
+            muons_iso04 = muons_iso04[ak.argsort(muons_iso04.pt, ascending=False, axis=1)]
+        if muons_nosip3d is not None:
+            muons_nosip3d = muons_nosip3d[ak.argsort(muons_nosip3d.pt, ascending=False, axis=1)]
 
         # self.select_fake_and_medium_photons(events=events, photons=photons)
 
         # Register as `vector.Momentum4D` objects so we can do four-vector operations with them
         electrons = ak.Array(electrons, with_name = "Momentum4D")
         muons = ak.Array(muons, with_name = "Momentum4D")
+        if muons_iso04 is not None:
+            muons_iso04 = ak.Array(muons_iso04, with_name = "Momentum4D")
+        if muons_nosip3d is not None:
+            muons_nosip3d = ak.Array(muons_nosip3d, with_name = "Momentum4D")
         photons = ak.Array(photons, with_name = "Momentum4D")
         FSRphotons = ak.Array(FSRphotons, with_name = "Momentum4D")
+        if FSRphotons_iso04 is not None:
+            FSRphotons_iso04 = ak.Array(FSRphotons_iso04, with_name = "Momentum4D")
+        if FSRphotons_nosip3d is not None:
+            FSRphotons_nosip3d = ak.Array(FSRphotons_nosip3d, with_name = "Momentum4D")
+        FSRphotons = ak.with_field(FSRphotons, FSRphotons.costheta, "costheta")
+        if FSRphotons_iso04 is not None:
+            FSRphotons_iso04 = ak.with_field(FSRphotons_iso04, FSRphotons_iso04.costheta, "costheta")
+        if FSRphotons_nosip3d is not None:
+            FSRphotons_nosip3d = ak.with_field(FSRphotons_nosip3d, FSRphotons_nosip3d.costheta, "costheta")
 
         awkward_utils.add_field(
                 events = events,
@@ -562,40 +753,38 @@ class ZaTaggerRun3(Tagger):
         logger.debug(f"Number of FSR photons: {ak.num(FSRphotons)}")
         logger.debug(f"Total number of FSR photons: {sum(ak.num(FSRphotons)>0)}")
 
-
         # 未修正的 Z boson 重建（不包含 FSR）
-        ee_pairs_noFSR = ak.combinations(electrons, 2, fields=["LeadLepton", "SubleadLepton"])
-        os_cut_noFSR = (ee_pairs_noFSR.LeadLepton.charge * ee_pairs_noFSR.SubleadLepton.charge) == -1
-        ee_pairs_noFSR = ee_pairs_noFSR[os_cut_noFSR]
-        mm_pairs_noFSR = ak.combinations(muons, 2, fields=["LeadLepton", "SubleadLepton"])
-        os_cut_noFSR = (mm_pairs_noFSR.LeadLepton.charge * mm_pairs_noFSR.SubleadLepton.charge) == -1
-        mm_pairs_noFSR = mm_pairs_noFSR[os_cut_noFSR]
-        z_cands_noFSR = ak.concatenate([ee_pairs_noFSR, mm_pairs_noFSR], axis=1)
-        z_cands_noFSR["ZCand"] = z_cands_noFSR.LeadLepton + z_cands_noFSR.SubleadLepton
-        z_cands_noFSR = z_cands_noFSR[ak.argsort(abs(z_cands_noFSR.ZCand.mass - 91.1876), axis=1)]
-        z_ee_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 11, False)
-        z_mumu_cut_noFSR = ak.fill_none(ak.firsts(z_cands_noFSR).LeadLepton.id == 13, False)
-
-        # NEW: 取最佳 noFSR Z 候選（後面填 branch 會用到）
-        z_cand_noFSR = ak.firsts(z_cands_noFSR)
+        z_cands_noFSR, z_cand_noFSR, z_ee_cut_noFSR, z_mumu_cut_noFSR = self._build_best_z_candidates(
+            electrons,
+            muons,
+        )
 
         # 修正 electrons 和 muons（包含 FSR）
         # electrons_withFSR = self.assign_fsr_photon(electrons, FSRphotons)
         electrons_withFSR = electrons
         muons_withFSR = self.assign_fsr_photon(muons, FSRphotons)
+        z_cands, _, z_ee_cut, z_mumu_cut = self._build_best_z_candidates(
+            electrons_withFSR,
+            muons_withFSR,
+        )
 
-        # 修正的 Z boson 重建（包含 FSR）
-        ee_pairs = ak.combinations(electrons_withFSR, 2, fields = ["LeadLepton", "SubleadLepton"])
-        os_cut = (ee_pairs.LeadLepton.charge * ee_pairs.SubleadLepton.charge) == -1
-        ee_pairs = ee_pairs[os_cut]
-        mm_pairs = ak.combinations(muons_withFSR, 2, fields = ["LeadLepton", "SubleadLepton"])
-        os_cut = (mm_pairs.LeadLepton.charge * mm_pairs.SubleadLepton.charge) == -1
-        mm_pairs = mm_pairs[os_cut]
-        z_cands = ak.concatenate([ee_pairs, mm_pairs], axis = 1)
-        z_cands["ZCand"] = z_cands.LeadLepton + z_cands.SubleadLepton
-        z_cands = z_cands[ak.argsort(abs(z_cands.ZCand.mass - 91.1876), axis = 1)]
-        z_ee_cut = ak.fill_none(ak.firsts(z_cands).LeadLepton.id == 11, False)
-        z_mumu_cut = ak.fill_none(ak.firsts(z_cands).LeadLepton.id == 13, False)
+        z_cands_iso04 = None
+        z_mumu_cut_iso04 = ak.num(events.Photon) < 0
+        if muons_iso04 is not None and FSRphotons_iso04 is not None:
+            muons_iso04_withFSR = self.assign_fsr_photon(muons_iso04, FSRphotons_iso04)
+            z_cands_iso04, _, _, z_mumu_cut_iso04 = self._build_best_z_candidates(
+                electrons_withFSR,
+                muons_iso04_withFSR,
+            )
+
+        z_cands_nosip3d = None
+        z_mumu_cut_nosip3d = ak.num(events.Photon) < 0
+        if muons_nosip3d is not None and FSRphotons_nosip3d is not None:
+            muons_nosip3d_withFSR = self.assign_fsr_photon(muons_nosip3d, FSRphotons_nosip3d)
+            z_cands_nosip3d, _, _, z_mumu_cut_nosip3d = self._build_best_z_candidates(
+                electrons_withFSR,
+                muons_nosip3d_withFSR,
+            )
 
         # Make trigger cuts 
         if self.year is not None:
@@ -637,16 +826,44 @@ class ZaTaggerRun3(Tagger):
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
         mu_trigger_cut = single_mu_trigger_cut  | double_mu_trigger_cut
 
+        trigger_pt_info = self._build_trigger_pt_cuts(
+            electrons,
+            muons,
+            single_ele_trigger_cut,
+            double_ele_trigger_cut,
+            single_mu_trigger_cut,
+            double_mu_trigger_cut,
+        )
+        ele_trigger_pt_cut = trigger_pt_info["ele_trigger_pt_cut"]
+        mu_trigger_pt_cut = trigger_pt_info["mu_trigger_pt_cut"]
+        trigger_pt_cut = trigger_pt_info["trigger_pt_cut"]
+
+        mu_trigger_pt_cut_iso04 = ak.num(events.Photon) < 0
+        if muons_iso04 is not None:
+            trigger_pt_info_iso04 = self._build_trigger_pt_cuts(
+                electrons,
+                muons_iso04,
+                single_ele_trigger_cut,
+                double_ele_trigger_cut,
+                single_mu_trigger_cut,
+                double_mu_trigger_cut,
+            )
+            mu_trigger_pt_cut_iso04 = trigger_pt_info_iso04["mu_trigger_pt_cut"]
+
+        mu_trigger_pt_cut_nosip3d = ak.num(events.Photon) < 0
+        if muons_nosip3d is not None:
+            trigger_pt_info_nosip3d = self._build_trigger_pt_cuts(
+                electrons,
+                muons_nosip3d,
+                single_ele_trigger_cut,
+                double_ele_trigger_cut,
+                single_mu_trigger_cut,
+                double_mu_trigger_cut,
+            )
+            mu_trigger_pt_cut_nosip3d = trigger_pt_info_nosip3d["mu_trigger_pt_cut"]
+
         # NEW: lepton pT-binned trigger efficiency study (phid-like cutflows)
         if self.options.get("zgammas", {}).get("study_lep_trigger_eff_ptbins", False):
-            # 事件層級：leading lepton pT（無 lepton -> 0）
-            lead_ele_pt = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0.0)
-            lead_mu_pt  = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0.0)
-
-            # NEW: 同時取 subleading lepton pT（無 sublead -> 0）
-            sublead_ele_pt = ak.fill_none(ak.pad_none(electrons.pt, 2, axis=1)[:, 1], 0.0)
-            sublead_mu_pt  = ak.fill_none(ak.pad_none(muons.pt, 2, axis=1)[:, 1], 0.0)
-
             # 4 種 trigger 定義（你指定要研究的）
             trig_defs = {
                 "double_ele": double_ele_trigger_cut,
@@ -679,35 +896,25 @@ class ZaTaggerRun3(Tagger):
             mu_bins  = self.options.get("zgammas", {}).get("mu_trigger_eff_ptbins",  list(range(8, 102, 2)))
 
             # electron: lead/sublead 各研究 double_ele 與 OR_ele
-            _register_ptbins("ele", lead_ele_pt,    ele_bins, "double_ele", trig_defs["double_ele"], "lead")
-            _register_ptbins("ele", lead_ele_pt,    ele_bins, "OR_ele",     trig_defs["OR_ele"],     "lead")
-            _register_ptbins("ele", sublead_ele_pt, ele_bins, "double_ele", trig_defs["double_ele"], "sublead")
-            _register_ptbins("ele", sublead_ele_pt, ele_bins, "OR_ele",     trig_defs["OR_ele"],     "sublead")
+            _register_ptbins("ele", trigger_pt_info["lead_ele_pt"],    ele_bins, "double_ele", trig_defs["double_ele"], "lead")
+            _register_ptbins("ele", trigger_pt_info["lead_ele_pt"],    ele_bins, "OR_ele",     trig_defs["OR_ele"],     "lead")
+            _register_ptbins("ele", trigger_pt_info["sublead_ele_pt"], ele_bins, "double_ele", trig_defs["double_ele"], "sublead")
+            _register_ptbins("ele", trigger_pt_info["sublead_ele_pt"], ele_bins, "OR_ele",     trig_defs["OR_ele"],     "sublead")
 
             # muon: lead/sublead 各研究 double_mu 與 OR_mu
-            _register_ptbins("mu", lead_mu_pt,    mu_bins, "double_mu", trig_defs["double_mu"], "lead")
-            _register_ptbins("mu", lead_mu_pt,    mu_bins, "OR_mu",     trig_defs["OR_mu"],     "lead")
-            _register_ptbins("mu", sublead_mu_pt, mu_bins, "double_mu", trig_defs["double_mu"], "sublead")
-            _register_ptbins("mu", sublead_mu_pt, mu_bins, "OR_mu",     trig_defs["OR_mu"],     "sublead")
+            _register_ptbins("mu", trigger_pt_info["lead_mu_pt"],    mu_bins, "double_mu", trig_defs["double_mu"], "lead")
+            _register_ptbins("mu", trigger_pt_info["lead_mu_pt"],    mu_bins, "OR_mu",     trig_defs["OR_mu"],     "lead")
+            _register_ptbins("mu", trigger_pt_info["sublead_mu_pt"], mu_bins, "double_mu", trig_defs["double_mu"], "sublead")
+            _register_ptbins("mu", trigger_pt_info["sublead_mu_pt"], mu_bins, "OR_mu",     trig_defs["OR_mu"],     "sublead")
 
-        if self.year is not None:
-            year = self.year[:4]
-            e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_ele_pt"][year]
-            m_cut = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > self.options["lead_mu_pt"][year]
-        else:
-            e_cut = ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > 25
-            m_cut = ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > 20
-        ee_cut = (ak.fill_none(ak.pad_none(electrons.pt, 1, axis=1)[:, 0], 0) > 25) & (ak.fill_none(ak.pad_none(electrons.pt, 2, axis=1)[:, 1], 0) > 15)
-        mm_cut = (ak.fill_none(ak.pad_none(muons.pt, 1, axis=1)[:, 0], 0) > 20) & (ak.fill_none(ak.pad_none(muons.pt, 2, axis=1)[:, 1], 0) > 10)
-        
-        ele_trigger_pt_cut = (single_ele_trigger_cut & e_cut) | (double_ele_trigger_cut & ee_cut)
-        mu_trigger_pt_cut = (single_mu_trigger_cut & m_cut) | (double_mu_trigger_cut & mm_cut)
-        trigger_pt_cut = (single_ele_trigger_cut & e_cut) | (double_ele_trigger_cut & ee_cut) | (single_mu_trigger_cut & m_cut) | (double_mu_trigger_cut & mm_cut)
-        
         z_mumu = z_mumu_cut 
         z_ee = z_ee_cut
         awkward_utils.add_field(events, "z_mumu", z_mumu, overwrite=True)
         awkward_utils.add_field(events, "z_ee", z_ee, overwrite=True)
+        if muons_iso04 is not None:
+            awkward_utils.add_field(events, "z_mumu_iso04", z_mumu_cut_iso04, overwrite=True)
+        if muons_nosip3d is not None:
+            awkward_utils.add_field(events, "z_mumu_nosip3d", z_mumu_cut_nosip3d, overwrite=True)
 
         # mass_cut = (z_cands.ZCand.mass > 80.) & (z_cands.ZCand.mass < 100.)
         mass_cut = z_cands.ZCand.mass > 50.
@@ -720,9 +927,25 @@ class ZaTaggerRun3(Tagger):
         z_cand = ak.firsts(z_cands)
         z_cand_noFSR = ak.firsts(z_cands_noFSR)
 
+        has_z_cand_iso04 = ak.num(events.Photon) < 0
+        z_cand_iso04 = None
+        if z_cands_iso04 is not None:
+            mass_cut_iso04 = z_cands_iso04.ZCand.mass > 50.
+            z_cands_iso04 = z_cands_iso04[mass_cut_iso04]
+            has_z_cand_iso04 = ak.num(z_cands_iso04) >= 1
+            z_cand_iso04 = ak.firsts(z_cands_iso04)
+
+        has_z_cand_nosip3d = ak.num(events.Photon) < 0
+        z_cand_nosip3d = None
+        if z_cands_nosip3d is not None:
+            mass_cut_nosip3d = z_cands_nosip3d.ZCand.mass > 50.
+            z_cands_nosip3d = z_cands_nosip3d[mass_cut_nosip3d]
+            has_z_cand_nosip3d = ak.num(z_cands_nosip3d) >= 1
+            z_cand_nosip3d = ak.firsts(z_cands_nosip3d)
+
         # Add Z-related fields to array
         # NOTE: sip3d only (no ip3d fallback)
-        for field in ["pt", "eta", "phi", "mass", "charge", "id", "ptE_error", "sip3d"]:
+        for field in ["pt", "eta", "costheta", "phi", "mass", "charge", "id", "ptE_error", "sip3d"]:
             if field == "sip3d":
                 awkward_utils.add_field(events, "Z_lead_lepton_sip3d", ak.fill_none(z_cand.LeadLepton.sip3d, DUMMY_VALUE))
                 awkward_utils.add_field(events, "Z_sublead_lepton_sip3d", ak.fill_none(z_cand.SubleadLepton.sip3d, DUMMY_VALUE))
@@ -745,22 +968,22 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(
                     events,
                     "Z_lead_lepton_%s" % field,
-                    ak.fill_none(z_cand.LeadLepton[field], DUMMY_VALUE)
+                    ak.fill_none(getattr(z_cand.LeadLepton, field), DUMMY_VALUE)
             )
             awkward_utils.add_field(
                     events,
                     "Z_sublead_lepton_%s" % field,
-                    ak.fill_none(z_cand.SubleadLepton[field], DUMMY_VALUE)
+                    ak.fill_none(getattr(z_cand.SubleadLepton, field), DUMMY_VALUE)
             )
             awkward_utils.add_field(
                 events,
                 f"Z_noFSR_lead_lepton_{field}",
-                ak.fill_none(z_cand_noFSR.LeadLepton[field], DUMMY_VALUE)
+                ak.fill_none(getattr(z_cand_noFSR.LeadLepton, field), DUMMY_VALUE)
             )
             awkward_utils.add_field(
                 events,
                 f"Z_noFSR_sublead_lepton_{field}",
-                ak.fill_none(z_cand_noFSR.SubleadLepton[field], DUMMY_VALUE)
+                ak.fill_none(getattr(z_cand_noFSR.SubleadLepton, field), DUMMY_VALUE)
             )
 
         # Make gamma candidate-level cuts
@@ -829,8 +1052,8 @@ class ZaTaggerRun3(Tagger):
         # ------------------------------------------------------------
 
         # Add ALP-related fields
-        for field in ["pt", "eta", "phi", "mass", "electronVeto", "energyRaw", "energyErr", "r9", "sieie", "hoe", "hoe_PUcorr", "hcalPFClusterIso", "hcalPFClusterIso_PUcorr", "ecalPFClusterIso", "ecalPFClusterIso_PUcorr", "chiso_PUcorr", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "mvaID"]:
-            if field in ["pt","eta","phi","mass"]:
+        for field in ["pt", "eta", "costheta", "phi", "mass", "electronVeto", "energyRaw", "energyErr", "r9", "sieie", "hoe", "hoe_PUcorr", "hcalPFClusterIso", "hcalPFClusterIso_PUcorr", "ecalPFClusterIso", "ecalPFClusterIso_PUcorr", "chiso_PUcorr", "sieip", "etaWidth", "phiWidth", "s4", "trkSumPtHollowConeDR03", "trkSumPtSolidConeDR04", "pfChargedIso", "pfChargedIsoWorstVtx", "esEffSigmaRR", "esEnergyOverRawE", "mvaID"]:
+            if field in ["pt","eta","costheta","phi","mass"]:
                 awkward_utils.add_field(
                     events,
                     "ALP_%s" % field,
@@ -838,11 +1061,11 @@ class ZaTaggerRun3(Tagger):
                 )
             name = f"ALP_lead_photon_{field}"
             if name not in events.fields:
-                awkward_utils.add_field(events, name, ak.fill_none(alp_cand.LeadPhoton[field], DUMMY_VALUE))
+                awkward_utils.add_field(events, name, ak.fill_none(getattr(alp_cand.LeadPhoton, field), DUMMY_VALUE))
 
             name = f"ALP_sublead_photon_{field}"
             if name not in events.fields:
-                awkward_utils.add_field(events, name, ak.fill_none(alp_cand.SubleadPhoton[field], DUMMY_VALUE))
+                awkward_utils.add_field(events, name, ak.fill_none(getattr(alp_cand.SubleadPhoton, field), DUMMY_VALUE))
 
 
         if int(self.year[:4]) < 2020:
@@ -970,13 +1193,25 @@ class ZaTaggerRun3(Tagger):
         sel_h_noFSR = (h_cand_noFSR.mass > options["mass_h"][0]) & (h_cand_noFSR.mass < options["mass_h"][1])
         sel_h_noFSR = ak.fill_none(sel_h_noFSR, value=False)
 
+        sel_h_iso04 = ak.num(events.Photon) < 0
+        if z_cand_iso04 is not None:
+            h_cand_iso04 = z_cand_iso04.ZCand + alp_cand.ALPCand
+            sel_h_iso04 = (h_cand_iso04.mass > options["mass_h"][0]) & (h_cand_iso04.mass < options["mass_h"][1])
+            sel_h_iso04 = ak.fill_none(sel_h_iso04, value=False)
+
+        sel_h_nosip3d = ak.num(events.Photon) < 0
+        if z_cand_nosip3d is not None:
+            h_cand_nosip3d = z_cand_nosip3d.ZCand + alp_cand.ALPCand
+            sel_h_nosip3d = (h_cand_nosip3d.mass > options["mass_h"][0]) & (h_cand_nosip3d.mass < options["mass_h"][1])
+            sel_h_nosip3d = ak.fill_none(sel_h_nosip3d, value=False)
+
         logger.debug(
             f'!!!!has H: {sum(has_z_cand & has_2gamma_cand & z_mumu_cut)} | '
             f'{sum(has_z_cand & has_2gamma_cand & z_ee_cut)}'
         )
 
         # Add Higgs-related fields to array
-        for field in ["pt", "eta", "phi", "mass"]:
+        for field in ["pt", "eta", "costheta", "phi", "mass"]:
             awkward_utils.add_field(
                 events,
                 "H_%s" % field,
@@ -991,73 +1226,135 @@ class ZaTaggerRun3(Tagger):
 
         all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
 
-        for cut_type in ["zgammas", "zgammas_ele", "zgammas_mu", "zgammas_w", "zgammas_ele_w", "zgammas_mu_w"]:
-            if "_w" in cut_type:
-                if hasattr(events, 'Generator_weight'):
-                    weighted = True
-                else:
-                    continue
-            else:
-                weighted = False
+        ee_all_cut = ak.num(events.Photon) < 0
+        mm_all_cut = ak.num(events.Photon) < 0
+        nominal_cutflows = {
+            "zgammas": (
+                [("N_lep_sel", z_ee_cut | z_mumu_cut), ("trig_cut", trigger_cut), ("lep_pt_cut", trigger_pt_cut)],
+                False,
+            ),
+            "zgammas_ele": (
+                [("N_lep_sel", z_ee_cut), ("trig_cut", ele_trigger_cut), ("lep_pt_cut", ele_trigger_pt_cut)],
+                False,
+            ),
+            "zgammas_mu": (
+                [("N_lep_sel", z_mumu_cut), ("trig_cut", mu_trigger_cut), ("lep_pt_cut", mu_trigger_pt_cut)],
+                False,
+            ),
+            "zgammas_w": (
+                [("N_lep_sel", z_ee_cut | z_mumu_cut), ("trig_cut", trigger_cut), ("lep_pt_cut", trigger_pt_cut)],
+                True,
+            ),
+            "zgammas_ele_w": (
+                [("N_lep_sel", z_ee_cut), ("trig_cut", ele_trigger_cut), ("lep_pt_cut", ele_trigger_pt_cut)],
+                True,
+            ),
+            "zgammas_mu_w": (
+                [("N_lep_sel", z_mumu_cut), ("trig_cut", mu_trigger_cut), ("lep_pt_cut", mu_trigger_pt_cut)],
+                True,
+            ),
+        }
+        trailing_nominal_steps = [
+            ("has_z_cand", has_z_cand),
+            ("has_2g_cand", has_2gamma_cand),
+            ("sel_h", sel_h),
+        ]
 
-            cut0 = ak.num(events.Photon) >= 0
+        for cut_type, (leading_steps, weighted) in nominal_cutflows.items():
+            if weighted and not hasattr(events, "Generator_weight"):
+                continue
 
-            cut1 = z_ee_cut | z_mumu_cut
-            if "ele" in cut_type:
-                cut1 = z_ee_cut
-            elif "mu" in cut_type:
-                cut1 = z_mumu_cut
-            cut2 = cut1 & trigger_cut
-            if "ele" in cut_type:
-                cut2 = cut1 & ele_trigger_cut
-            elif "mu" in cut_type:
-                cut2 = cut1 & mu_trigger_cut
-            cut3 = cut2 & trigger_pt_cut
-            if "ele" in cut_type:
-                cut3 = cut2 & ele_trigger_pt_cut
-            elif "mu" in cut_type:
-                cut3 = cut2 & mu_trigger_pt_cut
-            cut4 = cut3 & has_z_cand
-            cut5 = cut4 & has_2gamma_cand
-            cut6 = cut5 & sel_h
-            
-            if cut_type == "zgammas_ele":
-                ee_all_cut = cut6
-            if cut_type == "zgammas_mu":
-                mm_all_cut = cut6
-            
-            self.register_event_cuts(
-                names = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h", "all cuts"],
-                results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut6],
-                events = events,
-                cut_type = cut_type,
-                weighted = weighted
+            final_cut = self._register_sequential_event_cutflow(
+                events=events,
+                cut_type=cut_type,
+                steps=leading_steps + trailing_nominal_steps,
+                weighted=weighted,
             )
 
-        # NEW: electron sip3d scenario cutflow（像 phid 一樣額外註冊）
+            if cut_type == "zgammas_ele":
+                ee_all_cut = final_cut
+            elif cut_type == "zgammas_mu":
+                mm_all_cut = final_cut
+
+        # electron sip3d scenario cutflow
         if self.options.get("zgammas", {}).get("study_ele_ip3d_scenarios", False):
+            final_ele_sip3d_cut = ak.num(events.Photon) < 0
+            ele_sip3d_steps = [
+                ("N_lep_sel", z_ee_cut),
+                ("ele_sip3d_cut", events.pass_sel_ele_sip3d),
+                ("trig_cut", ele_trigger_cut),
+                ("lep_pt_cut", ele_trigger_pt_cut),
+                ("has_z_cand", has_z_cand),
+                ("has_2g_cand", has_2gamma_cand),
+                ("sel_h", sel_h),
+            ]
+
             for weighted in (False, True):
                 if weighted and not hasattr(events, "Generator_weight"):
                     continue
 
-                cut0 = ak.num(events.Photon) >= 0
-                cut1 = z_ee_cut
-                cut1b = cut1 & ak.fill_none(events.pass_sel_ele_sip3d, False)  # <-- sip3d scenario
-                cut2 = cut1b & ele_trigger_cut
-                cut3 = cut2 & ele_trigger_pt_cut
-                cut4 = cut3 & has_z_cand
-                cut5 = cut4 & has_2gamma_cand
-                cut6 = cut5 & sel_h
-
-                self.register_event_cuts(
-                    names = ["all", "N_lep_sel", "ele_sip3d_cut", "trig_cut", "lep_pt_cut", "has_z_cand", "has_2g_cand", "sel_h", "all cuts"],
-                    results = [cut0, cut1, cut1b, cut2, cut3, cut4, cut5, cut6, cut6],
-                    events = events,
-                    cut_type = "zgammas_ele_elesip3d_w" if weighted else "zgammas_ele_elesip3d",
-                    weighted = weighted
+                final_cut = self._register_sequential_event_cutflow(
+                    events=events,
+                    cut_type="zgammas_ele_elesip3d_w" if weighted else "zgammas_ele_elesip3d",
+                    steps=ele_sip3d_steps,
+                    weighted=weighted,
                 )
+                if not weighted:
+                    final_ele_sip3d_cut = final_cut
 
-                awkward_utils.add_field(events, "pass_allcuts_elesip3d", ak.fill_none(cut6, False), overwrite=True)
+            awkward_utils.add_field(events, "pass_allcuts_elesip3d", ak.fill_none(final_ele_sip3d_cut, False), overwrite=True)
+
+        if muons_iso04 is not None:
+            final_mu_iso04_cut = ak.num(events.Photon) < 0
+            mu_iso04_steps = [
+                ("N_lep_sel", z_mumu_cut_iso04),
+                ("trig_cut", mu_trigger_cut),
+                ("lep_pt_cut", mu_trigger_pt_cut_iso04),
+                ("has_z_cand", has_z_cand_iso04),
+                ("has_2g_cand", has_2gamma_cand),
+                ("sel_h", sel_h_iso04),
+            ]
+
+            for weighted in (False, True):
+                if weighted and not hasattr(events, "Generator_weight"):
+                    continue
+
+                final_cut = self._register_sequential_event_cutflow(
+                    events=events,
+                    cut_type="zgammas_mu_muiso04_w" if weighted else "zgammas_mu_muiso04",
+                    steps=mu_iso04_steps,
+                    weighted=weighted,
+                )
+                if not weighted:
+                    final_mu_iso04_cut = final_cut
+
+            awkward_utils.add_field(events, "pass_allcuts_muiso04", ak.fill_none(final_mu_iso04_cut, False), overwrite=True)
+
+        if muons_nosip3d is not None:
+            final_mu_nosip3d_cut = ak.num(events.Photon) < 0
+            mu_nosip3d_steps = [
+                ("N_lep_sel", z_mumu_cut_nosip3d),
+                ("trig_cut", mu_trigger_cut),
+                ("lep_pt_cut", mu_trigger_pt_cut_nosip3d),
+                ("has_z_cand", has_z_cand_nosip3d),
+                ("has_2g_cand", has_2gamma_cand),
+                ("sel_h", sel_h_nosip3d),
+            ]
+
+            for weighted in (False, True):
+                if weighted and not hasattr(events, "Generator_weight"):
+                    continue
+
+                final_cut = self._register_sequential_event_cutflow(
+                    events=events,
+                    cut_type="zgammas_mu_munosip3d_w" if weighted else "zgammas_mu_munosip3d",
+                    steps=mu_nosip3d_steps,
+                    weighted=weighted,
+                )
+                if not weighted:
+                    final_mu_nosip3d_cut = final_cut
+
+            awkward_utils.add_field(events, "pass_allcuts_munosip3d", ak.fill_none(final_mu_nosip3d_cut, False), overwrite=True)
 
         # --- NEW: 一次註冊 15 種 photon ID 情境對 cutflow("all cuts") 的影響 ---
         def _scenario_has_2gamma(events_, id_key: str):
@@ -1105,26 +1402,23 @@ class ZaTaggerRun3(Tagger):
                         continue
 
                     has_2g_s = _scenario_has_2gamma(events, id_key)
-
-                    cut0 = ak.num(events.Photon) >= 0
-                    cut1 = z_ee_cut | z_mumu_cut
-                    cut2 = cut1 & trigger_cut
-                    cut3 = cut2 & trigger_pt_cut
-                    cut4 = cut3 & has_z_cand
-                    cut5 = cut4 & g_kin_cut
-                    cut6 = cut5 & has_2g_s
-                    cut7 = cut6 & sel_h
-                    
-                    self.register_event_cuts(
-                        names   = ["all", "N_lep_sel", "trig_cut", "lep_pt_cut", "has_z_cand", "g_kin_cut", "has_2g_cand", "sel_h", "all cuts"],
-                        results = [cut0, cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut7],
-                        events  = events,
-                        cut_type= f"zgammas_{id_key}",
-                        weighted= weighted,
+                    final_cut = self._register_sequential_event_cutflow(
+                        events=events,
+                        cut_type=f"zgammas_{id_key}",
+                        steps=[
+                            ("N_lep_sel", z_ee_cut | z_mumu_cut),
+                            ("trig_cut", trigger_cut),
+                            ("lep_pt_cut", trigger_pt_cut),
+                            ("has_z_cand", has_z_cand),
+                            ("g_kin_cut", g_kin_cut),
+                            ("has_2g_cand", has_2g_s),
+                            ("sel_h", sel_h),
+                        ],
+                        weighted=weighted,
                     )
 
-                # （可選）把每個 scenario 的最終 allcuts 存成 event-level branch
-                awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(cut7, False), overwrite=True)
+                    if not weighted:
+                        awkward_utils.add_field(events, f"pass_allcuts_{id_key}", ak.fill_none(final_cut, False), overwrite=True)
 
         all_cuts = ee_all_cut | mm_all_cut
 
