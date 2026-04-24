@@ -8,6 +8,21 @@ scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scri
 
 eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 
+
+rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2022preEE_sf/hza_resolve_phcsev_hr9_2022preEE_sf.json $HiggsDNADir/2022preEE_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2022postEE_sf/hza_resolve_phcsev_hr9_2022postEE_sf.json $HiggsDNADir/2022postEE_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2023preBPix_sf/hza_resolve_phcsev_hr9_2023preBPix_sf.json $HiggsDNADir/2023preBPix_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2023postBPix_sf/hza_resolve_phcsev_hr9_2023postBPix_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2023postBPixHole_sf/hza_resolve_phcsev_hr9_2023postBPixHole_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2024_sf/hza_resolve_phcsev_hr9_2024_sf.json $HiggsDNADir/2024_UL/custom_SF_raw/
+
+rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2022preEE_sf/hza_resolve_phcsev_lr9_2022preEE_sf.json $HiggsDNADir/2022preEE_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2022postEE_sf/hza_resolve_phcsev_lr9_2022postEE_sf.json $HiggsDNADir/2022postEE_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2023preBPix_sf/hza_resolve_phcsev_lr9_2023preBPix_sf.json $HiggsDNADir/2023preBPix_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2023postBPix_sf/hza_resolve_phcsev_lr9_2023postBPix_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2023postBPixHole_sf/hza_resolve_phcsev_lr9_2023postBPixHole_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
+rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2024_sf/hza_resolve_phcsev_lr9_2024_sf.json $HiggsDNADir/2024_UL/custom_SF_raw/
+
 era_dir() {
     case "$1" in
         2022preEE) echo "2022preEE_UL" ;;
@@ -93,4 +108,4 @@ collect_muo_json "2024" "NUM_Mu24leg_DEN_HToZa_SignalMuons/hza_mutrig24_2024_eff
 ###------------------------
 ### ----- Convert ---------
 ###------------------------
-python3 "$scriptsDir/2_merge_custom_sf.py"
+# python3 "$scriptsDir/2_merge_custom_sf.py"
