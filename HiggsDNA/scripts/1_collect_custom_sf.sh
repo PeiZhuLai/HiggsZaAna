@@ -8,21 +8,6 @@ scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scri
 
 eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 
-
-rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2022preEE_sf/hza_resolve_phcsev_hr9_2022preEE_sf.json $HiggsDNADir/2022preEE_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2022postEE_sf/hza_resolve_phcsev_hr9_2022postEE_sf.json $HiggsDNADir/2022postEE_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2023preBPix_sf/hza_resolve_phcsev_hr9_2023preBPix_sf.json $HiggsDNADir/2023preBPix_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2023postBPix_sf/hza_resolve_phcsev_hr9_2023postBPix_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2023postBPixHole_sf/hza_resolve_phcsev_hr9_2023postBPixHole_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_hr9_2024_sf/hza_resolve_phcsev_hr9_2024_sf.json $HiggsDNADir/2024_UL/custom_SF_raw/
-
-rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2022preEE_sf/hza_resolve_phcsev_lr9_2022preEE_sf.json $HiggsDNADir/2022preEE_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2022postEE_sf/hza_resolve_phcsev_lr9_2022postEE_sf.json $HiggsDNADir/2022postEE_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2023preBPix_sf/hza_resolve_phcsev_lr9_2023preBPix_sf.json $HiggsDNADir/2023preBPix_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2023postBPix_sf/hza_resolve_phcsev_lr9_2023postBPix_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2023postBPixHole_sf/hza_resolve_phcsev_lr9_2023postBPixHole_sf.json $HiggsDNADir/2023postBPix_UL/custom_SF_raw/
-rsync -av $egmSFDir/hza_resolve_phcsev_lr9_2024_sf/hza_resolve_phcsev_lr9_2024_sf.json $HiggsDNADir/2024_UL/custom_SF_raw/
-
 era_dir() {
     case "$1" in
         2022preEE) echo "2022preEE_UL" ;;
@@ -80,10 +65,22 @@ done
 collect_egm_sf "2023postBPix" "hza_resolve_phid_2023postBPixHole_sf"
 collect_egm_sf "2023postBPix" "hza_resolve_phid_lowpt_2023postBPixHole_sf"
 
+###------------------------
+### ----- Photon CSEV -----
+###------------------------
+for era in "${eras[@]}"; do
+    collect_egm_sf "$era" "hza_resolve_phcsev_lr9_${era}_sf"
+    collect_egm_sf "$era" "hza_resolve_phcsev_hr9_${era}_sf"
+done
+
+# 2023postBPix also has separate CSEV maps for the eta/phi hole region.
+collect_egm_sf "2023postBPix" "hza_resolve_phcsev_lr9_2023postBPixHole_sf"
+collect_egm_sf "2023postBPix" "hza_resolve_phcsev_hr9_2023postBPixHole_sf"
+
 ###---------------------
 ### ----- Electron -----
 ###---------------------
-# These four raw maps are merged into one hzg_elid_*_scalefactors.json for 2024.
+# These four raw maps are merged into one hza_elid_*_scalefactors.json for 2024.
 # The high/low pT maps currently use the nongap_highpT/nongap_lowpT TnP names.
 elid_components=(gap nongap nongap_highpT nongap_lowpT)
 for component in "${elid_components[@]}"; do
@@ -108,4 +105,4 @@ collect_muo_json "2024" "NUM_Mu24leg_DEN_HToZa_SignalMuons/hza_mutrig24_2024_eff
 ###------------------------
 ### ----- Convert ---------
 ###------------------------
-# python3 "$scriptsDir/2_merge_custom_sf.py"
+python3 "$scriptsDir/2_merge_custom_sf.py"
