@@ -1,0 +1,273 @@
+{
+  "schema_version": 2,
+  "corrections": [
+    {
+      "name": "sf_pass",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "r9",
+          "type": "real",
+          "description": "r9"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data-MC SF"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "eta",
+          "pt",
+          "r9"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ],
+          [
+            0.0,
+            0.96,
+            99999.0
+          ]
+        ],
+        "content": [
+          0.9807393268081622,
+          0.9999226699237725,
+          1.0,
+          1.0,
+          0.9656026646592939,
+          0.9661130673571923,
+          0.9997671495309003,
+          0.9998801710395185,
+          1.0,
+          1.0,
+          0.9989854860900673,
+          0.9995349730756309
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "r9",
+          "type": "real",
+          "description": "r9"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data-MC unc"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "eta",
+          "pt",
+          "r9"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ],
+          [
+            0.0,
+            0.96,
+            99999.0
+          ]
+        ],
+        "content": [
+          0.022137874104018174,
+          0.004475989561942113,
+          0.0,
+          0.0,
+          0.10477237170474071,
+          0.034171796350461574,
+          0.001414048921813224,
+          0.0014141288330410413,
+          0.0,
+          0.0,
+          0.0014134963747454777,
+          0.0014138847769182969
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "sf_fail",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "r9",
+          "type": "real",
+          "description": "r9"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data-MC SF"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "eta",
+          "pt",
+          "r9"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ],
+          [
+            0.0,
+            0.96,
+            99999.0
+          ]
+        ],
+        "content": [
+          1.4446830025563246,
+          1.0,
+          0.5,
+          0.5,
+          1.2062172506270559,
+          1.4698661938389779,
+          1.0,
+          1.0,
+          0.5,
+          0.5,
+          1.0,
+          1.0
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_fail",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "r9",
+          "type": "real",
+          "description": "r9"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data-MC unc"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "eta",
+          "pt",
+          "r9"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ],
+          [
+            0.0,
+            0.96,
+            99999.0
+          ]
+        ],
+        "content": [
+          0.7524432829373955,
+          0.0,
+          0.0011180339887498947,
+          0.0011180339887498947,
+          0.7846290326046629,
+          0.7206728385478723,
+          0.0,
+          0.0,
+          0.0011180339887498947,
+          0.0011180339887498947,
+          0.0,
+          0.0
+        ],
+        "flow": "clamp"
+      }
+    }
+  ]
+}
