@@ -252,23 +252,29 @@ class SampleManager():
         dasgoclient output is not always a clean standalone JSON document. In
         practice it may contain leading warnings, a preceding "null", or even
         multiple concatenated JSON documents. Find the first decodable JSON
-        object/array and return exactly that slice.
+        object/array and return exactly that slice. If DAS only emitted scalar
+        JSON values such as "null", treat it as an empty result.
         """
         raw_output = raw_output.strip()
         if not raw_output:
             return raw_output
 
         decoder = json.JSONDecoder()
-        candidate_starts = [idx for idx, char in enumerate(raw_output) if char in "[{"]
+        start = 0
 
-        for start in candidate_starts:
+        while start < len(raw_output):
             try:
-                _, end = decoder.raw_decode(raw_output[start:])
-                return raw_output[start : start + end]
+                value, end = decoder.raw_decode(raw_output, start)
             except json.JSONDecodeError:
+                start += 1
                 continue
 
-        return raw_output
+            if isinstance(value, (list, dict)):
+                return raw_output[start:end]
+
+            start = max(end, start + 1)
+
+        return ""
     # -----------Read T2_CN_Beijing private mc-------------------
 
     def get_files_from_dasgoclient(self, sample, is_data, instance=None, redirector="root://xrootd-cms.infn.it"):
