@@ -5,7 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_dir}"
 
-outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_cutflow_DNA/Data}"
+outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_DNA_tmp/Data}"
 config="${CONFIG:-metadata/za_data_run3.json}"
 log_level="${LOG_LEVEL:-DEBUG}"
 n_cores="${N_CORES:-10}"
@@ -14,7 +14,7 @@ sample_list="${SAMPLE_LIST:-Data}"
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
-short="${SHORT:-0}"
+short="${SHORT:-1}"
 dry_run="${DRY_RUN:-0}"
 
 if [[ "${clean_analysis_state}" == "1" ]]; then
