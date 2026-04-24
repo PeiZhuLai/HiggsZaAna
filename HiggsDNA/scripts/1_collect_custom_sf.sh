@@ -49,13 +49,13 @@ rysnc -av $egmSFDir/hza_sielleg30trigger_nongap_2024_sf/hza_sielleg30trigger_non
 ###---------------------
 muoSFDir="/eos/home-p/pelai/HZa/root_mTnP"
 
-rysnc -av $muoSFDir/NUM_HToZa_SignalMuons_DEN_TrackerMuons/hza_muid_2024_scalefactors.json $HiggsDNADir/2024_UL/custom_SF_raw/
+rysnc -av $muoSFDir/NUM_HToZa_SignalMuons_DEN_TrackerMuons/hza_muid_2024_scalefactors.json $HiggsDNADir/2024_UL/
 
-rysnc -av $muoSFDir/NUM_Mu8leg_DEN_HToZa_SignalMuons/hza_mutrig8_2024_efficiencies.json $HiggsDNADir/2024_UL/custom_SF_raw/
+rysnc -av $muoSFDir/NUM_Mu8leg_DEN_HToZa_SignalMuons/hza_mutrig8_2024_efficiencies.json $HiggsDNADir/2024_UL/
 
-rysnc -av $muoSFDir/NUM_Mu17leg_DEN_HToZa_SignalMuons/hza_mutrig17_2024_efficiencies.json $HiggsDNADir/2024_UL/custom_SF_raw/
+rysnc -av $muoSFDir/NUM_Mu17leg_DEN_HToZa_SignalMuons/hza_mutrig17_2024_efficiencies.json $HiggsDNADir/2024_UL/
 
-rysnc -av $muoSFDir/NUM_Mu24leg_DEN_HToZa_SignalMuons/hza_mutrig24_2024_efficiencies.json $HiggsDNADir/2024_UL/custom_SF_raw/
+rysnc -av $muoSFDir/NUM_Mu24leg_DEN_HToZa_SignalMuons/hza_mutrig24_2024_efficiencies.json $HiggsDNADir/2024_UL/
 
 ###------------------------
 ### ----- Convert ---------
