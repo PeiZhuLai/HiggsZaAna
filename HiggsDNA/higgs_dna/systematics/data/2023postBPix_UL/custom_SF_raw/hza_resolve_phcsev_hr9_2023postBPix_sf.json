@@ -1,0 +1,190 @@
+{
+  "schema_version": 2,
+  "description": "auto-generated scale factors",
+  "corrections": [
+    {
+      "name": "sf_pass",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "ph_sc_abseta",
+          "type": "real",
+          "description": "ph_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data/MC scale factor (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "ph_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.980166429599063,
+          1.0,
+          0.9451704860508222
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "ph_sc_abseta",
+          "type": "real",
+          "description": "ph_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "uncertainty (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "ph_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.0020836440012931357,
+          0.0,
+          0.05331856341569951
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "sf_fail",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "ph_sc_abseta",
+          "type": "real",
+          "description": "ph_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data/MC scale factor (fail)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "ph_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            80.0
+          ]
+        ],
+        "content": [
+          16.075466085040055,
+          0.5,
+          1.5315538558997064
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_fail",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "ph_sc_abseta",
+          "type": "real",
+          "description": "ph_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "uncertainty (fail)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "ph_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            10.0,
+            80.0
+          ]
+        ],
+        "content": [
+          22.791879557104156,
+          0.0011180339887498947,
+          0.8374827643534825
+        ],
+        "flow": "clamp"
+      }
+    }
+  ]
+}
