@@ -22,7 +22,7 @@ MUON_ID_SF_FILE = {
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/muid_2022EE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_muid_2023_scalefactors.json",
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_muid_2023BPix_scalefactors.json",
-    "2024" : "higgs_dna/systematics/data/2024_UL/hzg_muid_2023BPix_scalefactors.json" #FIXME
+    "2024" : "higgs_dna/systematics/data/2024_UL/hza_muid_2024_scalefactors.json"
 }
 
 def muon_LooseID_sf(events, year, central_only, input_collection):
@@ -424,7 +424,7 @@ ELECTRON_ID_SF_FILE = {
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/hzg_elid_2022EE_scalefactors.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_elid_2023_scalefactors.json",
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_elid_2023BPix_scalefactors.json",
-    "2024" : "higgs_dna/systematics/data/2024_UL/hzg_elid_2023BPix_scalefactors.json" #FIXME
+    "2024" : "higgs_dna/systematics/data/2024_UL/hza_elid_2024_scalefactors.json"
 }
 
 ELECTRON_ID_SF_FILE_HOLE = {
@@ -816,7 +816,7 @@ ELECTRON_RECO_SF_FILE = {
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/electron_recoSF2022EE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/electron_recoSF2023.json",
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/electron_recoSF2023BPix.json",
-    "2024" : "higgs_dna/systematics/data/2024_UL/electron_recoSF2023BPix.json" #FIXME
+    "2024" : "higgs_dna/systematics/data/2024_UL/electron_recoSF2024.json"
 }
 
 def electron_reco_sf(events, year, central_only, input_collection):

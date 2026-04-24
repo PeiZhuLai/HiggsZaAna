@@ -310,11 +310,11 @@ def photon_id_sf(events, year, central_only, input_collection, working_point = "
 ############################
 
 PHOTON_ID_SF_FILE = {
-    "2022preEE" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2022preEE_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2022preEE_sf.json"],
-    "2022postEE" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2022postEE_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2022postEE_sf.json"],
-    "2023preBPix" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023preBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023preBPix_sf.json"],
-    "2023postBPix" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023postBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023postBPix_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2023postBPixHole_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2023postBPixHole_sf.json"],
-    "2024" : ["higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_lowpt_2024_sf.json","higgs_dna/systematics/data/hza_phid_sfs/hza_resolve_phid_2024_sf.json"],
+    "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hza_phid_2022EE_scalefactors.json"],
+    "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/hza_phid_2022EE_scalefactors.json"],
+    "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hza_phid_2023preBPix_scalefactors.json"],
+    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hza_phid_2023postBPix_scalefactors.json"],
+    "2024" : ["higgs_dna/systematics/data/2024_UL/hza_phid_2024_scalefactors.json"],
 }
 
 
@@ -428,20 +428,16 @@ def photon_zaid_sf(events, year, central_only, input_collection):
 
     return variations
 
-########################
-#### Photon CSEV SF ####
-########################
+#################################
+### Custom Photon e-veto SF #####
+#################################
 
 PHOTON_CSEV_EVAL = {
-    "2016preVFP" : "UL-Photon-CSEV-SF",
-    "2016postVFP" : "UL-Photon-CSEV-SF",
-    "2017" : "UL-Photon-CSEV-SF",
-    "2018" : "UL-Photon-CSEV-SF",
-    "2022preEE" : "Photon-CSEV-SF",
-    "2022postEE" : "Photon-CSEV-SF",
-    "2023preBPix" : "Photon-CSEV-SF",
-    "2023postBPix" : "Photon-CSEV-SF",
-    "2024" : "Photon-CSEV-SF"
+    "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hza_phcsev_2022EE_scalefactors.json"],
+    "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/hza_phcsev_2022EE_scalefactors.json"],
+    "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hza_phcsev_2023preBPix_scalefactors.json"],
+    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hza_phcsev_2023postBPix_scalefactors.json"],
+    "2024" : ["higgs_dna/systematics/data/2024_UL/hza_phcsev_2024_scalefactors.json"],
 }
 
 def photon_CSEV_sf(events, year, central_only, input_collection, working_point = "MVA"):
@@ -469,7 +465,7 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
 
     missing_fields = awkward_utils.missing_fields(events, required_fields)
 
-    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_ID_SF_FILE[year][0]))
+    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_EVAL[year][0]))
 
     photons = events[input_collection]
 
@@ -492,48 +488,8 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
     # Calculate SF and syst
     variations = {}
     
-    # Different treatment for Run2 vs Run3
-    if int(year[:4]) < 2022:  # Run2: use CSEV bins with predefined values
-        # Get CSEV SF values from the evaluator
-        csev_correction = evaluator[PHOTON_CSEV_EVAL[year]]
-        
-        # Get SF values for each bin and working point
-        sf_eb_high_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], "sf", working_point, "EBHighR9")
-        sf_eb_low_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], "sf", working_point, "EBLowR9")
-        sf_ee_high_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], "sf", working_point, "EEHighR9")
-        sf_ee_low_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], "sf", working_point, "EELowR9")
-        
-        # Determine which bin each photon belongs to
-        pho_isScEtaEB = photons_flattened.isScEtaEB
-        pho_isScEtaEE = photons_flattened.isScEtaEE
-        
-        # Create masks for each bin (R9 boundary = 0.96)
-        eb_high_r9_mask = pho_isScEtaEB & (photons_flattened.r9 > 0.96)
-        eb_low_r9_mask = pho_isScEtaEB & (photons_flattened.r9 <= 0.96)
-        ee_high_r9_mask = pho_isScEtaEE & (photons_flattened.r9 > 0.96)
-        ee_low_r9_mask = pho_isScEtaEE & (photons_flattened.r9 <= 0.96)
-        
-        # Assign SF values using awkward.where
-        sf = awkward.where(
-            eb_high_r9_mask,
-            sf_eb_high_r9,
-            awkward.where(
-                eb_low_r9_mask,
-                sf_eb_low_r9,
-                awkward.where(
-                    ee_high_r9_mask,
-                    sf_ee_high_r9,
-                    awkward.where(
-                        ee_low_r9_mask,
-                        sf_ee_low_r9,
-                        1.0  # Default value for photons not in any bin
-                    )
-                )
-            )
-        )
-    else:  # Run3: use eta and R9 directly
-        sf = evaluator[PHOTON_CSEV_EVAL[year]].evalv(
-                PHOTON_ID_SF[year],
+    sf = evaluator[PHOTON_CSEV_EVAL[year]].evalv(
+                PHOTON_CSEV_EVAL[year],
                 "sf",
                 working_point,
                 pho_eta,
@@ -546,11 +502,11 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
         for syst_var in syst_vars:
             if int(year[:4]) < 2022:  # Run2: use CSEV bins with predefined values
                 # Get systematic SF values for each bin
-                syst_eb_high_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], syst_var, working_point, "EBHighR9")
-                syst_eb_low_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], syst_var, working_point, "EBLowR9")
-                syst_ee_high_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], syst_var, working_point, "EEHighR9")
-                syst_ee_low_r9 = csev_correction.evaluate(PHOTON_ID_SF[year], syst_var, working_point, "EELowR9")
-                
+                syst_eb_high_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EBHighR9")
+                syst_eb_low_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EBLowR9")
+                syst_ee_high_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EEHighR9")
+                syst_ee_low_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EELowR9")
+
                 # Assign systematic SF values using awkward.where
                 syst = awkward.where(
                     eb_high_r9_mask,
@@ -853,45 +809,6 @@ def dummy_photon_pt_syst(events):
     variations["down"] = photons.pt - awkward.ones_like(photons.pt)
     return variations
 
-#######################
-###Electron veto SF ###
-########################
-
-from higgs_dna.systematics.data.electron_veto_sf import PHOTON_ELECTRON_VETO_SF_2016, PHOTON_ELECTRON_VETO_SF_2017, PHOTON_ELECTRON_VETO_SF_2018
-photon_electron_veto_sf_bins = {
-    "2016" : PHOTON_ELECTRON_VETO_SF_2016,
-    "2016preVFP" : PHOTON_ELECTRON_VETO_SF_2016,
-    "2016postVFP" : PHOTON_ELECTRON_VETO_SF_2016,
-    "2017" : PHOTON_ELECTRON_VETO_SF_2017,
-    "2018" : PHOTON_ELECTRON_VETO_SF_2018,
-    "2022preEE" : PHOTON_ELECTRON_VETO_SF_2018, #FIXME
-    "2022postEE" : PHOTON_ELECTRON_VETO_SF_2018, #FIXME
-    "2023preBPix" : PHOTON_ELECTRON_VETO_SF_2018, #FIXME
-    "2023postBPix" : PHOTON_ELECTRON_VETO_SF_2018 #FIXME
-}
-
-def photon_electron_veto_sf(events, central_only, year):
-    required_fields = [
-        ("Photon", "eta"), ("Photon", "r9")
-    ]
-
-    missing_fields = awkward_utils.missing_fields(events, required_fields)
-
-    if missing_fields:
-        message = "[photon_systematics : photon_preselection_sf] The events array is missing the following fields: %s which are needed as inputs." % (str(missing_fields))
-        logger.exception(message)
-        raise ValueError(message)
-
-    variations = systematic_from_bins(
-        bins = photon_electron_veto_sf_bins[year], 
-        variables = {
-            "photon_eta" : abs(events.Photon.eta),
-            "photon_r9" : events.Photon.r9
-        },
-        central_only = central_only
-    )
-    logger.debug(variations)
-    return variations
 
 #######################
 ### Photon MC Smear ###
