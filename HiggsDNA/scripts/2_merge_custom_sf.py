@@ -33,7 +33,7 @@ CORRECTION_NAMES = ("sf_pass", "unc_pass", "sf_fail", "unc_fail")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Merge custom HZa SF correctionlib JSONs into hzg-style JSONs."
+        description="Merge custom HZa SF correctionlib JSONs into hza-style JSONs."
     )
     parser.add_argument(
         "--higgsdna-dir",
@@ -136,7 +136,7 @@ def evaluate_multibinning(correction: dict, pt: float, eta: float) -> float:
     return data["content"][flat_index]
 
 
-def hzg_correction_template(source: dict, correction_name: str) -> dict:
+def hza_correction_template(source: dict, correction_name: str) -> dict:
     correction = deepcopy(source)
     correction["name"] = correction_name
     correction["inputs"] = [
@@ -159,7 +159,7 @@ def make_merged_correction(
     target_eta_edges: list[float],
     template_source: dict,
 ) -> dict:
-    correction = hzg_correction_template(template_source, correction_name)
+    correction = hza_correction_template(template_source, correction_name)
     content = []
 
     for pt_bin in range(len(target_pt_edges) - 1):
@@ -224,7 +224,7 @@ def merge_photon(base_dir: Path, era: str, hole: bool = False) -> Path:
     ]
 
     output_tag = f"{ERA_TAGS[era]}Hole" if hole else ERA_TAGS[era]
-    output = era_out_dir(base_dir, era) / f"hzg_phidvalidate_{output_tag}_scalefactors.json"
+    output = era_out_dir(base_dir, era) / f"hza_phidvalidate_{output_tag}_scalefactors.json"
     write_json(make_correction_set(corrections), output)
     return output
 
@@ -271,7 +271,7 @@ def merge_electron_id_2024(base_dir: Path) -> Path:
         for correction_name in CORRECTION_NAMES
     ]
 
-    output = era_out_dir(base_dir, era) / "hzg_elid_2024_scalefactors.json"
+    output = era_out_dir(base_dir, era) / "hza_elid_2024_scalefactors.json"
     write_json(make_correction_set(corrections), output)
     return output
 
