@@ -33,6 +33,11 @@ ERA_TAGS = {
 CORRECTION_NAMES = ("sf_pass", "unc_pass", "sf_fail", "unc_fail")
 R9_SPLIT = 0.96
 R9_MAX = 99999.0
+ELECTRON_TRIGGER_SFS_2024 = (
+    "dielleg12trigger",
+    "dielleg23trigger",
+    "sielleg30trigger",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -427,6 +432,45 @@ def merge_electron_id_2024(base_dir: Path) -> Path:
     return output
 
 
+def merge_electron_trigger_2024(base_dir: Path, trigger_sf: str) -> Path:
+    era = "2024"
+    raw = raw_dir(base_dir, era)
+    sources = {
+        "gap": correction_by_name(load_json(raw / f"hza_{trigger_sf}_gap_2024_sf.json")),
+        "nongap": correction_by_name(load_json(raw / f"hza_{trigger_sf}_nongap_2024_sf.json")),
+    }
+
+    sample_name = CORRECTION_NAMES[0]
+    target_pt_edges = merged_edges(
+        edges_for_kind(sources["gap"][sample_name], "pt"),
+        edges_for_kind(sources["nongap"][sample_name], "pt"),
+    )
+    target_eta_edges = merged_edges(
+        edges_for_kind(sources["gap"][sample_name], "eta"),
+        edges_for_kind(sources["nongap"][sample_name], "eta"),
+    )
+
+    def selector(correction_name: str, pt: float, eta: float) -> dict:
+        if is_ecal_gap(eta):
+            return sources["gap"][correction_name]
+        return sources["nongap"][correction_name]
+
+    corrections = [
+        make_merged_correction(
+            correction_name,
+            selector,
+            target_pt_edges,
+            target_eta_edges,
+            sources["nongap"][correction_name],
+        )
+        for correction_name in CORRECTION_NAMES
+    ]
+
+    output = era_out_dir(base_dir, era) / f"hza_{trigger_sf}_2024_scalefactors.json"
+    write_json(make_correction_set(corrections), output)
+    return output
+
+
 def validate_with_correctionlib(paths: list[Path]) -> None:
     try:
         from correctionlib import schemav2
@@ -459,6 +503,8 @@ def main() -> None:
                 outputs.append(csev_hole_output)
 
     outputs.append(merge_electron_id_2024(base_dir))
+    for trigger_sf in ELECTRON_TRIGGER_SFS_2024:
+        outputs.append(merge_electron_trigger_2024(base_dir, trigger_sf))
     validate_with_correctionlib(outputs)
 
 
