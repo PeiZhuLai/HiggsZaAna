@@ -3,7 +3,7 @@ set -euo pipefail
 
 HiggsDNADir="${HiggsDNADir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/higgs_dna/systematics/data}"
 egmSFDir="${egmSFDir:-/eos/home-p/pelai/HZa/root_TnP}"
-muoSFDir="${muoSFDir:-/eos/home-p/pelai/HZa/root_mTnP}"
+muoSFDir="${muoSFDir:-/eos/home-p/pelai/HZa/root_mTnP/efficiencies/muon/generalTracks/Z/Run2024}"
 scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts}"
 
 eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
