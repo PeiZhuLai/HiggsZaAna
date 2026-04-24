@@ -309,12 +309,16 @@ def photon_id_sf(events, year, central_only, input_collection, working_point = "
 ##### HZa Photon ID SF #####
 ############################
 
-PHOTON_ID_SF_FILE = {
-    "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hza_phid_2022EE_scalefactors.json"],
+PHOTON_ZAID_SF_FILE = {
+    "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hza_phid_2022_scalefactors.json"],
     "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/hza_phid_2022EE_scalefactors.json"],
-    "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hza_phid_2023preBPix_scalefactors.json"],
-    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hza_phid_2023postBPix_scalefactors.json"],
+    "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hza_phid_2023_scalefactors.json"],
+    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hza_phid_2023BPix_scalefactors.json"],
     "2024" : ["higgs_dna/systematics/data/2024_UL/hza_phid_2024_scalefactors.json"],
+}
+
+PHOTON_ZAID_SF_FILE_HOLE = {
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hza_phid_2023BPixHole_scalefactors.json"
 }
 
 
@@ -326,102 +330,62 @@ def photon_zaid_sf(events, year, central_only, input_collection):
     """
 
     required_fields = [
-        (input_collection, "eta"), (input_collection, "pt"), (input_collection, "phi")
+        (input_collection, "eta"), (input_collection, "pt")
     ]
+    if year == "2023postBPix":
+        required_fields.append((input_collection, "phi"))
 
     missing_fields = awkward_utils.missing_fields(events, required_fields)
 
     evaluators = []
-    for file in PHOTON_ID_SF_FILE[year]:
+    for file in PHOTON_ZAID_SF_FILE[year]:
         evaluators.append(_core.CorrectionSet.from_file(misc_utils.expand_path(file)))
+    evaluator_hole = None
+    if year == "2023postBPix":
+        evaluator_hole = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_ZAID_SF_FILE_HOLE[year]))
 
     photons = events[input_collection]
 
     n_photons = awkward.num(photons)
     photons_flattened = awkward.flatten(photons)
 
-    # NOTE:
-    # evaluators indexing for HZa photon ID SFs (per your PHOTON_ID_SF_FILE):
-    #   - [0] lowpt (pt < 20)
-    #   - [1] nominal (pt >= 20)
-    #   - [2] lowptHole (only for 2023postBPix, special eta/phi region)
-    #   - [3] Hole     (only for 2023postBPix, special eta/phi region)
-    if len(evaluators) < 2:
-        raise ValueError(f"[photon_zaid_sf] Expect at least 2 correction files for year={year}, got {len(evaluators)}")
-
-    # Common inputs
     pho_eta = numpy.clip(
         awkward.to_numpy(photons_flattened.eta),
         -2.49999,
         2.49999,
     )
     pho_pt_orig = awkward.to_numpy(photons_flattened.pt)
-    pho_phi = numpy.clip(
-        awkward.to_numpy(photons_flattened.phi),
-        -999.0,
-        999.0,
-    )
+    pho_pt = numpy.clip(pho_pt_orig, 10.0, 499.999)
 
-    # Masks
-    pt_below_20_mask = pho_pt_orig < 20.0
+    is_hole_region = None
+    if year == "2023postBPix":
+        pho_phi = awkward.to_numpy(photons_flattened.phi)
+        is_hole_region = (pho_eta > -1.566) & (pho_eta < 0.0) & (pho_phi > -1.2) & (pho_phi < -0.8)
 
-    # Clip pt for each regime (match JSON binning/validity)
-    pho_pt_low = numpy.clip(pho_pt_orig, 15.0, 19.999)
-    pho_pt_high = numpy.clip(pho_pt_orig, 20.0, 499.999)
-
-    # 2023postBPix special (eta,phi) "hole" region:
-    # TODO: set these to the real boundaries you want
-    HOLE_ABS_ETA_MAX = 1.566
-    HOLE_ABS_ETA_MIN = 1.444
-    HOLE_ABS_PHI_MAX = 0.0  # placeholder
-    HOLE_ABS_PHI_MIN = 0.0  # placeholder
-
-    abs_eta = numpy.abs(pho_eta)
-    abs_phi = numpy.abs(pho_phi)
-    is_hole_region = (
-        (year == "2023postBPix")
-        & (len(evaluators) >= 4)
-        & (abs_eta >= HOLE_ABS_ETA_MIN)
-        & (abs_eta < HOLE_ABS_ETA_MAX)
-        & (abs_phi >= HOLE_ABS_PHI_MIN)
-        & (abs_phi < HOLE_ABS_PHI_MAX)
-    )
-
-    def _eval_pass(evaluator, var, pt_arr):
-        # HZa JSONs shown use "sf_pass"/"unc_pass" with (pt, eta) ordering in code below
+    def _eval_pass(evaluator, var):
         if var == "central":
-            return evaluator["sf_pass"].evalv(pt_arr, pho_eta)
+            return evaluator["sf_pass"].evalv(pho_pt, pho_eta)
+        sf0 = evaluator["sf_pass"].evalv(pho_pt, pho_eta)
+        unc = evaluator["unc_pass"].evalv(pho_pt, pho_eta)
         if var == "up":
-            sf0 = evaluator["sf_pass"].evalv(pt_arr, pho_eta)
-            unc = evaluator["unc_pass"].evalv(pt_arr, pho_eta)
             return sf0 + unc
         if var == "down":
-            sf0 = evaluator["sf_pass"].evalv(pt_arr, pho_eta)
-            unc = evaluator["unc_pass"].evalv(pt_arr, pho_eta)
             return sf0 - unc
         raise ValueError(f"Unknown var={var}")
 
     variations = {}
     for var in (["central"] if central_only else ["central", "up", "down"]):
-        # Default evaluators (non-hole)
-        lowpt_val = _eval_pass(evaluators[0], var, pho_pt_low)
-        highpt_val = _eval_pass(evaluators[1], var, pho_pt_high)
+        sf = _eval_pass(evaluators[0], var)
 
-        sf = numpy.where(pt_below_20_mask, lowpt_val, highpt_val)
-
-        # Hole override for 2023postBPix (if provided)
-        if (year == "2023postBPix") and (len(evaluators) >= 4):
-            lowpt_hole_val = _eval_pass(evaluators[2], var, pho_pt_low)
-            highpt_hole_val = _eval_pass(evaluators[3], var, pho_pt_high)
-            sf_hole = numpy.where(pt_below_20_mask, lowpt_hole_val, highpt_hole_val)
+        if evaluator_hole is not None:
+            sf_hole = _eval_pass(evaluator_hole, var)
             sf = numpy.where(is_hole_region, sf_hole, sf)
 
         variations[var] = awkward.unflatten(sf, n_photons)
 
-    # Keep your original acceptance sanitization: set SF=1 outside validity/acceptance
     for var in variations.keys():
         variations[var] = awkward.where(
-            (photons.pt < 15.0) | (photons.pt >= 500.0) | (abs(photons.eta) >= 2.5),
+            (photons.pt < 10.0) | (photons.pt >= 500.0) | (abs(photons.eta) >= 2.5),
             awkward.ones_like(variations[var], dtype=float),
             variations[var],
         )
@@ -432,12 +396,16 @@ def photon_zaid_sf(events, year, central_only, input_collection):
 ### Custom Photon e-veto SF #####
 #################################
 
-PHOTON_CSEV_EVAL = {
-    "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hza_phcsev_2022EE_scalefactors.json"],
+PHOTON_CSEV_SF_FILE = {
+    "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hza_phcsev_2022_scalefactors.json"],
     "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/hza_phcsev_2022EE_scalefactors.json"],
-    "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hza_phcsev_2023preBPix_scalefactors.json"],
-    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hza_phcsev_2023postBPix_scalefactors.json"],
+    "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hza_phcsev_2023_scalefactors.json"],
+    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hza_phcsev_2023BPix_scalefactors.json"],
     "2024" : ["higgs_dna/systematics/data/2024_UL/hza_phcsev_2024_scalefactors.json"],
+}
+
+PHOTON_CSEV_SF_FILE_HOLE = {
+    "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hza_phcsev_2023BPixHole_scalefactors.json"
 }
 
 def photon_CSEV_sf(events, year, central_only, input_collection, working_point = "MVA"):
@@ -447,25 +415,18 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
         - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
     """
     
-    # working_point run3: MVA80 
-    # working_point run2: MVA
-    is_run2 = not (year.startswith("2022") or year.startswith("2023"))
-    working_point = "MVA" if is_run2 else "MVA80"
-    
     required_fields = [
-        (input_collection, "eta"), (input_collection, "r9")
+        (input_collection, "eta"), (input_collection, "pt"), (input_collection, "r9")
     ]
-    
-    # For Run2, also need isScEtaEB and isScEtaEE fields
-    if int(year[:4]) < 2022:
-        required_fields.extend([
-            (input_collection, "isScEtaEB"), 
-            (input_collection, "isScEtaEE")
-        ])
+    if year == "2023postBPix":
+        required_fields.append((input_collection, "phi"))
 
     missing_fields = awkward_utils.missing_fields(events, required_fields)
 
-    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_EVAL[year][0]))
+    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_SF_FILE[year][0]))
+    evaluator_hole = None
+    if year == "2023postBPix":
+        evaluator_hole = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_SF_FILE_HOLE[year]))
 
     photons = events[input_collection]
 
@@ -478,6 +439,12 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
         -2.49999,
         2.49999 # SFs only valid up to eta 2.5
     )
+    pho_abs_eta = numpy.abs(pho_eta)
+    pho_pt = numpy.clip(
+        awkward.to_numpy(photons_flattened.pt),
+        10.0,
+        499.999
+    )
 
     pho_r9 = numpy.clip(
         awkward.to_numpy(photons_flattened.r9),
@@ -485,65 +452,33 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
         99999.0
     )
 
+    is_hole_region = None
+    if year == "2023postBPix":
+        pho_phi = awkward.to_numpy(photons_flattened.phi)
+        is_hole_region = (pho_eta > -1.566) & (pho_eta < 0.0) & (pho_phi > -1.2) & (pho_phi < -0.8)
+
     # Calculate SF and syst
     variations = {}
-    
-    sf = evaluator[PHOTON_CSEV_EVAL[year]].evalv(
-                PHOTON_CSEV_EVAL[year],
-                "sf",
-                working_point,
-                pho_eta,
-                pho_r9
-        )
+
+    sf = evaluator["sf_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+    if evaluator_hole is not None:
+        sf_hole = evaluator_hole["sf_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+        sf = numpy.where(is_hole_region, sf_hole, sf)
     variations["central"] = awkward.unflatten(sf, n_photons)
 
     if not central_only:
-        syst_vars = ["sfup", "sfdown"] 
-        for syst_var in syst_vars:
-            if int(year[:4]) < 2022:  # Run2: use CSEV bins with predefined values
-                # Get systematic SF values for each bin
-                syst_eb_high_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EBHighR9")
-                syst_eb_low_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EBLowR9")
-                syst_ee_high_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EEHighR9")
-                syst_ee_low_r9 = csev_correction.evaluate(PHOTON_CSEV_EVAL[year], syst_var, working_point, "EELowR9")
-
-                # Assign systematic SF values using awkward.where
-                syst = awkward.where(
-                    eb_high_r9_mask,
-                    syst_eb_high_r9,
-                    awkward.where(
-                        eb_low_r9_mask,
-                        syst_eb_low_r9,
-                        awkward.where(
-                            ee_high_r9_mask,
-                            syst_ee_high_r9,
-                            awkward.where(
-                                ee_low_r9_mask,
-                                syst_ee_low_r9,
-                                1.0  # Default value
-                            )
-                        )
-                    )
-                )
-            else:  # Run3: use eta and R9 directly
-                syst = evaluator[PHOTON_CSEV_EVAL[year]].evalv(
-                        PHOTON_ID_SF[year],
-                        syst_var,
-                        working_point,
-                        pho_eta,
-                        pho_r9
-                )
-            if "up" in syst_var:
-                syst_var_name = "up"
-            elif "down" in syst_var:
-                syst_var_name = "down"
-            variations[syst_var_name] = awkward.unflatten(syst, n_photons)
+        syst = evaluator["unc_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+        if evaluator_hole is not None:
+            syst_hole = evaluator_hole["unc_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+            syst = numpy.where(is_hole_region, syst_hole, syst)
+        variations["up"] = awkward.unflatten(sf + syst, n_photons)
+        variations["down"] = awkward.unflatten(sf - syst, n_photons)
 
     for var in variations.keys():
-        # Set SFs = 1 for leptons which are not applicable
+        # Set SFs = 1 for photons which are not applicable
         variations[var] = awkward.where(
-                (abs(photons.eta) >= 2.5),
-                awkward.ones_like(variations[var]),
+                (photons.pt < 10.0) | (photons.pt >= 500.0) | (abs(photons.eta) >= 2.5),
+                awkward.ones_like(variations[var], dtype=float),
                 variations[var]
         )
 

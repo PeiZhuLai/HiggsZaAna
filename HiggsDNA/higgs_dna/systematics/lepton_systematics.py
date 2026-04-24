@@ -846,33 +846,64 @@ def electron_reco_sf(events, year, central_only, input_collection):
         2.49999 # SFs only valid up to eta 2.5
     )
 
+    ele_pt_orig = awkward.to_numpy(electrons_flattened.pt)
     ele_pt = numpy.clip(
-        awkward.to_numpy(electrons_flattened.pt),
+        ele_pt_orig,
         10.0, # SFs only valid for pT >= 10.0
         499.999 # and pT < 500.
     )
 
     # Calculate SF and syst
     variations = {}
-    
-    sf = evaluator["sf_pass"].evalv(
-        ele_pt,
-        ele_eta
-    )
-    variations["central"] = awkward.unflatten(sf, n_electrons)
 
-    if not central_only:
-        syst = evaluator["unc_pass"].evalv(
+    if year == "2024":
+        evaluator_name = "Electron-ID-SF"
+        year_key = "2024Prompt"
+        reco20to75_mask = ele_pt_orig < 75.0
+
+        def _eval_2024_reco(val_type):
+            sf_20to75 = evaluator[evaluator_name].evalv(
+                year_key,
+                val_type,
+                "Reco20to75",
+                ele_eta,
+                numpy.clip(ele_pt_orig, 20.0, 74.999),
+            )
+            sf_above75 = evaluator[evaluator_name].evalv(
+                year_key,
+                val_type,
+                "RecoAbove75",
+                ele_eta,
+                numpy.clip(ele_pt_orig, 75.0, 499.999),
+            )
+            return numpy.where(reco20to75_mask, sf_20to75, sf_above75)
+
+        sf = _eval_2024_reco("sf")
+        variations["central"] = awkward.unflatten(sf, n_electrons)
+
+        if not central_only:
+            variations["up"] = awkward.unflatten(_eval_2024_reco("sfup"), n_electrons)
+            variations["down"] = awkward.unflatten(_eval_2024_reco("sfdown"), n_electrons)
+    else:
+        sf = evaluator["sf_pass"].evalv(
             ele_pt,
             ele_eta
         )
-        variations["up"] = awkward.unflatten(syst+sf, n_electrons)
-        variations["down"] = awkward.unflatten(sf-syst, n_electrons)
+        variations["central"] = awkward.unflatten(sf, n_electrons)
 
+        if not central_only:
+            syst = evaluator["unc_pass"].evalv(
+                ele_pt,
+                ele_eta
+            )
+            variations["up"] = awkward.unflatten(syst+sf, n_electrons)
+            variations["down"] = awkward.unflatten(sf-syst, n_electrons)
+
+    min_valid_pt = 20.0 if year == "2024" else 10.0
     for var in variations.keys():
         # Set SFs = 1 for leptons which are not applicable
         variations[var] = awkward.where(
-                (electrons.pt < 10.0) | (electrons.pt >= 500.0) | (abs(electrons.eta) >= 2.5),
+                (electrons.pt < min_valid_pt) | (electrons.pt >= 500.0) | (abs(electrons.eta) >= 2.5),
                 awkward.ones_like(variations[var], dtype=float),
                 variations[var]
         )
