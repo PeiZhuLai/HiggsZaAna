@@ -68,13 +68,11 @@ collect_egm_sf "2023postBPix" "hza_resolve_phid_lowpt_2023postBPixHole_sf"
 ###---------------------
 ### ----- Electron -----
 ###---------------------
-# These four raw maps are merged into one hzg_elid_*_scalefactors.json per era.
+# These four raw maps are merged into one hzg_elid_*_scalefactors.json for 2024.
 # The high/low pT maps currently use the nongap_highpT/nongap_lowpT TnP names.
 elid_components=(gap nongap nongap_highpT nongap_lowpT)
-for era in "${eras[@]}"; do
-    for component in "${elid_components[@]}"; do
-        collect_egm_sf "$era" "hza_elid_${component}_${era}_sf"
-    done
+for component in "${elid_components[@]}"; do
+    collect_egm_sf "2024" "hza_elid_${component}_2024_sf"
 done
 
 # Electron trigger custom SFs currently exist only for the 2024 campaign.
