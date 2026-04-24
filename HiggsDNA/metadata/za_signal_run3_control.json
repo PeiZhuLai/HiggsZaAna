@@ -133,6 +133,21 @@
                         "SelectedPhoton"
                     ]
                 ]
+            },
+            "photon_csev_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "photon_CSEV_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedPhoton",
+                "target_collections": [
+                    [
+                        "SelectedPhoton"
+                    ]
+                ]
             }
         },
         "independent_collections": {
