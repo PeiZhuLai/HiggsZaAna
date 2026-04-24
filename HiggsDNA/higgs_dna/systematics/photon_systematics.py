@@ -905,6 +905,8 @@ def photon_scale_smear_run3(events, year, is_data):
         )
         corrected_energyErr = numpy.sqrt((photons_energyerr) ** 2 + (photons_pt * numpy.cosh(photons_scEta) * smear) ** 2) * scale
         events["Photon", "corrected_energyErr"] = awkward.unflatten(corrected_energyErr, n_photons)
+        events["Photon", "pt"] = awkward.unflatten(corrected_pt, n_photons)
+        events["Photon", "energyErr"] = awkward.unflatten(corrected_energyErr, n_photons)
         return events
 
     # --- MC branch: apply central smear ---
@@ -914,10 +916,11 @@ def photon_scale_smear_run3(events, year, is_data):
         evaluator[smear_names[year]].evalv("smear", photons_pt, photons_r9, photons_smear_eta),
     )
     rng = numpy.random.default_rng(seed=123)
+    smear_random = rng.normal(loc=0.0, scale=1.0, size=len(photons_pt))
     smear_val = awkward.where(
         (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
         awkward.ones_like(photons_pt, dtype=float),
-        rng.normal(loc=1.0, scale=numpy.abs(smear)),
+        1.0 + numpy.abs(smear) * smear_random,
     )
 
     corrected_pt = photons_pt * smear_val
@@ -941,10 +944,12 @@ def photon_scale_smear_run3(events, year, is_data):
         smear_syst_val = awkward.where(
             (photons_AbsScEta > 3.0) | (photons_pt < photon_pt_min),
             awkward.ones_like(photons_pt, dtype=float),
-            rng.normal(loc=1.0, scale=numpy.abs(smear_syst)),
+            1.0 + numpy.abs(smear_syst) * smear_random,
         )
-        events["Photon", "dEsigma" + syst.replace("smear_", "").capitalize()] = (
-            photons.pt * awkward.unflatten(smear_syst_val, n_photons)
+        pt_syst = photons_pt * smear_syst_val
+        events["Photon", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(
+            pt_syst - corrected_pt,
+            n_photons,
         )
         events["Photon", "energyErr_dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(
             numpy.sqrt((photons_energyerr) ** 2 + (photons_pt * numpy.cosh(photons_scEta) * smear_syst) ** 2) * smear_syst_val,
@@ -968,6 +973,9 @@ def photon_scale_smear_run3(events, year, is_data):
         )
         events["Photon", "pt_Scale" + syst.replace("scale_", "").capitalize()] = photons.corrected_pt * scale
         events["Photon", "energyErr_Scale" + syst.replace("scale_", "").capitalize()] = photons.corrected_energyErr * scale
+
+    events["Photon", "pt"] = awkward.unflatten(corrected_pt, n_photons)
+    events["Photon", "energyErr"] = awkward.unflatten(corrected_energyErr, n_photons)
 
     # NEW: log systematics branches (match photon_systematics_copy.py style; first 10)
     if ("Photon" in events.fields) and ("dEsigmaUp" in events["Photon"].fields):

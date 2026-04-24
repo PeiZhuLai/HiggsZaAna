@@ -1054,6 +1054,7 @@ def electron_scale_smear_run3(events, year, is_data):
 
         corrected_pt = awkward.to_numpy(electrons_pt * scale)
         events["Electron", "corrected_pt"] = awkward.unflatten(corrected_pt, n_electrons)
+        events["Electron", "pt"] = awkward.unflatten(corrected_pt, n_electrons)
 
         # NEW: pt scale up/down for logging (data)
         corrected_pt_up = awkward.to_numpy(electrons_pt * scale_up)
@@ -1080,10 +1081,11 @@ def electron_scale_smear_run3(events, year, is_data):
     # Apply smear corrections first
     smear = evaluator[electron_smear_names[year]].evalv("smear", electrons_pt, electrons_r9, electrons_smear_eta)
     rng = numpy.random.default_rng(seed=8011)
+    smear_random = rng.normal(loc=0.0, scale=1.0, size=len(electrons_pt))
     smear_val = awkward.where(
         (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
         awkward.ones_like(electrons_pt, dtype=float),
-        rng.normal(loc=1.0, scale=numpy.abs(smear)),
+        1.0 + numpy.abs(smear) * smear_random,
     )
 
     # Central smeared pt
@@ -1096,7 +1098,7 @@ def electron_scale_smear_run3(events, year, is_data):
         smear_val_syst = awkward.where(
             (electrons_AbsScEta > 3.0) | (electrons_pt < electron_pt_min),
             awkward.ones_like(electrons_pt, dtype=float),
-            rng.normal(loc=1.0, scale=numpy.abs(smear_syst)),
+            1.0 + numpy.abs(smear_syst) * smear_random,
         )
         pt_syst = awkward.to_numpy(electrons_pt * smear_val_syst)
         events["Electron", "dEsigma" + syst.replace("smear_", "").capitalize()] = awkward.unflatten(
@@ -1114,7 +1116,7 @@ def electron_scale_smear_run3(events, year, is_data):
         )
         pt_syst = awkward.to_numpy(corrected_pt * scale_factor)
         events["Electron", "dEscale" + syst.replace("scale_", "").capitalize()] = awkward.unflatten(
-            pt_syst - corrected_pt,  # delta wrt central
+            pt_syst,
             n_electrons,
         )
 
@@ -1138,12 +1140,12 @@ def electron_scale_smear_run3(events, year, is_data):
     logger.debug(
         "[Lepton Systematics] Electron pt Scale Up (abs pt) (first %d): %s",
         _nprint,
-        (corrected_pt[:_nprint] + awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleUp"]))[:_nprint]),
+        awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleUp"]))[:_nprint],
     )
     logger.debug(
         "[Lepton Systematics] Electron pt Scale Down (abs pt) (first %d): %s",
         _nprint,
-        (corrected_pt[:_nprint] + awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleDown"]))[:_nprint]),
+        awkward.to_numpy(awkward.flatten(events["Electron", "dEscaleDown"]))[:_nprint],
     )
 
     logger.debug(
@@ -1171,6 +1173,8 @@ def electron_scale_smear_run3(events, year, is_data):
 
     logger.info("[Lepton Systematics] Applied Electron scale and smear corrections for year %s", year)
     logger.debug("[Lepton Systematics] =========================================================")
+
+    events["Electron", "pt"] = awkward.unflatten(corrected_pt, n_electrons)
 
     return events
 
@@ -1258,6 +1262,7 @@ def muon_scale_smear_run3(events, year, is_data):
     if is_data:
         # Data: scale only
         events["Muon", "corrected_pt"] = awkward.unflatten(pt_scale_nom, n_muons)
+        events["Muon", "pt"] = awkward.unflatten(pt_scale_nom, n_muons)
         events["Muon", "scaleUp_pt"]    = awkward.unflatten(pt_scale_up, n_muons)
         events["Muon", "scaleDown_pt"]  = awkward.unflatten(pt_scale_dn, n_muons)
         events["Muon", "smearUp_pt"]    = awkward.unflatten(pt_scale_nom, n_muons)
@@ -1282,6 +1287,9 @@ def muon_scale_smear_run3(events, year, is_data):
     # Nominal smeared pt (scale + resol)
     pt_corr = pt_resol(pt_scale_nom, eta, phi, nL, evt, lumi, cset, nested=False)
 
+    pt_corr_scale_up = pt_resol(pt_scale_up, eta, phi, nL, evt, lumi, cset, nested=False)
+    pt_corr_scale_dn = pt_resol(pt_scale_dn, eta, phi, nL, evt, lumi, cset, nested=False)
+
     # Resolution systematics (Up/Down)
     try:
         pt_corr_resup = pt_resol_var(pt_scale_nom, pt_corr, eta, "up", cset, nested=False)
@@ -1291,12 +1299,13 @@ def muon_scale_smear_run3(events, year, is_data):
         pt_corr_resdn = pt_corr
 
     events["Muon", "corrected_pt"] = awkward.unflatten(pt_corr, n_muons)
+    events["Muon", "pt"] = awkward.unflatten(pt_corr, n_muons)
 
 
-    events["Muon", "scaleUp_pt"]   = awkward.unflatten(pt_scale_up, n_muons)
-    events["Muon", "scaleDown_pt"] = awkward.unflatten(pt_scale_dn, n_muons)
-    events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup, n_muons)
-    events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn, n_muons)
+    events["Muon", "scaleUp_pt"]   = awkward.unflatten(pt_corr_scale_up, n_muons)
+    events["Muon", "scaleDown_pt"] = awkward.unflatten(pt_corr_scale_dn, n_muons)
+    events["Muon", "smearUp_pt"]   = awkward.unflatten(pt_corr_resup - pt_corr, n_muons)
+    events["Muon", "smearDown_pt"] = awkward.unflatten(pt_corr_resdn - pt_corr, n_muons)
 
     # NEW: align MC printing style with electron scale+smear logs
     logger.debug(
