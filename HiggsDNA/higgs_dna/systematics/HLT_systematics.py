@@ -20,7 +20,7 @@ SingleElectron_HLT_FILE = {
     "2022postEE":    f"{base_path}2022postEE_UL/hzg_eltrig30_2022EE_efficiencies.json",
     "2023preBPix":      f"{base_path}2023preBPix_UL/hzg_eltrig30_2023_efficiencies.json",
     "2023postBPix":  f"{base_path}2023postBPix_UL/hzg_eltrig30_2023BPix_efficiencies.json",
-    "2024":  f"{base_path}2024_UL/hzg_eltrig30_2023BPix_efficiencies.json", #FIXME
+    "2024":  f"{base_path}2024_UL/hza_sielleg30trigger_2024_scalefactors.json",
 }
 DoubleElectron_HighLeg_HLT_FILE = {
     "2016preVFP":   f"{base_path}2016preVFP_UL/hzg_eltrig23_2016APV_efficiencies.json",
@@ -31,7 +31,7 @@ DoubleElectron_HighLeg_HLT_FILE = {
     "2022postEE":    f"{base_path}2022postEE_UL/hzg_eltrig23_2022EE_efficiencies.json",
     "2023preBPix":      f"{base_path}2023preBPix_UL/hzg_eltrig23_2023_efficiencies.json",
     "2023postBPix":  f"{base_path}2023postBPix_UL/hzg_eltrig23_2023BPix_efficiencies.json",
-    "2024":  f"{base_path}2024_UL/hzg_eltrig23_2023BPix_efficiencies.json", #FIXME
+    "2024":  f"{base_path}2024_UL/hza_dielleg23trigger_2024_scalefactors.json",
 }
 DoubleElectron_LowLeg_HLT_FILE = {
     "2016preVFP":   f"{base_path}2016preVFP_UL/hzg_eltrig12_2016APV_efficiencies.json",
@@ -42,7 +42,7 @@ DoubleElectron_LowLeg_HLT_FILE = {
     "2022postEE":    f"{base_path}2022postEE_UL/hzg_eltrig12_2022EE_efficiencies.json",
     "2023preBPix":      f"{base_path}2023preBPix_UL/hzg_eltrig12_2023_efficiencies.json",
     "2023postBPix":  f"{base_path}2023postBPix_UL/hzg_eltrig12_2023BPix_efficiencies.json",
-    "2024":  f"{base_path}2024_UL/hzg_eltrig12_2023BPix_efficiencies.json", #FIXME
+    "2024":  f"{base_path}2024_UL/hza_dielleg12trigger_2024_scalefactors.json",
 }
 
 # Hole files for 2023postBPix
@@ -67,7 +67,7 @@ SingleMuon_HLT_FILE = {
     "2022postEE":    f"{base_path}2022postEE_UL/hzg_mutrig24_2022EE_efficiencies.json",
     "2023preBPix":      f"{base_path}2023preBPix_UL/hzg_mutrig24_2023_efficiencies.json",
     "2023postBPix":  f"{base_path}2023postBPix_UL/hzg_mutrig24_2023BPix_efficiencies.json",
-    "2024":  f"{base_path}2024_UL/hzg_mutrig24_2023BPix_efficiencies.json", #FIXME
+    "2024":  f"{base_path}2024_UL/hza_mutrig24_2024_efficiencies.json", #FIXME
 }
 DoubleMuon_HighLeg_HLT_FILE = {
     "2016preVFP":   f"{base_path}2016preVFP_UL/hzg_mutrig17_2016APV_efficiencies.json",
@@ -78,7 +78,7 @@ DoubleMuon_HighLeg_HLT_FILE = {
     "2022postEE":    f"{base_path}2022postEE_UL/hzg_mutrig17_2022EE_efficiencies.json",
     "2023preBPix":      f"{base_path}2023preBPix_UL/hzg_mutrig17_2023_efficiencies.json",
     "2023postBPix":  f"{base_path}2023postBPix_UL/hzg_mutrig17_2023BPix_efficiencies.json",
-    "2024":  f"{base_path}2024_UL/hzg_mutrig17_2023BPix_efficiencies.json", #FIXME
+    "2024":  f"{base_path}2024_UL/hza_mutrig17_2024_efficiencies.json", #FIXME
 }
 DoubleMuon_LowLeg_HLT_FILE = {
     "2016preVFP":   f"{base_path}2016preVFP_UL/hzg_mutrig8_2016APV_efficiencies.json",
@@ -89,7 +89,7 @@ DoubleMuon_LowLeg_HLT_FILE = {
     "2022postEE":    f"{base_path}2022postEE_UL/hzg_mutrig8_2022EE_efficiencies.json",
     "2023preBPix":      f"{base_path}2023preBPix_UL/hzg_mutrig8_2023_efficiencies.json",
     "2023postBPix":  f"{base_path}2023postBPix_UL/hzg_mutrig8_2023BPix_efficiencies.json",
-    "2024":  f"{base_path}2024_UL/hzg_mutrig8_2023BPix_efficiencies.json", #FIXME
+    "2024":  f"{base_path}2024_UL/hza_mutrig8_2024_efficiencies.json", #FIXME
 }
 
 
