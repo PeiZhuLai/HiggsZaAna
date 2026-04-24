@@ -826,6 +826,13 @@ class ZaTaggerRun3(Tagger):
         ele_trigger_cut = single_ele_trigger_cut | double_ele_trigger_cut
         mu_trigger_cut = single_mu_trigger_cut  | double_mu_trigger_cut
 
+        pass_only_dimu = ak.fill_none(double_mu_trigger_cut, False) & ~ak.fill_none(single_mu_trigger_cut, False)
+        pass_only_diel = ak.fill_none(double_ele_trigger_cut, False) & ~ak.fill_none(single_ele_trigger_cut, False)
+        awkward_utils.add_field(events, "pass_only_dimu", pass_only_dimu, overwrite=True)
+        awkward_utils.add_field(events, "pass_simu_or_dimu", ak.fill_none(mu_trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_only_diel", pass_only_diel, overwrite=True)
+        awkward_utils.add_field(events, "pass_siel_or_diel", ak.fill_none(ele_trigger_cut, False), overwrite=True)
+
         trigger_pt_info = self._build_trigger_pt_cuts(
             electrons,
             muons,
