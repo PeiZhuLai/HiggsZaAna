@@ -224,7 +224,7 @@ def merge_photon(base_dir: Path, era: str, hole: bool = False) -> Path:
     ]
 
     output_tag = f"{ERA_TAGS[era]}Hole" if hole else ERA_TAGS[era]
-    output = era_out_dir(base_dir, era) / f"hza_phidvalidate_{output_tag}_scalefactors.json"
+    output = era_out_dir(base_dir, era) / f"hza_phid_{output_tag}_scalefactors.json"
     write_json(make_correction_set(corrections), output)
     return output
 
