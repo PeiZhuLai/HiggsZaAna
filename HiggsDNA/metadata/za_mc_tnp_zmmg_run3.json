@@ -34,41 +34,6 @@
             }
         },
         "independent_collections": {
-            "Muon_scale": {
-                "method": "from_branch",
-                "branch_modified": [
-                    "Muon",
-                    "pt"
-                ],
-                "branches": {
-                    "up": [
-                        "Muon",
-                        "scaleUp_pt"
-                    ],
-                    "down": [
-                        "Muon",
-                        "scaleDown_pt"
-                    ]
-                }
-            },
-            "Muon_smear": {
-                "method": "from_branch",
-                "branch_modified": [
-                    "Muon",
-                    "pt"
-                ],
-                "branches": {
-                    "up": [
-                        "Muon",
-                        "smearUp_pt"
-                    ],
-                    "down": [
-                        "Muon",
-                        "smearDown_pt"
-                    ]
-                },
-                "additive": true
-            }
         }
     },
     "samples": {
