@@ -7,14 +7,14 @@ cd "${repo_dir}"
 
 outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_DNA_control_tmp/Data}"
 config="${CONFIG:-metadata/za_data_run3_control.json}"
-log_level="${LOG_LEVEL:-DEBUG}"
+log_level="${LOG_LEVEL:-INFO}" # DEBUG # INFO
 n_cores="${N_CORES:-10}"
-batch_system="${BATCH_SYSTEM:-local}"
+batch_system="${BATCH_SYSTEM:-condor}" # local # condor
 sample_list="${SAMPLE_LIST:-Data}"
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
-short="${SHORT:-1}"
+short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 
 if [[ "${clean_analysis_state}" == "1" ]]; then
