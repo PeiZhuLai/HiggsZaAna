@@ -87,11 +87,13 @@ for component in "${elid_components[@]}"; do
     collect_egm_sf "2024" "hza_elid_${component}_2024_sf"
 done
 
-# Electron trigger custom SFs currently exist only for the 2024 campaign.
-electron_trigger_sfs=(dielleg12trigger dielleg23trigger sielleg30trigger)
-for trigger_sf in "${electron_trigger_sfs[@]}"; do
-    collect_egm_sf "2024" "hza_${trigger_sf}_gap_2024_sf"
-    collect_egm_sf "2024" "hza_${trigger_sf}_nongap_2024_sf"
+# Electron trigger custom efficiencies currently exist only for the 2024 campaign.
+# The raw TnP directory names still end in _sf, but --exportJson now writes
+# effdata/systdata/effmc/systmc correction names for trigger maps.
+electron_trigger_effs=(dielleg12trigger dielleg23trigger sielleg30trigger)
+for trigger_eff in "${electron_trigger_effs[@]}"; do
+    collect_egm_sf "2024" "hza_${trigger_eff}_gap_2024_sf"
+    collect_egm_sf "2024" "hza_${trigger_eff}_nongap_2024_sf"
 done
 
 ###---------------------

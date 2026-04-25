@@ -31,6 +31,7 @@ ERA_TAGS = {
 }
 
 CORRECTION_NAMES = ("sf_pass", "unc_pass", "sf_fail", "unc_fail")
+EFFICIENCY_NAMES = ("effdata", "systdata", "effmc", "systmc")
 R9_SPLIT = 0.96
 R9_MAX = 99999.0
 ELECTRON_TRIGGER_SFS_2024 = (
@@ -179,6 +180,16 @@ def point_value(point: dict[str, float], kind: str) -> Optional[float]:
 
 
 def hza_correction_template(source: dict, correction_name: str) -> dict:
+    output_descriptions = {
+        "sf_pass": "data-MC SF",
+        "sf_fail": "data-MC SF",
+        "unc_pass": "data-MC unc",
+        "unc_fail": "data-MC unc",
+        "effdata": "data eff",
+        "systdata": "data unc",
+        "effmc": "MC eff",
+        "systmc": "MC unc",
+    }
     correction = deepcopy(source)
     correction["name"] = correction_name
     correction["inputs"] = [
@@ -188,7 +199,7 @@ def hza_correction_template(source: dict, correction_name: str) -> dict:
     correction["output"] = {
         "name": "sf",
         "type": "real",
-        "description": "data-MC SF" if correction_name.startswith("sf_") else "data-MC unc",
+        "description": output_descriptions.get(correction_name, correction["output"]["description"]),
     }
     correction["data"]["inputs"] = ["pt", "eta"]
     return correction
@@ -440,7 +451,20 @@ def merge_electron_trigger_2024(base_dir: Path, trigger_sf: str) -> Path:
         "nongap": correction_by_name(load_json(raw / f"hza_{trigger_sf}_nongap_2024_sf.json")),
     }
 
-    sample_name = CORRECTION_NAMES[0]
+    source_names = set(sources["gap"]) & set(sources["nongap"])
+    if all(name in source_names for name in EFFICIENCY_NAMES):
+        correction_names = EFFICIENCY_NAMES
+        output_name = f"hza_{trigger_sf}_2024_efficiencies.json"
+    elif all(name in source_names for name in CORRECTION_NAMES):
+        correction_names = CORRECTION_NAMES
+        output_name = f"hza_{trigger_sf}_2024_scalefactors.json"
+    else:
+        raise ValueError(
+            f"Unsupported electron trigger JSON schema for {trigger_sf}: "
+            f"found {sorted(source_names)}"
+        )
+
+    sample_name = correction_names[0]
     target_pt_edges = merged_edges(
         edges_for_kind(sources["gap"][sample_name], "pt"),
         edges_for_kind(sources["nongap"][sample_name], "pt"),
@@ -463,10 +487,10 @@ def merge_electron_trigger_2024(base_dir: Path, trigger_sf: str) -> Path:
             target_eta_edges,
             sources["nongap"][correction_name],
         )
-        for correction_name in CORRECTION_NAMES
+        for correction_name in correction_names
     ]
 
-    output = era_out_dir(base_dir, era) / f"hza_{trigger_sf}_2024_scalefactors.json"
+    output = era_out_dir(base_dir, era) / output_name
     write_json(make_correction_set(corrections), output)
     return output
 
