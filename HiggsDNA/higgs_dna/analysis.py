@@ -406,10 +406,15 @@ class AnalysisManager():
 
         logger.info("[AnalysisManager : run] Running %d tasks with %d total input files split over %d total jobs." % (len(self.jobs_manager.tasks), sum([len(x.files) for x in self.jobs_manager.tasks]), sum([len(x.jobs) for x in self.jobs_manager.tasks])))
 
-        summary = self.jobs_manager.submit_jobs()
-        while not self.jobs_manager.complete():
-            self.save()
+        try:
             summary = self.jobs_manager.submit_jobs()
+            while not self.jobs_manager.complete():
+                self.save()
+                summary = self.jobs_manager.submit_jobs()
+        except Exception:
+            logger.exception("[AnalysisManager : run] Analysis failed while jobs were being submitted or monitored. Saving current state before exiting.")
+            self.save()
+            raise
 
         if self.merge_outputs:
             self.jobs_manager.merge_outputs(self.output_dir)

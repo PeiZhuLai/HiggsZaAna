@@ -9,6 +9,7 @@ import pyarrow
 import datetime
 import sys
 import re
+import shlex
 from tqdm import tqdm
 
 import logging
@@ -342,6 +343,8 @@ class CondorManager(JobsManager):
         self.output_dir = os.path.abspath(output_dir)
         self.submit_all_file = self.output_dir + "/submit_all.txt"
         self.job_map = {} # run condor_q only once and store results in this map, rather than running condor_q for each job individually. self.job_map then gets passed to the Tasks, where they do the rest of the bookkeeping.
+        self.condor_submit_max_attempts = int(kwargs.get("condor_submit_max_attempts", os.environ.get("HIGGSDNA_CONDOR_SUBMIT_MAX_ATTEMPTS", 5)))
+        self.condor_submit_retry_delay = float(kwargs.get("condor_submit_retry_delay", os.environ.get("HIGGSDNA_CONDOR_SUBMIT_RETRY_DELAY", 30.)))
 
         if self.output_dir.startswith("/eos") and self.host == "lxplus":
             self.log_output_dir = self.higgs_dna_path + "/eos_logs/" + os.path.split(self.output_dir)[-1]
@@ -427,29 +430,26 @@ class CondorManager(JobsManager):
             idx = 0
             for i, chunk in enumerate(submit_chunks):
                 submit_file = self.submit_all_file.replace(".txt", "_%d.txt" % i)
-                command = "cat %s > %s" % (" ".join(chunk), submit_file) 
-                os.system(command)
+                self.write_merged_submit_file(chunk, submit_file)
                 
                 # submit all jobs
-                results = do_cmd("condor_submit %s" % submit_file).split("\n")
-                submitted_clusters = []
-                for line in results:
-                    match = re.search(r"(\d+)\s+job\(s\)\s+submitted\s+to\s+cluster\s+(\d+)", line)
-                    if match is not None:
-                        submitted_clusters.append(
-                                (int(match.group(1)), match.group(2))
-                        )
-
+                results, submitted_clusters, submit_status = self.run_condor_submit(
+                    submit_file = submit_file,
+                    chunk_idx = i,
+                    expected_jobs = len(chunk)
+                )
                 n_submitted = sum(n_jobs for n_jobs, _ in submitted_clusters)
 
                 # Check if they were submitted successfully
                 if n_submitted == len(chunk):
-                    logger.info("[CondorManager : submit_to_batch] Submitted %d jobs." % n_submitted)
+                    cluster_summary = ", ".join(["%s (%d jobs)" % (cluster_id, n_jobs) for n_jobs, cluster_id in submitted_clusters])
+                    logger.info("[CondorManager : submit_to_batch] Submitted %d jobs in chunk %d to cluster(s): %s." % (n_submitted, i, cluster_summary))
 
                 else:
+                    status_msg = "" if submit_status == 0 else " Exit status: %d." % submit_status
                     logger.error("[CondorManager : submit_to_batch] condor_submit output for chunk %d:\n%s", i, "\n".join(results))
-                    logger.exception("[CondorManager : submit_to_batch] We found %d jobs to submit in chunk %d, but only %d were successfully submitted." % (len(chunk), i, n_submitted))
-                    raise RuntimeError()
+                    logger.error("[CondorManager : submit_to_batch] We found %d jobs to submit in chunk %d, but only %d were successfully submitted.%s" % (len(chunk), i, n_submitted, status_msg))
+                    raise RuntimeError("condor_submit failed for chunk %d" % i)
 
                 # Assign cluster id's to jobs
                 for n_jobs, cluster_id in submitted_clusters:
@@ -465,6 +465,64 @@ class CondorManager(JobsManager):
         for task in self.tasks:
             task.process(job_map = self.job_map)
             self.summary[task.name] = task.summary 
+
+    def write_merged_submit_file(self, submit_files, output_file):
+        """
+        Merge per-job HTCondor submit files into one submit file.
+        """
+        with open(output_file, "w") as f_out:
+            for submit_file in submit_files:
+                with open(submit_file, "r") as f_in:
+                    f_out.write(f_in.read())
+                    f_out.write("\n")
+
+    def parse_condor_submit_results(self, results):
+        submitted_clusters = []
+        for line in results:
+            match = re.search(r"(\d+)\s+job\(s\)\s+submitted\s+to\s+cluster\s+(\d+)", line)
+            if match is not None:
+                submitted_clusters.append(
+                        (int(match.group(1)), match.group(2))
+                )
+        return submitted_clusters
+
+    def can_retry_condor_submit(self, results, n_submitted):
+        if n_submitted != 0:
+            return False
+
+        output = "\n".join(results)
+        retryable_patterns = [
+            r"Failed to connect to .*queue manager",
+            r"AUTHENTICATE:.*deadline",
+            r"Failed to authenticate",
+            r"SECMAN:.*failed",
+            r"CEDAR:.*connection",
+            r"Connection timed out",
+            r"temporarily unavailable",
+        ]
+        return any(re.search(pattern, output, re.IGNORECASE) for pattern in retryable_patterns)
+
+    def run_condor_submit(self, submit_file, chunk_idx, expected_jobs):
+        max_attempts = max(1, self.condor_submit_max_attempts)
+        for attempt in range(max_attempts):
+            submit_status, output = do_cmd("condor_submit %s" % shlex.quote(submit_file), returnStatus = True)
+            results = output.split("\n")
+            submitted_clusters = self.parse_condor_submit_results(results)
+            n_submitted = sum(n_jobs for n_jobs, _ in submitted_clusters)
+
+            if n_submitted == expected_jobs:
+                if attempt > 0:
+                    logger.info("[CondorManager : submit_to_batch] condor_submit for chunk %d succeeded on attempt %d/%d." % (chunk_idx, attempt + 1, max_attempts))
+                return results, submitted_clusters, submit_status
+
+            if attempt + 1 < max_attempts and self.can_retry_condor_submit(results, n_submitted):
+                delay = self.condor_submit_retry_delay * float(attempt + 1)
+                logger.warning("[CondorManager : submit_to_batch] condor_submit for chunk %d submitted %d/%d jobs and failed with a transient auth/connection error on attempt %d/%d. Retrying in %.0f seconds." % (chunk_idx, n_submitted, expected_jobs, attempt + 1, max_attempts, delay))
+                logger.warning("[CondorManager : submit_to_batch] condor_submit output for chunk %d:\n%s", chunk_idx, "\n".join(results))
+                time.sleep(delay)
+                continue
+
+            return results, submitted_clusters, submit_status
 
 
     def monitor_jobs(self):
