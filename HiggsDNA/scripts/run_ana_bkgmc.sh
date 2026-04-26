@@ -14,10 +14,16 @@ sample_list="${SAMPLE_LIST:-DYGto2LG_10to50,DYGto2LG_50to100,DYJetsToLL,DYGto2LG
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 # sample_list="${SAMPLE_LIST:-DYGto2LG_10to50,DYGto2LG_50to100,DYJetsToLL,DYGto2LG_10to100,DYJetsTo2E,DYJetsTo2Mu,DYJetsTo2Tau}"
 # years="${YEARS:-2024}"
-clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
+fpo="${FPO:-5}"
+clean_analysis_state="${CLEAN_ANALYSIS_STATE:-0}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
+condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-500}"
+condor_q_timeout="${CONDOR_Q_TIMEOUT:-60}"
+
+export HIGGSDNA_CONDOR_SUBMIT_CHUNK_SIZE="${condor_submit_chunk_size}"
+export HIGGSDNA_CONDOR_Q_TIMEOUT="${condor_q_timeout}"
 
 if [[ "${clean_analysis_state}" == "1" ]]; then
     rm -f "${outdir}/analysis_manager.pkl" "${outdir}/analysis_manager_temp.pkl"
@@ -47,6 +53,10 @@ fi
 
 if [[ -n "${years}" ]]; then
     cmd+=(--years "${years}")
+fi
+
+if [[ -n "${fpo}" ]]; then
+    cmd+=(--fpo "${fpo}")
 fi
 
 cmd+=("$@")

@@ -10,6 +10,7 @@ import datetime
 import sys
 import re
 import shlex
+import subprocess
 from tqdm import tqdm
 
 import logging
@@ -345,6 +346,8 @@ class CondorManager(JobsManager):
         self.job_map = {} # run condor_q only once and store results in this map, rather than running condor_q for each job individually. self.job_map then gets passed to the Tasks, where they do the rest of the bookkeeping.
         self.condor_submit_max_attempts = int(kwargs.get("condor_submit_max_attempts", os.environ.get("HIGGSDNA_CONDOR_SUBMIT_MAX_ATTEMPTS", 5)))
         self.condor_submit_retry_delay = float(kwargs.get("condor_submit_retry_delay", os.environ.get("HIGGSDNA_CONDOR_SUBMIT_RETRY_DELAY", 30.)))
+        self.condor_submit_chunk_size = int(kwargs.get("condor_submit_chunk_size", os.environ.get("HIGGSDNA_CONDOR_SUBMIT_CHUNK_SIZE", 100)))
+        self.condor_q_timeout = float(kwargs.get("condor_q_timeout", os.environ.get("HIGGSDNA_CONDOR_Q_TIMEOUT", 60.)))
 
         if self.output_dir.startswith("/eos") and self.host == "lxplus":
             self.log_output_dir = self.higgs_dna_path + "/eos_logs/" + os.path.split(self.output_dir)[-1]
@@ -412,7 +415,9 @@ class CondorManager(JobsManager):
         """
 
         """
-        self.monitor_jobs()
+        if not self.monitor_jobs():
+            logger.warning("[CondorManager : submit_to_batch] Skipping this submit cycle because condor_q failed. This avoids resubmitting jobs with stale queue information.")
+            return
 
         jobs_to_submit = []
         for task in self.tasks:
@@ -425,7 +430,7 @@ class CondorManager(JobsManager):
 
         if jobs_to_submit: 
             submit_files = [job.condor_submit_file for job in jobs_to_submit]
-            submit_chunks = create_chunks(submit_files, 100) # submit in batches of 100
+            submit_chunks = create_chunks(submit_files, self.condor_submit_chunk_size)
 
             idx = 0
             for i, chunk in enumerate(submit_chunks):
@@ -460,7 +465,9 @@ class CondorManager(JobsManager):
                         idx += 1
 
 
-        self.monitor_jobs()
+        if not self.monitor_jobs():
+            logger.warning("[CondorManager : submit_to_batch] condor_q failed after job submission. Job status will be refreshed on the next cycle.")
+            return
 
         for task in self.tasks:
             task.process(job_map = self.job_map)
@@ -530,21 +537,52 @@ class CondorManager(JobsManager):
 
         """
         self.job_map = {}
-        monitor_results = do_cmd("condor_q --json -attributes ClusterId,JobStatus")
+        known_cluster_ids = [
+            job.cluster_id
+            for task in self.tasks
+            for job in task.jobs
+            if job.cluster_id is not None
+        ]
+        if not known_cluster_ids:
+            return True
 
+        monitor_success, monitor_results = self.run_condor_q()
+        if not monitor_success:
+            return False
         if not monitor_results: # no condor jobs were found
-            return
+            return True
 
-        success = False
-        while not success:
-            try:
-                monitor_results = json.loads(monitor_results)
-                success = True
-            except: # sometimes condor_q just intermittently fails, just try again later if this happens
-                monitor_results = do_cmd("condor_q --json -attributes ClusterId,JobStatus")
+        try:
+            monitor_results = json.loads(monitor_results)
+        except Exception:
+            logger.warning("[CondorManager : monitor_jobs] Could not parse condor_q JSON output. Skipping this monitor cycle.")
+            logger.debug("[CondorManager : monitor_jobs] condor_q output:\n%s", monitor_results)
+            return False
 
         for x in monitor_results:
             self.job_map[str(x["ClusterId"])] = CONDOR_STATUS_FLAGS[x["JobStatus"]]
+        return True
+
+    def run_condor_q(self):
+        cmd = ["condor_q", "--json", "-attributes", "ClusterId,JobStatus"]
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout = subprocess.PIPE,
+                stderr = subprocess.STDOUT,
+                text = True,
+                timeout = self.condor_q_timeout,
+                check = False
+            )
+        except subprocess.TimeoutExpired:
+            logger.warning("[CondorManager : monitor_jobs] condor_q timed out after %.0f seconds.", self.condor_q_timeout)
+            return False, ""
+
+        if result.returncode != 0:
+            logger.warning("[CondorManager : monitor_jobs] condor_q failed with exit status %d:\n%s", result.returncode, result.stdout)
+            return False, result.stdout
+
+        return True, result.stdout.strip()
 
 
     def prepare_inputs(self):
