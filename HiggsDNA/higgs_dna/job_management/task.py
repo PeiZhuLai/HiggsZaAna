@@ -7,8 +7,6 @@ import copy
 import os
 import math
 import json
-import awkward
-import numpy
 import sys
 from tqdm import tqdm
 import pyarrow as pa
@@ -25,7 +23,6 @@ from higgs_dna.utils.logger_utils import simple_logger
 logger = simple_logger(__name__)
 
 from higgs_dna.job_management.jobs import Job 
-from higgs_dna.utils import awkward_utils
 from higgs_dna.utils.misc_utils import create_chunks
 from higgs_dna.utils.progress_bar import ProgressBar
 from higgs_dna.constants import CENTRAL_WEIGHT
@@ -159,6 +156,20 @@ def _get_merged_output_schema(paths, is_data, task_name, syst_tag):
     return merged_schema
 
 
+def _get_unified_parquet_schema(paths, task_name, syst_tag):
+    schemas = [
+        _normalize_arrow_schema(pq.ParquetFile(path).schema_arrow)
+        for path in paths
+    ]
+    try:
+        return pa.unify_schemas(schemas)
+    except (pa.ArrowInvalid, pa.ArrowTypeError) as exc:
+        raise RuntimeError(
+            "Schema mismatch while merging task '%s' syst '%s': could not unify parquet schemas.%s"
+            % (task_name, syst_tag, _schema_conflict_details(paths, schemas))
+        ) from exc
+
+
 def _normalize_table_to_schema(table, target_schema, task_name, syst_tag, output_path):
     arrays = []
     for field in target_schema:
@@ -186,6 +197,52 @@ def _normalize_table_to_schema(table, target_schema, task_name, syst_tag, output
         arrays.append(column)
 
     return pa.Table.from_arrays(arrays, schema=target_schema)
+
+
+def _constant_column(value, length, field_type):
+    return pa.array([value] * length, type=field_type)
+
+
+def _rewrite_parquet_with_constant_column(path, field, value, task_name, syst_tag):
+    parquet_file = pq.ParquetFile(path)
+    schema = _normalize_arrow_schema(parquet_file.schema_arrow)
+    if schema.get_field_index(field.name) >= 0:
+        return False
+
+    target_schema = _replace_or_add_field(schema, field)
+    tmp_path = path + ".tmp"
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+
+    writer = None
+    try:
+        for row_group_idx in range(parquet_file.num_row_groups):
+            table = _normalize_arrow_table(parquet_file.read_row_group(row_group_idx))
+            table = _replace_or_add_column(
+                table,
+                field.name,
+                _constant_column(value, len(table), field.type),
+            )
+            table = _normalize_table_to_schema(
+                table,
+                target_schema,
+                task_name,
+                syst_tag,
+                path,
+            )
+
+            if writer is None:
+                writer = pq.ParquetWriter(tmp_path, target_schema)
+            writer.write_table(table)
+
+        if writer is None:
+            writer = pq.ParquetWriter(tmp_path, target_schema)
+    finally:
+        if writer is not None:
+            writer.close()
+
+    os.replace(tmp_path, path)
+    return True
 
 
 class Task():
@@ -526,6 +583,18 @@ class Task():
                 self.name,
                 syst_tag,
             )
+            process_id = self.config["sample"].get("process_id")
+            year = self.config["sample"].get("year")
+            if process_id is not None:
+                merged_schema = _replace_or_add_field(
+                    merged_schema,
+                    pa.field("process_id", pa.float64()),
+                )
+            if year is not None:
+                merged_schema = _replace_or_add_field(
+                    merged_schema,
+                    pa.field("year", pa.string()),
+                )
             logger.info(
                 "[Task : merge_outputs] Task '%s' : streaming merge of %d parquet files into '%s'.",
                 self.name,
@@ -573,6 +642,19 @@ class Task():
                                 table,
                                 CENTRAL_WEIGHT + "_no_lumi",
                                 central_weight_no_lumi,
+                            )
+
+                        if process_id is not None:
+                            table = _replace_or_add_column(
+                                table,
+                                "process_id",
+                                _constant_column(float(process_id), len(table), pa.float64()),
+                            )
+                        if year is not None:
+                            table = _replace_or_add_column(
+                                table,
+                                "year",
+                                _constant_column(str(year), len(table), pa.string()),
                             )
 
                         table = _normalize_table_to_schema(
@@ -623,21 +705,18 @@ class Task():
 
         self.process_id = self.config["sample"]["process_id"]
         if self.process_id is None:
+            self.wrote_process_ids = True
             return
 
         for syst_tag, merged_output in self.merged_outputs.items():
-            events = awkward.from_parquet(merged_output)
-
-            if "process_id" in events.fields:
-                return
-
-            logger.debug("[Task : add_process_id] Task '%s' : adding field 'process_id' with value %d in output file '%s'" % (self.name, self.process_id, merged_output))
-            awkward_utils.add_field(
-                    events = events,
-                    name = "process_id",
-                    data = numpy.ones(len(events)) * self.process_id
+            logger.debug("[Task : add_process_id] Task '%s' : adding field 'process_id' with value %s in output file '%s'" % (self.name, self.process_id, merged_output))
+            _rewrite_parquet_with_constant_column(
+                merged_output,
+                pa.field("process_id", pa.float64()),
+                float(self.process_id),
+                self.name,
+                syst_tag,
             )
-            awkward.to_parquet(events, merged_output)
         
 
         self.wrote_process_ids = True
@@ -649,7 +728,7 @@ class Task():
         Note that because the year is taken from the SampleManager, it is possible the "year" field
         is not the same as the year for the CMS sample (e.g. this might happen on purpose if you were missing a sample 
         for 2016 and used a sample from 2017 in its place).
-        The "year" field is stored as an integer.
+        The "year" field is stored as a string.
         """
         if self.wrote_years:
             return
@@ -657,22 +736,14 @@ class Task():
         self.year = self.config["sample"]["year"]
 
         for syst_tag, merged_output in self.merged_outputs.items():
-            events = awkward.from_parquet(merged_output)
-
-            if "year" in events.fields:
-                return
-
-            logger.debug("[Task : add_process_id] Task '%s' : adding field 'year' with value '%s' in output file '%s'." % (self.name, self.year, merged_output))
-
-            year_array = numpy.empty(len(events), dtype="S10")
-            year_array[:] = self.year
-            awkward_utils.add_field(
-                    events = events,
-                    name = "year",
-                    data = year_array 
+            logger.debug("[Task : add_year] Task '%s' : adding field 'year' with value '%s' in output file '%s'." % (self.name, self.year, merged_output))
+            _rewrite_parquet_with_constant_column(
+                merged_output,
+                pa.field("year", pa.string()),
+                str(self.year),
+                self.name,
+                syst_tag,
             )
-
-            awkward.to_parquet(events, merged_output)
 
 
         self.wrote_years = True

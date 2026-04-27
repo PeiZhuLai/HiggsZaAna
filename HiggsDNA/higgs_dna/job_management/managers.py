@@ -1,11 +1,9 @@
 import os
 import importlib
 import time
-import awkward
-import numpy
 import json
 import glob
-import pyarrow
+import pyarrow.parquet as pq
 import datetime
 import sys
 import re
@@ -19,8 +17,12 @@ from higgs_dna.utils.logger_utils import simple_logger
 logger = simple_logger(__name__)
 
 from higgs_dna.job_management.jobs import Job, LocalJob, CondorJob
+from higgs_dna.job_management.task import (
+    _get_unified_parquet_schema,
+    _iter_parquet_row_groups,
+    _normalize_table_to_schema,
+)
 from higgs_dna.utils.metis_utils import num_to_ordinal_string, do_cmd, do_cmd_timeout
-from higgs_dna.utils import awkward_utils
 from higgs_dna.utils.misc_utils import check_proxy, create_chunks, get_HiggsDNA_base, get_conda
 from higgs_dna.job_management.constants import CONDOR_STATUS_FLAGS, HOST_PARAMS 
 
@@ -175,18 +177,22 @@ class JobsManager():
         """
         merged_any = False
         for task in self.tasks:
-            if not task.complete or task.merged_output_files:
+            if not task.complete:
                 continue
 
-            task.remerge = self.remerge
-            logger.info(
-                "[JobsManager : merge_completed_task_outputs] Merging per-job outputs for completed task '%s'.",
-                task.name,
-            )
-            task.merge_outputs()
+            if not task.merged_output_files:
+                task.remerge = self.remerge
+                logger.info(
+                    "[JobsManager : merge_completed_task_outputs] Merging per-job outputs for completed task '%s'.",
+                    task.name,
+                )
+                task.merge_outputs()
+                merged_any = True
+
+            wrote_metadata = task.wrote_process_ids and task.wrote_years
             task.add_process_id()
             task.add_year()
-            merged_any = True
+            merged_any = merged_any or not wrote_metadata
 
         return merged_any
 
@@ -223,31 +229,42 @@ class JobsManager():
             elif os.path.exists(merged_file) and self.remerge:
                 logger.debug("[JobsManager : merge_outputs] For syst_tag '%s' merged output file '%s' already exists, but some jobs were unretired or --short option was removed, so we will remerge inputs and overwrite this file." % (syst_tag, merged_file))
 
-            merged_events = []
-            for output in outputs:
-                merged_events.append(awkward.from_parquet(output))
-            
-            # Add dummy values for missing fields (usually weight branches in data)
-            branches = []
-            for events in merged_events:
-                branches += events.fields
-            branches = set(branches)
-
-            for idx, events in enumerate(merged_events):
-                missing_branches = [b for b in branches if b not in events.fields]
-                for b in missing_branches:
-                    awkward_utils.add_field(
-                            events = merged_events[idx],
-                            name = b,
-                            data = numpy.ones(len(merged_events[idx]))
-                    )
-
             logger.info("[JobsManager : merge_outputs] For syst_tag '%s' merging %d files into merged file '%s'." % (syst_tag, len(outputs), merged_file))
 
-            merged_events = awkward.concatenate(merged_events)
-            
-            logger.debug("\t merging %d events" % len(merged_events))
-            awkward.to_parquet(merged_events, merged_file)
+            merged_schema = _get_unified_parquet_schema(outputs, "JobsManager", syst_tag)
+            if os.path.exists(merged_file):
+                os.remove(merged_file)
+
+            writer = None
+            try:
+                for output_idx, output in enumerate(outputs, start=1):
+                    if output_idx == 1 or output_idx == len(outputs) or output_idx % 25 == 0:
+                        logger.info(
+                            "[JobsManager : merge_outputs] For syst_tag '%s' processing parquet %d/%d: '%s'.",
+                            syst_tag,
+                            output_idx,
+                            len(outputs),
+                            output,
+                        )
+
+                    for table in _iter_parquet_row_groups(output):
+                        table = _normalize_table_to_schema(
+                            table,
+                            merged_schema,
+                            "JobsManager",
+                            syst_tag,
+                            output,
+                        )
+
+                        if writer is None:
+                            writer = pq.ParquetWriter(merged_file, merged_schema)
+                        writer.write_table(table)
+
+                if writer is None:
+                    writer = pq.ParquetWriter(merged_file, merged_schema)
+            finally:
+                if writer is not None:
+                    writer.close()
 
 
     def prepare_inputs(self):
