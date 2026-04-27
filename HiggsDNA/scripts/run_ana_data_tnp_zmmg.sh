@@ -15,6 +15,7 @@ export PYTHONPATH="${repo_dir}"
 
 outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/data"
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
+merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 
 # rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/data/job_1
 # rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/data/analysis_manager.pkl
@@ -32,6 +33,10 @@ cmd=(
 
 if [[ "${reconfigure_jobs}" == "1" ]]; then
     cmd+=(--reconfigure_jobs)
+fi
+
+if [[ "${merge_outputs}" == "1" ]]; then
+    cmd+=(--merge_outputs)
 fi
 
 "${cmd[@]}" #--short #--batch_system "local" "condor" INFO DEBUG #--with_skimmed

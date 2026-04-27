@@ -16,6 +16,7 @@ years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 # years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
+merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 
@@ -35,6 +36,10 @@ cmd=(
 
 if [[ "${unretire_jobs}" == "1" ]]; then
     cmd+=(--unretire_jobs)
+fi
+
+if [[ "${merge_outputs}" == "1" ]]; then
+    cmd+=(--merge_outputs)
 fi
 
 if [[ "${short}" == "1" ]]; then
