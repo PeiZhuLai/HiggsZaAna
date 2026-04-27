@@ -132,8 +132,8 @@ def _g_from_bins(eff_by_bin: Dict[str, float]) -> ROOT.TGraphAsymmErrors:
             continue
         xs.append(_ptbin_center(b))
         ys.append(float(eff_by_bin[b]) * 100.0)
-        exl.append(0.5 * PT_BIN_W)  # x-bar half width (2 GeV bins -> +/- 1 GeV)
-        exh.append(0.5 * PT_BIN_W)
+        exl.append(0.0)  # keep only vertical error bars
+        exh.append(0.0)
         eyl.append(0.0)
         eyh.append(0.0)
     x = carray("d", xs)
@@ -177,8 +177,8 @@ def _g_from_bin_records(bins_obj: Dict[str, Dict[str, float]]) -> ROOT.TGraphAsy
 
         xs.append(_ptbin_center(b))
         ys.append(100.0 * eff)
-        exl.append(0.5 * PT_BIN_W)
-        exh.append(0.5 * PT_BIN_W)
+        exl.append(0.0)
+        exh.append(0.0)
         eyl.append(100.0 * err_low)
         eyh.append(100.0 * err_high)
 
@@ -500,7 +500,7 @@ def _plot_or_vs_double(
     _apply_style(g_or, ROOT.TColor.GetColor("#e42536"), 20, 1.2, 2)
     _apply_style(g_db, ROOT.TColor.GetColor("#5790fc"), 22, 1.2, 2)
 
-    # draw points with x error bars (x-bar) and no connecting line
+    # draw points with vertical error bars and no connecting line
     g_or.Draw("AP")          # axes + points
     g_db.Draw("P SAME")      # points only (reuse axes)
 
