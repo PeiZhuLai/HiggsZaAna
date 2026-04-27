@@ -165,6 +165,31 @@ class JobsManager():
                 bar = bar[:columns]
             self.dashboard[idx].update(bar)
 
+    def merge_completed_task_outputs(self):
+        """
+        Merge per-job outputs for tasks that have already completed.
+
+        This intentionally does not create the top-level merged parquet files
+        across tasks; those are still written by ``merge_outputs`` once the
+        whole analysis is complete.
+        """
+        merged_any = False
+        for task in self.tasks:
+            if not task.complete or task.merged_output_files:
+                continue
+
+            task.remerge = self.remerge
+            logger.info(
+                "[JobsManager : merge_completed_task_outputs] Merging per-job outputs for completed task '%s'.",
+                task.name,
+            )
+            task.merge_outputs()
+            task.add_process_id()
+            task.add_year()
+            merged_any = True
+
+        return merged_any
+
 
     def merge_outputs(self, dir):
         """

@@ -408,9 +408,13 @@ class AnalysisManager():
 
         try:
             summary = self.jobs_manager.submit_jobs()
+            if self.merge_outputs and self.jobs_manager.merge_completed_task_outputs():
+                self.save()
             while not self.jobs_manager.complete():
                 self.save()
                 summary = self.jobs_manager.submit_jobs()
+                if self.merge_outputs and self.jobs_manager.merge_completed_task_outputs():
+                    self.save()
         except Exception:
             logger.exception("[AnalysisManager : run] Analysis failed while jobs were being submitted or monitored. Saving current state before exiting.")
             self.save()
