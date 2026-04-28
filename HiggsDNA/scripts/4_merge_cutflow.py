@@ -440,7 +440,7 @@ def main() -> int:
                 caption=rf"Background cutflow for {latex_escape_text(year)}",
                 label=f"cutflow-bkg-mc-{year}",
                 columns=columns,
-                font_size=r"\small",
+                font_size=r"\footnotesize",
                 resize_to_textwidth=False,
                 overall_eff_digits=5,
             )
@@ -453,7 +453,7 @@ def main() -> int:
                 caption=rf"Data cutflow for {latex_escape_text(year)}",
                 label=f"cutflow-data-{year}",
                 columns=columns,
-                font_size=r"\small",
+                font_size=r"\footnotesize",
                 resize_to_textwidth=False,
                 overall_eff_digits=5,
             )
