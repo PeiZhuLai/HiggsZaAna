@@ -477,6 +477,47 @@ def preselect(data):
 
     return data
 
+def ensure_za_compatibility(data):
+    """
+    Some ZA parquet configs only write ALP photon branches, while this converter
+    still decorates legacy single-gamma variables.  Preserve existing gamma_*
+    branches when present and otherwise alias them from the leading ALP photon.
+    """
+    fallback_columns = {
+        "gamma_pt": "ALP_lead_photon_pt",
+        "gamma_eta": "ALP_lead_photon_eta",
+        "gamma_phi": "ALP_lead_photon_phi",
+        "gamma_mass": "ALP_lead_photon_mass",
+        "gamma_mvaID": "ALP_lead_photon_mvaID",
+        "gamma_energyErr": "ALP_lead_photon_energyErr",
+        "gamma_sieie": "ALP_lead_photon_sieie",
+        "gamma_hoe": "ALP_lead_photon_hoe",
+        "gamma_r9": "ALP_lead_photon_r9",
+        "gamma_chiso": "ALP_lead_photon_chiso",
+        "gamma_alliso": "ALP_lead_photon_alliso",
+        "gamma_e_veto": "ALP_lead_photon_electronVeto",
+    }
+
+    added_columns = []
+    for target, source in fallback_columns.items():
+        if target not in data.columns and source in data.columns:
+            data[target] = data[source]
+            added_columns.append(target)
+
+    if added_columns:
+        print("Aliased missing gamma branches from ALP_lead_photon: %s" % ", ".join(added_columns))
+
+    required_columns = ["gamma_pt", "gamma_eta", "gamma_phi", "gamma_mass"]
+    missing_required = [column for column in required_columns if column not in data.columns]
+    if missing_required:
+        raise KeyError(
+            "Missing required photon branches after compatibility mapping: %s. "
+            "Available columns include: %s"
+            % (", ".join(missing_required), ", ".join(list(data.columns)[:50]))
+        )
+
+    return data
+
 def decorate(data):
 
     if data.shape[0] == 0: return data
@@ -643,6 +684,7 @@ def main():
 #    for data in tqdm(read_root(args.input, key='DiMuonNtuple', columns=variables, chunksize=args.chunksize), desc='Processing %s' % args.input, bar_format='{desc}: {percentage:3.0f}%|{bar:20}{r_bar}'):
 
     data = pd.read_parquet(args.input)
+    data = ensure_za_compatibility(data)
     initial_events += data.shape[0]
     #data = preprocess(data)
     data = preselect(data) #TODO add cutflow
