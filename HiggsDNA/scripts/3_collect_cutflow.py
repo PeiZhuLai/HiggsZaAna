@@ -14,8 +14,8 @@ Key features (requested):
   - 1 sip3d scenario: zgammas_eleip3d (and optionally its _w variant if present)
 
 Output:
-- Prints a LaTeX-friendly cutflow table rows to stdout.
-- Writes the same content to an output text file.
+- Writes directly usable LaTeX cutflow tables to an output text file.
+- Writes the same information to a JSON sidecar file with metadata.
 
 Usage examples:
   python collect_cutflow.py --dataset_type Sig_MC --dataset mA_M1 --year 2022postEE
@@ -27,10 +27,7 @@ Notes:
 """
 
 import os
-import numpy as np
-import pandas as pd
 import re
-from pdb import set_trace
 import time
 import glob
 import json
@@ -142,6 +139,9 @@ LABELS_COMMON = {
     "g_kin_cut": "Photon Kinematic Cuts",
     "has_2g_cand": r"$N_{\gamma}\geq 2$",
     "sel_h": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
+    "sel_h_2": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "event": "Event Filtering",
     "all cuts": "Total Baseline Events",
 }
 
@@ -157,6 +157,10 @@ LABELS_COMMON_ele_ip3d = {
     "g_kin_cut": "Photon Kinematic Cuts",
     "has_2g_cand": r"$N_{\gamma}\geq 2$",
     "sel_h": r"$95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
+    "sel_h_2": r"$95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
+    "event": "Event Filtering",
+    "ele_sip3d_cut": "Electron SIP3D Cut",
     "all cuts": "Total Baseline Events",
 }
 # -----------------------------
@@ -654,29 +658,68 @@ def render_trigeff_json_dict(result: TrigEffResult) -> Dict:
 
 def render_trigeff(result: TrigEffResult) -> str:
     """
-    LaTeX-friendly:
-      TrigEff: <cut_type_prefix>
-        overall & in & pass & eff \\
-        <ptbin> & in & pass & eff \\
+    Render trigger-efficiency payloads as LaTeX tables.
     """
     lines: List[str] = []
     if not result.by_prefix:
         return ""
 
-    lines.append("Trigger efficiency payloads:")
     for prefix, d in result.by_prefix.items():
         o = d["overall"]
-        lines.append(f"TrigEff: {prefix}")
-        lines.append(f"  overall{'':30} & {o['in_bin']:.0f} & {o['pass_trigger']:.0f} & {o['eff']:.6f} \\\\")
+        lines.extend([
+            r"\begin{table}[htbp]",
+            r"\centering",
+            rf"\caption{{Trigger efficiency: {_latex_texttt(prefix)}}}",
+            rf"\label{{tab:trigeff-{_latex_label_id(prefix)}}}",
+            r"\begin{tabular}{lrrr}",
+            r"\hline",
+            r"$p_T$ bin & In bin & Pass trigger & Efficiency \\",
+            r"\hline",
+            f"Overall & {o['in_bin']:.0f} & {o['pass_trigger']:.0f} & {o['eff']:.6f} \\\\",
+        ])
         for ptbin, bb in d["bins"].items():
-            lines.append(f"  {ptbin:35} & {bb['in_bin']:.0f} & {bb['pass_trigger']:.0f} & {bb['eff']:.6f} \\\\")
-        lines.append("")
+            lines.append(
+                f"{_latex_escape_text(ptbin)} & {bb['in_bin']:.0f} & {bb['pass_trigger']:.0f} & {bb['eff']:.6f} \\\\"
+            )
+        lines.extend([
+            r"\hline",
+            r"\end{tabular}",
+            r"\end{table}",
+            "",
+        ])
     return "\n".join(lines)
 
 
 # -----------------------------
 # Pretty printing
 # -----------------------------
+_LATEX_ESCAPE_MAP = {
+    "\\": r"\textbackslash{}",
+    "&": r"\&",
+    "%": r"\%",
+    "$": r"\$",
+    "#": r"\#",
+    "_": r"\_",
+    "{": r"\{",
+    "}": r"\}",
+    "~": r"\textasciitilde{}",
+    "^": r"\textasciicircum{}",
+}
+
+
+def _latex_escape_text(s: str) -> str:
+    return "".join(_LATEX_ESCAPE_MAP.get(ch, ch) for ch in str(s))
+
+
+def _latex_texttt(s: str) -> str:
+    return rf"\texttt{{{_latex_escape_text(s)}}}"
+
+
+def _latex_label_id(s: str) -> str:
+    label = re.sub(r"[^A-Za-z0-9]+", "-", str(s)).strip("-").lower()
+    return label or "table"
+
+
 def label_for(ct: str, cut_key: str) -> str:
     # Provide a bit more specific labels for ele/mu channels if needed
     if cut_key == "N_lep_sel":
@@ -692,9 +735,9 @@ def label_for(ct: str, cut_key: str) -> str:
 
     # sip3d variants should use the dedicated label mapping (includes ele_ip3d_cut)
     if ct in set(SIP3D_CUTFLOW_TYPES):
-        return LABELS_COMMON_ele_ip3d.get(cut_key, cut_key)
+        return LABELS_COMMON_ele_ip3d.get(cut_key, _latex_escape_text(cut_key))
 
-    return LABELS_COMMON.get(cut_key, cut_key)
+    return LABELS_COMMON.get(cut_key, _latex_escape_text(cut_key))
 
 
 def format_value(ct: str, v: float) -> str:
@@ -707,34 +750,33 @@ def format_value(ct: str, v: float) -> str:
 
 def render_cutflows(result: CutflowResult, xs_pb: Optional[float] = None, lumi_fb: Optional[float] = None) -> str:
     """
-    Render in a LaTeX-friendly style:
-      Cut Type: <ct>
-          <label> & <value> \\
+    Render cutflows as directly usable LaTeX tables.
 
-    NEW: for any ct containing '_w', additionally scale by xs * pfTofb * lumi.
+    The xs/lumi arguments are kept for call-site compatibility; text output
+    intentionally mirrors the same unscaled values that were previously written.
     """
-    w_scale = 1.0
-    if xs_pb is not None and lumi_fb is not None:
-        w_scale = float(xs_pb) * float(pfTofb) * float(lumi_fb)
-
     lines: List[str] = []
-    lines.append(f"# jobs used: {result.n_jobs_used}")
-    lines.append(f"# genWeightSum total (used for *_w normalization, summed over jobs with value): {result.gen_weight_sum_total:.6f}")
-    # --- NEW ---
-    lines.append(f"# xs[pb]={xs_pb if xs_pb is not None else 'NA'} pfTofb={pfTofb:.1f} lumi[fb^-1]={lumi_fb if lumi_fb is not None else 'NA'}")
-    lines.append(f"# *_w additional scale = xs*pfTofb*lumi = {w_scale:.6f}")
-    for fp in result.out_files_used:
-        gws = result.gen_weight_sum_by_file.get(fp)
-        lines.append(f"#   {fp}  genWeightSum={gws if gws is not None else 'NA'}")
-    lines.append("")
 
     for ct, cuts in result.cutflows.items():
-        lines.append(f"Cut Type: {ct}")
+        lines.extend([
+            r"\begin{table}[htbp]",
+            r"\centering",
+            rf"\caption{{Cutflow: {_latex_texttt(ct)}}}",
+            rf"\label{{tab:cutflow-{_latex_label_id(ct)}}}",
+            r"\begin{tabular}{lr}",
+            r"\hline",
+            r"Selection & Events \\",
+            r"\hline",
+        ])
         for cut_key, v in cuts.items():
-            # vv = (v * w_scale) if "_w" in ct else v
             vv = v
-            lines.append(f"  {label_for(ct, cut_key):35} & {format_value(ct, vv)} \\\\")
-        lines.append("")
+            lines.append(f"{label_for(ct, cut_key)} & {format_value(ct, vv)} \\\\")
+        lines.extend([
+            r"\hline",
+            r"\end{tabular}",
+            r"\end{table}",
+            "",
+        ])
 
     return "\n".join(lines)
 
