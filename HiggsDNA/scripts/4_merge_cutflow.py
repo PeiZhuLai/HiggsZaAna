@@ -255,6 +255,18 @@ def n_minus_one_efficiencies(cuts: Dict[str, float], rows: Sequence[str]) -> Dic
     return out
 
 
+def overall_efficiency(cuts: Dict[str, float], rows: Sequence[str]) -> Optional[float]:
+    initial_key = "all" if "all" in cuts else next((key for key in rows if key in cuts), None)
+    final_key = "all cuts" if "all cuts" in cuts else next((key for key in reversed(rows) if key in cuts), None)
+    if initial_key is None or final_key is None:
+        return None
+
+    initial = float(cuts[initial_key])
+    if initial == 0.0:
+        return None
+    return 100.0 * float(cuts[final_key]) / initial
+
+
 def format_count(value: float) -> str:
     return f"{value:.0f}"
 
@@ -299,7 +311,13 @@ def render_table(*, caption: str, label: str, columns: Sequence[TableColumn]) ->
             row.extend([format_count(col.cuts[cut_key]), format_eff(effs[cut_key])])
         lines.append(" & ".join(row) + r" \\")
 
+    overall_row = ["Overall efficiency"]
+    for col in columns:
+        overall_row.extend(["--", format_eff(overall_efficiency(col.cuts, rows))])
+
     lines.extend([
+        r"\hline",
+        " & ".join(overall_row) + r" \\",
         r"\hline",
         r"\end{tabular}%",
         r"}",
