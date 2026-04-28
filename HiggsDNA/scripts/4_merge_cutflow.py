@@ -271,24 +271,42 @@ def format_count(value: float) -> str:
     return f"{value:.0f}"
 
 
-def format_eff(value: Optional[float]) -> str:
-    return "--" if value is None else f"{value:.1f}"
+def format_eff(value: Optional[float], digits: int = 1) -> str:
+    return "--" if value is None else f"{value:.{digits}f}"
 
 
-def render_table(*, caption: str, label: str, columns: Sequence[TableColumn]) -> str:
+def render_table(
+    *,
+    caption: str,
+    label: str,
+    columns: Sequence[TableColumn],
+    font_size: Optional[str] = None,
+    resize_to_textwidth: bool = True,
+    overall_eff_digits: int = 1,
+) -> str:
     rows = ordered_cut_keys(columns)
     col_spec = "l" + "rr" * len(columns)
 
-    lines: List[str] = [
-        r"% Requires \usepackage{graphicx} for \resizebox.",
+    lines: List[str] = []
+    if resize_to_textwidth:
+        lines.append(r"% Requires \usepackage{graphicx} for \resizebox.")
+
+    lines.extend([
         r"\begin{table}[htbp]",
         r"\centering",
         rf"\caption{{{caption}}}",
         rf"\label{{tab:{latex_label_id(label)}}}",
-        r"\resizebox{\textwidth}{!}{%",
+    ])
+    if font_size:
+        lines.append(font_size)
+
+    if resize_to_textwidth:
+        lines.append(r"\resizebox{\textwidth}{!}{%")
+
+    lines.extend([
         rf"\begin{{tabular}}{{{col_spec}}}",
         r"\hline",
-    ]
+    ])
 
     top_header = ["Selection"]
     for col in columns:
@@ -313,17 +331,22 @@ def render_table(*, caption: str, label: str, columns: Sequence[TableColumn]) ->
 
     overall_row = ["Overall efficiency"]
     for col in columns:
-        overall_row.extend(["--", format_eff(overall_efficiency(col.cuts, rows))])
+        overall_row.extend(["--", format_eff(overall_efficiency(col.cuts, rows), overall_eff_digits)])
 
-    lines.extend([
+    end_lines = [
         r"\hline",
         " & ".join(overall_row) + r" \\",
         r"\hline",
-        r"\end{tabular}%",
-        r"}",
+        r"\end{tabular}%" if resize_to_textwidth else r"\end{tabular}",
+    ]
+    if resize_to_textwidth:
+        end_lines.append(r"}")
+    end_lines.extend([
         r"\end{table}",
         "",
     ])
+
+    lines.extend(end_lines)
     return "\n".join(lines)
 
 
@@ -417,6 +440,9 @@ def main() -> int:
                 caption=rf"Background cutflow for {latex_escape_text(year)}",
                 label=f"cutflow-bkg-mc-{year}",
                 columns=columns,
+                font_size=r"\small",
+                resize_to_textwidth=False,
+                overall_eff_digits=5,
             )
             written.append(write_table(output_dir, f"cutflow_Bkg_MC_{year}.tex", table))
             all_tables.append(table)
@@ -427,6 +453,9 @@ def main() -> int:
                 caption=rf"Data cutflow for {latex_escape_text(year)}",
                 label=f"cutflow-data-{year}",
                 columns=columns,
+                font_size=r"\small",
+                resize_to_textwidth=False,
+                overall_eff_digits=5,
             )
             written.append(write_table(output_dir, f"cutflow_Data_{year}.tex", table))
             all_tables.append(table)
