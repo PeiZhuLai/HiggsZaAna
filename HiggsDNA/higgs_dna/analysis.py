@@ -420,8 +420,7 @@ class AnalysisManager():
             self.save()
             raise
 
-        if self.merge_outputs:
-            self.jobs_manager.merge_outputs(self.output_dir)
+        if self.merge_outputs and self.jobs_manager.merge_completed_task_outputs():
             self.save()
 
         self.jobs_manager.summarize()

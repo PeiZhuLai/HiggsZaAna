@@ -171,9 +171,8 @@ class JobsManager():
         """
         Merge per-job outputs for tasks that have already completed.
 
-        This intentionally does not create the top-level merged parquet files
-        across tasks; those are still written by ``merge_outputs`` once the
-        whole analysis is complete.
+        This intentionally does not create top-level merged parquet files
+        across tasks; it only writes ``<sample>_<era>/merged_*.parquet``.
         """
         merged_any = False
         for task in self.tasks:
