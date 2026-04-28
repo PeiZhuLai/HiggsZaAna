@@ -14,7 +14,7 @@ sample_list="${SAMPLE_LIST:-Data}"
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
-merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
+merge_outputs="${MERGE_OUTPUTS:-1}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 

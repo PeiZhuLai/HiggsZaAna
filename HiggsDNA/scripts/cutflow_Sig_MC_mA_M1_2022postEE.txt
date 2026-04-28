@@ -1,0 +1,903 @@
+# jobs used: 9
+# genWeightSum total (used for *_w normalization, summed over jobs with value): 498000.000000
+# xs[pb]=0.1 pfTofb=1000.0 lumi[fb^-1]=26.6717
+# *_w additional scale = xs*pfTofb*lumi = 2667.170000
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_1/18369407.0.out  genWeightSum=15000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_10/18369416.0.out  genWeightSum=9000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_2/18369408.0.out  genWeightSum=1000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_3/18369409.0.out  genWeightSum=4000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_4/18369410.0.out  genWeightSum=185000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_5/18369411.0.out  genWeightSum=21000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_7/18369413.0.out  genWeightSum=1000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_8/18369414.0.out  genWeightSum=1000.0
+#   /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC/mA_M1_2022postEE/job_9/18369415.0.out  genWeightSum=261000.0
+
+Cut Type: zgammas
+  Initial Events                      & 498000 \\
+  $N_{l}\geq 2$                       & 218822 \\
+  Trigger                             & 207667 \\
+  Lepton Trigger $p_T$ Cut            & 205593 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 204015 \\
+  $N_{\gamma}\geq 2$                  & 23304 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 22417 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 21695 \\
+  Event Filtering                     & 21690 \\
+  Total Baseline Events               & 21690 \\
+
+Cut Type: zgammas_ele
+  Initial Events                      & 498000 \\
+  $N_{e}\geq 2$                       & 104814 \\
+  Trigger                             & 95576 \\
+  Lepton Trigger $p_T$ Cut            & 94038 \\
+  $m_{ee} > 50\,\mathrm{GeV}$         & 93305 \\
+  $N_{\gamma}\geq 2$                  & 10402 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 9965 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 9646 \\
+  Event Filtering                     & 9644 \\
+  Total Baseline Events               & 9644 \\
+
+Cut Type: zgammas_mu
+  Initial Events                      & 498000 \\
+  $N_{\mu}\geq 2$                     & 114008 \\
+  Trigger                             & 112070 \\
+  Lepton Trigger $p_T$ Cut            & 111543 \\
+  $m_{\mu\mu} > 50\,\mathrm{GeV}$     & 110707 \\
+  $N_{\gamma}\geq 2$                  & 12902 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 12452 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 12049 \\
+  Event Filtering                     & 12046 \\
+  Total Baseline Events               & 12046 \\
+
+Cut Type: zgammas_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  $N_{\gamma}\geq 2$                  & 0.563868 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.548527 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.527899 \\
+  Event Filtering                     & 0.527861 \\
+  Total Baseline Events               & 0.527861 \\
+
+Cut Type: zgammas_ele_w
+  Initial Events                      & 11.078357 \\
+  $N_{e}\geq 2$                       & 2.520093 \\
+  Trigger                             & 2.341647 \\
+  Lepton Trigger $p_T$ Cut            & 2.312017 \\
+  $m_{ee} > 50\,\mathrm{GeV}$         & 2.295688 \\
+  $N_{\gamma}\geq 2$                  & 0.240054 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.234294 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.224111 \\
+  Event Filtering                     & 0.224094 \\
+  Total Baseline Events               & 0.224094 \\
+
+Cut Type: zgammas_mu_w
+  Initial Events                      & 11.078357 \\
+  $N_{\mu}\geq 2$                     & 2.868161 \\
+  Trigger                             & 2.812939 \\
+  Lepton Trigger $p_T$ Cut            & 2.801433 \\
+  $m_{\mu\mu} > 50\,\mathrm{GeV}$     & 2.777588 \\
+  $N_{\gamma}\geq 2$                  & 0.323814 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.314233 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.303789 \\
+  Event Filtering                     & 0.303768 \\
+  Total Baseline Events               & 0.303768 \\
+
+Cut Type: zgammas_ele_elesip3d
+  Initial Events                      & 498000 \\
+  $N_{e}\geq 2$                       & 104814 \\
+  ele_sip3d_cut                       & 97490 \\
+  Trigger                             & 89224 \\
+  Lepton Trigger $p_T$ Cut            & 87863 \\
+  $m_{ee} > 50\,\mathrm{GeV}$         & 87288 \\
+  $N_{\gamma}\geq 2$                  & 9906 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 9501 \\
+  $95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 9199 \\
+  Event Filtering                     & 9197 \\
+  Total Baseline Events               & 9197 \\
+
+Cut Type: zgammas_ele_elesip3d_w
+  Initial Events                      & 11.078357 \\
+  $N_{e}\geq 2$                       & 2.520093 \\
+  ele_sip3d_cut                       & 2.320103 \\
+  Trigger                             & 2.156840 \\
+  Lepton Trigger $p_T$ Cut            & 2.130379 \\
+  $m_{ee} > 50\,\mathrm{GeV}$         & 2.117574 \\
+  $N_{\gamma}\geq 2$                  & 0.228845 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.223323 \\
+  $95 < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.215351 \\
+  Event Filtering                     & 0.215335 \\
+  Total Baseline Events               & 0.215335 \\
+
+Cut Type: zgammas_phid_custom_tight
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 137173 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 30453 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 29463 \\
+  Event Filtering                     & 29456 \\
+  Total Baseline Events               & 29456 \\
+
+Cut Type: zgammas_phid_custom_extend_tight
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 115157 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 17640 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 17035 \\
+  Event Filtering                     & 17029 \\
+  Total Baseline Events               & 17029 \\
+
+Cut Type: zgammas_phid_sieie_tight
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 129893 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 18489 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 17844 \\
+  Event Filtering                     & 17838 \\
+  Total Baseline Events               & 17838 \\
+
+Cut Type: zgammas_phid_PFECalIso_tight
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 111160 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 11698 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 11136 \\
+  Event Filtering                     & 11134 \\
+  Total Baseline Events               & 11134 \\
+
+Cut Type: zgammas_phid_official_tight
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 89155 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 9316 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 8898 \\
+  Event Filtering                     & 8898 \\
+  Total Baseline Events               & 8898 \\
+
+Cut Type: zgammas_phid_custom_medium
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 141943 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 30453 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 29463 \\
+  Event Filtering                     & 29456 \\
+  Total Baseline Events               & 29456 \\
+
+Cut Type: zgammas_phid_custom_extend_medium
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 119186 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 17917 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 17298 \\
+  Event Filtering                     & 17292 \\
+  Total Baseline Events               & 17292 \\
+
+Cut Type: zgammas_phid_sieie_medium
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 130070 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 18529 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 17882 \\
+  Event Filtering                     & 17876 \\
+  Total Baseline Events               & 17876 \\
+
+Cut Type: zgammas_phid_PFECalIso_medium
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 112362 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 11863 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 11290 \\
+  Event Filtering                     & 11286 \\
+  Total Baseline Events               & 11286 \\
+
+Cut Type: zgammas_phid_official_medium
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 93701 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 9810 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 9380 \\
+  Event Filtering                     & 9378 \\
+  Total Baseline Events               & 9378 \\
+
+Cut Type: zgammas_phid_custom_loose
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 150734 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 30453 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 29463 \\
+  Event Filtering                     & 29456 \\
+  Total Baseline Events               & 29456 \\
+
+Cut Type: zgammas_phid_custom_extend_loose
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 131752 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 19808 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 19124 \\
+  Event Filtering                     & 19118 \\
+  Total Baseline Events               & 19118 \\
+
+Cut Type: zgammas_phid_sieie_loose
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 136319 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 20056 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 19354 \\
+  Event Filtering                     & 19348 \\
+  Total Baseline Events               & 19348 \\
+
+Cut Type: zgammas_phid_PFECalIso_loose
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 119631 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 12713 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 12084 \\
+  Event Filtering                     & 12080 \\
+  Total Baseline Events               & 12080 \\
+
+Cut Type: zgammas_phid_official_loose
+  Initial Events                      & 614094 \\
+  $N_{l}\geq 2$                       & 296865 \\
+  Trigger                             & 283347 \\
+  Lepton Trigger $p_T$ Cut            & 280898 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 278809 \\
+  Photon Kinematic Cuts               & 159325 \\
+  $N_{\gamma}\geq 2$                  & 111585 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 11869 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 11371 \\
+  Event Filtering                     & 11367 \\
+  Total Baseline Events               & 11367 \\
+
+Cut Type: zgammas_phid_custom_tight_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.513927 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.548527 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.527899 \\
+  Event Filtering                     & 0.527861 \\
+  Total Baseline Events               & 0.527861 \\
+
+Cut Type: zgammas_phid_custom_extend_tight_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.094060 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.309973 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.299453 \\
+  Event Filtering                     & 0.299424 \\
+  Total Baseline Events               & 0.299424 \\
+
+Cut Type: zgammas_phid_sieie_tight_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.369829 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.326984 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.315872 \\
+  Event Filtering                     & 0.315843 \\
+  Total Baseline Events               & 0.315843 \\
+
+Cut Type: zgammas_phid_PFECalIso_tight_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.026221 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.209642 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.196930 \\
+  Event Filtering                     & 0.196920 \\
+  Total Baseline Events               & 0.196920 \\
+
+Cut Type: zgammas_phid_official_tight_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 1.620037 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.157754 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.149532 \\
+  Event Filtering                     & 0.149532 \\
+  Total Baseline Events               & 0.149532 \\
+
+Cut Type: zgammas_phid_custom_medium_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.604926 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.548527 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.527899 \\
+  Event Filtering                     & 0.527861 \\
+  Total Baseline Events               & 0.527861 \\
+
+Cut Type: zgammas_phid_custom_extend_medium_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.167677 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.315424 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.304847 \\
+  Event Filtering                     & 0.304818 \\
+  Total Baseline Events               & 0.304818 \\
+
+Cut Type: zgammas_phid_sieie_medium_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.373128 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.328958 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.317840 \\
+  Event Filtering                     & 0.317811 \\
+  Total Baseline Events               & 0.317811 \\
+
+Cut Type: zgammas_phid_PFECalIso_medium_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.047812 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.211620 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.198860 \\
+  Event Filtering                     & 0.198843 \\
+  Total Baseline Events               & 0.198843 \\
+
+Cut Type: zgammas_phid_official_medium_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 1.712010 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.169056 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.160340 \\
+  Event Filtering                     & 0.160334 \\
+  Total Baseline Events               & 0.160334 \\
+
+Cut Type: zgammas_phid_custom_loose_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.758194 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.548527 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.527899 \\
+  Event Filtering                     & 0.527861 \\
+  Total Baseline Events               & 0.527861 \\
+
+Cut Type: zgammas_phid_custom_extend_loose_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.385635 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.343807 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.331709 \\
+  Event Filtering                     & 0.331680 \\
+  Total Baseline Events               & 0.331680 \\
+
+Cut Type: zgammas_phid_sieie_loose_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.475946 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.349526 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.337237 \\
+  Event Filtering                     & 0.337208 \\
+  Total Baseline Events               & 0.337208 \\
+
+Cut Type: zgammas_phid_PFECalIso_loose_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.180065 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.227795 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.213181 \\
+  Event Filtering                     & 0.213164 \\
+  Total Baseline Events               & 0.213164 \\
+
+Cut Type: zgammas_phid_official_loose_w
+  Initial Events                      & 11.078357 \\
+  $N_{l}\geq 2$                       & 5.388253 \\
+  Trigger                             & 5.154747 \\
+  Lepton Trigger $p_T$ Cut            & 5.113565 \\
+  $m_{ll} > 50\,\mathrm{GeV}$         & 5.073316 \\
+  Photon Kinematic Cuts               & 2.919222 \\
+  $N_{\gamma}\geq 2$                  & 2.023096 \\
+  $m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$ & 0.205747 \\
+  $95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$ & 0.196325 \\
+  Event Filtering                     & 0.196308 \\
+  Total Baseline Events               & 0.196308 \\
+
+Trigger efficiency payloads:
+TrigEff: trigeff_ele_lead_OR_ele
+  overall                               & 356646 & 257628 & 0.722363 \\
+  pt8to10                             & 5824 & 22 & 0.003777 \\
+  pt10to12                            & 4618 & 48 & 0.010394 \\
+  pt12to14                            & 5146 & 118 & 0.022930 \\
+  pt14to16                            & 5770 & 164 & 0.028423 \\
+  pt16to18                            & 6294 & 206 & 0.032730 \\
+  pt18to20                            & 7208 & 266 & 0.036903 \\
+  pt20to22                            & 6256 & 258 & 0.041240 \\
+  pt22to24                            & 7190 & 598 & 0.083171 \\
+  pt24to26                            & 7746 & 1216 & 0.156984 \\
+  pt26to28                            & 8120 & 1772 & 0.218227 \\
+  pt28to30                            & 8754 & 2656 & 0.303404 \\
+  pt30to32                            & 9110 & 5468 & 0.600220 \\
+  pt32to34                            & 9550 & 7018 & 0.734869 \\
+  pt34to36                            & 10426 & 8194 & 0.785920 \\
+  pt36to38                            & 11460 & 9266 & 0.808551 \\
+  pt38to40                            & 12002 & 10012 & 0.834194 \\
+  pt40to42                            & 13332 & 11388 & 0.854185 \\
+  pt42to44                            & 15072 & 13332 & 0.884554 \\
+  pt44to46                            & 17018 & 15216 & 0.894112 \\
+  pt46to48                            & 18736 & 17034 & 0.909159 \\
+  pt48to50                            & 18506 & 16888 & 0.912569 \\
+  pt50to52                            & 17052 & 15752 & 0.923763 \\
+  pt52to54                            & 14810 & 13650 & 0.921675 \\
+  pt54to56                            & 12950 & 11938 & 0.921853 \\
+  pt56to58                            & 11392 & 10454 & 0.917662 \\
+  pt58to60                            & 9554 & 8788 & 0.919824 \\
+  pt60to62                            & 8192 & 7512 & 0.916992 \\
+  pt62to64                            & 7010 & 6388 & 0.911270 \\
+  pt64to66                            & 6026 & 5516 & 0.915367 \\
+  pt66to68                            & 5216 & 4756 & 0.911810 \\
+  pt68to70                            & 4550 & 4186 & 0.920000 \\
+  pt70to72                            & 4004 & 3650 & 0.911588 \\
+  pt72to74                            & 3588 & 3304 & 0.920847 \\
+  pt74to76                            & 3256 & 2970 & 0.912162 \\
+  pt76to78                            & 2840 & 2626 & 0.924648 \\
+  pt78to80                            & 2498 & 2328 & 0.931946 \\
+  pt80to82                            & 2278 & 2096 & 0.920105 \\
+  pt82to84                            & 2120 & 1926 & 0.908491 \\
+  pt84to86                            & 2038 & 1862 & 0.913641 \\
+  pt86to88                            & 1816 & 1668 & 0.918502 \\
+  pt88to90                            & 1712 & 1566 & 0.914720 \\
+  pt90to92                            & 1468 & 1382 & 0.941417 \\
+  pt92to94                            & 1450 & 1326 & 0.914483 \\
+  pt94to96                            & 1224 & 1118 & 0.913399 \\
+  pt96to98                            & 1154 & 1068 & 0.925477 \\
+  pt98to100                           & 1022 & 932 & 0.911937 \\
+  pt100toInf                          & 19288 & 17726 & 0.919017 \\
+
+TrigEff: trigeff_ele_lead_double_ele
+  overall                               & 356646 & 176970 & 0.496206 \\
+  pt8to10                             & 5824 & 6 & 0.001030 \\
+  pt10to12                            & 4618 & 18 & 0.003898 \\
+  pt12to14                            & 5146 & 94 & 0.018267 \\
+  pt14to16                            & 5770 & 150 & 0.025997 \\
+  pt16to18                            & 6294 & 186 & 0.029552 \\
+  pt18to20                            & 7208 & 230 & 0.031909 \\
+  pt20to22                            & 6256 & 246 & 0.039322 \\
+  pt22to24                            & 7190 & 566 & 0.078720 \\
+  pt24to26                            & 7746 & 1196 & 0.154402 \\
+  pt26to28                            & 8120 & 1718 & 0.211576 \\
+  pt28to30                            & 8754 & 2140 & 0.244460 \\
+  pt30to32                            & 9110 & 2634 & 0.289133 \\
+  pt32to34                            & 9550 & 3146 & 0.329424 \\
+  pt34to36                            & 10426 & 3930 & 0.376942 \\
+  pt36to38                            & 11460 & 4882 & 0.426003 \\
+  pt38to40                            & 12002 & 5690 & 0.474088 \\
+  pt40to42                            & 13332 & 7144 & 0.535854 \\
+  pt42to44                            & 15072 & 8722 & 0.578689 \\
+  pt44to46                            & 17018 & 10632 & 0.624750 \\
+  pt46to48                            & 18736 & 12382 & 0.660867 \\
+  pt48to50                            & 18506 & 12460 & 0.673295 \\
+  pt50to52                            & 17052 & 11826 & 0.693526 \\
+  pt52to54                            & 14810 & 10216 & 0.689804 \\
+  pt54to56                            & 12950 & 8894 & 0.686795 \\
+  pt56to58                            & 11392 & 7920 & 0.695225 \\
+  pt58to60                            & 9554 & 6562 & 0.686833 \\
+  pt60to62                            & 8192 & 5484 & 0.669434 \\
+  pt62to64                            & 7010 & 4588 & 0.654494 \\
+  pt64to66                            & 6026 & 3998 & 0.663458 \\
+  pt66to68                            & 5216 & 3450 & 0.661426 \\
+  pt68to70                            & 4550 & 2920 & 0.641758 \\
+  pt70to72                            & 4004 & 2594 & 0.647852 \\
+  pt72to74                            & 3588 & 2390 & 0.666109 \\
+  pt74to76                            & 3256 & 2080 & 0.638821 \\
+  pt76to78                            & 2840 & 1820 & 0.640845 \\
+  pt78to80                            & 2498 & 1604 & 0.642114 \\
+  pt80to82                            & 2278 & 1442 & 0.633011 \\
+  pt82to84                            & 2120 & 1328 & 0.626415 \\
+  pt84to86                            & 2038 & 1332 & 0.653582 \\
+  pt86to88                            & 1816 & 1134 & 0.624449 \\
+  pt88to90                            & 1712 & 1094 & 0.639019 \\
+  pt90to92                            & 1468 & 928 & 0.632153 \\
+  pt92to94                            & 1450 & 938 & 0.646897 \\
+  pt94to96                            & 1224 & 766 & 0.625817 \\
+  pt96to98                            & 1154 & 754 & 0.653380 \\
+  pt98to100                           & 1022 & 624 & 0.610568 \\
+  pt100toInf                          & 19288 & 12112 & 0.627955 \\
+
+TrigEff: trigeff_ele_sublead_OR_ele
+  overall                               & 212310 & 193556 & 0.911667 \\
+  pt8to10                             & 2812 & 1550 & 0.551209 \\
+  pt10to12                            & 2886 & 1756 & 0.608455 \\
+  pt12to14                            & 4174 & 2958 & 0.708673 \\
+  pt14to16                            & 5082 & 3884 & 0.764266 \\
+  pt16to18                            & 6278 & 4942 & 0.787193 \\
+  pt18to20                            & 8038 & 6538 & 0.813386 \\
+  pt20to22                            & 7966 & 6744 & 0.846598 \\
+  pt22to24                            & 9870 & 8606 & 0.871935 \\
+  pt24to26                            & 11106 & 9712 & 0.874482 \\
+  pt26to28                            & 12228 & 10912 & 0.892378 \\
+  pt28to30                            & 13514 & 12136 & 0.898032 \\
+  pt30to32                            & 14436 & 13596 & 0.941812 \\
+  pt32to34                            & 15252 & 14574 & 0.955547 \\
+  pt34to36                            & 16142 & 15544 & 0.962954 \\
+  pt36to38                            & 15604 & 15092 & 0.967188 \\
+  pt38to40                            & 14700 & 14226 & 0.967755 \\
+  pt40to42                            & 13688 & 13296 & 0.971362 \\
+  pt42to44                            & 11016 & 10710 & 0.972222 \\
+  pt44to46                            & 7674 & 7452 & 0.971071 \\
+  pt46to48                            & 4706 & 4594 & 0.976201 \\
+  pt48to50                            & 2616 & 2558 & 0.977829 \\
+  pt50to52                            & 1722 & 1694 & 0.983740 \\
+  pt52to54                            & 1376 & 1322 & 0.960756 \\
+  pt54to56                            & 1068 & 1046 & 0.979401 \\
+  pt56to58                            & 850 & 838 & 0.985882 \\
+  pt58to60                            & 700 & 688 & 0.982857 \\
+  pt60to62                            & 624 & 610 & 0.977564 \\
+  pt62to64                            & 504 & 490 & 0.972222 \\
+  pt64to66                            & 544 & 536 & 0.985294 \\
+  pt66to68                            & 458 & 446 & 0.973799 \\
+  pt68to70                            & 400 & 384 & 0.960000 \\
+  pt70to72                            & 338 & 332 & 0.982249 \\
+  pt72to74                            & 362 & 360 & 0.994475 \\
+  pt74to76                            & 302 & 302 & 1.000000 \\
+  pt76to78                            & 246 & 240 & 0.975610 \\
+  pt78to80                            & 264 & 252 & 0.954545 \\
+  pt80to82                            & 220 & 216 & 0.981818 \\
+  pt82to84                            & 164 & 160 & 0.975610 \\
+  pt84to86                            & 182 & 180 & 0.989011 \\
+  pt86to88                            & 138 & 136 & 0.985507 \\
+  pt88to90                            & 152 & 148 & 0.973684 \\
+  pt90to92                            & 122 & 120 & 0.983607 \\
+  pt92to94                            & 98 & 96 & 0.979592 \\
+  pt94to96                            & 96 & 94 & 0.979167 \\
+  pt96to98                            & 78 & 78 & 1.000000 \\
+  pt98to100                           & 88 & 88 & 1.000000 \\
+  pt100toInf                          & 1426 & 1320 & 0.925666 \\
+
+TrigEff: trigeff_ele_sublead_double_ele
+  overall                               & 212310 & 163490 & 0.770053 \\
+  pt8to10                             & 2812 & 134 & 0.047653 \\
+  pt10to12                            & 2886 & 252 & 0.087318 \\
+  pt12to14                            & 4174 & 1840 & 0.440824 \\
+  pt14to16                            & 5082 & 3052 & 0.600551 \\
+  pt16to18                            & 6278 & 3988 & 0.635234 \\
+  pt18to20                            & 8038 & 5510 & 0.685494 \\
+  pt20to22                            & 7966 & 5708 & 0.716545 \\
+  pt22to24                            & 9870 & 7414 & 0.751165 \\
+  pt24to26                            & 11106 & 8414 & 0.757608 \\
+  pt26to28                            & 12228 & 9428 & 0.771017 \\
+  pt28to30                            & 13514 & 10598 & 0.784224 \\
+  pt30to32                            & 14436 & 11620 & 0.804932 \\
+  pt32to34                            & 15252 & 12370 & 0.811041 \\
+  pt34to36                            & 16142 & 13326 & 0.825548 \\
+  pt36to38                            & 15604 & 13058 & 0.836837 \\
+  pt38to40                            & 14700 & 12350 & 0.840136 \\
+  pt40to42                            & 13688 & 11608 & 0.848042 \\
+  pt42to44                            & 11016 & 9368 & 0.850399 \\
+  pt44to46                            & 7674 & 6608 & 0.861089 \\
+  pt46to48                            & 4706 & 3980 & 0.845729 \\
+  pt48to50                            & 2616 & 2226 & 0.850917 \\
+  pt50to52                            & 1722 & 1496 & 0.868757 \\
+  pt52to54                            & 1376 & 1172 & 0.851744 \\
+  pt54to56                            & 1068 & 898 & 0.840824 \\
+  pt56to58                            & 850 & 754 & 0.887059 \\
+  pt58to60                            & 700 & 610 & 0.871429 \\
+  pt60to62                            & 624 & 532 & 0.852564 \\
+  pt62to64                            & 504 & 424 & 0.841270 \\
+  pt64to66                            & 544 & 448 & 0.823529 \\
+  pt66to68                            & 458 & 400 & 0.873362 \\
+  pt68to70                            & 400 & 340 & 0.850000 \\
+  pt70to72                            & 338 & 294 & 0.869822 \\
+  pt72to74                            & 362 & 324 & 0.895028 \\
+  pt74to76                            & 302 & 256 & 0.847682 \\
+  pt76to78                            & 246 & 218 & 0.886179 \\
+  pt78to80                            & 264 & 224 & 0.848485 \\
+  pt80to82                            & 220 & 182 & 0.827273 \\
+  pt82to84                            & 164 & 144 & 0.878049 \\
+  pt84to86                            & 182 & 162 & 0.890110 \\
+  pt86to88                            & 138 & 116 & 0.840580 \\
+  pt88to90                            & 152 & 122 & 0.802632 \\
+  pt90to92                            & 122 & 104 & 0.852459 \\
+  pt92to94                            & 98 & 80 & 0.816327 \\
+  pt94to96                            & 96 & 82 & 0.854167 \\
+  pt96to98                            & 78 & 66 & 0.846154 \\
+  pt98to100                           & 88 & 74 & 0.840909 \\
+  pt100toInf                          & 1426 & 1116 & 0.782609 \\
+
+TrigEff: trigeff_mu_lead_OR_mu
+  overall                               & 351184 & 302206 & 0.860535 \\
+  pt8to10                             & 3758 & 90 & 0.023949 \\
+  pt10to12                            & 4334 & 134 & 0.030918 \\
+  pt12to14                            & 4450 & 164 & 0.036854 \\
+  pt14to16                            & 5096 & 198 & 0.038854 \\
+  pt16to18                            & 5498 & 472 & 0.085849 \\
+  pt18to20                            & 5946 & 842 & 0.141608 \\
+  pt20to22                            & 6068 & 1122 & 0.184904 \\
+  pt22to24                            & 6526 & 1472 & 0.225559 \\
+  pt24to26                            & 7052 & 6074 & 0.861316 \\
+  pt26to28                            & 7184 & 6334 & 0.881682 \\
+  pt28to30                            & 8112 & 7278 & 0.897189 \\
+  pt30to32                            & 8540 & 7790 & 0.912178 \\
+  pt32to34                            & 9220 & 8506 & 0.922560 \\
+  pt34to36                            & 10142 & 9488 & 0.935516 \\
+  pt36to38                            & 10954 & 10332 & 0.943217 \\
+  pt38to40                            & 11674 & 11120 & 0.952544 \\
+  pt40to42                            & 13264 & 12740 & 0.960495 \\
+  pt42to44                            & 14926 & 14408 & 0.965295 \\
+  pt44to46                            & 17298 & 16776 & 0.969823 \\
+  pt46to48                            & 19304 & 18890 & 0.978554 \\
+  pt48to50                            & 19368 & 18978 & 0.979864 \\
+  pt50to52                            & 17394 & 17024 & 0.978728 \\
+  pt52to54                            & 15876 & 15550 & 0.979466 \\
+  pt54to56                            & 13984 & 13730 & 0.981836 \\
+  pt56to58                            & 11838 & 11620 & 0.981585 \\
+  pt58to60                            & 10196 & 9954 & 0.976265 \\
+  pt60to62                            & 8490 & 8272 & 0.974323 \\
+  pt62to64                            & 7052 & 6906 & 0.979297 \\
+  pt64to66                            & 6310 & 6158 & 0.975911 \\
+  pt66to68                            & 5230 & 5110 & 0.977055 \\
+  pt68to70                            & 4674 & 4562 & 0.976038 \\
+  pt70to72                            & 4184 & 4100 & 0.979924 \\
+  pt72to74                            & 3578 & 3486 & 0.974287 \\
+  pt74to76                            & 3194 & 3120 & 0.976832 \\
+  pt76to78                            & 2894 & 2820 & 0.974430 \\
+  pt78to80                            & 2522 & 2456 & 0.973830 \\
+  pt80to82                            & 2350 & 2292 & 0.975319 \\
+  pt82to84                            & 2162 & 2110 & 0.975948 \\
+  pt84to86                            & 2070 & 2018 & 0.974879 \\
+  pt86to88                            & 1796 & 1748 & 0.973274 \\
+  pt88to90                            & 1692 & 1628 & 0.962175 \\
+  pt90to92                            & 1486 & 1452 & 0.977120 \\
+  pt92to94                            & 1346 & 1322 & 0.982169 \\
+  pt94to96                            & 1290 & 1254 & 0.972093 \\
+  pt96to98                            & 1132 & 1098 & 0.969965 \\
+  pt98to100                           & 1092 & 1072 & 0.981685 \\
+  pt100toInf                          & 18638 & 18136 & 0.973066 \\
+
+TrigEff: trigeff_mu_lead_double_mu
+  overall                               & 351184 & 224644 & 0.639676 \\
+  pt8to10                             & 3758 & 88 & 0.023417 \\
+  pt10to12                            & 4334 & 128 & 0.029534 \\
+  pt12to14                            & 4450 & 160 & 0.035955 \\
+  pt14to16                            & 5096 & 194 & 0.038069 \\
+  pt16to18                            & 5498 & 470 & 0.085486 \\
+  pt18to20                            & 5946 & 840 & 0.141271 \\
+  pt20to22                            & 6068 & 1116 & 0.183916 \\
+  pt22to24                            & 6526 & 1380 & 0.211462 \\
+  pt24to26                            & 7052 & 1860 & 0.263755 \\
+  pt26to28                            & 7184 & 2170 & 0.302060 \\
+  pt28to30                            & 8112 & 2844 & 0.350592 \\
+  pt30to32                            & 8540 & 3532 & 0.413583 \\
+  pt32to34                            & 9220 & 4154 & 0.450542 \\
+  pt34to36                            & 10142 & 5080 & 0.500887 \\
+  pt36to38                            & 10954 & 6140 & 0.560526 \\
+  pt38to40                            & 11674 & 7176 & 0.614699 \\
+  pt40to42                            & 13264 & 8778 & 0.661791 \\
+  pt42to44                            & 14926 & 10698 & 0.716736 \\
+  pt44to46                            & 17298 & 13004 & 0.751763 \\
+  pt46to48                            & 19304 & 15276 & 0.791339 \\
+  pt48to50                            & 19368 & 15734 & 0.812371 \\
+  pt50to52                            & 17394 & 14224 & 0.817753 \\
+  pt52to54                            & 15876 & 12998 & 0.818720 \\
+  pt54to56                            & 13984 & 11508 & 0.822941 \\
+  pt56to58                            & 11838 & 9796 & 0.827505 \\
+  pt58to60                            & 10196 & 8380 & 0.821891 \\
+  pt60to62                            & 8490 & 6892 & 0.811779 \\
+  pt62to64                            & 7052 & 5774 & 0.818775 \\
+  pt64to66                            & 6310 & 5080 & 0.805071 \\
+  pt66to68                            & 5230 & 4196 & 0.802294 \\
+  pt68to70                            & 4674 & 3774 & 0.807445 \\
+  pt70to72                            & 4184 & 3358 & 0.802581 \\
+  pt72to74                            & 3578 & 2864 & 0.800447 \\
+  pt74to76                            & 3194 & 2516 & 0.787727 \\
+  pt76to78                            & 2894 & 2338 & 0.807878 \\
+  pt78to80                            & 2522 & 1964 & 0.778747 \\
+  pt80to82                            & 2350 & 1868 & 0.794894 \\
+  pt82to84                            & 2162 & 1696 & 0.784459 \\
+  pt84to86                            & 2070 & 1648 & 0.796135 \\
+  pt86to88                            & 1796 & 1480 & 0.824053 \\
+  pt88to90                            & 1692 & 1340 & 0.791962 \\
+  pt90to92                            & 1486 & 1252 & 0.842530 \\
+  pt92to94                            & 1346 & 1044 & 0.775632 \\
+  pt94to96                            & 1290 & 1020 & 0.790698 \\
+  pt96to98                            & 1132 & 886 & 0.782686 \\
+  pt98to100                           & 1092 & 920 & 0.842491 \\
+  pt100toInf                          & 18638 & 15006 & 0.805129 \\
+
+TrigEff: trigeff_mu_sublead_OR_mu
+  overall                               & 225666 & 222370 & 0.985394 \\
+  pt8to10                             & 2430 & 2140 & 0.880658 \\
+  pt10to12                            & 3358 & 3070 & 0.914235 \\
+  pt12to14                            & 4366 & 4006 & 0.917545 \\
+  pt14to16                            & 5240 & 4966 & 0.947710 \\
+  pt16to18                            & 6426 & 6176 & 0.961096 \\
+  pt18to20                            & 7600 & 7330 & 0.964474 \\
+  pt20to22                            & 8762 & 8468 & 0.966446 \\
+  pt22to24                            & 10138 & 9776 & 0.964293 \\
+  pt24to26                            & 11418 & 11336 & 0.992818 \\
+  pt26to28                            & 12464 & 12380 & 0.993261 \\
+  pt28to30                            & 13944 & 13860 & 0.993976 \\
+  pt30to32                            & 15222 & 15140 & 0.994613 \\
+  pt32to34                            & 16378 & 16278 & 0.993894 \\
+  pt34to36                            & 17226 & 17140 & 0.995008 \\
+  pt36to38                            & 17176 & 17100 & 0.995575 \\
+  pt38to40                            & 16562 & 16470 & 0.994445 \\
+  pt40to42                            & 15070 & 15024 & 0.996948 \\
+  pt42to44                            & 12558 & 12502 & 0.995541 \\
+  pt44to46                            & 8850 & 8818 & 0.996384 \\
+  pt46to48                            & 4802 & 4782 & 0.995835 \\
+  pt48to50                            & 2912 & 2902 & 0.996566 \\
+  pt50to52                            & 1938 & 1928 & 0.994840 \\
+  pt52to54                            & 1422 & 1412 & 0.992968 \\
+  pt54to56                            & 1144 & 1142 & 0.998252 \\
+  pt56to58                            & 914 & 910 & 0.995624 \\
+  pt58to60                            & 798 & 796 & 0.997494 \\
+  pt60to62                            & 690 & 688 & 0.997101 \\
+  pt62to64                            & 574 & 574 & 1.000000 \\
+  pt64to66                            & 504 & 502 & 0.996032 \\
+  pt66to68                            & 422 & 420 & 0.995261 \\
+  pt68to70                            & 416 & 416 & 1.000000 \\
+  pt70to72                            & 356 & 356 & 1.000000 \\
+  pt72to74                            & 302 & 300 & 0.993377 \\
+  pt74to76                            & 306 & 306 & 1.000000 \\
+  pt76to78                            & 230 & 230 & 1.000000 \\
+  pt78to80                            & 220 & 218 & 0.990909 \\
+  pt80to82                            & 224 & 224 & 1.000000 \\
+  pt82to84                            & 164 & 164 & 1.000000 \\
+  pt84to86                            & 156 & 154 & 0.987179 \\
+  pt86to88                            & 182 & 180 & 0.989011 \\
+  pt88to90                            & 140 & 140 & 1.000000 \\
+  pt90to92                            & 114 & 112 & 0.982456 \\
+  pt92to94                            & 134 & 134 & 1.000000 \\
+  pt94to96                            & 120 & 120 & 1.000000 \\
+  pt96to98                            & 100 & 100 & 1.000000 \\
+  pt98to100                           & 82 & 82 & 1.000000 \\
+  pt100toInf                          & 1112 & 1098 & 0.987410 \\
+
+TrigEff: trigeff_mu_sublead_double_mu
+  overall                               & 225666 & 210584 & 0.933167 \\
+  pt8to10                             & 2430 & 2038 & 0.838683 \\
+  pt10to12                            & 3358 & 2948 & 0.877904 \\
+  pt12to14                            & 4366 & 3862 & 0.884563 \\
+  pt14to16                            & 5240 & 4784 & 0.912977 \\
+  pt16to18                            & 6426 & 5988 & 0.931839 \\
+  pt18to20                            & 7600 & 7048 & 0.927368 \\
+  pt20to22                            & 8762 & 8218 & 0.937914 \\
+  pt22to24                            & 10138 & 9448 & 0.931939 \\
+  pt24to26                            & 11418 & 10708 & 0.937817 \\
+  pt26to28                            & 12464 & 11706 & 0.939185 \\
+  pt28to30                            & 13944 & 13108 & 0.940046 \\
+  pt30to32                            & 15222 & 14248 & 0.936014 \\
+  pt32to34                            & 16378 & 15276 & 0.932715 \\
+  pt34to36                            & 17226 & 16128 & 0.936259 \\
+  pt36to38                            & 17176 & 16146 & 0.940033 \\
+  pt38to40                            & 16562 & 15500 & 0.935877 \\
+  pt40to42                            & 15070 & 14158 & 0.939482 \\
+  pt42to44                            & 12558 & 11798 & 0.939481 \\
+  pt44to46                            & 8850 & 8276 & 0.935141 \\
+  pt46to48                            & 4802 & 4478 & 0.932528 \\
+  pt48to50                            & 2912 & 2744 & 0.942308 \\
+  pt50to52                            & 1938 & 1820 & 0.939112 \\
+  pt52to54                            & 1422 & 1328 & 0.933896 \\
+  pt54to56                            & 1144 & 1082 & 0.945804 \\
+  pt56to58                            & 914 & 858 & 0.938731 \\
+  pt58to60                            & 798 & 762 & 0.954887 \\
+  pt60to62                            & 690 & 660 & 0.956522 \\
+  pt62to64                            & 574 & 530 & 0.923345 \\
+  pt64to66                            & 504 & 472 & 0.936508 \\
+  pt66to68                            & 422 & 394 & 0.933649 \\
+  pt68to70                            & 416 & 402 & 0.966346 \\
+  pt70to72                            & 356 & 320 & 0.898876 \\
+  pt72to74                            & 302 & 290 & 0.960265 \\
+  pt74to76                            & 306 & 288 & 0.941176 \\
+  pt76to78                            & 230 & 218 & 0.947826 \\
+  pt78to80                            & 220 & 202 & 0.918182 \\
+  pt80to82                            & 224 & 210 & 0.937500 \\
+  pt82to84                            & 164 & 156 & 0.951220 \\
+  pt84to86                            & 156 & 146 & 0.935897 \\
+  pt86to88                            & 182 & 166 & 0.912088 \\
+  pt88to90                            & 140 & 134 & 0.957143 \\
+  pt90to92                            & 114 & 104 & 0.912281 \\
+  pt92to94                            & 134 & 122 & 0.910448 \\
+  pt94to96                            & 120 & 118 & 0.983333 \\
+  pt96to98                            & 100 & 98 & 0.980000 \\
+  pt98to100                           & 82 & 82 & 1.000000 \\
+  pt100toInf                          & 1112 & 1014 & 0.911871 \\
+

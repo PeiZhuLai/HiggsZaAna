@@ -44,7 +44,7 @@ baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs"
 
 dataType = ["Data", "Bkg_MC", "Sig_MC"]
 
-outputDir = "../cutflow_list"
+outputDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
 
 # Year of Signal
 year_sig_2022 = ["2022preEE", "2022postEE"]
