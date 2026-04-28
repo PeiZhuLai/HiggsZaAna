@@ -14,6 +14,8 @@ unset C_INCLUDE_PATH
 export PYTHONPATH="${repo_dir}"
 
 outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/data"
+unretire_jobs="${UNRETIRE_JOBS:-1}"
+retire_jobs="${RETIRE_JOBS:-0}" # 1 retire unfinished jobs # 0 no retire
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 
@@ -27,9 +29,14 @@ cmd=(
     --log-level "INFO"
     --n_cores 10
     --output_dir "$outdir"
-    --unretire_jobs
     --batch_system "condor"
 )
+
+if [[ "${retire_jobs}" == "1" ]]; then
+    cmd+=(--retire_jobs)
+elif [[ "${unretire_jobs}" == "1" ]]; then
+    cmd+=(--unretire_jobs)
+fi
 
 if [[ "${reconfigure_jobs}" == "1" ]]; then
     cmd+=(--reconfigure_jobs)

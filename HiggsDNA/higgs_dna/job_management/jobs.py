@@ -59,6 +59,7 @@ class Job():
         self.name_full = self.name + "_" + str(self.idx)
         self.n_attempts = 0
         self.force_retirement = False
+        self.retirement_reason = None
         # If the ``dir`` for an analysis is /some/path/dir, the job will have an output directory of the format /some/path/dir/samplename_year/job_n
         self.task_dir = os.path.abspath(dir)
         self.dir = os.path.abspath(dir + "/job_%s/" % (str(self.idx)))
@@ -242,10 +243,16 @@ class Job():
         if self.status == "retired":
             return False
 
-        if self.n_attempts >= 5 or self.force_retirement:
+        if self.force_retirement:
+            logger.info("[Job : submit] Job '%s_%d' is being retired by request after %d previous submission attempts. Jobs can be unretired with run_analysis.py through the `--unretire_jobs` option." % (self.name, self.idx, self.n_attempts))
+            self.status = "retired"
+            self.retirement_reason = "forced"
+            return False
+
+        if self.n_attempts >= 5:
             logger.info("[Job : submit] Job '%s_%d' has been submitted %d times, retiring job. Jobs can be unretired with run_analysis.py through the `--unretire_jobs` option." % (self.name, self.idx, self.n_attempts))
             self.status = "retired"
-            self.n_attempts = 0
+            self.retirement_reason = "max_attempts"
             return False
 
         if dry_run:

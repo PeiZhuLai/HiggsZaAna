@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 outdir="/eos/home-p/pelai/HZa/parquet_sumStudy_DNA/Bkg_MC"
+unretire_jobs="${UNRETIRE_JOBS:-1}"
+retire_jobs="${RETIRE_JOBS:-0}" # 1 retire unfinished jobs # 0 no retire
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 
 # rm -fr /eos/home-p/pelai/HZa/parquet_sumStudy_DNA/Bkg_MC/DYGto2LG_10to100_2023preBPix/job_1
@@ -14,9 +16,14 @@ cmd=(
     --log-level "INFO"
     --n_cores 10
     --output_dir "${outdir}"
-    --unretire_jobs
     --batch_system "condor"
 )
+
+if [[ "${retire_jobs}" == "1" ]]; then
+    cmd+=(--retire_jobs)
+elif [[ "${unretire_jobs}" == "1" ]]; then
+    cmd+=(--unretire_jobs)
+fi
 
 if [[ "${merge_outputs}" == "1" ]]; then
     cmd+=(--merge_outputs)

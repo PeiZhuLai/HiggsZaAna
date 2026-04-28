@@ -17,6 +17,7 @@ years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 fpo="${FPO:-5}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-0}"
 unretire_jobs="${UNRETIRE_JOBS:-1}"
+retire_jobs="${RETIRE_JOBS:-0}" # 1 retire unfinished jobs # 0 no retire
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
@@ -40,7 +41,9 @@ cmd=(
     --batch_system "${batch_system}"
 )
 
-if [[ "${unretire_jobs}" == "1" ]]; then
+if [[ "${retire_jobs}" == "1" ]]; then
+    cmd+=(--retire_jobs)
+elif [[ "${unretire_jobs}" == "1" ]]; then
     cmd+=(--unretire_jobs)
 fi
 

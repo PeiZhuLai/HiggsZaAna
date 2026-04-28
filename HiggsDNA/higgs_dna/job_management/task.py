@@ -404,7 +404,12 @@ class Task():
             logger.info("[Task : process] Task '%s' COMPLETED : %d/%d (%.2f percent) of jobs completed/retired which is >= the minimum job completion fraction for this task (%.2f percent)." % (self.name, self.n_completed_jobs + self.n_retired_jobs, len(self.jobs), 100. * self.completion_or_retired_frac, 100. * self.min_completion_frac))
             retired_jobs = [job for job in self.jobs if job.status == "retired"]
             for job in retired_jobs:
-                logger.warning("[Task : process] WARNING: Task '%s' had to retire job '%s' since it ran unsuccessfully for %d straight times. If this is an MC sample, this will just reduce your statistics. If this is a data job, you have processed less events than you intended!" % (self.name, job.name_full, job.n_attempts))
+                if getattr(job, "retirement_reason", None) == "forced":
+                    logger.warning("[Task : process] WARNING: Task '%s' retired job '%s' by request after %d previous submission attempts. If this is an MC sample, this will just reduce your statistics. If this is a data job, you have processed less events than you intended!" % (self.name, job.name_full, job.n_attempts))
+                elif job.n_attempts <= 0:
+                    logger.warning("[Task : process] WARNING: Task '%s' had to retire job '%s' after it reached the retry limit. The previous attempt count was not preserved in the saved state. If this is an MC sample, this will just reduce your statistics. If this is a data job, you have processed less events than you intended!" % (self.name, job.name_full))
+                else:
+                    logger.warning("[Task : process] WARNING: Task '%s' had to retire job '%s' since it ran unsuccessfully for %d straight times. If this is an MC sample, this will just reduce your statistics. If this is a data job, you have processed less events than you intended!" % (self.name, job.name_full, job.n_attempts))
             self.complete = True
 
         # If neither of the first three, we are not done yet
@@ -445,6 +450,7 @@ class Task():
             logger.debug("[Task : unretire_jobs] Task '%s' : resubmitting job '%s' with status '%s' and %d previously failed attempts." % (self.name, job.name_full, job.status, job.n_attempts))
             job.n_attempts = 0
             job.force_retirement = False
+            job.retirement_reason = None
             job.status = "waiting"
     
         self.complete = False
