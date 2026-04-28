@@ -441,7 +441,7 @@ def main() -> int:
                 label=f"cutflow-bkg-mc-{year}",
                 columns=columns,
                 font_size=r"\footnotesize",
-                resize_to_textwidth=False,
+                resize_to_textwidth=(year == "2024"),
                 overall_eff_digits=5,
             )
             written.append(write_table(output_dir, f"cutflow_Bkg_MC_{year}.tex", table))
