@@ -656,7 +656,7 @@ def render_trigeff_json_dict(result: TrigEffResult) -> Dict:
     return out
 
 
-def render_trigeff(result: TrigEffResult) -> str:
+def render_trigeff(result: TrigEffResult, sample_label: Optional[str] = None) -> str:
     """
     Render trigger-efficiency payloads as LaTeX tables.
     """
@@ -666,11 +666,17 @@ def render_trigeff(result: TrigEffResult) -> str:
 
     for prefix, d in result.by_prefix.items():
         o = d["overall"]
+        caption = (
+            rf"Trigger efficiency for {_latex_texttt(sample_label)}: {_latex_texttt(prefix)}"
+            if sample_label
+            else rf"Trigger efficiency: {_latex_texttt(prefix)}"
+        )
+        label_parts = [p for p in (sample_label, prefix) if p]
         lines.extend([
             r"\begin{table}[htbp]",
             r"\centering",
-            rf"\caption{{Trigger efficiency: {_latex_texttt(prefix)}}}",
-            rf"\label{{tab:trigeff-{_latex_label_id(prefix)}}}",
+            rf"\caption{{{caption}}}",
+            rf"\label{{tab:trigeff-{_latex_label_id('-'.join(label_parts))}}}",
             r"\begin{tabular}{lrrr}",
             r"\hline",
             r"$p_T$ bin & In bin & Pass trigger & Efficiency \\",
@@ -748,7 +754,12 @@ def format_value(ct: str, v: float) -> str:
     return f"{v:.0f}"
 
 
-def render_cutflows(result: CutflowResult, xs_pb: Optional[float] = None, lumi_fb: Optional[float] = None) -> str:
+def render_cutflows(
+    result: CutflowResult,
+    xs_pb: Optional[float] = None,
+    lumi_fb: Optional[float] = None,
+    sample_label: Optional[str] = None,
+) -> str:
     """
     Render cutflows as directly usable LaTeX tables.
 
@@ -758,11 +769,17 @@ def render_cutflows(result: CutflowResult, xs_pb: Optional[float] = None, lumi_f
     lines: List[str] = []
 
     for ct, cuts in result.cutflows.items():
+        caption = (
+            rf"Cutflow for {_latex_texttt(sample_label)}: {_latex_texttt(ct)}"
+            if sample_label
+            else rf"Cutflow: {_latex_texttt(ct)}"
+        )
+        label_parts = [p for p in (sample_label, ct) if p]
         lines.extend([
             r"\begin{table}[htbp]",
             r"\centering",
-            rf"\caption{{Cutflow: {_latex_texttt(ct)}}}",
-            rf"\label{{tab:cutflow-{_latex_label_id(ct)}}}",
+            rf"\caption{{{caption}}}",
+            rf"\label{{tab:cutflow-{_latex_label_id('-'.join(label_parts))}}}",
             r"\begin{tabular}{lr}",
             r"\hline",
             r"Selection & Events \\",
@@ -938,13 +955,14 @@ def main() -> int:
                 lumi_fb = float(lumi_2024)
 
         result = collect_cutflows(out_files, cutflow_types=cutflow_types, syst=syst)
-        text = render_cutflows(result, xs_pb=xs_pb, lumi_fb=lumi_fb)
+        sample_label = f"{dataset_type}_{dataset}_{year}"
+        text = render_cutflows(result, xs_pb=xs_pb, lumi_fb=lumi_fb, sample_label=sample_label)
 
         trigeff_systs = discover_trigeff_systs(out_files)
         trigeff_json = None
         if "nominal" in trigeff_systs:
             trigeff = collect_trigeff(out_files, syst="nominal")
-            trigeff_text = render_trigeff(trigeff)
+            trigeff_text = render_trigeff(trigeff, sample_label=sample_label)
             if trigeff_text:
                 text = text + "\n" + trigeff_text
             trigeff_json = render_trigeff_json_dict(trigeff)
