@@ -1591,7 +1591,7 @@ for year in years:
         for mass in mass_list:
             dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
             dfs[year][dataset][mass]["mass"] = mass
-            dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]) / dfs[year][dataset][mass]['H_m']
+            dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
 
 
