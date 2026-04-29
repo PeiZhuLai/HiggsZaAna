@@ -14,8 +14,8 @@ unset C_INCLUDE_PATH
 export PYTHONPATH="${repo_dir}"
 
 outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/data"
-unretire_jobs="${UNRETIRE_JOBS:-1}"
-retire_jobs="${RETIRE_JOBS:-0}" # 1 retire unfinished jobs # 0 no retire
+unretire_jobs="${UNRETIRE_JOBS:-1}" # 1 re-run unfinished jobs # 0 no re-run
+retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all jobs finished
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 

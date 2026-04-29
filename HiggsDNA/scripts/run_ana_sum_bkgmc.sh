@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 outdir="/eos/home-p/pelai/HZa/parquet_sumStudy_DNA/Bkg_MC"
-unretire_jobs="${UNRETIRE_JOBS:-1}"
-retire_jobs="${RETIRE_JOBS:-0}" # 1 retire unfinished jobs # 0 no retire
+unretire_jobs="${UNRETIRE_JOBS:-1}" # 1 re-run unfinished jobs # 0 no re-run
+retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all jobs finished
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 
 # rm -fr /eos/home-p/pelai/HZa/parquet_sumStudy_DNA/Bkg_MC/DYGto2LG_10to100_2023preBPix/job_1
