@@ -79,7 +79,7 @@ MASS_VALUES = {
     "M30": 30.0,
 }
 
-PARAM_MASS_CYCLE = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0, 25.0, 30.0)
+search_mA_list = [float(m) for m in range(1, 31)]
 
 
 @dataclass(frozen=True)
@@ -185,7 +185,7 @@ def sys_central_branch(sys_name: str) -> str:
 
 
 def param_cycle_expr() -> str:
-    terms = [f"((Entry$ % {len(PARAM_MASS_CYCLE)}) == {idx}) * {mass:.8g}" for idx, mass in enumerate(PARAM_MASS_CYCLE)]
+    terms = [f"((Entry$ % {len(search_mA_list)}) == {idx}) * {mass:.8g}" for idx, mass in enumerate(search_mA_list)]
     return "(" + " + ".join(terms) + ")"
 
 
