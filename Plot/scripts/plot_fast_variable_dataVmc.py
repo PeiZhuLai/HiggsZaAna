@@ -772,7 +772,7 @@ def main() -> None:
                 total_unc,
                 args.cut,
                 args.mA,
-                logY=True,
+                log_y=True,
             )
             canvas.Write()
             SaveCanvPic(canvas, plot_output_path, output_name(var_name) + "_log")
@@ -789,7 +789,7 @@ def main() -> None:
                 total_unc,
                 args.cut,
                 args.mA,
-                logY=False,
+                log_y=False,
             )
             canvas.Write()
             SaveCanvPic(canvas, plot_output_path, output_name(var_name))
