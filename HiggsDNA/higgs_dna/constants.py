@@ -19,7 +19,8 @@ LUMI = {
     "2023" : 27.756,
     "2023preBPix": 18.063,
     "2023postBPix": 9.693,
-    "2024": 108.83
+    "2024": 108.83,
+    "2025": 110.67
 }
 
 GOLDEN_JSON = {
@@ -34,7 +35,8 @@ GOLDEN_JSON = {
     "2023" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json",
     "2023preBPix" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json",
     "2023postBPix" : "metadata/golden_json/Cert_Collisions2023_366442_370790_Golden.json",
-    "2024" : "metadata/golden_json/Cert_Collisions2024_378981_386951_Golden.json"
+    "2024" : "metadata/golden_json/Cert_Collisions2024_378981_386951_Golden.json",
+    "2025" : "metadata/golden_json/Cert_Collisions2025_391658_398903_Golden.json"
 }
 
 # nanoAOD branches to always include
@@ -70,6 +72,9 @@ BRANCHES = {
         "2024" : [
             "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
         ],
+        "2025" : [
+            "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"
+        ],
         "any" : ["event", "run", "luminosityBlock"]
     },
     "mc" : {
@@ -86,6 +91,7 @@ BRANCHES = {
         "2023preBPix" : [],
         "2023postBPix" : [],
         "2024" : [],
+        "2025" : [],
         "any" : ["event", "run", "luminosityBlock"]
     }
 }
