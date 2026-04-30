@@ -24,11 +24,9 @@ import Plot_Configs as PC
 from Analyzer_Helper import getMassSigma
 from Plot_Helper import (
     CreateCanvas,
-    DrawOnCanv,
+    Draw_unc,
+    Get_StatUnc,
     LoadNtuples,
-    MakeCMSDASLabel,
-    MakeLegend,
-    MakeLumiLabel,
     MakeRatioPlot,
     MakeStack,
     SaveCanvPic,
@@ -40,6 +38,8 @@ from Plot_Helper import (
 
 ROOT.gROOT.SetBatch(True)
 ROOT.TH1.SetDefaultSumw2(True)
+ROOT.gStyle.SetOptTitle(0)
+ROOT.gStyle.SetOptStat(0)
 
 
 PDF_NAME_MAP = {
@@ -119,6 +119,195 @@ def parse_args() -> argparse.Namespace:
 
 def output_name(var_name: str) -> str:
     return PDF_NAME_MAP.get(var_name, var_name)
+
+
+def set_no_title_or_stats(obj) -> None:
+    if obj:
+        obj.SetTitle("")
+        if hasattr(obj, "SetStats"):
+            obj.SetStats(False)
+
+
+def draw_cms_labels(canvas: ROOT.TCanvas, lumi: str) -> None:
+    canvas.cd()
+    label = ROOT.TLatex()
+    label.SetNDC(True)
+    label.SetTextFont(42)
+
+    label.SetTextAlign(13)
+    label.SetTextSize(0.050)
+    label.DrawLatex(0.16, 0.935, "#bf{CMS} #it{Preliminary}")
+
+    label.SetTextAlign(31)
+    label.SetTextSize(0.040)
+    label.DrawLatex(0.95, 0.935, f"{float(lumi):.2f} fb^{{-1}} (13.6 TeV)")
+
+
+def draw_fast_on_canvas(
+    canvas: ROOT.TCanvas,
+    var_name: str,
+    plot_cfg: PC.Plot_Config,
+    stacks,
+    histos,
+    scaled_sig,
+    ratio_plot,
+    total_unc,
+    bdt_cut: bool,
+    mA: str,
+    log_y: bool,
+) -> None:
+    ROOT.gStyle.SetOptTitle(0)
+    ROOT.gStyle.SetOptStat(0)
+
+    canvas.SetBottomMargin(0.012)
+    canvas.cd()
+
+    left_margin = 0.16
+    right_margin = 0.05
+    bottom_margin = 0.19
+    top_margin = 0.085
+
+    upper_pad = ROOT.TPad("upperpad_" + var_name, "upperpad_" + var_name, 0, 0.25, 1, 1)
+    upper_pad.SetLeftMargin(left_margin)
+    upper_pad.SetRightMargin(right_margin)
+    upper_pad.SetBottomMargin(bottom_margin)
+    upper_pad.SetTopMargin(top_margin)
+    upper_pad.Draw()
+    upper_pad.cd()
+    upper_pad.SetTickx(1)
+    upper_pad.SetTicky(1)
+    canvas.SetTickx()
+    canvas.SetTicky()
+
+    for hist in histos.values():
+        set_no_title_or_stats(hist)
+    for stack in stacks.values():
+        set_no_title_or_stats(stack)
+
+    h_max = max(histos["Data"].GetMaximum(), stacks["all"].GetMaximum(), stacks["sig"].GetMaximum())
+    if log_y:
+        upper_pad.SetLogy()
+        histos["Data"].SetMinimum(1e-2)
+        stacks["all"].SetMinimum(1e-2)
+        histos["Data"].SetMaximum(h_max * 1.1e4 if h_max > 0 else 1.0)
+        stacks["all"].SetMaximum(h_max * 1.1e4 if h_max > 0 else 1.0)
+    else:
+        histos["Data"].SetMaximum(h_max * 1.4 if h_max > 0 else 1.0)
+        stacks["all"].SetMaximum(h_max * 1.4 if h_max > 0 else 1.0)
+
+    histos["Data"].Draw("PE")
+    histos["Data"].GetXaxis().SetLabelSize(0)
+    histos["Data"].GetXaxis().SetTitleOffset(0.95)
+
+    if var_name in ["H_m", "ALP_m", "Z_m"]:
+        histos["Data"].GetYaxis().SetTitle("Events / %.2f GeV" % histos["Data"].GetBinWidth(1))
+    else:
+        histos["Data"].GetYaxis().SetTitle("Events / %.3f" % histos["Data"].GetBinWidth(1))
+    histos["Data"].GetYaxis().SetTitleSize(0.07)
+    histos["Data"].GetYaxis().SetLabelSize(0.055)
+    histos["Data"].GetYaxis().SetTitleFont(42)
+    histos["Data"].GetYaxis().SetTitleOffset(1.15)
+
+    stacks["all"].Draw("HISTSAME")
+    if var_name.split("_")[-1] in plot_cfg.ana_cfg.sig_names:
+        scaled_sig[var_name.split("_")[-1]].Draw("HISTSAME")
+    elif bdt_cut:
+        scaled_sig[mA].Draw("HISTSAME")
+    else:
+        line_styles = [1, 2, 5, 7]
+        for sample, style in zip(["M1", "M10", "M20", "M30"], line_styles):
+            if sample in scaled_sig:
+                scaled_sig[sample].SetLineStyle(style)
+                scaled_sig[sample].SetLineWidth(4)
+                scaled_sig[sample].Draw("HISTSAME")
+
+    histos["Data"].SetMarkerStyle(20)
+    histos["Data"].SetLineWidth(2)
+    histos["Data"].GetXaxis().SetTickLength(0.04)
+
+    stat_err, stat_err_norm = Get_StatUnc(stacks["bkg"].GetStack().Last())
+    total_abs = total_unc[0]
+    total_norm = total_unc[1]
+
+    Draw_unc(total_abs, ROOT.TColor.GetColor("#A0A0A0"), alpha=0.3, fill_style=1001)
+    Draw_unc(stat_err, ROOT.TColor.GetColor("#404040"), alpha=0.90, fill_style=3354)
+
+    histos["Data"].Draw("SAMEPE")
+    histos["Data"].Draw("AXIS SAME")
+
+    if var_name.split("_")[-1] in plot_cfg.ana_cfg.sig_names:
+        legend_1 = ROOT.TLegend(0.66, 0.59, 0.97, 0.86)
+        ROOT.SetOwnership(legend_1, False)
+        legend_1.AddEntry(histos["Data"], "Data", "PE")
+        bkg_labels = {"DYGto2LG": "Z + #gamma", "DYJetsToLL": "Z + jets"}
+        for sample_bkg in plot_cfg.ana_cfg.bkg_names:
+            legend_1.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
+        legend_1.AddEntry(total_abs, "Total Unc.", "f")
+        legend_1.AddEntry(stat_err, "Stat. Unc.", "f")
+
+        legend_2 = ROOT.TLegend(0.40, 0.80, 0.66, 0.86)
+        ROOT.SetOwnership(legend_2, False)
+        legend_2.AddEntry(
+            scaled_sig[var_name.split("_")[-1]],
+            "m_{a} = %s GeV" % var_name.split("_")[-1].lstrip("M"),
+            "l",
+        )
+        legends = (legend_1, legend_2)
+    else:
+        legend_1 = ROOT.TLegend(0.29, 0.816, 0.50, 0.87)
+        ROOT.SetOwnership(legend_1, False)
+        legend_1.AddEntry(histos["Data"], "Data", "PE")
+
+        legend_2 = ROOT.TLegend(0.44, 0.654, 0.73, 0.87)
+        ROOT.SetOwnership(legend_2, False)
+        bkg_labels = {"DYGto2LG": "Z + #gamma", "DYJetsToLL": "Z + jets"}
+        for sample_bkg in plot_cfg.ana_cfg.bkg_names:
+            legend_2.AddEntry(histos[sample_bkg], bkg_labels.get(sample_bkg, sample_bkg), "f")
+        legend_2.AddEntry(total_abs, "Total Unc.", "f")
+        legend_2.AddEntry(stat_err, "Stat. Unc.", "f")
+
+        legend_3 = ROOT.TLegend(0.67, 0.654, 0.97, 0.87)
+        ROOT.SetOwnership(legend_3, False)
+        if bdt_cut:
+            legend_3.AddEntry(scaled_sig[mA], "m_{a} = %s GeV" % mA.lstrip("M"), "l")
+        else:
+            for sample in ["M1", "M10", "M20", "M30"]:
+                if sample in scaled_sig:
+                    legend_3.AddEntry(scaled_sig[sample], "m_{a} = %s GeV" % sample.lstrip("M"), "l")
+        legends = (legend_1, legend_2, legend_3)
+
+    for legend in legends:
+        legend.SetBorderSize(0)
+        legend.SetFillStyle(0)
+        legend.SetFillColor(0)
+        legend.SetTextFont(42)
+        legend.SetTextSize(0.045)
+        legend.Draw("SAME")
+
+    draw_cms_labels(canvas, plot_cfg.lumi)
+
+    canvas.cd()
+    lower_pad = ROOT.TPad("lowerpad_" + var_name, "lowerpad_" + var_name, 0, 0, 1, 0.35)
+    lower_pad.SetTopMargin(0.00001)
+    lower_pad.SetBottomMargin(0.36)
+    lower_pad.SetLeftMargin(left_margin)
+    lower_pad.SetRightMargin(right_margin)
+    lower_pad.SetGridy()
+    lower_pad.Draw()
+    lower_pad.cd()
+    lower_pad.SetTickx(1)
+    lower_pad.SetTicky(1)
+
+    if var_name.split("_")[-1] in plot_cfg.ana_cfg.sig_names:
+        ratio_plot.GetXaxis().SetTitle("BDT Score")
+    else:
+        ratio_plot.GetXaxis().SetTitle(plot_cfg.var_title_map[var_name])
+    ratio_plot.GetXaxis().SetTitleOffset(1.0)
+    ratio_plot.Draw("APZ SAME")
+
+    Draw_unc(total_norm, ROOT.TColor.GetColor("#A0A0A0"), alpha=0.3, fill_style=1001)
+    Draw_unc(stat_err_norm, ROOT.TColor.GetColor("#404040"), alpha=0.90, fill_style=3354)
+    ratio_plot.Draw("SAMEPZ")
 
 
 def has_branch(chain: ROOT.TChain, branch: str) -> bool:
@@ -550,8 +739,6 @@ def main() -> None:
                 histos_sys[var_name][sample][sys_name].Write()
 
     out_file.cd()
-    lumi_label = MakeLumiLabel(plot_cfg.lumi)
-    cms_label = MakeCMSDASLabel()
     scaled_sig = {}
 
     for var_name in var_names:
@@ -570,12 +757,11 @@ def main() -> None:
         for sample in analyzer_cfg.sig_names:
             scaled_sig[sample] = ScaleSignal(plot_cfg, stacks[sample], histos[var_name][sample], var_name)
         ratio_plot = MakeRatioPlot(histos[var_name]["Data"], stacks["all"].GetStack().Last(), var_name)
-        legend = MakeLegend(plot_cfg, histos[var_name], scaled_sig)
         total_unc = Total_Unc(stacks["bkg"], histos_sys[var_name], analyzer_cfg)
 
         if args.ln:
             canvas = CreateCanvas(var_name + "_log")
-            DrawOnCanv(
+            draw_fast_on_canvas(
                 canvas,
                 var_name,
                 plot_cfg,
@@ -583,9 +769,6 @@ def main() -> None:
                 histos[var_name],
                 scaled_sig,
                 ratio_plot,
-                legend,
-                lumi_label,
-                cms_label,
                 total_unc,
                 args.cut,
                 args.mA,
@@ -595,7 +778,7 @@ def main() -> None:
             SaveCanvPic(canvas, plot_output_path, output_name(var_name) + "_log")
         else:
             canvas = CreateCanvas(var_name)
-            DrawOnCanv(
+            draw_fast_on_canvas(
                 canvas,
                 var_name,
                 plot_cfg,
@@ -603,9 +786,6 @@ def main() -> None:
                 histos[var_name],
                 scaled_sig,
                 ratio_plot,
-                legend,
-                lumi_label,
-                cms_label,
                 total_unc,
                 args.cut,
                 args.mA,

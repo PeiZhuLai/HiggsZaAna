@@ -7,6 +7,7 @@
 import argparse
 import os
 import sys
+from array import array
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -21,6 +22,17 @@ import Analyzer_Configs as AC
 
 ROOT.gROOT.SetBatch(True)
 ROOT.TH1.SetDefaultSumw2(True)
+ROOT.gStyle.SetOptTitle(0)
+ROOT.gStyle.SetOptStat(0)
+
+
+LUMI_MAP = {
+    "2022preEE": 7.9804,
+    "2022postEE": 26.6717,
+    "2023preBPix": 18.063,
+    "2023postBPix": 9.693,
+    "2024": 108.83,
+}
 
 
 @dataclass(frozen=True)
@@ -28,11 +40,21 @@ class PlotSpec:
     name: str
     expr: str
     title: str
-    nbins: int
-    xmin: float
-    xmax: float
+    bins: Tuple[float, ...]
     selection: str
     flavor: str
+
+    @property
+    def nbins(self) -> int:
+        return len(self.bins) - 1
+
+    @property
+    def xmin(self) -> float:
+        return self.bins[0]
+
+    @property
+    def xmax(self) -> float:
+        return self.bins[-1]
 
 
 @dataclass(frozen=True)
@@ -46,6 +68,17 @@ class WeightSpec:
     plot_flavors: Tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class TriggerPathSpec:
+    name: str
+    flavor: str
+    numerator_branch: str
+    denominator_branch: str
+    numerator_label: str
+    denominator_label: str
+    ratio_title: str
+
+
 def sideband_cut(mass_branch: str) -> str:
     return (
         f"({mass_branch} > 95.0 && {mass_branch} < 180.0 && "
@@ -57,9 +90,7 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "lead_electron_pt",
         "Z_lead_lepton_pt",
         "Lead electron p_{T} [GeV]",
-        50,
-        0.0,
-        200.0,
+        (7.0, 15.0, 20.0, 35.0, 50.0, 100.0, 500.0),
         "z_ee == 1",
         "electron",
     ),
@@ -67,9 +98,7 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "sublead_electron_pt",
         "Z_sublead_lepton_pt",
         "Sublead electron p_{T} [GeV]",
-        50,
-        0.0,
-        120.0,
+        (7.0, 15.0, 20.0, 35.0, 50.0, 100.0, 500.0),
         "z_ee == 1",
         "electron",
     ),
@@ -77,9 +106,7 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "lead_muon_pt",
         "Z_lead_lepton_pt",
         "Lead muon p_{T} [GeV]",
-        50,
-        0.0,
-        200.0,
+        (5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 120.0, 500.0),
         "z_mumu == 1",
         "muon",
     ),
@@ -87,9 +114,7 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "sublead_muon_pt",
         "Z_sublead_lepton_pt",
         "Sublead muon p_{T} [GeV]",
-        50,
-        0.0,
-        120.0,
+        (5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 120.0, 500.0),
         "z_mumu == 1",
         "muon",
     ),
@@ -97,9 +122,7 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "lead_photon_pt",
         "ALP_lead_photon_pt",
         "Lead photon p_{T} [GeV]",
-        50,
-        0.0,
-        200.0,
+        (10.0, 20.0, 35.0, 50.0, 80.0),
         "1",
         "photon",
     ),
@@ -107,9 +130,7 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "sublead_photon_pt",
         "ALP_sublead_photon_pt",
         "Sublead photon p_{T} [GeV]",
-        50,
-        0.0,
-        120.0,
+        (10.0, 20.0, 35.0, 50.0, 80.0),
         "1",
         "photon",
     ),
@@ -179,6 +200,28 @@ WEIGHTS: Tuple[WeightSpec, ...] = (
 )
 
 
+TRIGGER_PATHS: Tuple[TriggerPathSpec, ...] = (
+    TriggerPathSpec(
+        "muon_trigger_path",
+        "muon",
+        "pass_simu_or_dimu",
+        "pass_only_dimu",
+        "pass_simu_or_dimu",
+        "pass_only_dimu",
+        "simu_or_dimu / only_dimu",
+    ),
+    TriggerPathSpec(
+        "electron_trigger_path",
+        "electron",
+        "pass_siel_or_diel",
+        "pass_only_diel",
+        "pass_siel_or_diel",
+        "pass_only_diel",
+        "siel_or_diel / only_diel",
+    ),
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fast sideband SF validation plots")
     parser.add_argument("-y", "--Year", dest="year", default="run3")
@@ -194,12 +237,32 @@ def parse_args() -> argparse.Namespace:
 
 def set_style() -> None:
     ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptTitle(0)
     ROOT.gStyle.SetTitleBorderSize(0)
     ROOT.gStyle.SetTitleFillColor(0)
     ROOT.gStyle.SetCanvasColor(ROOT.kWhite)
     ROOT.gStyle.SetPadColor(ROOT.kWhite)
     ROOT.gStyle.SetFrameFillColor(ROOT.kWhite)
     ROOT.gStyle.SetLegendBorderSize(0)
+
+
+def lumi_for_eras(eras: Sequence[str]) -> float:
+    return sum(LUMI_MAP.get(era, 0.0) for era in eras)
+
+
+def draw_cms_labels(canvas: ROOT.TCanvas, lumi: float) -> None:
+    canvas.cd()
+    label = ROOT.TLatex()
+    label.SetNDC(True)
+    label.SetTextFont(42)
+
+    label.SetTextAlign(13)
+    label.SetTextSize(0.050)
+    label.DrawLatex(0.13, 0.935, "#bf{CMS} #it{Preliminary}")
+
+    label.SetTextAlign(31)
+    label.SetTextSize(0.040)
+    label.DrawLatex(0.95, 0.935, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
 
 
 def add_file(chain: ROOT.TChain, path: str) -> bool:
@@ -278,7 +341,9 @@ def draw_hist(
     if old:
         old.Delete()
 
-    hist = ROOT.TH1D(hist_name, hist_name, plot.nbins, plot.xmin, plot.xmax)
+    hist = ROOT.TH1D(hist_name, hist_name, plot.nbins, array("d", plot.bins))
+    hist.SetTitle("")
+    hist.SetStats(False)
     hist.Sumw2()
     selection = f"({sideband_cut(mass_branch)}) && ({plot.selection}) && ({extra_selection})"
     draw_weight = "1.0" if data else weight
@@ -321,18 +386,23 @@ def make_ratio(data: ROOT.TH1, mc: ROOT.TH1, name: str) -> Optional[ROOT.TH1]:
 
 
 def decorate_histograms(data: ROOT.TH1, after: ROOT.TH1, before: ROOT.TH1) -> None:
+    for hist in (data, after, before):
+        hist.SetTitle("")
+        hist.SetStats(False)
+
     data.SetMarkerStyle(20)
     data.SetMarkerSize(0.9)
     data.SetLineColor(ROOT.kBlack)
+    data.SetLineWidth(3)
     data.SetMarkerColor(ROOT.kBlack)
 
     after.SetLineColor(ROOT.kRed + 1)
-    after.SetLineWidth(2)
+    after.SetLineWidth(3)
     after.SetFillStyle(0)
     after.SetMarkerColor(ROOT.kRed + 1)
 
     before.SetLineColor(ROOT.kAzure + 1)
-    before.SetLineWidth(2)
+    before.SetLineWidth(3)
     before.SetLineStyle(2)
     before.SetFillStyle(0)
     before.SetMarkerColor(ROOT.kAzure + 1)
@@ -345,6 +415,7 @@ def draw_plot(
     plot: PlotSpec,
     weight: WeightSpec,
     era_label: str,
+    lumi: float,
     out_path: str,
     log_y: bool,
 ) -> None:
@@ -378,6 +449,8 @@ def draw_plot(
         after.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
 
     after.GetXaxis().SetLabelSize(0)
+    after.GetYaxis().SetTitleSize(0.055)
+    after.GetYaxis().SetLabelSize(0.05)
     after.GetYaxis().SetTitle("Events")
     after.GetYaxis().SetTitleOffset(1.15)
     after.Draw("hist")
@@ -387,39 +460,31 @@ def draw_plot(
     legend = ROOT.TLegend(0.52, 0.70, 0.90, 0.89)
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
-    legend.AddEntry(data, "Data sideband", "lep")
+    legend.SetTextSize(0.04)
+    legend.AddEntry(data, "Data", "lep")
     legend.AddEntry(after, weight.after_label, "l")
     legend.AddEntry(before, weight.before_label, "l")
     legend.Draw()
 
-    label = ROOT.TLatex()
-    label.SetNDC()
-    label.SetTextFont(42)
-    label.SetTextSize(0.04)
-    label.DrawLatex(0.16, 0.86, era_label)
-    label.DrawLatex(0.16, 0.81, "Sideband: 95 < m_{ll#gamma#gamma} < 180 GeV, excluding 115-135 GeV")
+    draw_cms_labels(canvas, lumi)
 
     lower.cd()
     ratio_after = make_ratio(data, after, f"ratio_after_{era_label}_{weight.name}_{plot.name}")
     ratio_before = make_ratio(data, before, f"ratio_before_{era_label}_{weight.name}_{plot.name}")
-    frame = ROOT.TH1D(
-        f"frame_{era_label}_{weight.name}_{plot.name}",
-        "",
-        plot.nbins,
-        plot.xmin,
-        plot.xmax,
-    )
+    frame = ROOT.TH1D(f"frame_{era_label}_{weight.name}_{plot.name}", "", plot.nbins, array("d", plot.bins))
+    frame.SetTitle("")
+    frame.SetStats(False)
     frame.SetDirectory(0)
     frame.GetYaxis().SetTitle("Data / MC")
     frame.GetXaxis().SetTitle(plot.title)
     frame.GetYaxis().SetRangeUser(0.45, 1.55)
     frame.GetYaxis().SetNdivisions(505)
-    frame.GetYaxis().SetTitleSize(0.10)
+    frame.GetYaxis().SetTitleSize(0.055)
     frame.GetYaxis().SetTitleOffset(0.52)
-    frame.GetYaxis().SetLabelSize(0.085)
-    frame.GetXaxis().SetTitleSize(0.11)
+    frame.GetYaxis().SetLabelSize(0.05)
+    frame.GetXaxis().SetTitleSize(0.055)
     frame.GetXaxis().SetTitleOffset(1.10)
-    frame.GetXaxis().SetLabelSize(0.09)
+    frame.GetXaxis().SetLabelSize(0.05)
     frame.Draw("axis")
 
     line = ROOT.TLine(plot.xmin, 1.0, plot.xmax, 1.0)
@@ -432,13 +497,124 @@ def draw_plot(
         ratio_after.SetMarkerSize(0.75)
         ratio_after.SetMarkerColor(ROOT.kRed + 1)
         ratio_after.SetLineColor(ROOT.kRed + 1)
+        ratio_after.SetLineWidth(3)
         ratio_after.Draw("E1 same")
     if ratio_before:
         ratio_before.SetMarkerStyle(24)
         ratio_before.SetMarkerSize(0.75)
         ratio_before.SetMarkerColor(ROOT.kAzure + 1)
         ratio_before.SetLineColor(ROOT.kAzure + 1)
+        ratio_before.SetLineWidth(3)
         ratio_before.Draw("E1 same")
+
+    canvas.cd()
+    canvas.SaveAs(out_path + ".pdf")
+    canvas.SaveAs(out_path + ".png")
+    canvas.Close()
+
+
+def draw_trigger_path_plot(
+    numerator: ROOT.TH1,
+    denominator: ROOT.TH1,
+    plot: PlotSpec,
+    trigger: TriggerPathSpec,
+    era_label: str,
+    lumi: float,
+    out_path: str,
+    log_y: bool,
+) -> None:
+    for hist in (numerator, denominator):
+        hist.SetTitle("")
+        hist.SetStats(False)
+        hist.SetLineWidth(3)
+
+    numerator.SetMarkerStyle(20)
+    numerator.SetMarkerSize(0.9)
+    numerator.SetLineColor(ROOT.kRed + 1)
+    numerator.SetMarkerColor(ROOT.kRed + 1)
+
+    denominator.SetMarkerStyle(24)
+    denominator.SetMarkerSize(0.9)
+    denominator.SetLineColor(ROOT.kAzure + 1)
+    denominator.SetMarkerColor(ROOT.kAzure + 1)
+
+    canvas = ROOT.TCanvas(f"c_{era_label}_{trigger.name}_{plot.name}", "", 800, 800)
+    upper = ROOT.TPad("upper", "upper", 0.0, 0.30, 1.0, 1.0)
+    lower = ROOT.TPad("lower", "lower", 0.0, 0.0, 1.0, 0.30)
+    upper.SetBottomMargin(0.03)
+    upper.SetLeftMargin(0.13)
+    upper.SetRightMargin(0.05)
+    lower.SetTopMargin(0.03)
+    lower.SetBottomMargin(0.35)
+    lower.SetLeftMargin(0.13)
+    lower.SetRightMargin(0.05)
+    if log_y:
+        upper.SetLogy()
+
+    upper.Draw()
+    lower.Draw()
+
+    upper.cd()
+    ymax = max(numerator.GetMaximum(), denominator.GetMaximum())
+    if log_y:
+        positive = [h.GetMinimum(0.0) for h in (numerator, denominator) if h.GetMinimum(0.0) > 0]
+        ymin = min(positive) * 0.5 if positive else 0.01
+        denominator.SetMinimum(ymin)
+        denominator.SetMaximum(ymax * 20.0 if ymax > 0 else 1.0)
+    else:
+        denominator.SetMinimum(0.0)
+        denominator.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
+
+    denominator.GetXaxis().SetLabelSize(0)
+    denominator.GetYaxis().SetTitle("Events")
+    denominator.GetYaxis().SetTitleSize(0.055)
+    denominator.GetYaxis().SetLabelSize(0.05)
+    denominator.GetYaxis().SetTitleOffset(1.15)
+    denominator.Draw("E1")
+    numerator.Draw("E1 same")
+
+    legend = ROOT.TLegend(0.52, 0.72, 0.90, 0.89)
+    legend.SetFillStyle(0)
+    legend.SetBorderSize(0)
+    legend.SetTextSize(0.04)
+    legend.AddEntry(numerator, trigger.numerator_label, "lep")
+    legend.AddEntry(denominator, trigger.denominator_label, "lep")
+    legend.Draw()
+
+    draw_cms_labels(canvas, lumi)
+
+    lower.cd()
+    ratio = make_ratio(numerator, denominator, f"ratio_{era_label}_{trigger.name}_{plot.name}")
+    frame = ROOT.TH1D(f"frame_{era_label}_{trigger.name}_{plot.name}", "", plot.nbins, array("d", plot.bins))
+    frame.SetTitle("")
+    frame.SetStats(False)
+    frame.SetDirectory(0)
+    frame.GetYaxis().SetTitle(trigger.ratio_title)
+    frame.GetXaxis().SetTitle(plot.title)
+    frame.GetYaxis().SetRangeUser(0.45, 1.55)
+    frame.GetYaxis().SetNdivisions(505)
+    frame.GetYaxis().SetTitleSize(0.055)
+    frame.GetYaxis().SetTitleOffset(0.52)
+    frame.GetYaxis().SetLabelSize(0.05)
+    frame.GetXaxis().SetTitleSize(0.055)
+    frame.GetXaxis().SetTitleOffset(1.10)
+    frame.GetXaxis().SetLabelSize(0.05)
+    frame.Draw("axis")
+
+    line = ROOT.TLine(plot.xmin, 1.0, plot.xmax, 1.0)
+    line.SetLineColor(ROOT.kGray + 2)
+    line.SetLineStyle(2)
+    line.Draw("same")
+
+    if ratio:
+        ratio.SetTitle("")
+        ratio.SetStats(False)
+        ratio.SetMarkerStyle(20)
+        ratio.SetMarkerSize(0.75)
+        ratio.SetMarkerColor(ROOT.kBlack)
+        ratio.SetLineColor(ROOT.kBlack)
+        ratio.SetLineWidth(3)
+        ratio.Draw("E1 same")
 
     canvas.cd()
     canvas.SaveAs(out_path + ".pdf")
@@ -478,6 +654,7 @@ def main() -> None:
 
     for era_label, eras in era_groups:
         print(f"\n[Era] {era_label}: {', '.join(eras)}")
+        lumi = lumi_for_eras(eras)
         chains = build_chains(cfg, input_dir, eras)
         if chains["Data"].GetEntries() <= 0 or chains["MC"].GetEntries() <= 0:
             print(f"[Skip] {era_label}: empty Data or MC chain")
@@ -541,7 +718,66 @@ def main() -> None:
                         scale_to_unit(hist)
 
                 out_path = os.path.join(out_subdir, plot.name)
-                draw_plot(data_hist, after_hist, before_hist, plot, weight, era_label, out_path, args.log_y)
+                draw_plot(data_hist, after_hist, before_hist, plot, weight, era_label, lumi, out_path, args.log_y)
+
+        for trigger in TRIGGER_PATHS:
+            for plot in PLOTS:
+                if plot.flavor != trigger.flavor:
+                    continue
+
+                required_data = [
+                    plot.expr,
+                    mass_branch,
+                    trigger.numerator_branch,
+                    trigger.denominator_branch,
+                ]
+                if plot.selection != "1":
+                    required_data.extend(token.strip() for token in plot.selection.split("==")[:1])
+
+                missing_data = missing_branches(chains["Data"], required_data)
+                if missing_data:
+                    print(f"[Skip] {era_label}/{trigger.name}/{plot.name}: missing Data={missing_data}")
+                    continue
+
+                out_subdir = os.path.join(out_dir, era_label, "trigger_sf", "trigger_paths")
+                os.makedirs(out_subdir, exist_ok=True)
+                tag = f"{era_label}_{trigger.name}_{plot.name}"
+
+                print(f"[Draw] {tag}")
+                numerator_hist = draw_hist(
+                    chains["Data"],
+                    f"h_num_{tag}",
+                    plot,
+                    "1.0",
+                    mass_branch,
+                    f"{trigger.numerator_branch} == 1",
+                    data=True,
+                )
+                denominator_hist = draw_hist(
+                    chains["Data"],
+                    f"h_den_{tag}",
+                    plot,
+                    "1.0",
+                    mass_branch,
+                    f"{trigger.denominator_branch} == 1",
+                    data=True,
+                )
+
+                if args.normalize:
+                    for hist in (numerator_hist, denominator_hist):
+                        scale_to_unit(hist)
+
+                out_path = os.path.join(out_subdir, f"{trigger.name}_{plot.name}")
+                draw_trigger_path_plot(
+                    numerator_hist,
+                    denominator_hist,
+                    plot,
+                    trigger,
+                    era_label,
+                    lumi,
+                    out_path,
+                    args.log_y,
+                )
 
     print("\nDone")
 
