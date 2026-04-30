@@ -8,8 +8,8 @@ echo "==============STARTED=============="
 # target="./"
 
 # Run3
-input="/eos/home-p/pelai/HZa/Parquet/NanoV12/run3/"
-target="/eos/home-p/pelai/HZa/Root_Dataset/run3_BDT/"
+input="/eos/home-p/pelai/HZa/parquet_DNA/"
+target="/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT"
 
 # input="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/Parquet/"
 # target="/eos/home-p/pelai/HZa/Root_Dataset/run3/"
@@ -19,9 +19,7 @@ target="/eos/home-p/pelai/HZa/Root_Dataset/run3_BDT/"
 # target="/eos/home-p/pelai/HZgamma/Root_Dataset/run2/NanoV9/"
 
 
-# years=(2016preVFP 2016postVFP 2017 2018 2022preEE 2022postEE 2023preBPix 2023postBPix)
-# years=(2016preVFP 2016postVFP 2017 2018)
-# years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
+# years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 years=(2022preEE)
 # years=(2022preEE 2022postEE)
 # years=(2023preBPix 2023postBPix)
@@ -194,7 +192,7 @@ done
 
 # 处理 bkgmc 样本
 
-samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
+# samples=(ZGToLLG DYJetsToLL WGToLNuG ZG2JToG2L2J EWKZ2J TT TTGJets TGJets ttWJets ttZJets WW WZ ZZ DYGto2LG_10to50 DYGto2LG_50to100)
 for i in {1..3};do
     if [ "$i" = "1" ]; then
         samples=(DYGto2LG_10to50 DYGto2LG_50to100)
