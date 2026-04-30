@@ -498,10 +498,6 @@ def main():
                             weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_up / ntup.weight_photon_id_sf_SelectedPhoton_central
                         elif sys_name =='weight_photon_id_sf_SelectedPhoton_down':
                             weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_down / ntup.weight_photon_id_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_up':
-                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_up / ntup.weight_photon_csev_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_down':
-                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_down / ntup.weight_photon_csev_sf_SelectedPhoton_central
 
                         for var in var_names:
                             histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
