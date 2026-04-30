@@ -2,7 +2,6 @@
 initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor
 executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/run_parquet2root.sh
 
-# ✅ 关键：一个 cluster 一个 log（不要带 ProcId）
 log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).log
 
 # stdout/stderr 仍然可以每个 job 一份
