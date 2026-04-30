@@ -483,6 +483,65 @@ def compute_delta_phi_g1Z(x):
 
     return true_delta_phi(abs(x.ALP_lead_photon_phi-x.Z_phi))
 
+def ensure_za_compatibility(data):
+    """
+    Some ZA parquet configs only write ALP photon branches, while this converter
+    still decorates legacy single-gamma variables. Preserve existing gamma_*
+    branches when present and otherwise alias them from the leading ALP photon.
+    """
+    fallback_columns = {
+        "gamma_pt": "ALP_lead_photon_pt",
+        "gamma_eta": "ALP_lead_photon_eta",
+        "gamma_phi": "ALP_lead_photon_phi",
+        "gamma_mass": "ALP_lead_photon_mass",
+        "gamma_mvaID": "ALP_lead_photon_mvaID",
+        "gamma_energyErr": "ALP_lead_photon_energyErr",
+        "gamma_sieie": "ALP_lead_photon_sieie",
+        "gamma_hoe": "ALP_lead_photon_hoe",
+        "gamma_r9": "ALP_lead_photon_r9",
+        "gamma_chiso": "ALP_lead_photon_chiso",
+        "gamma_alliso": "ALP_lead_photon_alliso",
+        "gamma_e_veto": "ALP_lead_photon_electronVeto",
+    }
+
+    added_columns = []
+    for target, source in fallback_columns.items():
+        if target not in data.columns and source in data.columns:
+            data[target] = data[source]
+            added_columns.append(target)
+
+    if added_columns:
+        print("Aliased missing gamma branches from ALP_lead_photon: %s" % ", ".join(added_columns))
+
+    required_columns = ["gamma_pt", "gamma_eta", "gamma_phi", "gamma_mass"]
+    missing_required = [column for column in required_columns if column not in data.columns]
+    if missing_required:
+        raise KeyError(
+            "Missing required photon branches after compatibility mapping: %s. "
+            "Available columns include: %s"
+            % (", ".join(missing_required), ", ".join(list(data.columns)[:50]))
+        )
+
+    return data
+
+MVA_FEATURE_COLUMNS = [
+    "pho1Pt",
+    "pho1R9",
+    "pho1IetaIeta55",
+    "pho1PIso_noCorr",
+    "pho2Pt",
+    "pho2R9",
+    "pho2IetaIeta55",
+    "pho2PIso_noCorr",
+    "ALP_calculatedPhotonIso",
+    "var_dR_Za",
+    "var_dR_g1g2",
+    "var_dR_g1Z",
+    "var_PtaOverMh",
+    "H_pt",
+    "param",
+]
+
 def compute_MVA_Score(x, wanted_ma):
     """
     與 ALP_plot_param.py 一致的輸入變數順序，回傳 predict_proba 的正類機率。
@@ -527,6 +586,48 @@ def compute_MVA_Score(x, wanted_ma):
     except Exception:
         return np.nan
 
+def add_mva_scores(data, masses=range(1, 31)):
+    """
+    Add MVA_Score_mA_M* columns using batched XGBoost inference.
+
+    The old implementation called predict_proba once per row per mass. For large
+    parquet files that is effectively dominated by Python overhead. Here each
+    mass is evaluated with one dense feature matrix.
+    """
+    try:
+        model = get_model()
+    except Exception as e:
+        print("WARNING: failed to load MVA model: %s" % e)
+        for ma in masses:
+            data[f"MVA_Score_mA_M{ma}"] = np.nan
+        return data
+
+    h_mass = pd.to_numeric(data["H_mass"], errors="coerce").to_numpy(dtype=float)
+    alp_mass = pd.to_numeric(data["ALP_mass"], errors="coerce").to_numpy(dtype=float)
+    valid_base = np.isfinite(h_mass) & (h_mass != 0)
+    base_features = data[MVA_FEATURE_COLUMNS[:-1]].apply(pd.to_numeric, errors="coerce")
+
+    score_columns = {}
+    for ma in masses:
+        scores = np.full(data.shape[0], np.nan, dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            param = (alp_mass - ma) / h_mass
+
+        features = base_features.copy()
+        features["param"] = param
+        matrix = features[MVA_FEATURE_COLUMNS].to_numpy(dtype=float)
+        valid = valid_base & np.isfinite(matrix).all(axis=1)
+
+        if np.any(valid):
+            try:
+                scores[valid] = model.predict_proba(matrix[valid])[:, 1]
+            except Exception as e:
+                print("WARNING: failed to evaluate MVA score for mA_M%s: %s" % (ma, e))
+
+        score_columns[f"MVA_Score_mA_M{ma}"] = scores
+
+    return pd.concat([data, pd.DataFrame(score_columns, index=data.index)], axis=1)
+
 def preselect(data):
 
     #data.query('(Muons_Minv_MuMu_Paper >= 110) | (Event_Paper_Category >= 17)', inplace=True)
@@ -553,10 +654,7 @@ def decorate(data):
     data['var_dR_g1g2'] = data.apply(lambda x: compute_dR_g1_g2(x), axis=1) 
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 
     
-    # 修正: 使用解析後的質量數值與已載入的模型；若模型不存在則回傳 NaN
-    # 原本手動 M1~M6 改為自動產生 [1,30] step=1
-    for ma in range(1, 31):
-        data[f"MVA_Score_mA_M{ma}"] = data.apply(lambda x, _ma=ma: compute_MVA_Score(x, _ma), axis=1)
+    data = add_mva_scores(data)
 
     data['H_m'] = data.H_mass
     data['ALP_m'] = data.ALP_mass
@@ -704,6 +802,7 @@ def main():
 #    for data in tqdm(read_root(args.input, key='DiMuonNtuple', columns=variables, chunksize=args.chunksize), desc='Processing %s' % args.input, bar_format='{desc}: {percentage:3.0f}%|{bar:20}{r_bar}'):
 
     data = pd.read_parquet(args.input)
+    data = ensure_za_compatibility(data)
     initial_events += data.shape[0]
     #data = preprocess(data)
     data = preselect(data) #TODO add cutflow
