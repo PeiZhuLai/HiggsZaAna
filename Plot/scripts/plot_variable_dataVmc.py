@@ -310,6 +310,7 @@ def main():
 
     ### loop over samples and events
     mass_list = {'M1':1.0, 'M2':2.0, 'M3':3.0, 'M4':4.0, 'M5':5.0, 'M6':6.0, 'M7':7.0, 'M8':8.0, 'M9':9.0, 'M10':10.0, 'M15':15.0, 'M20':20.0, 'M25':25.0, 'M30':30.0}
+    search_mA_list = [float(m) for m in range(1, 31)] 
     # 新增：控制每個 (sample, mA) 的偵錯輸出次數
     debug_printed = {}
 
@@ -450,7 +451,7 @@ def main():
                 if sample in analyzer_cfg.sig_names:
                     param_val['param'] = (ntup.ALP_m - mass_list[sample])/ntup.H_m
                 else:
-                    mass_random = random.choice(list(mass_list.values()))
+                    mass_random = random.choice(list(search_mA_list))
                     param_val['param'] = (ntup.ALP_m - mass_random)/ntup.H_m
                 
                 var_map.update(param_val)
