@@ -26,10 +26,10 @@ ROOT.gStyle.SetOptTitle(0)
 ROOT.gStyle.SetOptStat(0)
 
 
-LOWER_AXIS_TITLE_SIZE = 0.105
-LOWER_AXIS_LABEL_SIZE = 0.090
-LOWER_X_TITLE_OFFSET = 1.02
-LOWER_Y_TITLE_OFFSET = 0.43
+LOWER_AXIS_TITLE_SIZE = 0.14
+LOWER_AXIS_LABEL_SIZE = 0.14
+LOWER_X_TITLE_OFFSET = 1.1
+LOWER_Y_TITLE_OFFSET = 0.45
 
 
 LUMI_MAP = {
@@ -263,12 +263,12 @@ def draw_cms_labels(pad: ROOT.TVirtualPad, lumi: float) -> None:
     label.SetTextFont(42)
 
     label.SetTextAlign(13)
-    label.SetTextSize(0.040)
-    label.DrawLatex(0.13, 0.965, "#bf{CMS} #it{Preliminary}")
+    label.SetTextSize(0.060)
+    label.DrawLatex(0.13, 0.963, "#bf{CMS} #it{Preliminary}")
 
     label.SetTextAlign(31)
-    label.SetTextSize(0.034)
-    label.DrawLatex(0.95, 0.965, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
+    label.SetTextSize(0.055)
+    label.DrawLatex(0.95, 0.92, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
 
 
 def add_file(chain: ROOT.TChain, path: str) -> bool:
@@ -475,18 +475,18 @@ def draw_plot(
         after.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
 
     after.GetXaxis().SetLabelSize(0)
-    after.GetYaxis().SetTitleSize(0.055)
-    after.GetYaxis().SetLabelSize(0.05)
+    after.GetYaxis().SetTitleSize(0.065)
+    after.GetYaxis().SetLabelSize(0.060)
     after.GetYaxis().SetTitle("Events")
-    after.GetYaxis().SetTitleOffset(1.15)
+    after.GetYaxis().SetTitleOffset(1.0)
     after.Draw("hist")
     before.Draw("hist same")
     data.Draw("E1 same")
 
-    legend = ROOT.TLegend(0.52, 0.70, 0.90, 0.89)
+    legend = ROOT.TLegend(0.47, 0.64, 0.83, 0.85)
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
-    legend.SetTextSize(0.04)
+    legend.SetTextSize(0.045)
     legend.AddEntry(data, "Data", "lep")
     legend.AddEntry(after, weight.after_label, "l")
     legend.AddEntry(before, weight.before_label, "l")
@@ -574,7 +574,7 @@ def draw_trigger_path_plot(
     after.GetXaxis().SetLabelSize(0)
     after.GetYaxis().SetTitle(trigger.ratio_title)
     after.GetYaxis().SetTitleSize(0.055)
-    after.GetYaxis().SetLabelSize(0.05)
+    after.GetYaxis().SetLabelSize(0.055)
     after.GetYaxis().SetTitleOffset(1.15)
     after.Draw("hist")
     before.Draw("hist same")

@@ -451,7 +451,7 @@ def main():
                 if sample in analyzer_cfg.sig_names:
                     param_val['param'] = (ntup.ALP_m - mass_list[sample])/ntup.H_m
                 else:
-                    mass_random = random.choice(list(search_mA_list))
+                    mass_random = random.choice(search_mA_list)
                     param_val['param'] = (ntup.ALP_m - mass_random)/ntup.H_m
                 
                 var_map.update(param_val)

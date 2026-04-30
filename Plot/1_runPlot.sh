@@ -84,11 +84,6 @@ wait
 ## Validate SF
 python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
 
+## fast variable plot
+python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
 wait
-#----------------------------------------------------------------------------
-
-python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys
-
-# 原本 param 對 background/data 用 Python random mass，fast 版用固定 10 GeV reference
-python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys
-python3 scripts/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys
