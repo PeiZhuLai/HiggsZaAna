@@ -572,13 +572,37 @@ x_test_mass = x_test[:,Hm_var_indices].flatten()
 # x_test_mass = x_test[:,mass_var_indices].flatten()
 # x_test_cats = x_test[:,cat_var_indices]
 
-def make_balanced_weights(y, w):
+def make_positive_xgb_weights(w, name):
     w = np.asarray(w, dtype=float)
+    if np.any(~np.isfinite(w)):
+        raise ValueError(f"{name} contains non-finite weights.")
+
+    n_negative = np.count_nonzero(w < 0)
+    n_zero = np.count_nonzero(w == 0)
+
+    w_positive = np.abs(w)
+    positive_mask = w_positive > 0
+    if not np.any(positive_mask):
+        raise ValueError(f"{name} has no positive training weights after abs().")
+
+    min_positive = np.min(w_positive[positive_mask])
+    w_positive = np.where(positive_mask, w_positive, min_positive * 1e-6)
+
+    if n_negative or n_zero:
+        print(f"{name}: converted weights for XGBoost training; negative={n_negative}, zero={n_zero}")
+
+    return w_positive
+
+def make_balanced_weights(y, w, name):
+    w = make_positive_xgb_weights(w, name)
     sig_mask = y == 1
     bkg_mask = y == 0
 
     sum_sig = np.sum(w[sig_mask])
     sum_bkg = np.sum(w[bkg_mask])
+    if sum_sig <= 0 or sum_bkg <= 0:
+        raise ValueError(f"{name} has non-positive class weight sum: signal={sum_sig}, bkg={sum_bkg}")
+
     total = sum_sig + sum_bkg
 
     scale_sig = total / (2.0 * sum_sig)
@@ -586,8 +610,8 @@ def make_balanced_weights(y, w):
 
     return w * np.where(sig_mask, scale_sig, scale_bkg)
 
-x_train_w_balanced = make_balanced_weights(y_train, x_train_w)
-x_test_w_balanced = make_balanced_weights(y_test, x_test_w)
+x_train_w_balanced = make_balanced_weights(y_train, x_train_w, "x_train_w")
+x_test_w_balanced = make_balanced_weights(y_test, x_test_w, "x_test_w")
 
 print(x_test_reduced.shape)
 print(x_train_reduced.shape)
@@ -595,7 +619,7 @@ print(x_train.shape)
 print(len(x_train_w))
 print(x[0])
 print(x_train_w)
-print("weighted train yields before balance: signal", np.sum(x_train_w[y_train == 1]), "bkg", np.sum(x_train_w[y_train == 0]))
+print("signed weighted train yields before balance: signal", np.sum(x_train_w[y_train == 1]), "bkg", np.sum(x_train_w[y_train == 0]))
 print("weighted train yields after balance: signal", np.sum(x_train_w_balanced[y_train == 1]), "bkg", np.sum(x_train_w_balanced[y_train == 0]))
 print("finish")
 
