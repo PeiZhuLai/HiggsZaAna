@@ -79,6 +79,8 @@ MASS_VALUES = {
     "M30": 30.0,
 }
 
+PARAM_MASS_CYCLE = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0, 25.0, 30.0)
+
 
 @dataclass(frozen=True)
 class HistSpec:
@@ -182,6 +184,11 @@ def sys_central_branch(sys_name: str) -> str:
     return sys_name
 
 
+def param_cycle_expr() -> str:
+    terms = [f"((Entry$ % {len(PARAM_MASS_CYCLE)}) == {idx}) * {mass:.8g}" for idx, mass in enumerate(PARAM_MASS_CYCLE)]
+    return "(" + " + ".join(terms) + ")"
+
+
 def build_hist_specs(
     var_names: Sequence[str],
     target_masses: Sequence[str],
@@ -221,9 +228,9 @@ def build_hist_specs(
         "var_MhMZ": HistSpec("var_MhMZ", 130, 180.0, 310.0),
         "ALP_calculatedPhotonIso": HistSpec("ALP_calculatedPhotonIso", 25, 0.0, 125.0),
         # The original script used a random ALP mass for background/data in param.
-        # TTreeFormula cannot reproduce that exact Python-side random choice, so
-        # background/data use a stable reference mass of 10 GeV.
-        "param": HistSpec(f"(ALP_m - 10.0) / {mass_branch}", 25, -0.3, 0.6),
+        # For a deterministic fast TTreeFormula version, background/data cycle
+        # through the same mass hypotheses by Entry$.
+        "param": HistSpec(f"(ALP_m - {param_cycle_expr()}) / {mass_branch}", 25, -0.3, 0.6),
     }
 
     specs = {var: base_specs[var] for var in var_names if var in base_specs}
