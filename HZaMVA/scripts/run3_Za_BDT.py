@@ -572,12 +572,31 @@ x_test_mass = x_test[:,Hm_var_indices].flatten()
 # x_test_mass = x_test[:,mass_var_indices].flatten()
 # x_test_cats = x_test[:,cat_var_indices]
 
+def make_balanced_weights(y, w):
+    w = np.asarray(w, dtype=float)
+    sig_mask = y == 1
+    bkg_mask = y == 0
+
+    sum_sig = np.sum(w[sig_mask])
+    sum_bkg = np.sum(w[bkg_mask])
+    total = sum_sig + sum_bkg
+
+    scale_sig = total / (2.0 * sum_sig)
+    scale_bkg = total / (2.0 * sum_bkg)
+
+    return w * np.where(sig_mask, scale_sig, scale_bkg)
+
+x_train_w_balanced = make_balanced_weights(y_train, x_train_w)
+x_test_w_balanced = make_balanced_weights(y_test, x_test_w)
+
 print(x_test_reduced.shape)
 print(x_train_reduced.shape)
 print(x_train.shape)
 print(len(x_train_w))
 print(x[0])
 print(x_train_w)
+print("weighted train yields before balance: signal", np.sum(x_train_w[y_train == 1]), "bkg", np.sum(x_train_w[y_train == 0]))
+print("weighted train yields after balance: signal", np.sum(x_train_w_balanced[y_train == 1]), "bkg", np.sum(x_train_w_balanced[y_train == 0]))
 print("finish")
 
 
@@ -599,8 +618,7 @@ def objective(trial):
         learning_rate=learning_rate,
         n_estimators=n_estimators,
         min_child_weight=min_child_weight,
-        scale_pos_weight=scale_weight,
-        #scale_pos_weight=1,
+        scale_pos_weight=1,
         early_stopping_rounds=10,
         eval_metric=["logloss"],
         base_score=0.5,
@@ -619,7 +637,14 @@ def objective(trial):
         subsample=subsample, 
         verbosity=1)
     eval_set = [(x_train_reduced, y_train), (x_test_reduced, y_test)]
-    model.fit(x_train_reduced, y_train, sample_weight=xgb.DMatrix(x_train).get_weight() , eval_set=eval_set, verbose=False)
+    model.fit(
+        x_train_reduced,
+        y_train,
+        sample_weight=x_train_w_balanced,
+        eval_set=eval_set,
+        sample_weight_eval_set=[x_train_w_balanced, x_test_w_balanced],
+        verbose=False,
+    )
     #preds = model.predict(x_test_reduced)
     #rmse = accuracy_score(y_test, preds)
     preds_test = model.predict_proba(x_test_reduced)[:, 1]
@@ -658,7 +683,7 @@ save_optuna_fig_pdf(fig, "optuna_param_importances_overfit.pdf", show=False)
 print("总试验次数：", len(xgb_study.trials))
 
 print("帕累托最优解集(Pareto front):")
-trials = sorted(xgb_study.best_trials, key=lambda t: t.values) # 对字典best_trials按values从小到达排序
+trials = sorted(xgb_study.best_trials, key=lambda t: (-t.values[0], t.values[1]))
 for trial in trials:
     print("     Trial:", trial.number)
     print(f"    Values: auc_test={trial.values[0]}, overfit={ trial.values[1]}")
@@ -696,8 +721,7 @@ model_best = xgb.XGBClassifier(
     learning_rate=best_xgb_params['learning_rate'],
     n_estimators=best_xgb_params['n_estimators'],
     min_child_weight=best_xgb_params['min_child_weight'],
-    scale_pos_weight=scale_weight,
-    #scale_pos_weight=1,
+    scale_pos_weight=1,
     early_stopping_rounds=10,
     eval_metric=["logloss"],
     base_score=0.5,
@@ -731,7 +755,14 @@ print(model_best)
 #early_stopping_rounds (int): Activates early stopping. Validation metric needs to improve at least once in every early_stopping_rounds round(s) to continue training.
 eval_set = [(x_train_reduced, y_train), (x_test_reduced, y_test)]
 # model_best.fit(x_train_reduced, y_train, sample_weight=xgb.DMatrix(x_train).get_weight() , eval_set=eval_set, verbose=False) # original 
-model_best.fit(x_train_reduced, y_train, sample_weight=x_train_w, eval_set=eval_set, verbose=False)
+model_best.fit(
+    x_train_reduced,
+    y_train,
+    sample_weight=x_train_w_balanced,
+    eval_set=eval_set,
+    sample_weight_eval_set=[x_train_w_balanced, x_test_w_balanced],
+    verbose=False,
+)
 #model_best.fit(x_train_reduced, y_train , eval_set=eval_set, verbose=False)
 print("save model file ",model_file)
 output = open(model_file, 'wb')
