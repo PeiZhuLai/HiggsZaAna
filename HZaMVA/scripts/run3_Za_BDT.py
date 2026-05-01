@@ -750,31 +750,161 @@ model_file = './model_Za_BDT_run3.pkl'
 #min_child_weight_best=5
 
 best_xgb_params = trials[0].params
+KS_PVALUE_TARGET = 0.05
+
+def make_xgb_model(params, random_state=0):
+    return xgb.XGBClassifier(
+        max_depth=int(params['max_depth']),
+        learning_rate=params['learning_rate'],
+        n_estimators=int(params['n_estimators']),
+        min_child_weight=params['min_child_weight'],
+        scale_pos_weight=1,
+        early_stopping_rounds=10,
+        eval_metric=["logloss"],
+        base_score=0.5,
+        nthread=4,
+        #n_jobs=2,
+        booster='gbtree',
+        colsample_bylevel=1,
+        colsample_bynode=1,
+        colsample_bytree=params['colsample_bytree'],
+        gamma=params['gamma'],
+        max_delta_step=0,
+        objective='binary:logistic',
+        random_state=random_state,
+        reg_alpha=params['reg_alpha'],
+        reg_lambda=params['reg_lambda'],
+        subsample=params['subsample'],
+        verbosity=1)
+
+def regularized_xgb_candidates(best_params):
+    base = {
+        'max_depth': int(best_params.get('max_depth', 3)),
+        'learning_rate': best_params.get('learning_rate', 0.06),
+        'n_estimators': int(best_params.get('n_estimators', 800)),
+        'min_child_weight': best_params.get('min_child_weight', 20),
+        'gamma': best_params.get('gamma', 1.0),
+        'reg_lambda': best_params.get('reg_lambda', 10.0),
+        'reg_alpha': best_params.get('reg_alpha', 0.1),
+        'subsample': best_params.get('subsample', 0.8),
+        'colsample_bytree': best_params.get('colsample_bytree', 0.8),
+    }
+
+    candidates = [('optuna_best', base)]
+    candidates.append((
+        'ks_regularized',
+        {
+            **base,
+            'max_depth': min(base['max_depth'], 3),
+            'learning_rate': min(base['learning_rate'], 0.06),
+            'n_estimators': min(base['n_estimators'], 900),
+            'min_child_weight': max(base['min_child_weight'], 30),
+            'gamma': max(base['gamma'], 1.0),
+            'reg_lambda': max(base['reg_lambda'], 15.0),
+            'reg_alpha': max(base['reg_alpha'], 0.2),
+            'subsample': min(base['subsample'], 0.8),
+            'colsample_bytree': min(base['colsample_bytree'], 0.8),
+        },
+    ))
+    candidates.append((
+        'ks_more_regularized',
+        {
+            **base,
+            'max_depth': 2,
+            'learning_rate': min(base['learning_rate'], 0.04),
+            'n_estimators': min(base['n_estimators'], 700),
+            'min_child_weight': max(base['min_child_weight'], 60),
+            'gamma': max(base['gamma'], 2.0),
+            'reg_lambda': max(base['reg_lambda'], 30.0),
+            'reg_alpha': max(base['reg_alpha'], 1.0),
+            'subsample': min(base['subsample'], 0.7),
+            'colsample_bytree': min(base['colsample_bytree'], 0.7),
+        },
+    ))
+    candidates.append((
+        'ks_strong_regularized',
+        {
+            **base,
+            'max_depth': 2,
+            'learning_rate': min(base['learning_rate'], 0.03),
+            'n_estimators': min(base['n_estimators'], 500),
+            'min_child_weight': max(base['min_child_weight'], 100),
+            'gamma': max(base['gamma'], 5.0),
+            'reg_lambda': max(base['reg_lambda'], 50.0),
+            'reg_alpha': max(base['reg_alpha'], 2.0),
+            'subsample': min(base['subsample'], 0.65),
+            'colsample_bytree': min(base['colsample_bytree'], 0.65),
+        },
+    ))
+    return candidates
+
+def evaluate_train_test_ks(clf):
+    pred_train = clf.predict_proba(x_train_reduced)[:, 1]
+    pred_test = clf.predict_proba(x_test_reduced)[:, 1]
+    sig_train = y_train > 0.5
+    sig_test = y_test > 0.5
+    bkg_train = y_train < 0.5
+    bkg_test = y_test < 0.5
+
+    _, p_sig = weighted_ks_2samp(
+        pred_train[sig_train],
+        x_train_w[sig_train],
+        pred_test[sig_test],
+        x_test_w[sig_test],
+    )
+    _, p_bkg = weighted_ks_2samp(
+        pred_train[bkg_train],
+        x_train_w[bkg_train],
+        pred_test[bkg_test],
+        x_test_w[bkg_test],
+    )
+    _, p_sig_unweighted = ks_2samp(pred_train[sig_train], pred_test[sig_test])
+    _, p_bkg_unweighted = ks_2samp(pred_train[bkg_train], pred_test[bkg_test])
+    fpr_test, tpr_test, _ = roc_curve(y_test, pred_test)
+    auc_test = auc(fpr_test, tpr_test)
+    return p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, auc_test
+
+def fit_model_with_ks_target():
+    eval_set = [(x_train_reduced, y_train), (x_test_reduced, y_test)]
+    results = []
+
+    for name, params in regularized_xgb_candidates(best_xgb_params):
+        model = make_xgb_model(params, random_state=0)
+        model.fit(
+            x_train_reduced,
+            y_train,
+            sample_weight=x_train_w_balanced,
+            eval_set=eval_set,
+            sample_weight_eval_set=[x_train_w_balanced, x_test_w_balanced],
+            verbose=False,
+        )
+        p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, auc_test = evaluate_train_test_ks(model)
+        min_ks_pvalue = min(p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted)
+        results.append((min_ks_pvalue, auc_test, name, params, model, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted))
+        print(
+            "KS candidate {}: p_sig_w={:.4g}, p_bkg_w={:.4g}, "
+            "p_sig_unw={:.4g}, p_bkg_unw={:.4g}, min_p={:.4g}, auc_test={:.4f}".format(
+                name, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, min_ks_pvalue, auc_test
+            )
+        )
+        if min_ks_pvalue > KS_PVALUE_TARGET:
+            print("Selected KS-safe model:", name)
+            return model, name, params
+
+    results.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    min_ks_pvalue, auc_test, name, params, model, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted = results[0]
+    print(
+        "No candidate reached KS p-value target {:.3g} for both classes; selected best available {} "
+        "with p_sig_w={:.4g}, p_bkg_w={:.4g}, p_sig_unw={:.4g}, p_bkg_unw={:.4g}, auc_test={:.4f}".format(
+            KS_PVALUE_TARGET, name, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, auc_test
+        )
+    )
+    return model, name, params
 
 # fit model no training sample
-model_best = xgb.XGBClassifier(
-    max_depth=best_xgb_params['max_depth'],
-    learning_rate=best_xgb_params['learning_rate'],
-    n_estimators=best_xgb_params['n_estimators'],
-    min_child_weight=best_xgb_params['min_child_weight'],
-    scale_pos_weight=1,
-    early_stopping_rounds=10,
-    eval_metric=["logloss"],
-    base_score=0.5,
-    nthread=4,
-    #n_jobs=2,
-    booster='gbtree',
-    colsample_bylevel=1,
-    colsample_bynode=1, 
-    colsample_bytree=best_xgb_params.get('colsample_bytree', 0.8),
-    gamma=best_xgb_params['gamma'],
-    max_delta_step=0,
-    objective='binary:logistic', 
-    random_state=0, 
-    reg_alpha=best_xgb_params['reg_alpha'],
-    reg_lambda=best_xgb_params['reg_lambda'],
-    subsample=best_xgb_params.get('subsample', 0.8),
-    verbosity=1)
+model_best, selected_model_name, selected_xgb_params = fit_model_with_ks_target()
+print("Selected model candidate:", selected_model_name)
+print("Selected model params:", selected_xgb_params)
 print(model_best)
 
 # do cross validation
@@ -788,18 +918,6 @@ print(model_best)
 #model_best.set_params(n_estimators=cvresult.shape[0])
 
 
-#early_stopping_rounds (int): Activates early stopping. Validation metric needs to improve at least once in every early_stopping_rounds round(s) to continue training.
-eval_set = [(x_train_reduced, y_train), (x_test_reduced, y_test)]
-# model_best.fit(x_train_reduced, y_train, sample_weight=xgb.DMatrix(x_train).get_weight() , eval_set=eval_set, verbose=False) # original 
-model_best.fit(
-    x_train_reduced,
-    y_train,
-    sample_weight=x_train_w_balanced,
-    eval_set=eval_set,
-    sample_weight_eval_set=[x_train_w_balanced, x_test_w_balanced],
-    verbose=False,
-)
-#model_best.fit(x_train_reduced, y_train , eval_set=eval_set, verbose=False)
 print("save model file ",model_file)
 output = open(model_file, 'wb')
 pickle.dump(model_best, output)
@@ -911,11 +1029,11 @@ fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, 
 # print(fpr_test, tpr_test)
 ks_test = max(tpr_test-fpr_test)
 auc_test = auc(fpr_test,tpr_test)
-print("test K-S value: ",ks_test)
+print("test ROC separation max(TPR-FPR): ",ks_test)
 
 ks_train = max(tpr_train-fpr_train)
 auc_train = auc(fpr_train,tpr_train)
-print("train K-S value: ",ks_train)
+print("train ROC separation max(TPR-FPR): ",ks_train)
 
 #plot roc curve
 plt.figure()
@@ -947,11 +1065,11 @@ fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, 
 # print(fpr_test, tpr_test)
 ks_test = max(tpr_test-fpr_test)
 auc_test = auc(fpr_test,tpr_test)
-print("test K-S value: ",ks_test)
+print("test ROC separation max(TPR-FPR): ",ks_test)
 
 ks_train = max(tpr_train-fpr_train)
 auc_train = auc(fpr_train,tpr_train)
-print("train K-S value: ",ks_train)
+print("train ROC separation max(TPR-FPR): ",ks_train)
 
 #plot roc curve
 plt.figure(figsize=(8, 6))
