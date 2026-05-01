@@ -90,6 +90,44 @@ def convert_ntuple_dataframe(path, filename, treename, branches, selections="H_m
     dataframe = pd.DataFrame.from_records(np)
     return dataframe, tree
 
+def weighted_ks_2samp(x1, w1, x2, w2):
+    x1 = np.asarray(x1, dtype=float)
+    x2 = np.asarray(x2, dtype=float)
+    w1 = np.asarray(w1, dtype=float)
+    w2 = np.asarray(w2, dtype=float)
+
+    mask1 = np.isfinite(x1) & np.isfinite(w1)
+    mask2 = np.isfinite(x2) & np.isfinite(w2)
+    x1, w1 = x1[mask1], np.abs(w1[mask1])
+    x2, w2 = x2[mask2], np.abs(w2[mask2])
+    mask1 = w1 > 0
+    mask2 = w2 > 0
+    x1, w1 = x1[mask1], w1[mask1]
+    x2, w2 = x2[mask2], w2[mask2]
+
+    if len(x1) == 0 or len(x2) == 0:
+        return np.nan, np.nan
+
+    order1 = np.argsort(x1)
+    order2 = np.argsort(x2)
+    x1, w1 = x1[order1], w1[order1]
+    x2, w2 = x2[order2], w2[order2]
+    cdf1 = np.cumsum(w1) / np.sum(w1)
+    cdf2 = np.cumsum(w2) / np.sum(w2)
+
+    x_all = np.sort(np.concatenate([x1, x2]))
+    idx1 = np.searchsorted(x1, x_all, side="right") - 1
+    idx2 = np.searchsorted(x2, x_all, side="right") - 1
+    cdf1_all = np.where(idx1 >= 0, cdf1[np.maximum(idx1, 0)], 0.0)
+    cdf2_all = np.where(idx2 >= 0, cdf2[np.maximum(idx2, 0)], 0.0)
+    stat = np.max(np.abs(cdf1_all - cdf2_all))
+
+    neff1 = np.sum(w1) ** 2 / np.sum(w1 ** 2)
+    neff2 = np.sum(w2) ** 2 / np.sum(w2 ** 2)
+    en = np.sqrt(neff1 * neff2 / (neff1 + neff2))
+    pvalue = stats.kstwobign.sf((en + 0.12 + 0.11 / en) * stat)
+    return stat, pvalue
+
 def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,w_test, bins=50, label=''):
     
     # K-S Test
@@ -105,9 +143,9 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     disc_test_signal_all = y_test_frame[y_test_frame['truth'] < 0]['disc'].values
     disc_test_bkg_all = y_test_frame[y_test_frame['truth'] > 0]['disc'].values
 
-    # K-S test
-    stat_signal,pval_signal = ks_2samp(disc_train_signal_all,disc_test_signal_all)
-    stat_bkg,pval_bkg = ks_2samp(disc_train_bkg_all,disc_test_bkg_all)
+    # Unweighted K-S test, useful as a raw-event diagnostic.
+    stat_signal_unw,pval_signal_unw = ks_2samp(disc_train_signal_all,disc_test_signal_all)
+    stat_bkg_unw,pval_bkg_unw = ks_2samp(disc_train_bkg_all,disc_test_bkg_all)
     ######################
     
     
@@ -126,6 +164,14 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
         w2 = w[y<0.5]
         decisions += [d1, d2]
         weight    += [w1, w2]
+
+    # The plotted train/test shapes are weighted, so use a weighted K-S summary in the legend.
+    stat_signal,pval_signal = weighted_ks_2samp(decisions[0], weight[0], decisions[2], weight[2])
+    stat_bkg,pval_bkg = weighted_ks_2samp(decisions[1], weight[1], decisions[3], weight[3])
+    print("Signal unweighted KS: D={:.4g}, p={:.4g}".format(stat_signal_unw, pval_signal_unw))
+    print("Bkg unweighted KS: D={:.4g}, p={:.4g}".format(stat_bkg_unw, pval_bkg_unw))
+    print("Signal weighted KS approx: D={:.4g}, p={:.4g}".format(stat_signal, pval_signal))
+    print("Bkg weighted KS approx: D={:.4g}, p={:.4g}".format(stat_bkg, pval_bkg))
         
     low  = min(np.min(d) for d in decisions)
     high = max(np.max(d) for d in decisions)
@@ -135,11 +181,11 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     plt.hist(0,
              color='w', alpha=0.5, range=low_high, bins=bins,
              histtype='stepfilled', density=True, 
-             label='Sig K-S Test p-value: {0:.2f}'.format(pval_signal))
+             label='Sig weighted K-S p-value: {0:.3g}'.format(pval_signal))
     plt.hist(0,
              color='w', alpha=0.5, range=low_high, bins=bins,
              histtype='stepfilled', density=True, 
-             label='Bkg K-S Test p-value: {0:.2f}'.format(pval_bkg))
+             label='Bkg weighted K-S p-value: {0:.3g}'.format(pval_bkg))
     
     
     plt.hist(decisions[0],
