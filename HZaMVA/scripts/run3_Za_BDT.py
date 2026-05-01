@@ -31,7 +31,7 @@ except Exception:
     pio = None
 
 # --- ensure plot output dir exists + helper to save all matplotlib figures ---
-PLOTS_DIR = Path("../plots_MVA/run3")
+PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3")
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
@@ -45,14 +45,18 @@ def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
     lineno = frame.f_back.f_lineno
     return f"{prefix}_L{lineno}.{ext}"
 
-def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300):
+def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300, close: bool = True):
     """
-    Save current matplotlib figure to plots_MVA/run3 as PDF, then show.
+    Save current matplotlib figure to the configured plots_MVA/run3 directory as PDF.
     """
     if pdf_name is None:
         pdf_name = _auto_pdf_name("matplotlib")
     out = PLOTS_DIR / pdf_name
-    plt.savefig(str(out), format="pdf", bbox_inches="tight", dpi=dpi)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig = plt.gcf()
+    fig.savefig(str(out), format="pdf", bbox_inches="tight", dpi=dpi)
+    if close:
+        plt.close(fig)
     # plt.show()
 
 # +++ add: save optuna (plotly) figures as PDF +++
@@ -160,7 +164,7 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     
     hist, bins = np.histogram(decisions[3],
                               bins=bins, range=low_high, density=True, weights = weight[3])
-    scale = len(decisions[2]) / sum(hist)
+    scale = len(decisions[3]) / sum(hist)
     err = np.sqrt(hist * scale) / scale
 
     plt.subplots_adjust(left=0.1, right=0.97, top=0.97, bottom=0.13)
@@ -193,8 +197,6 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     )
     ymax_signal = max(hist_sig_train.max(), hist_sig_test.max())
     plt.ylim([0.0, 1.3 * ymax_signal])
-    #plt.savefig('./plot/BDT_output.png',dpi=300)
-    plt.savefig(f'./plots_MVA/run3/train_test.pdf', format='pdf')
     savefig_and_show("train_test.pdf")
     
 # Za variables
@@ -275,7 +277,25 @@ print("weighted Sideband event: data", n_data_SB, "bkg:", n_bkg_SB)
 
 file_name = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt", "param", "ALP_m", "H_m"]
 
-xlabel = ["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{a}$", "$m_{H}$"]
+xlabel = [
+    r"$\gamma_{Leading}\ P_{T}$",
+    r"$\gamma_{Leading}$ R9",
+    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta}^{5x5}$",
+    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
+    r"$\gamma_{Subleading}\ P_{T}$",
+    r"$\gamma_{Subleading}$ R9",
+    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta}^{5x5}$",
+    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
+    r"$\gamma\gamma$ Iso",
+    r"$\Delta R(Z,a)$",
+    r"$\Delta R(\gamma,\gamma)$",
+    r"$\Delta R(\gamma_{Leading}, Z)$",
+    r"$P_{t,a} / m_{H}$",
+    r"$P_{T,H}$",
+    r"$(m_{a} - m_{a,\mathrm{hyp}}) / m_{H}$",
+    r"$m_{a}$",
+    r"$m_{H}$",
+]
 
 x_limits = {
     'pho1Pt': (6, 60),
@@ -351,147 +371,86 @@ for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_
     plt.subplots_adjust(left=0.17, right=0.96, top=0.97, bottom=0.15)
 
     plt.legend(loc='best', frameon=False, handlelength=3.0, fontsize=22)
-    path = Path("plots_MVA/run3")
-    path.mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'./plots_MVA/run3/{fn}.pdf', format='pdf')
     savefig_and_show(f"{fn}.pdf")
     
 print(variables)
 
-plt.figure(figsize=(24, 21))
-ax1 = plt.gca()
-# Signal heatmap
+corr_vars = variables + ["param", "H_m"]
+corr_labels = xlabel[:15] + [xlabel[16]]
 
-print(df_sig_all[variables+["param"]+["H_m"]])
+print(df_sig_all[corr_vars])
 
-cmap = sns.cubehelix_palette(start = 1.5, rot = 3, gamma=0.8, as_cmap = True)
-sns.heatmap(df_sig_all[variables+["param"]+["H_m"]].corr(), annot=True, fmt=".2f", ax = ax1, cmap="PiYG", annot_kws={"size": 29}, cbar_kws={'pad': 0.01}, vmin=-1, vmax=1)
-ax1.set_title('Signal', fontsize=36, fontstyle='italic', pad=18)
-ax1.tick_params(axis='both', which='major', labelsize=30)
+def format_corr_axis(ax, labels, tick_size, show_ylabels=True):
+    tick_positions = np.arange(len(labels)) + 0.5
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels(labels, rotation=30, ha="right", rotation_mode="anchor")
+    ax.set_yticks(tick_positions)
+    if show_ylabels:
+        ax.set_yticklabels(labels)
+    else:
+        ax.set_yticklabels([])
+    ax.tick_params(axis="both", which="major", labelsize=tick_size)
 
-# Adjust z-axis (colorbar) label size
-cbar1 = ax1.collections[0].colorbar
-cbar1.ax.tick_params(labelsize=29)
+def draw_corr_heatmap(df, title, pdf_name):
+    fig, ax = plt.subplots(figsize=(24, 21))
+    sns.heatmap(
+        df[corr_vars].corr(),
+        annot=True,
+        fmt=".2f",
+        ax=ax,
+        cmap="PiYG",
+        annot_kws={"size": 29},
+        cbar_kws={"pad": 0.01},
+        vmin=-1,
+        vmax=1,
+    )
+    ax.set_title(title, fontsize=36, fontstyle="italic", pad=18)
+    format_corr_axis(ax, corr_labels, 30)
+    cbar = ax.collections[0].colorbar
+    if cbar is not None:
+        cbar.ax.tick_params(labelsize=29)
+    fig.subplots_adjust(left=0.16, right=1.03, top=0.95, bottom=0.11)
+    savefig_and_show(pdf_name)
 
-ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
-ax1.set_yticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \ eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
+draw_corr_heatmap(df_sig_all, "Signal", "corr_Sig.pdf")
+draw_corr_heatmap(df_bkg_all, "Background", "corr_Bkg.pdf")
 
+f, (ax1, ax2) = plt.subplots(1, 2, figsize=(45, 21), gridspec_kw={"width_ratios": [1, 1.15]})
+f.subplots_adjust(wspace=0.01)
 
-ax1.set_xticklabels(ax1.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
+sns.heatmap(
+    df_sig_all[corr_vars].corr(),
+    annot=True,
+    fmt=".2f",
+    ax=ax1,
+    cmap="PiYG",
+    annot_kws={"size": 27},
+    vmin=-1,
+    vmax=1,
+    cbar=False,
+)
+ax1.set_title("Signal", fontsize=44, fontstyle="italic", pad=18)
+format_corr_axis(ax1, corr_labels, 38)
 
-plt.subplots_adjust(left=0.16, right=1.03, top=0.95, bottom=0.11)
-
-plt.savefig('./plots_MVA/run3/corr_Sig.pdf', format='pdf')
-
-print(variables)
-
-plt.figure(figsize=(24, 21))
-ax1 = plt.gca()
-
-# Signal heatmap
-cmap = sns.cubehelix_palette(start = 1.5, rot = 3, gamma=0.8, as_cmap = True)
-sns.heatmap(df_bkg_all[variables+["param"]+["H_m"]].corr(), annot=True, fmt=".2f", ax = ax1, cmap="PiYG", annot_kws={"size": 29}, cbar_kws={'pad': 0.01}, vmin=-1, vmax=1)
-ax1.set_title('Background', fontsize=36, fontstyle='italic', pad=18)
-ax1.tick_params(axis='both', which='major', labelsize=30)
-
-# Adjust z-axis (colorbar) label size
-cbar1 = ax1.collections[0].colorbar
-cbar1.ax.tick_params(labelsize=29)
-
-ax1.set_xticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \eta i \ eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \ eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
-ax1.set_yticklabels(["$\gamma_{Leading} \ P_{T}$", "$\gamma_{Leading}$ R9", "$\gamma_{Leading}$ $\sigma_{i \ eta i \ eta \ 5x5}$", " $\gamma_{Leading}$ $PF_{\gamma}$ Iso", "$\gamma_{Subleading} \ P_{T}$", "$\gamma_{Subleading}$ R9", "$\gamma_{Subleading}$ $\sigma_{i \ eta i \ eta \ 5x5}$", "$\gamma_{Subleading}$ $PF_{\gamma}$ Iso", "$\gamma\gamma$ Iso", "$\Delta R(Z,a)$", "$\Delta R(\gamma,\gamma)$", "$\Delta R(\gamma_{Leading}, Z)$", "$P_{t,a} / m_{H}$", "$P_{T,H}$", "$(m_{a} - m_{a, hype}) / m_{H}$", "$m_{H}$"])
-
-ax1.set_xticklabels(ax1.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
-
-plt.subplots_adjust(left=0.16, right=1.03, top=0.95, bottom=0.11)
-
-plt.savefig('./plots_MVA/run3/corr_Bkg.pdf', format='pdf')
-
-f, (ax1,ax2) = plt.subplots(1, 2, figsize = (45, 21), gridspec_kw={'width_ratios': [1, 1.15]})
-f.subplots_adjust(wspace = 0.01)
-
-cmap = sns.cubehelix_palette(start = 1.5, rot = 3, gamma=0.8, as_cmap = True)
-sns.heatmap(df_sig_all[variables+["param"]+["H_m"]].corr(), annot=True, fmt=".2f", ax = ax1, cmap="PiYG", annot_kws={"size": 27}, vmin=-1, vmax=1, cbar=False)
-ax1.set_title('Signal', fontsize=44, fontstyle='italic', pad=18)
-ax1.tick_params(axis='both', which='major', labelsize=38)
-
-# FIX: use valid LaTeX commands (\gamma, \Delta, \sigma, \eta) + raw strings
-ax1.set_xticklabels([
-    r"$\gamma_{Leading}\ P_{T}$",
-    r"$\gamma_{Leading}$ R9",
-    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
-    r"$\gamma_{Subleading}$ R9",
-    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma\gamma$ Iso",
-    r"$\Delta R(Z,a)$",
-    r"$\Delta R(\gamma,\gamma)$",
-    r"$\Delta R(\gamma_{Leading}, Z)$",
-    r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
-    r"$(m_{a} - m_{a,\ hype}) / m_{H}$",
-    r"$m_{H}$",
-])
-ax1.set_yticklabels([
-    r"$\gamma_{Leading}\ P_{T}$",
-    r"$\gamma_{Leading}$ R9",
-    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
-    r"$\gamma_{Subleading}$ R9",
-    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma\gamma$ Iso",
-    r"$\Delta R(Z,a)$",
-    r"$\Delta R(\gamma,\gamma)$",
-    r"$\Delta R(\gamma_{Leading}, Z)$",
-    r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
-    r"$(m_{a} - m_{a,\ hype}) / m_{H}$",
-    r"$m_{H}$",
-])
-
-ax1.set_xticklabels(ax1.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
-############################################################################################################## 
-sns.heatmap(df_bkg_all[variables+["param"]+["H_m"]].corr(), annot=True, fmt=".2f", ax = ax2, cmap="PiYG", annot_kws={"size": 27}, cbar_kws={'pad': 0.01}, vmin=-1, vmax=1)
-ax2.set_title('Background', fontsize=44, fontstyle='italic', pad=18)
-ax2.tick_params(axis='both', which='major', labelsize=38)
-
-# Adjust z-axis (colorbar) label size
+sns.heatmap(
+    df_bkg_all[corr_vars].corr(),
+    annot=True,
+    fmt=".2f",
+    ax=ax2,
+    cmap="PiYG",
+    annot_kws={"size": 27},
+    cbar_kws={"pad": 0.01},
+    vmin=-1,
+    vmax=1,
+)
+ax2.set_title("Background", fontsize=44, fontstyle="italic", pad=18)
+format_corr_axis(ax2, corr_labels, 38, show_ylabels=False)
 cbar2 = ax2.collections[0].colorbar
-cbar2.ax.tick_params(labelsize=36)
-
-ax2.set_yticklabels([])
-
-# FIX: use valid LaTeX commands + raw strings
-ax2.set_xticklabels([
-    r"$\gamma_{Leading}\ P_{T}$",
-    r"$\gamma_{Leading}$ R9",
-    r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
-    r"$\gamma_{Subleading}$ R9",
-    r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta\ 5x5}$",
-    r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma\gamma$ Iso",
-    r"$\Delta R(Z,a)$",
-    r"$\Delta R(\gamma,\gamma)$",
-    r"$\Delta R(\gamma_{Leading}, Z)$",
-    r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
-    r"$(m_{a} - m_{a,\ hype}) / m_{H}$",
-    r"$m_{H}$",
-])
-
-ax2.set_xticklabels(ax2.get_xticklabels(), rotation=30, ha='right', rotation_mode="anchor")
+if cbar2 is not None:
+    cbar2.ax.tick_params(labelsize=36)
 
 f.subplots_adjust(left=0.11, right=1.01, top=0.95, bottom=0.13)
-
-# f.show()
-
-plt.savefig('./plots_MVA/run3/corr_Sig_Bkg.pdf', format='pdf')
+savefig_and_show("corr_Sig_Bkg.pdf")
 
 
 var_indices = [df_sig_all.columns.get_loc(v) for v in variables+['param']] # get positions of all the variables set above
@@ -856,7 +815,6 @@ plt.hist(disc_train_bkg_DY, density=True, bins=bins, alpha=0.3, label='Bkg train
 #plt.hist(disc_test_bkg_all, normed=True, bins=50, alpha=0.3, label='DY bkg test', color='red')
 #plt.hist(disc_test_signal, normed=True, bins=50, alpha=0.3, label='signal test', color='blue')
 plt.legend(loc='upper center')
-plt.savefig(f'./plots_MVA/run3/sig_bkg_BDT.pdf', format='pdf')
 savefig_and_show("sig_bkg_BDT.pdf")
 
 compare_train_test(model,x_train_reduced,y_train,z_train,x_train_w,x_test_reduced,y_test,z_test,x_test_w,bins=bins)
@@ -886,8 +844,6 @@ plt.yticks(fontsize=14)
 #fig.text(0.5, 0.05, 'Source: Your data analysis', ha='center', fontsize=10, color='gray')
 
 # Save and show the plot
-#plt.savefig('./plot/rank.png', dpi=300, bbox_inches='tight')
-plt.savefig(f'./plots_MVA/run3/feature_importance.pdf', format='pdf')
 savefig_and_show("feature_importance.pdf")
 
 ##########################################################
@@ -924,7 +880,6 @@ plt.xlabel('Background (false positives)')
 plt.ylabel('Signal (true positives)')
 plt.title(r'ROC - sig vs. bkg')
 plt.legend(loc="lower right")
-#plt.savefig('./plot/ROC.png')
 savefig_and_show("ROC_debug.pdf")
 
 
@@ -934,8 +889,6 @@ savefig_and_show("ROC_debug.pdf")
 
 #get roc curve
 #fpr, tpr, _ = roc_curve(y_test, y_pred, x_test_w)
-plt.figure(figsize=(8, 6))
-
 fpr_test, tpr_test, boundary_test = roc_curve(y_test_frame['label'].values, y_test_frame['disc'].values)
 fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, y_train_frame['disc'].values)
 # print(fpr_test, tpr_test)
@@ -948,7 +901,7 @@ auc_train = auc(fpr_train,tpr_train)
 print("train K-S value: ",ks_train)
 
 #plot roc curve
-plt.figure()
+plt.figure(figsize=(8, 6))
 lw = 2
 plt.plot(tpr_train, 1-fpr_train, color='darkorange',
          lw=lw, label=r'Train (AUC = {0:.3f})'.format(auc_train))
@@ -971,7 +924,6 @@ plt.ylim([0.0, 1.1])
 plt.xlabel('Signal Efficiency', fontsize=14, labelpad=10)
 plt.ylabel('Background Rejection', fontsize=14, labelpad=10)
 plt.legend(loc="lower left", fontsize=12, frameon=False)
-# plt.savefig('../plots_MVA/run3/ROC.pdf')
 savefig_and_show("ROC.pdf")
 
 
@@ -1121,6 +1073,7 @@ sig_SR = bkg_all_frame[(( (bkg_all_frame["H_mass"] > 115) & (bkg_all_frame["H_ma
 
 
 def draw_dataMC(var_name, nbins = 50,range_hl=(0,1)):
+    plt.figure(figsize=(8, 6))
     #var_name = 'disc'
     hist_DY, bins = np.histogram(bkg_all_frame[var_name][bkg_all_frame['truth']==1], weights=bkg_all_frame['weight'][bkg_all_frame['truth']==1], bins=nbins,range=range_hl)
     # hist_ZG, _ = np.histogram(bkg_all_frame[var_name][bkg_all_frame['truth']==2], weights=bkg_all_frame['weight'][bkg_all_frame['truth']==2], bins=nbins,range=range_hl)
@@ -1140,7 +1093,6 @@ def draw_dataMC(var_name, nbins = 50,range_hl=(0,1)):
     plt.ylabel('Weighted Frequency')
     plt.title('Stacked Weighted Histogram of Mass by Truth')
     plt.subplots_adjust(left=0.15, right=0.96, top=0.94, bottom=0.1)
-    plt.savefig(str(PLOTS_DIR / f'weight_check_{var_name}_full_run3.pdf'), format='pdf')
     savefig_and_show(f"weight_check_{var_name}_full_run3.pdf")
 
 
@@ -1574,7 +1526,8 @@ for [l,h] in partition_final:
     sig5 = computeSignificance(s,b_smooth,20)
     print('significance:', sig5, 'ns:', s, 'nb smooth:', b_smooth, 'b_smooth_up:', b_smooth_up, 'b_smooth_dn:', b_smooth_dn, 'b_nosmooth:', b_nosmooth)
 
-def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
+def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_name=None):
+    plt.figure(figsize=(8, 6))
     hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
     # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
     #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
@@ -1593,16 +1546,18 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
     plt.title('Stacked Weighted Histogram of Mass by Truth')
-    # savefig_and_show(_auto_pdf_name(f"cat_{var_name}"))
+    if output_name is not None:
+        savefig_and_show(output_name)
 
 cats = [[0.0, 0.12999999523162842], [0.12999999523162842, 1.]]
 
 cats[0][0]
 for i in range(2):
     print('cat',i)
-    draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180))
+    draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180), output_name=f"cat2_H_mass_{i}.pdf")
 
-def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
+def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_name=None):
+    plt.figure(figsize=(8, 6))
     hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
     # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
     #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
@@ -1621,14 +1576,15 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1)):
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
     plt.title('Stacked Weighted Histogram of Mass by Truth')
-    # savefig_and_show(_auto_pdf_name(f"cat_{var_name}"))
+    if output_name is not None:
+        savefig_and_show(output_name)
 
 cats = [[0.0, 0.925000011920929], [0.925000011920929, 0.9599999785423279], [0.9599999785423279, 0.9700000286102295], [0.9700000286102295, 1.]]
 
 cats[0][0]
 for i in range(4):
     print('cat',i)
-    draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180))
+    draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180), output_name=f"cat4_H_mass_{i}.pdf")
 
 
 # # Optimization of MVA Cut Point by Significance - Run 2
@@ -1810,6 +1766,7 @@ hist_data_err = np.sqrt(hist_data)
 center = (bins[:-1] + bins[1:]) / 2
 
 # 绘制堆叠的直方图
+plt.figure(figsize=(8, 6))
 plt.bar(bins[:-1], hist_bkg_DY, width=np.diff(bins), label='DY')
 # plt.bar(bins[:-1], hist_bkg_ZG, width=np.diff(bins), label='ZG', bottom=hist_bkg_DY)
 plt.bar(bins[:-1], hist_sig*100, width=np.diff(bins), color='red', edgecolor='red', label='Signal * 50', alpha=0.3)
@@ -1829,6 +1786,7 @@ nbins = 50
 range_hl = (95, 180)
 w = int((len(BDT_boundaries)-1)/n_bdt_bin)
 
+plt.figure(figsize=(8, 6))
 for i in range(n_bdt_bin):
     low = BDT_boundaries[(i)*w]
     heigh = BDT_boundaries[(i+1)*w]
