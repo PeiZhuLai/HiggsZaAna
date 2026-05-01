@@ -17,7 +17,6 @@ from sklearn.model_selection import ShuffleSplit
 import seaborn as sns
 from scipy.stats import ks_2samp
 from scipy import stats
-#from xgboost import XGBClassifier
 import xgboost as xgb
 import random
 import optuna
@@ -30,7 +29,6 @@ try:
 except Exception:
     pio = None
 
-# --- ensure plot output dir exists + helper to save all matplotlib figures ---
 PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3")
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -57,9 +55,7 @@ def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300, close: b
     fig.savefig(str(out), format="pdf", bbox_inches="tight", dpi=dpi)
     if close:
         plt.close(fig)
-    # plt.show()
 
-# +++ add: save optuna (plotly) figures as PDF +++
 def save_optuna_fig_pdf(fig, pdf_name: str, *, show: bool = False):
     """
     Save an Optuna visualization (plotly Figure) to plots_MVA/run3 as PDF.
@@ -146,7 +142,6 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     # Unweighted K-S test, useful as a raw-event diagnostic.
     stat_signal_unw,pval_signal_unw = ks_2samp(disc_train_signal_all,disc_test_signal_all)
     stat_bkg_unw,pval_bkg_unw = ks_2samp(disc_train_bkg_all,disc_test_bkg_all)
-    ######################
     
     
     fig = plt.figure(figsize=(8,6))
@@ -157,14 +152,11 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     for x,y,w in ((x_train, y_train, w_train), (x_test, y_test, w_test)):
         d1 = clf.predict_proba(x[y>0.5])[:,1]
         d2 = clf.predict_proba(x[y<0.5])[:,1].ravel()
-        #d1 = evaluate_sklearn(clf,x[y>0.5])
-        #d2 = evaluate_sklearn(clf,x[y<0.5])
         w1 = w[y>0.5]
         w2 = w[y<0.5]
         decisions += [d1, d2]
         weight    += [w1, w2]
 
-    # The plotted train/test shapes are weighted, so use a weighted K-S summary in the legend.
     stat_signal,pval_signal = weighted_ks_2samp(decisions[0], weight[0], decisions[2], weight[2])
     stat_bkg,pval_bkg = weighted_ks_2samp(decisions[1], weight[1], decisions[3], weight[3])
     print("Signal unweighted KS: D={:.4g}, p={:.4g}".format(stat_signal_unw, pval_signal_unw))
@@ -221,10 +213,8 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
 
     plt.xlabel("BDT Score", fontsize=18, labelpad=10)
     plt.ylabel("Arbitrary Units", fontsize=18, labelpad=10)
-    #plt.yscale('log')
     plt.legend(loc='upper center', fontsize=16, frameon=False)
 
-    # --- signal histograms (for y-axis scaling) ---
     hist_sig_train, _ = np.histogram(
         decisions[0],
         bins=bins,
@@ -263,7 +253,6 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
 
 variables = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt"]
 mass_variables = ["ALP_m", "H_m"]
-# wt_variables = ['factor*pho1SFs*pho2SFs']
 wt_variables = ['factor']
 
 file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
@@ -310,7 +299,7 @@ df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name
 
 
 # Get sideband/signal region data
-# sideband 95 <𝑚𝓁𝓁γγ <115 GeV and 135 <𝑚𝓁𝓁γγ <180 GeV)
+# sideband 95 <𝑚llgg <115 GeV and 135 <𝑚llgg <180 GeV)
 data_SB = df_data_all[( (df_data_all["H_m"] > 110) & (df_data_all["H_m"] < 115) ) | ( (df_data_all["H_m"] > 135) & (df_data_all["H_m"] < 180) )]
 bkg_SB = df_bkg_all[( (df_bkg_all["H_m"] > 110) & (df_bkg_all["H_m"] < 115) ) | ( (df_bkg_all["H_m"] > 135) & (df_bkg_all["H_m"] < 180) )]
 
@@ -389,7 +378,7 @@ for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_
 
     data_range = x_max - x_min
     bin_size = bin_sizes.get(hlf, data_range/40.)
-    num_bins = int(data_range / float(bin_size))  # Ensure float division
+    num_bins = int(data_range / float(bin_size))
 
     bins = np.linspace(x_min, x_max, num_bins + 1)
 
@@ -397,10 +386,10 @@ for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_
     plt.hist(df_bkg_all[hlf], weights=df_bkg_all['factor'], bins=bins, density=True, histtype='step', label='Bkg', color='blue', linestyle='-.', linewidth=2.7)
     
     plt.xlabel(xlabel_hlf, fontsize=22, labelpad=13)
-    plt.ylabel(f'A.U. / {bin_size:.3f}', fontsize=22, labelpad=13)  # Include the bin size in the y-axis label
+    plt.ylabel(f'A.U. / {bin_size:.3f}', fontsize=22, labelpad=13)
 
     if hlf in x_limits:
-        plt.xlim(x_limits[hlf])  # Set the x-axis range based on the limits for the current variable
+        plt.xlim(x_limits[hlf])
     
 
     plt.tick_params(axis='x', labelsize=22, direction='in', top=True, right=True, length=11)  # Set the font size of the x-axis tick labels
@@ -415,12 +404,10 @@ for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_
     plt.legend(loc='best', frameon=False, handlelength=3.0, fontsize=22)
     savefig_and_show(f"{fn}.pdf")
     
-# print(variables)
 
 corr_vars = variables + ["param", "H_m"]
 corr_labels = xlabel[:15] + [xlabel[16]]
 
-# print(df_sig_all[corr_vars])
 
 def format_corr_axis(ax, labels, tick_size, show_ylabels=True):
     tick_positions = np.arange(len(labels)) + 0.5
@@ -495,15 +482,13 @@ f.subplots_adjust(left=0.11, right=1.01, top=0.95, bottom=0.13)
 savefig_and_show("corr_Sig_Bkg.pdf")
 
 
-var_indices = [df_sig_all.columns.get_loc(v) for v in variables+['param']] # get positions of all the variables set above
+var_indices = [df_sig_all.columns.get_loc(v) for v in variables+['param']]
 mass_var_indices = [df_sig_all.columns.get_loc(v) for v in mass_variables]
 wt_var_indices = [df_sig_all.columns.get_loc(v) for v in wt_variables]
 Hm_var_indices = [df_sig_all.columns.get_loc(v) for v in ['H_m']]
-# cat_var_indices = [df_sig_all.columns.get_loc(v) for v in rewt_variables]
 
 signal = df_sig_all.values
 signal_a = df_sig_a.values
-# signal_VBF = df_sig_VBF.values
 background = df_bkg_all.values
 background_DY = df_bkg_dy.values
 # background_ZG = df_bkg_ZG.values
@@ -520,30 +505,16 @@ weight_for_1 = (1.0 / sig)*(total)/2.0
 class_weight = {0: weight_for_0, 1: weight_for_1}
 scale_weight = (1.0*bkg)/(sig*1.0)
 
-#signal label as 1, bkg label as 0 (ground truth)
 sig_label_a = np.ones(len(signal_a))
-# sig_label_VBF = np.ones(len(signal_VBF))
-#sig_label_ttH = np.ones(len(signal_ttH))
-#sig_label_WH = np.ones(len(signal_WH))
-#sig_label_ZH = np.ones(len(signal_ZH))
 bkg_label_DY = np.zeros(len(background_DY))
-# bkg_label_ZG = 2*np.ones(len(background_ZG))
-#bkg_label_TT = 3*np.ones(len(background_TT))
 
 sig_proc_a = -1*np.ones(len(signal_a))
-# sig_proc_VBF = -2*np.ones(len(signal_VBF))
-#sig_proc_ttH = -3*np.ones(len(signal_ttH))
-#sig_proc_WH = -4*np.ones(len(signal_WH))
-#sig_proc_ZH = -5*np.ones(len(signal_ZH))
 bkg_proc_DY = np.ones(len(background_DY))
-# bkg_proc_ZG = 2*np.ones(len(background_ZG))
-#bkg_proc_TT = 3*np.ones(len(background_TT))
 
 x = np.concatenate((signal_a, background_DY))
 y = np.concatenate((sig_label_a, bkg_label_DY))
 z = np.concatenate((sig_proc_a, bkg_proc_DY))
 
-# split data into train and test sets
 seed = 123
 test_size = 0.5
 x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(
@@ -555,15 +526,12 @@ x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(
     stratify=y,
 )
 
-# For training we ignore the columns with the event ID information
 x_train_reduced = x_train[:,var_indices]
 x_train_w = x_train[:,wt_var_indices].flatten()
 x_train_mass = x_train[:,Hm_var_indices].flatten()
 x_test_reduced = x_test[:,var_indices]
 x_test_w = x_test[:,wt_var_indices].flatten()
 x_test_mass = x_test[:,Hm_var_indices].flatten()
-# x_test_mass = x_test[:,mass_var_indices].flatten()
-# x_test_cats = x_test[:,cat_var_indices]
 
 def make_positive_xgb_weights(w, name):
     w = np.asarray(w, dtype=float)
@@ -655,8 +623,6 @@ def objective(trial):
         sample_weight_eval_set=[x_train_w_balanced, x_test_w_balanced],
         verbose=False,
     )
-    #preds = model.predict(x_test_reduced)
-    #rmse = accuracy_score(y_test, preds)
     preds_test = model.predict_proba(x_test_reduced)[:, 1]
     preds_train = model.predict_proba(x_train_reduced)[:, 1]
     fpr_test, tpr_test, boundary_test = roc_curve(y_test, preds_test)
@@ -701,14 +667,6 @@ for trial in trials:
     print(f"    Values: auc_test={trial.values[0]}, overfit={ trial.values[1]}")
     print("    Params: ", trial.params, '\n')
 
-
-#optuna.visualization.plot_optimization_history(xgb_study).show()
-#optuna.visualization.plot_param_importances(xgb_study).show()
-#optuna.visualization.plot_slice(xgb_study).show()
-#optuna.visualization.plot_parallel_coordinate(xgb_study).show()
-# Get the best hyperparameters for each model
-#best_xgb_params = xgb_study.best_params
-#print(best_xgb_params)
 
 model_file = './model_Za_BDT_run3.pkl'
 
@@ -883,16 +841,6 @@ print("Selected model candidate:", selected_model_name)
 print("Selected model params:", selected_xgb_params)
 print(model_best)
 
-# do cross validation
-#xgtrain = xgb.DMatrix(x_train_reduced, label=y_train)
-
-#xgb_param = model_best.get_xgb_params()
-#cvresult = xgb.cv(xgb_param, xgtrain, num_boost_round=5000, nfold=5, metrics=['auc'],early_stopping_rounds=50, stratified=True, seed=1301)
-#print('Best number of trees = {}'.format(cvresult.shape[0]))
-#print(cvresult)
-
-#model_best.set_params(n_estimators=cvresult.shape[0])
-
 
 print("save model file ",model_file)
 output = open(model_file, 'wb')
@@ -905,15 +853,9 @@ filename=model_file
 # load the model from disk
 model = pickle.load(open(filename, 'rb'))
 
-#make predictions for test sample
 y_test_pred = model.predict_proba(x_test_reduced)[:, 1]
 y_train_pred = model.predict_proba(x_train_reduced)[:, 1]
 
-# print(len(z_test))
-# print(len(y_test_pred))
-# print(len(y_test))
-# print(len(x_test_w))
-# print(len(x_test_mass))
 ##########################################################
 # make histogram of discriminator value for signal and bkg
 ##########################################################
@@ -934,33 +876,15 @@ disc_test_signal_all = y_test_frame[y_test_frame['truth'] < 0]['disc'].values
 
 # K-S test
 stat_signal,pval_signal = ks_2samp(disc_train_signal_all,disc_test_signal_all)
-#stat_signal,pval_signal = ks_2samp(disc_train_signal_all[disc_train_signal_all>0.5],disc_test_signal_all[disc_test_signal_all>0.5])
 stat_bkg,pval_bkg = ks_2samp(disc_train_bkg_all,disc_test_bkg_all)
-# print(pval_signal)
-# print(pval_bkg)
-# print(ks_2samp(disc_train_signal_all*100.0,disc_test_signal_all*100.0))
-# print(stats.anderson_ksamp([disc_train_signal_all,disc_test_signal_all]))
-# print(stats.mannwhitneyu(disc_train_signal_all,disc_test_signal_all,alternative='two-sided',use_continuity = False))
-# print(len(disc_train_signal_all))
-# print(len(disc_train_bkg_all))
-# print(stats.ttest_ind(disc_train_signal_all,disc_test_signal_all))
 
 bins = 50
 
 plt.figure()
-#plt.hist(disc_train_bkg_all, density=True, bins=bins, alpha=0.3, label='bkg train', color='red',weights=y_train_frame[y_train_frame['truth'] > 0]['weight'])
-#plt.hist(disc_train_signal_all, density=True, bins=bins, alpha=0.3, label='signal train', color='blue',weights=y_train_frame[y_train_frame['truth'] < 0]['weight'])
 plt.hist(disc_train_signal_a, density=True, bins=bins, alpha=0.3, label='Sig train', color='red',weights=y_train_frame[y_train_frame['truth'] == -1]['weight'])
-# plt.hist(disc_train_signal_VBF, density=True, bins=bins, alpha=0.3, label='VBF train', color='green',weights=y_train_frame[y_train_frame['truth'] == -2]['weight'])
 plt.hist(disc_train_bkg_DY, density=True, bins=bins, alpha=0.3, label='Bkg train', color='blue',weights=y_train_frame[y_train_frame['truth'] == 1]['weight'])
-# plt.hist(disc_train_bkg_ZG, density=True, bins=bins, alpha=0.3, label='ZG train', color='black',weights=y_train_frame[y_train_frame['truth'] == 2]['weight'])
-#plt.hist(disc_train_bkg_TT, density=True, bins=bins, alpha=0.3, label='TT train', color='yellow',weights=y_train_frame[y_train_frame['truth'] == 3]['weight'])
 
 
-#plt.scatter(x_values, y_values, s=100) 
-
-#plt.hist(disc_test_bkg_all, normed=True, bins=50, alpha=0.3, label='DY bkg test', color='red')
-#plt.hist(disc_test_signal, normed=True, bins=50, alpha=0.3, label='signal test', color='blue')
 plt.legend(loc='upper center')
 savefig_and_show("sig_bkg_BDT.pdf")
 
@@ -969,28 +893,16 @@ compare_train_test(model,x_train_reduced,y_train,z_train,x_train_w,x_test_reduce
 ##########################################################
 # Rank training variable of importance
 ##########################################################
-# sort variables by feature importance
 sorted_idx = model.feature_importances_.argsort()
-#variables = variables + ['param']
-#variables_label = variables_label
 variables_sorted = [xlabel[i] for i in sorted_idx]
 
-# Create horizontal bar chart
 fig, ax = plt.subplots(figsize=(8, 6))
 ax.barh(variables_sorted, model.feature_importances_[sorted_idx], color='#FF7609')
 
-# Add axis labels and increase font size
 ax.set_xlabel('Feature Importance', fontsize=18, labelpad=15)
-# ax.set_ylabel('Variable', fontsize=18, fontweight='bold')
 plt.subplots_adjust(left=0.25, right=0.97, top=0.97, bottom=0.13)
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
-
-# Add title and caption
-# fig.suptitle('Variable Importances in the BDTs', fontsize=18, fontweight='bold')
-#fig.text(0.5, 0.05, 'Source: Your data analysis', ha='center', fontsize=10, color='gray')
-
-# Save and show the plot
 savefig_and_show("feature_importance.pdf")
 
 ##########################################################
@@ -998,11 +910,8 @@ savefig_and_show("feature_importance.pdf")
 ##########################################################
 
 #get roc curve
-#fpr, tpr, _ = roc_curve(y_test, y_pred, x_test_w)
-
 fpr_test, tpr_test, boundary_test = roc_curve(y_test_frame['label'].values, y_test_frame['disc'].values)
 fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, y_train_frame['disc'].values)
-# print(fpr_test, tpr_test)
 ks_test = max(tpr_test-fpr_test)
 auc_test = auc(fpr_test,tpr_test)
 print("test ROC separation max(TPR-FPR): ",ks_test)
@@ -1011,43 +920,6 @@ ks_train = max(tpr_train-fpr_train)
 auc_train = auc(fpr_train,tpr_train)
 print("train ROC separation max(TPR-FPR): ",ks_train)
 
-#plot roc curve
-plt.figure()
-lw = 2
-plt.plot(fpr_train, tpr_train, color='darkorange',
-         lw=lw, label=r'Train (area = {0:.4f})'.format(auc_train))
-
-plt.plot(fpr_test, tpr_test, color='darkgreen',
-         lw=lw, label=r'Test (area = {0:.4f})'.format(auc_test))
-
-plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-plt.xlim([-0.05, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('Background (false positives)')
-plt.ylabel('Signal (true positives)')
-plt.title(r'ROC - sig vs. bkg')
-plt.legend(loc="lower right")
-savefig_and_show("ROC_debug.pdf")
-
-
-##########################################################
-# make ROC curve
-##########################################################
-
-#get roc curve
-#fpr, tpr, _ = roc_curve(y_test, y_pred, x_test_w)
-fpr_test, tpr_test, boundary_test = roc_curve(y_test_frame['label'].values, y_test_frame['disc'].values)
-fpr_train, tpr_train, boundary_train = roc_curve(y_train_frame['label'].values, y_train_frame['disc'].values)
-# print(fpr_test, tpr_test)
-ks_test = max(tpr_test-fpr_test)
-auc_test = auc(fpr_test,tpr_test)
-print("test ROC separation max(TPR-FPR): ",ks_test)
-
-ks_train = max(tpr_train-fpr_train)
-auc_train = auc(fpr_train,tpr_train)
-print("train ROC separation max(TPR-FPR): ",ks_train)
-
-#plot roc curve
 plt.figure(figsize=(8, 6))
 lw = 2
 plt.plot(tpr_train, 1-fpr_train, color='darkorange',
@@ -1079,21 +951,16 @@ savefig_and_show("ROC.pdf")
 from ROOT import *
 from array import array
 
-# 设置全局字体大小和图形样式
 plt.rcParams.update({
-    'figure.figsize': (5, 4),  # 图形大小
+    'figure.figsize': (5, 4),
 
     'font.size': 14,
-    'axes.titlesize': 14,  # 图标题，plt.title()
-    'axes.labelsize': 14,  # 坐标轴标题/标签，plt.xlabel, plt.ylabel
-    'xtick.labelsize': 14,  # x 轴刻度“数字或文字”大小
-    'ytick.labelsize': 14,  # y 轴刻度“数字或文字”大小
-    'legend.fontsize': 14,  # 图例文字大小 plt.legend()
-    'figure.titlesize': 14,  # 整个 Figure 的总标题字体大小，用 plt.suptitle() 设定的顶层标题
-
-    # 'patch.linewidth': 1.5 ,       # 直方图柱子的边框线宽
-    # 'patch.edgecolor': 'blue',      # 直方图柱子的边框颜色
-
+    'axes.titlesize': 14,
+    'axes.labelsize': 14,
+    'xtick.labelsize': 14,
+    'ytick.labelsize': 14,
+    'legend.fontsize': 14,
+    'figure.titlesize': 14,
 })
 
 
@@ -1114,7 +981,6 @@ for year in years:
             dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
-            # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
 
 
 
@@ -1133,7 +999,6 @@ signal = df_sig_all.values
 background_DY = df_bkg_dy.values
 background = df_bkg_all.values
 
-#signal label as 1, bkg label as 0 (ground truth)
 sig_label_a = np.ones(len(signal_a))
 bkg_label_DY = np.zeros(len(background_DY))
 
@@ -1148,27 +1013,10 @@ var_indices = [df_sig_all.columns.get_loc(v) for v in variables+["param"]] # get
 mass_var_indices = [df_sig_all.columns.get_loc(v) for v in mass_variables]
 wt_var_indices = [df_sig_all.columns.get_loc(v) for v in wt_variables]
 Hm_var_indices = [df_sig_all.columns.get_loc(v) for v in ['H_m']]
-# wt_var_indices = [df_bkg_all.columns.get_loc(v) for v in wt_variables]
-
-
-# print("Number of signal MC events:",len(signal))
-# print("Number of background MC events:",len(background))
-# print("Number of background DY MC events:",len(background_DY))
-# print("Number of background ZG MC events:",len(background_ZG))
 
 nsigw = np.sum(signal[:,wt_var_indices])
 nbkgw = np.sum(background[:,wt_var_indices])
 nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
-# nbkgw_ZG = np.sum(background_ZG[:,wt_var_indices])
-
-# print("expected number of events for signal: ")
-# print(nsigw)
-# print("expected number of events for all bkg: ")
-# print(nbkgw)
-# print("expected number of events for DY bkg: ")
-# print(nbkgw_DY)
-# print("expected number of events for ZG bkg: ")
-# print(nbkgw_ZG)
 
 sig = len(signal)
 bkg = len(background)
@@ -1187,14 +1035,8 @@ data_all_pred = model.predict_proba(data_all_reduced)[:, 1]
 
 data_all_frame = pd.DataFrame({'truth':None, 'disc':data_all_pred, 'label':None, 'weight':data_all_w, 'H_mass':data_all_mass})
 
-# pd.options.display.min_rows = 30
-# print(data_all_frame["H_mass"])
-
 data_SB = data_all_frame[( (data_all_frame["H_mass"] > 110) & (data_all_frame["H_mass"] < 115) ) | ( (data_all_frame["H_mass"] > 135) & (data_all_frame["H_mass"] < 180) )]
 data_SR = data_all_frame[( (data_all_frame["H_mass"] > 115) & (data_all_frame["H_mass"] < 135) )]
-
-# print(data_SB) #empty
-# print(data_SR)
 
 x_reduced = x[:,var_indices]
 x_w = x[:,wt_var_indices].flatten()
@@ -1208,12 +1050,6 @@ bkg_SR = bkg_all_frame[(( (bkg_all_frame["H_mass"] > 115) & (bkg_all_frame["H_ma
 
 sig_SB = bkg_all_frame[ (( (bkg_all_frame["H_mass"] > 110) & (bkg_all_frame["H_mass"] < 115) ) | ( (bkg_all_frame["H_mass"] > 135) & (bkg_all_frame["H_mass"] < 180) )) & (bkg_all_frame['truth'] < 0)]
 sig_SR = bkg_all_frame[(( (bkg_all_frame["H_mass"] > 115) & (bkg_all_frame["H_mass"] < 135) )) & (bkg_all_frame['truth'] < 0)]
-
-# print(bkg_SB) #empty
-# print(bkg_SR)
-# print(sig_SB) #empty
-# print(sig_SR)
-
 
 def draw_dataMC(var_name, nbins = 50,range_hl=(0,1)):
     plt.figure(figsize=(8, 6))
@@ -1242,15 +1078,11 @@ def draw_dataMC(var_name, nbins = 50,range_hl=(0,1)):
 draw_dataMC(var_name='H_mass',nbins = 50, range_hl=(100,180))
 draw_dataMC(var_name='disc',nbins = 50,range_hl=(0,1))
 
-
-
 nbins = 200
 hist_bkg_SB, bins = np.histogram(bkg_SB['disc'], weights=bkg_SB['weight'], bins=nbins,range=(0,1))
 hist_bkg_SR, bins = np.histogram(bkg_SR['disc'], weights=bkg_SR['weight'], bins=nbins,range=(0,1))
 hist_sig_SR, bins = np.histogram(sig_SR['disc'], weights=sig_SR['weight'], bins=nbins,range=(0,1))
 hist_data_SB, bins = np.histogram(data_SB['disc'], weights=data_SB['weight'], bins=nbins,range=(0,1))
-
-
 
 def SetgStyle():
 
@@ -1264,26 +1096,22 @@ def SetgStyle():
     gStyle.SetPadColor(kWhite)
     gStyle.SetCanvasColor(kWhite)
     
-    
-    gStyle.SetCanvasDefH(600) #Height of canvas
-    gStyle.SetCanvasDefW(600) #Width of canvas
-    gStyle.SetCanvasDefX(0)   #POsition on screen
+    gStyle.SetCanvasDefH(600)
+    gStyle.SetCanvasDefW(600)
+    gStyle.SetCanvasDefX(0)
     gStyle.SetCanvasDefY(0)
-
     
     gStyle.SetPadLeftMargin(0.18)
     gStyle.SetPadRightMargin(0.05)
     gStyle.SetPadTopMargin(0.085)
     gStyle.SetPadBottomMargin(0.12)
     
-    # For hgg axis titles:
     gStyle.SetTitleColor(1, "XYZ")
     gStyle.SetTitleFont(42, "XYZ")
     gStyle.SetTitleSize(0.04, "XYZ")
-    gStyle.SetTitleXOffset(0.95)#//0.9)
-    gStyle.SetTitleYOffset(1.15)# // => 1.15 if exponents
+    gStyle.SetTitleXOffset(0.95)
+    gStyle.SetTitleYOffset(1.15)
     
-    # For hgg axis labels:
     gStyle.SetLabelColor(1, "XYZ")
     gStyle.SetLabelFont(42, "XYZ")
     gStyle.SetLabelOffset(0.007, "XYZ")
@@ -1295,7 +1123,6 @@ def SetgStyle():
     gStyle.SetLegendFont(42)
     
     gStyle.SetFillColor(10)
-    # Nothing for now
     gStyle.SetTextFont(42)
     gStyle.SetTextSize(0.03)
 
@@ -1317,7 +1144,6 @@ def hist2graph(hist, mva_low = 0.1):
     bin_y=[]
     
     for x in range(Nbins+1):
-        # remove BDT score less than mva_low
         if x < bin_x_low: continue
         bin_x_Center.append(xaxis.GetBinCenter(x))
         bin_y.append(hist.GetBinContent(x))
@@ -1419,10 +1245,8 @@ def compare(hist, hist_smooth):
     hist_smooth[0].SetLineWidth(2)
     hist_smooth[0].Draw("SAME")
 
-    #canv.cd()
     global legend
     legend = TLegend(0.6,0.65,0.88,0.88)
-    #legend.AddEntry(hist, "Background")
     legend.AddEntry(hist_smooth[1], "Smoothing + 1#sigma", "l")
     legend.AddEntry(hist_smooth[0], "Smoothing", "l")
     legend.AddEntry(hist_smooth[2], "Smoothing - 1#sigma", "l")
@@ -1435,13 +1259,7 @@ def compare(hist, hist_smooth):
     latex.SetTextSize(0.042)
     latex.SetTextAlign(31)
 
-
     canv.Update()
-    #print legend
-
-    #cmsText     = "CMS";
-    #cmsTextFont   = 61
-    #latex = rt.TLatex()
 
     return canv
 
@@ -1458,7 +1276,6 @@ def sumSignificance(partition, h_sig_SR, h_bkg_SR, h_data_SB_noSmooth):
         b = h_bkg_SR.Integral(pair[0],pair[1])
         d_noSmooth = h_data_SB_noSmooth.Integral(pair[0],pair[1])
         significance = computeSignificance(s,b,d_noSmooth)
-        #print h_sig_SR.GetBinCenter(pair[0])-h_bdt_signal_SR.GetBinWidth(pair[0])/2.,significance,b
         if significance>0.: sum += significance*significance
         else: return -999.
     return np.sqrt(sum)
@@ -1475,15 +1292,12 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
         for i in range(1,nBins+1):
             partition = [[i,nBins]]
             significance = sumSignificance(partition, h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB)
-            #print h_bdt_signal_SR.GetBinCenter(partition[0][0])-h_bdt_signal_SR.GetBinWidth(partition[0][0])/2,"1. --->",significance,h_bdt_data_SB.Integral(partition[0][0],nBins)
-            #print h_bdt_signal_SR.GetBinCenter(partition[0][0])-h_bdt_signal_SR.GetBinWidth(partition[0][0])/2,"1. --->",significance
             if significance>significance_final:
                 significance_final = significance
                 partition_final = partition
             sig_all[i] = significance
         
         output = nCats," - Best category: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,"1. --->",significance_final,"signal total: ",h_bdt_signal_SR.Integral(1,nBins+1),"events:",h_bdt_signal_SR.GetEntries(),"signal cut",h_bdt_signal_SR.Integral(partition_final[0][0],nBins),"smoothed background: ",h_bdt_datamix_SR_weighted_smooth.Integral(partition_final[0][0],nBins),"data: ",h_bdt_data_SB.Integral(partition_final[0][0],nBins),"NEXT BIN: ","smoothed background: ",h_bdt_datamix_SR_weighted_smooth.Integral(partition_final[0][0]+1,nBins),"data: ",h_bdt_data_SB.Integral(partition_final[0][0]+1,nBins)
-        # print(' '.join(map(str,output)))
 
     #2 categories
     elif nCats == 2:
@@ -1500,7 +1314,6 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
         
         if significance_final > -999:
             output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2,"1. --->",significance_final
-            # print(' '.join(map(str,output)))
         else:
             print("No valid partition found for nCats=2")
     
@@ -1512,15 +1325,12 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                 for k in range(j+1,nBins+1):
                     partition = [[1,i],[j,k-1],[k,nBins]]
                     if abs(i-j)==1:
-                        # print (partition)
                         significance = sumSignificance(partition, h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB)
-                        # print(significance)
                         if significance>significance_final:
                             significance_final = significance
                             partition_final = partition
         
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, "1. --->",significance_final
-        # print(' '.join(map(str,output)))
         
     #4 categories
     elif nCats == 4:
@@ -1538,7 +1348,6 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                                 partition_final = partition
 
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[3][0])-h_bdt_signal_SR.GetBinWidth(partition_final[3][0])/2, "1. --->",significance_final
-        # print(' '.join(map(str,output)))
 
     #5 categories
     elif nCats == 5:
@@ -1549,14 +1358,12 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                         for f in range(d+1,nBins+1):
                             partition = [[1,i],[j,k-1],[k,d-1],[d,f-1],[f,nBins]]
                             if abs(i-j)==1:
-                            #print partition
                                 significance = sumSignificance(partition, h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB)
                                 if significance>significance_final:
                                     significance_final = significance
                                     partition_final = partition
 
         output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[3][0])-h_bdt_signal_SR.GetBinWidth(partition_final[3][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[4][0])-h_bdt_signal_SR.GetBinWidth(partition_final[4][0])/2, "1. --->",significance_final
-        # print(' '.join(map(str,output)))
 
     else:
         print("Number of categories not supported, choose: 1, 2, 3, 4, 5, 6, 7, 8 or 9!")
@@ -1596,9 +1403,7 @@ significance_all_dn = {}
 
 partition_final, significance_final, output, significance_all = getResults(roohist_sig_SR, hist_SR_smooth[0], hist_CR, nCats, nbins)
 
-# print(partition_final)
 for [l,h] in partition_final:
-    # print([l,h])
     s = roohist_sig_SR.Integral(l, h)
     b_smooth = hist_SR_smooth[0].Integral(l, h)
     b_smooth_up = hist_SR_smooth[1].Integral(l, h)
@@ -1606,7 +1411,6 @@ for [l,h] in partition_final:
     b_nosmooth = hist_SR.Integral(l, h)
 
     sig5 = computeSignificance(s,b_smooth,20)
-    # print('significance:', sig5, 'ns:', s, 'nb smooth:', b_smooth, 'b_smooth_up:', b_smooth_up, 'b_smooth_dn:', b_smooth_dn, 'b_nosmooth:', b_nosmooth)
 
 nCats = 3
 partition_final = {}
@@ -1672,16 +1476,11 @@ for [l,h] in partition_final:
 def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_name=None):
     plt.figure(figsize=(8, 6))
     hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
     hist_data, _ = np.histogram(data_all_frame[var_name][(data_all_frame['disc']>BDT_low) & (data_all_frame['disc']<=BDT_high) & ((data_all_frame['H_mass']<115) | (data_all_frame['H_mass']>135))], bins=nbins,range=range_hl)
     hist_data_err = np.sqrt(hist_data)
     bins = bins + (bins[1]-bins[0])/2.
-    # center = (bins[:-1] + bins[1:]) / 2
 
-    # 绘制堆叠的直方图
     plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
-    # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
     plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
     plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
 
@@ -1701,16 +1500,11 @@ for i in range(2):
 def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_name=None):
     plt.figure(figsize=(8, 6))
     hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
     hist_data, _ = np.histogram(data_all_frame[var_name][(data_all_frame['disc']>BDT_low) & (data_all_frame['disc']<=BDT_high) & ((data_all_frame['H_mass']<115) | (data_all_frame['H_mass']>135))], bins=nbins,range=range_hl)
     hist_data_err = np.sqrt(hist_data)
     bins = bins + (bins[1]-bins[0])/2.
-    # center = (bins[:-1] + bins[1:]) / 2
 
-    # 绘制堆叆的直方图
     plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
-    # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
     plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
     plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
 
@@ -1746,7 +1540,6 @@ for year in years:
             dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
-            # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
 
 
 df_bkg_dy   = pd.concat([dfs[y]["All_Bkg"] for y in years])
@@ -1761,24 +1554,17 @@ df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name
 var_indices = [df_sig_all.columns.get_loc(v) for v in variables+['param']] # get positions of all the variables set above
 mass_var_indices = [df_sig_all.columns.get_loc(v) for v in mass_variables]
 wt_var_indices = [df_sig_all.columns.get_loc(v) for v in wt_variables]
-# cat_var_indices = [df_sig_all.columns.get_loc(v) for v in rewt_variables]
 
 signal_a = df_sig_a.values
 signal = df_sig_all.values
-# signal_VBF = df_sig_VBF.values
 background_DY = df_bkg_dy.values
 background = df_bkg_all.values
 
-#signal label as 1, bkg label as 0 (ground truth)
 sig_label_a = np.ones(len(signal_a))
-# sig_label_VBF = np.ones(len(signal_VBF))
 bkg_label_DY = np.zeros(len(background_DY))
-# bkg_label_ZG = np.zeros(len(background_ZG))
 
 sig_proc_a = -1*np.ones(len(signal_a))
-# sig_proc_VBF = -2*np.ones(len(signal_VBF))
 bkg_proc_DY = np.ones(len(background_DY))
-# bkg_proc_ZG = 2*np.ones(len(background_ZG))
 
 x = np.concatenate((signal_a, background_DY))
 y = np.concatenate((sig_label_a, bkg_label_DY))
@@ -1789,8 +1575,6 @@ z = np.concatenate((sig_proc_a, bkg_proc_DY))
 nsigw = np.sum(signal[:,wt_var_indices])
 nbkgw = np.sum(background[:,wt_var_indices])
 nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
-# nbkgw_ZG = np.sum(background_ZG[:,wt_var_indices])
-#nbkgw_TT = np.sum(background_TT[:,wt_var_indices])
 
 # print("expected number of events for ZG bkg: ")
 # print(nbkgw_ZG)
@@ -1808,7 +1592,6 @@ scale_weight = (1.0*bkg)/(sig*1.0)
 data_all_reduced = df_data_all.to_numpy()[:,var_indices]
 data_all_w = df_data_all.to_numpy()[:,wt_var_indices].flatten()
 data_all_mass = df_data_all.to_numpy()[:,Hm_var_indices].flatten()
-# data_all_cats = df_data_all.to_numpy()[:,cat_var_indices]
 data_all_pred = model.predict_proba(data_all_reduced)[:, 1]
 data_all_frame = pd.DataFrame({'truth':None, 'disc':data_all_pred, 'label':None, 'weight':data_all_w, 'H_mass':data_all_mass})
 
@@ -1817,14 +1600,11 @@ x_reduced = x[:,var_indices]
 x_w = x[:,wt_var_indices].flatten()
 x_mass = x[:,Hm_var_indices].flatten()
 x_pred = model.predict_proba(x_reduced)[:, 1]
-# x_cats = x[:,cat_var_indices]
 y_test_frame = pd.DataFrame({'truth':z, 'disc':x_pred, 'label':y, 'weight':x_w, 'H_mass':x_mass})
 
 data = data_all_frame
 bkg = y_test_frame[(y_test_frame['truth'] > 0)]
 bkg_DY = y_test_frame[(y_test_frame['truth'] == 1 )]
-# bkg_ZG = y_test_frame[(y_test_frame['truth'] == 2)]
-# bkg_TT = y_test_frame[(y_test_frame['truth'] == 3)]
 sig = y_test_frame[(y_test_frame['truth'] < 0)]
 
 ##########################################################
@@ -1849,8 +1629,6 @@ def getDiscriminator_hist(frame, boundaries, bins, name, region="all"):
         hist_root.SetBinContent(i + 1, nEvents)
         hist_list.append(nEvents)
 
-        #print("nEvents", nEvents, 'bins', bins[i], 'low/heigh', low, '/', heigh)
-
     return hist_root, np.array(hist_list)
 
 ##########################################################
@@ -1873,29 +1651,23 @@ for sig_eff in sig_effs:
         boundaries = np.insert(boundaries, 0, 0)
     else:
         boundaries = np.insert(boundaries, 0, boundary_test[index])
-    #boundaries.append(boundary_test[index])
 
 sig_effs = np.insert(sig_effs, 0, 0.0)
 BDT_boundaries = np.append(boundaries, 1.0)
-# len(BDT_boundaries)
 
 hist_bkg_root, hist_bkg = getDiscriminator_hist(bkg, BDT_boundaries, sig_effs, 'bkg', region="SR")
 hist_sig_root, hist_sig = getDiscriminator_hist(sig, BDT_boundaries, sig_effs, 'sig', region="SR")
 hist_data_root, hist_data = getDiscriminator_hist(data, BDT_boundaries, sig_effs, 'data', region="SB")
 hist_bkg_DY_root, hist_bkg_DY = getDiscriminator_hist(bkg_DY, BDT_boundaries, sig_effs, 'bkg_DY', region="all")
-# hist_bkg_ZG_root, hist_bkg_ZG = getDiscriminator_hist(bkg_ZG, BDT_boundaries, sig_effs, 'bkg_ZG', region="all")
 
 weidth = sig_effs[1]-sig_effs[0]
 bins = sig_effs + weidth/2.
 hist_data_err = np.sqrt(hist_data)
 center = (bins[:-1] + bins[1:]) / 2
 
-# 绘制堆叠的直方图
 plt.figure(figsize=(8, 6))
 plt.bar(bins[:-1], hist_bkg_DY, width=np.diff(bins), label='DY')
-# plt.bar(bins[:-1], hist_bkg_ZG, width=np.diff(bins), label='ZG', bottom=hist_bkg_DY)
 plt.bar(bins[:-1], hist_sig*100, width=np.diff(bins), color='red', edgecolor='red', label='Signal * 50', alpha=0.3)
-#plt.bar(bins[:-1], hist_bkg_TT, width=np.diff(bins), label='TT', bottom=hist_bkg_DY)
 plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
 
 plt.legend()
@@ -1938,102 +1710,6 @@ plt.legend()
 plt.xlabel("H_mass")
 plt.ylabel('Weighted Frequency')
 plt.title('Stacked Weighted Histogram of Mass by Truth')
-    
-# Set the x-axis range
 plt.xlim(range_hl)
 
 savefig_and_show("bkg_mass_shapes_by_bdt.pdf")
-
-
-# from itertools import combinations
-
-# boundaries_test = sig_effs[::4][1:-1]
-# boundaries_number = len(boundaries_test)
-
-# nCats = 2
-
-#print(list(list(combinations(boundaries_test, 2))[6]))#.insert(0, 0.))
-#print(hist_bkg[0:2])
-#index = np.where(sig_effs == boundaries_test[5])[0]
-
-# for nCats in range(4):
-
-#     boundaries_all = list(combinations(boundaries_test, nCats+1))
-
-#     #print(boundaries_all)
-
-#     significance_best = 0.0
-#     significance_best_lists = []
-#     boundaries_best = np.array([])
-
-#     for boundaries in boundaries_all:
-
-#         boundaries = np.array(boundaries)
-#         boundaries = np.insert(boundaries, 0, 0.)
-#         boundaries = np.append(boundaries, 1.0)
-        
-#         #print(boundaries)
-#         significance_sum = 0.0
-#         significance_lists = []
-
-#         for i in range(len(boundaries)-1):
-#             index_low = np.where(sig_effs == boundaries[i])[0][0]
-#             index_heigh = np.where(sig_effs == boundaries[i+1])[0][0]
-
-#             # remove the lowest BDT bin
-#             if index_low == 0: continue
-
-#             nbkg = sum(hist_bkg[index_low:index_heigh-1])
-#             nsig = sum(hist_sig[index_low:index_heigh-1])
-
-#             #print("index_low",index_low, "index_heigh", index_heigh, "nbkg", nbkg, "nsig", nsig, "ndata", sum(hist_data[index_low:index_heigh-1]))
-
-#             if nbkg > 0:
-#                 significance = nsig/np.sqrt(nbkg)
-#             if nbkg == 0:
-#                 significance = nsig/np.sqrt(1.)
-
-#             significance_sum = np.sqrt(significance_sum*significance_sum + significance*significance)
-#             significance_lists.append(significance)
-
-#         if significance_sum > significance_best:
-#             significance_best = significance_sum
-#             significance_best_lists = significance_lists
-#             boundaries_best = boundaries
-        
-
-#     print("nCats:", nCats+2, ", max significance:", significance_best, ", Boundaries:", boundaries_best, "Significance list:", significance_best_lists)
-
-# def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50, range_hl=(0,1)):
-#     hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-#     # hist_ZG, _ = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==2) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-#     #data_mass_blind = data_all_frame['H_mass'].loc[(data_all_frame['H_mass'] >= 120), 'H_mass'] = 0
-#     hist_data, _ = np.histogram(data_all_frame[var_name][(data_all_frame['disc']>BDT_low) & (data_all_frame['disc']<=BDT_high) & ((data_all_frame['H_mass']<115) | (data_all_frame['H_mass']>135))], bins=nbins,range=range_hl)
-#     hist_data_err = np.sqrt(hist_data)
-#     bins = bins + (bins[1]-bins[0])/2.
-#     # center = (bins[:-1] + bins[1:]) / 2.
-
-#     # 绘制堆叆的直方图
-#     plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
-#     # plt.bar(bins[:-1], hist_ZG, width=np.diff(bins), label='ZG', bottom=hist_DY)
-#     plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
-#     plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
-
-#     plt.legend()
-#     plt.xlabel(var_name)
-#     plt.ylabel('Weighted Frequency')
-#     plt.title('Stacked Weighted Histogram of Mass by Truth')
-#     savefig_and_show(_auto_pdf_name(f"bestbounds_{var_name}"))
-
-# boundaries_best = [ 0., 0.12, 0.44, 0.56, 0.64, 1. ]
-# nCats = 3
-# BDT_boundaries_best = []
-# for b in boundaries_best:
-#     BDT_boundaries_best.append(BDT_boundaries[np.where(sig_effs == b)[0][0]])
-
-# for i in range(nCats):
-#     BDT_low = BDT_boundaries_best[i+1]
-#     BDT_high = BDT_boundaries_best[i+2]
-
-#     print("BDT_low/BDT_high:", BDT_low, BDT_high)
-#     draw_dataMC("H_mass", BDT_low, BDT_high, 65, (110,180))
