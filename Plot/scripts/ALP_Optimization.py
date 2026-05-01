@@ -387,7 +387,30 @@ def sumSignificance(partition, h_sig_SR, h_bkg_SR, h_data_SB_noSmooth):
     else: return -999.
   return np.sqrt(sum)
 
-def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB, nCats, nBins):
+def fallbackPartition(nCats, nBins):
+    if nCats <= 1:
+        return [[1, nBins]]
+    if nCats > nBins:
+        return [[min(i, nBins), min(i, nBins)] for i in range(1, nCats + 1)]
+    partition = [[i, i] for i in range(1, nCats)]
+    partition.append([nCats, nBins])
+    return partition
+
+def ensurePartition(partition, nCats, nBins, label=""):
+    if partition:
+        return partition
+    label_msg = " for %s" % label if label else ""
+    print("[Warning] No valid %d-category partition%s; writing fallback boundaries with significance -999." % (nCats, label_msg))
+    return fallbackPartition(nCats, nBins)
+
+def formatCategoryOutput(nCats, partition, significance, hist):
+    boundaries = [
+        hist.GetBinCenter(pair[0]) - hist.GetBinWidth(pair[0]) / 2.0
+        for pair in partition
+    ]
+    return tuple([nCats, " - Best categories: "] + boundaries + ["1. --->", significance])
+
+def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB, nCats, nBins, label=""):
 
     significance_final = -999.
     partition_final = []
@@ -407,6 +430,7 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                 significance_final = significance
                 partition_final = partition
         # output = nCats," - Best category: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,"1. --->",significance_final,"signal total: ",h_bdt_signal_SR.Integral(1,nBins+1),"events:",h_bdt_signal_SR.GetEntries(),"signal cut",h_bdt_signal_SR.Integral(partition_final[0][0],nBins),"smoothed background: ",h_bdt_datamix_SR_weighted_smooth.Integral(partition_final[0][0],nBins),"data: ",h_bdt_data_SB.Integral(partition_final[0][0],nBins),"NEXT BIN: ","smoothed background: ",h_bdt_datamix_SR_weighted_smooth.Integral(partition_final[0][0]+1,nBins),"data: ",h_bdt_data_SB.Integral(partition_final[0][0]+1,nBins)
+        partition_final = ensurePartition(partition_final, nCats, nBins, label)
         cut_value    = h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2
         # print(f"significance_final: {significance_final:.3f}")
         # print(f"h_bdt_signal_SR.GetBinCenter(partition_final[0][0]) : {h_bdt_signal_SR.GetBinCenter(partition_final[0][0]):.3f}")
@@ -460,7 +484,8 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                         significance_final = significance
                         partition_final = partition
 
-        output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2,h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2,"1. --->",significance_final
+        partition_final = ensurePartition(partition_final, nCats, nBins, label)
+        output = formatCategoryOutput(nCats, partition_final, significance_final, h_bdt_signal_SR)
         # print (' '.join(map(str,output)))
 
     #3 categories
@@ -477,7 +502,8 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                             significance_final = significance
                             partition_final = partition
 
-        output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, "1. --->",significance_final
+        partition_final = ensurePartition(partition_final, nCats, nBins, label)
+        output = formatCategoryOutput(nCats, partition_final, significance_final, h_bdt_signal_SR)
         print (' '.join(map(str,output)))
 
     #4 categories
@@ -495,7 +521,8 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                                 significance_final = significance
                                 partition_final = partition
 
-        output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[3][0])-h_bdt_signal_SR.GetBinWidth(partition_final[3][0])/2, "1. --->",significance_final
+        partition_final = ensurePartition(partition_final, nCats, nBins, label)
+        output = formatCategoryOutput(nCats, partition_final, significance_final, h_bdt_signal_SR)
         print (' '.join(map(str,output)))
 
     #5 categories
@@ -513,7 +540,8 @@ def getResults(h_bdt_signal_SR, h_bdt_datamix_SR_weighted_smooth, h_bdt_data_SB,
                                     significance_final = significance
                                     partition_final = partition
 
-        output = nCats," - Best categories: ",h_bdt_signal_SR.GetBinCenter(partition_final[0][0])-h_bdt_signal_SR.GetBinWidth(partition_final[0][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[1][0])-h_bdt_signal_SR.GetBinWidth(partition_final[1][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[2][0])-h_bdt_signal_SR.GetBinWidth(partition_final[2][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[3][0])-h_bdt_signal_SR.GetBinWidth(partition_final[3][0])/2, h_bdt_signal_SR.GetBinCenter(partition_final[4][0])-h_bdt_signal_SR.GetBinWidth(partition_final[4][0])/2, "1. --->",significance_final
+        partition_final = ensurePartition(partition_final, nCats, nBins, label)
+        output = formatCategoryOutput(nCats, partition_final, significance_final, h_bdt_signal_SR)
         print (' '.join(map(str,output)))
 
     else:
@@ -607,9 +635,9 @@ def main():
             for r in signal_region:
 
                 # print(r)
-                partition_final[r], significance_final[r], output[r], significance_all[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][0], hist_CR[sig], nCats, nBins)
-                partition_final_up[r], significance_final_up[r], output_up[r], significance_all_up[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][1], hist_CR[sig], nCats, nBins)
-                partition_final_dn[r], significance_final_dn[r], output_dn[r], significance_all_dn[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][2], hist_CR[sig], nCats, nBins)
+                partition_final[r], significance_final[r], output[r], significance_all[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][0], hist_CR[sig], nCats, nBins, "%s %s nominal" % (sig, r))
+                partition_final_up[r], significance_final_up[r], output_up[r], significance_all_up[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][1], hist_CR[sig], nCats, nBins, "%s %s smooth-up" % (sig, r))
+                partition_final_dn[r], significance_final_dn[r], output_dn[r], significance_all_dn[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][2], hist_CR[sig], nCats, nBins, "%s %s smooth-down" % (sig, r))
                 #partition_final[r], significance_final[r], output[r], significance_all[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][1], hist_CR[sig], nCats, nBins)
                 #partition_final[r], significance_final[r], output[r], significance_all[r] = getResults(hist_signal[r][sig], hist_SR_smooth[r][sig][2], hist_CR[sig], nCats, nBins)
 
