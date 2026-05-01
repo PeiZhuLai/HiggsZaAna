@@ -1082,21 +1082,22 @@ plt.plot(tpr_train, 1-fpr_train, color='darkorange',
 plt.plot(tpr_test, 1-fpr_test, color='darkgreen',
          lw=lw, label=r'Test (AUC = {0:.3f})'.format(auc_test))
 
-plt.tick_params(axis='x', labelsize=12, direction='in', top=True, right=True, length=11)  # Set the font size of the x-axis tick labels
-plt.tick_params(axis='y', labelsize=12, direction='in', top=True, right=True, length=11)  # Set the font size of the y-axis tick labels
+plt.tick_params(axis='x', labelsize=18, direction='in', top=True, right=True, length=11)  # Set the font size of the x-axis tick labels
+plt.tick_params(axis='y', labelsize=18, direction='in', top=True, right=True, length=11)  # Set the font size of the y-axis tick labels
 
 plt.gca().xaxis.set_minor_locator(AutoMinorLocator(5))  # Set the same number of sub-ticks between the major ticks
 plt.gca().yaxis.set_minor_locator(AutoMinorLocator(5))  # Set the same number of sub-ticks between the major ticks
 plt.gca().tick_params(which='minor', direction='in', top=True, right=True, length=5)  # Set the direction of the sub-ticks to 'in' for top and right sides
 
-plt.subplots_adjust(left=0.17, right=0.96, top=0.97, bottom=0.16)
+plt.subplots_adjust(left=0.17, right=0.96, top=0.91, bottom=0.17)
 
 plt.plot([1, 0], [0, 1], color='navy', lw=lw, linestyle='--', label='Random Guess')
 plt.xlim([0.01, 1.1])
 plt.ylim([0.0, 1.1])
-plt.xlabel('Signal Efficiency', fontsize=14, labelpad=10)
-plt.ylabel('Background Rejection', fontsize=14, labelpad=10)
-plt.legend(loc="lower left", fontsize=12, frameon=False)
+plt.title(r'ROC - sig vs. bkg', fontsize=22, pad=14)
+plt.xlabel('Signal Efficiency', fontsize=20, labelpad=12)
+plt.ylabel('Background Rejection', fontsize=20, labelpad=12)
+plt.legend(loc="lower left", fontsize=17, frameon=False)
 savefig_and_show("ROC.pdf")
 
 
