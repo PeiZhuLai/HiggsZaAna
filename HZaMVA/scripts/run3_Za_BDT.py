@@ -696,8 +696,10 @@ def objective(trial):
 study_name = "Za-study"
 storage_name = "sqlite:///{}.db".format(study_name)
 xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name, storage=storage_name, load_if_exists=True)
-# xgb_study.optimize(objective, n_trials=20, timeout=5000)
+# n=5, timeout=300 is enough
 xgb_study.optimize(objective, n_trials=5, timeout=300)
+# Not that necessary 
+# xgb_study.optimize(objective, n_trials=20, timeout=5000)
 
 # --- replace .show() with PDF export ---
 fig = optuna.visualization.plot_pareto_front(
