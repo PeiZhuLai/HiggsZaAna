@@ -7,7 +7,11 @@ import numpy as np
 from array import array
 import math
 
-sys.path.insert(0, '%s/lib' % os.getcwd())
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PLOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir))
+PLOT_OUTPUT_DIR = os.path.join(PLOT_DIR, 'plots')
+
+sys.path.insert(0, os.path.join(PLOT_DIR, 'lib'))
 from ROOT import *
 import Analyzer_Configs as AC
 #import Plot_Configs     as PC
@@ -88,7 +92,7 @@ elif options.year == 'run2':
         #name_SR = "ALP_plot_run2_UL_Ns_10_SR.root"
         #name_CR = "ALP_plot_run2_UL_Ns_10_CR.root"
 elif options.year == 'run3':
-    file_out = 'plots/plots_run3UL'
+    file_out = os.path.join(PLOT_OUTPUT_DIR, 'plots_run3UL')
     if options.ele:
         name_SR = "ALP_plot_run3_UL_SR_ele.root"
         name_CR = "ALP_plot_run3_UL_CR_ele.root"
@@ -874,4 +878,3 @@ def main():
 
 
 main()
-
