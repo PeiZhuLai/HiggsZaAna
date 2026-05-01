@@ -10,7 +10,7 @@ import uproot
 
 INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
 # 新增：merged BDT（同一 era 檔內含多個 mA 分支）
-INPUT_BASE_MERGED = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT/"
+INPUT_BASE_MERGED = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/"
 
 # Year of Signal
 year_sig_2022 = ["2022preEE", "2022postEE"]

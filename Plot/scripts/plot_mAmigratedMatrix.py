@@ -19,7 +19,7 @@ optimized_BDT_Cut="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_p
 
 # RENAME: clarify these are input/output roots for plotting
 # FIX: eos home path should be /eos/home-<letter>/<user>/... (NOT /eos/home-<letter>-<user>/...)
-input_root_dir = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT"
+input_root_dir = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
 output_plot_dir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/mAmigratedMatrix"
 
 # Define the list of mA values (these are "true mass" directories)

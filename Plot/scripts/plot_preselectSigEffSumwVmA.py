@@ -32,7 +32,7 @@ ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 ma_interpolate = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
 # sig_samples = ["ALP_M5", "ALP_M15", "ALP_M30"]
 sig_samples = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
-INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT"
+INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
 # optimized_BDT_Cut="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 # 改：不再使用 optimized_BDT_Cut；改用固定 MVA cut（可自行調整或之後加 argparse）
 DEFAULT_MVA_CUT = None  # type: Optional[float]
