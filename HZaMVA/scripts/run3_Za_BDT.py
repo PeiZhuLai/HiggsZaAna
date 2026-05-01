@@ -519,7 +519,14 @@ z = np.concatenate((sig_proc_a, bkg_proc_DY))
 # split data into train and test sets
 seed = 123
 test_size = 0.5
-x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=test_size, random_state=seed)
+x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(
+    x,
+    y,
+    z,
+    test_size=test_size,
+    random_state=seed,
+    stratify=y,
+)
 
 # For training we ignore the columns with the event ID information
 x_train_reduced = x_train[:,var_indices]
@@ -713,14 +720,14 @@ model_best = xgb.XGBClassifier(
     booster='gbtree',
     colsample_bylevel=1,
     colsample_bynode=1, 
-    colsample_bytree=1, 
+    colsample_bytree=best_xgb_params.get('colsample_bytree', 0.8),
     gamma=best_xgb_params['gamma'],
     max_delta_step=0,
     objective='binary:logistic', 
     random_state=0, 
     reg_alpha=best_xgb_params['reg_alpha'],
     reg_lambda=best_xgb_params['reg_lambda'],
-    subsample=1, 
+    subsample=best_xgb_params.get('subsample', 0.8),
     verbosity=1)
 print(model_best)
 
@@ -1787,6 +1794,7 @@ range_hl = (95, 180)
 w = int((len(BDT_boundaries)-1)/n_bdt_bin)
 
 plt.figure(figsize=(8, 6))
+mass_bins = np.linspace(range_hl[0], range_hl[1], nbins + 1)
 for i in range(n_bdt_bin):
     low = BDT_boundaries[(i)*w]
     heigh = BDT_boundaries[(i+1)*w]
@@ -1794,12 +1802,24 @@ for i in range(n_bdt_bin):
     eff_heigh = sig_effs[(i+1)*w]
     
     bkg_mc = bkg[ (bkg['disc'] > low) & (bkg['disc'] <= heigh) ]
+    if len(bkg_mc) == 0:
+        continue
 
-    plt.hist(bkg_mc["H_mass"], bins=nbins, histtype='step', linewidth=2, density=True, alpha=0.5, label="%.2f-%.2f" % (eff_low, eff_heigh))
-    plt.legend()
-    plt.xlabel("Discriminator")
-    plt.ylabel('Weighted Frequency')
-    plt.title('Stacked Weighted Histogram of Mass by Truth')
+    hist, mass_edges = np.histogram(bkg_mc["H_mass"], bins=mass_bins, density=True)
+    mass_centers = (mass_edges[:-1] + mass_edges[1:]) / 2
+    plt.step(
+        mass_centers,
+        hist,
+        where='mid',
+        linewidth=2,
+        alpha=0.7,
+        label="%.1f-%.1f" % (eff_low, eff_heigh),
+    )
+
+plt.legend()
+plt.xlabel("H_mass")
+plt.ylabel('Weighted Frequency')
+plt.title('Stacked Weighted Histogram of Mass by Truth')
     
 # Set the x-axis range
 plt.xlim(range_hl)
