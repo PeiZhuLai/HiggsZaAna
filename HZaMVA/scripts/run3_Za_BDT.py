@@ -508,32 +508,17 @@ background = df_bkg_all.values
 background_DY = df_bkg_dy.values
 # background_ZG = df_bkg_ZG.values
 
-print("Number of signal MC events:",len(signal))
-print("Number of background MC events:",len(background))
-print("Number of background DY MC events:",len(background_DY))
-
 nsigw = np.sum(signal[:,wt_var_indices])
 nbkgw = np.sum(background[:,wt_var_indices])
 nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
 
-print("expected number of events for signal: ")
-print(nsigw)
-print("expected number of events for all bkg: ")
-print(nbkgw)
-print("expected number of events for DY bkg: ")
-print(nbkgw_DY)
-
 sig = len(signal)
 bkg = len(background)
 total = bkg + sig
-print('Raw events:\n    Total: {}\n    Signal: {} ({:.2f}% of total)\n    Background: {} ({:.2f}% of total)\n'.format(total, sig, 100 * sig / total, bkg, 100 * bkg / total))
 weight_for_0 = (1.0 / bkg)*(total)/2.0
 weight_for_1 = (1.0 / sig)*(total)/2.0
 class_weight = {0: weight_for_0, 1: weight_for_1}
-print('Weight for class background: {:.2f}'.format(weight_for_0))
-print('Weight for class signal: {:.2f}'.format(weight_for_1))
 scale_weight = (1.0*bkg)/(sig*1.0)
-print('scale weight : {:.2f}'.format(scale_weight))
 
 #signal label as 1, bkg label as 0 (ground truth)
 sig_label_a = np.ones(len(signal_a))
@@ -1188,14 +1173,10 @@ nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
 sig = len(signal)
 bkg = len(background)
 total = bkg + sig
-print('Raw events:\n    Total: {}\n    Signal: {} ({:.2f}% of total)\n    Background: {} ({:.2f}% of total)\n'.format(total, sig, 100 * sig / total, bkg, 100 * bkg / total))
 weight_for_0 = (1.0 / bkg)*(total)/2.0
 weight_for_1 = (1.0 / sig)*(total)/2.0
 class_weight = {0: weight_for_0, 1: weight_for_1}
-print('Weight for class background: {:.2f}'.format(weight_for_0))
-print('Weight for class signal: {:.2f}'.format(weight_for_1))
 scale_weight = (1.0*bkg)/(sig*1.0)
-print('scale weight : {:.2f}'.format(scale_weight))
 
 
 data_all_reduced = df_data_all.to_numpy()[:,var_indices]
@@ -1715,7 +1696,6 @@ cats = [[0.0, 0.12999999523162842], [0.12999999523162842, 1.]]
 
 cats[0][0]
 for i in range(2):
-    print('cat',i)
     draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180), output_name=f"cat2_H_mass_{i}.pdf")
 
 def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_name=None):
@@ -1745,7 +1725,6 @@ cats = [[0.0, 0.925000011920929], [0.925000011920929, 0.9599999785423279], [0.95
 
 cats[0][0]
 for i in range(4):
-    print('cat',i)
     draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180), output_name=f"cat4_H_mass_{i}.pdf")
 
 
@@ -1805,9 +1784,6 @@ x = np.concatenate((signal_a, background_DY))
 y = np.concatenate((sig_label_a, bkg_label_DY))
 z = np.concatenate((sig_proc_a, bkg_proc_DY))
 
-print("Number of signal MC events:",len(signal))
-print("Number of background MC events:",len(background))
-print("Number of background DY MC events:",len(background_DY))
 # print("Number of background ZG MC events:",len(background_ZG))
 
 nsigw = np.sum(signal[:,wt_var_indices])
@@ -1816,12 +1792,6 @@ nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
 # nbkgw_ZG = np.sum(background_ZG[:,wt_var_indices])
 #nbkgw_TT = np.sum(background_TT[:,wt_var_indices])
 
-print("expected number of events for signal: ")
-print(nsigw)
-print("expected number of events for all bkg: ")
-print(nbkgw)
-print("expected number of events for DY bkg: ")
-print(nbkgw_DY)
 # print("expected number of events for ZG bkg: ")
 # print(nbkgw_ZG)
 
@@ -1829,14 +1799,10 @@ print(nbkgw_DY)
 sig = len(signal)
 bkg = len(background)
 total = bkg + sig
-print('Raw events:\n    Total: {}\n    Signal: {} ({:.2f}% of total)\n    Background: {} ({:.2f}% of total)\n'.format(total, sig, 100 * sig / total, bkg, 100 * bkg / total))
 weight_for_0 = (1.0 / bkg)*(total)/2.0
 weight_for_1 = (1.0 / sig)*(total)/2.0
 class_weight = {0: weight_for_0, 1: weight_for_1}
-print('Weight for class background: {:.2f}'.format(weight_for_0))
-print('Weight for class signal: {:.2f}'.format(weight_for_1))
 scale_weight = (1.0*bkg)/(sig*1.0)
-print('scale weight : {:.2f}'.format(scale_weight))
 
 
 data_all_reduced = df_data_all.to_numpy()[:,var_indices]
@@ -1853,9 +1819,6 @@ x_mass = x[:,Hm_var_indices].flatten()
 x_pred = model.predict_proba(x_reduced)[:, 1]
 # x_cats = x[:,cat_var_indices]
 y_test_frame = pd.DataFrame({'truth':z, 'disc':x_pred, 'label':y, 'weight':x_w, 'H_mass':x_mass})
-
-print( x_reduced[0] )
-print(f"predict test: {model.predict_proba([x_reduced[0]])}")
 
 data = data_all_frame
 bkg = y_test_frame[(y_test_frame['truth'] > 0)]
