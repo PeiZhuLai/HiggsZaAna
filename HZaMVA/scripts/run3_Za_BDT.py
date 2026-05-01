@@ -155,7 +155,6 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     weight    = []
     print(clf)
     for x,y,w in ((x_train, y_train, w_train), (x_test, y_test, w_test)):
-        print(x.shape)
         d1 = clf.predict_proba(x[y>0.5])[:,1]
         d2 = clf.predict_proba(x[y<0.5])[:,1].ravel()
         #d1 = evaluate_sklearn(clf,x[y>0.5])
@@ -384,9 +383,6 @@ bin_sizes = {
 }
 
 for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_name):
-    print(hlf)
-    print(xlabel_hlf)
-    
     plt.figure(figsize=(8, 6))
 
     x_min, x_max = x_limits.get(hlf)
@@ -625,15 +621,8 @@ def make_balanced_weights(y, w, name):
 x_train_w_balanced = make_balanced_weights(y_train, x_train_w, "x_train_w")
 x_test_w_balanced = make_balanced_weights(y_test, x_test_w, "x_test_w")
 
-print(x_test_reduced.shape)
-print(x_train_reduced.shape)
-print(x_train.shape)
-print(len(x_train_w))
-print(x[0])
-print(x_train_w)
 print("signed weighted train yields before balance: signal", np.sum(x_train_w[y_train == 1]), "bkg", np.sum(x_train_w[y_train == 0]))
 print("weighted train yields after balance: signal", np.sum(x_train_w_balanced[y_train == 1]), "bkg", np.sum(x_train_w_balanced[y_train == 0]))
-print("finish")
 
 
 # # Optuna for optimization
