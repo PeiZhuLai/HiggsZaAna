@@ -419,12 +419,12 @@ for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_
     plt.legend(loc='best', frameon=False, handlelength=3.0, fontsize=22)
     savefig_and_show(f"{fn}.pdf")
     
-print(variables)
+# print(variables)
 
 corr_vars = variables + ["param", "H_m"]
 corr_labels = xlabel[:15] + [xlabel[16]]
 
-print(df_sig_all[corr_vars])
+# print(df_sig_all[corr_vars])
 
 def format_corr_axis(ax, labels, tick_size, show_ylabels=True):
     tick_positions = np.arange(len(labels)) + 0.5
@@ -697,7 +697,7 @@ study_name = "Za-study"
 storage_name = "sqlite:///{}.db".format(study_name)
 xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name, storage=storage_name, load_if_exists=True)
 # xgb_study.optimize(objective, n_trials=20, timeout=5000)
-# xgb_study.optimize(objective, n_trials=5, timeout=300)
+xgb_study.optimize(objective, n_trials=5, timeout=300)
 
 # --- replace .show() with PDF export ---
 fig = optuna.visualization.plot_pareto_front(
