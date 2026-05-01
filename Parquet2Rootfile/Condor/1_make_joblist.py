@@ -4,7 +4,7 @@ import os
 
 # ===== Base paths =====
 INPUT_BASE  = "/eos/home-p/pelai/HZa/parquet_DNA"
-OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT"
+OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
 
 # 先 False，稳定后再 True
 # ===== Switches =====

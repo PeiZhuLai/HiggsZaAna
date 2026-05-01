@@ -9,7 +9,7 @@ echo "==============STARTED=============="
 
 # Run3
 input="/eos/home-p/pelai/HZa/parquet_DNA/"
-target="/eos/home-p/pelai/HZa/root_P2Root/run3/"
+target="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/"
 
 # Gen Info
 # input="/eos/home-p/pelai/HZa/parquet_Sig_MC_DNA/"

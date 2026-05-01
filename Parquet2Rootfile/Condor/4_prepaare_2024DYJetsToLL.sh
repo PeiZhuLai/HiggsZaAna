@@ -61,10 +61,10 @@ prepare_dyjets() {
 # # Prepare DYJetsToLL
 #########################################################################
 # 改用你提供的 run3_BDT 路徑
-DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT/DYJetsToLL
-DYJetsTo2E_path=/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT/DYJetsTo2E
-DYJetsTo2Mu_path=/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT/DYJetsTo2Mu
-DYJetsTo2Tau_path=/eos/home-p/pelai/HZa/root_P2Root/run3_mergedBDT/DYJetsTo2Tau
+DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/DYJetsToLL
+DYJetsTo2E_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/DYJetsTo2E
+DYJetsTo2Mu_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/DYJetsTo2Mu
+DYJetsTo2Tau_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/DYJetsTo2Tau
 
 DYJetsToLL_path="$(strip_cr "$DYJetsToLL_path")"
 DYJetsTo2E_path="$(strip_cr "$DYJetsTo2E_path")"

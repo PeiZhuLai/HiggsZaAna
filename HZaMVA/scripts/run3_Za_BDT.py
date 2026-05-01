@@ -219,7 +219,7 @@ mass_variables = ["ALP_m", "H_m"]
 # wt_variables = ['factor*pho1SFs*pho2SFs']
 wt_variables = ['factor']
 
-file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3"
+file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
 bkg_name = ['All_Bkg']
 data_name = ['Data']
 sig_name = ['All_Sig']
