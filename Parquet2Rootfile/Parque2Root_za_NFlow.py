@@ -551,14 +551,15 @@ def decorate(data):
     if data.shape[0] == 0: return data
 
     # Za training Variables
+    # NFlow for sieie and PF-ECAL Iso
     data['pho1Pt'] = data.ALP_lead_photon_pt
     data['pho1R9'] = data.ALP_lead_photon_r9
-    data['pho1IetaIeta55'] = data.ALP_lead_photon_sieie
-    data['pho1PIso_noCorr'] = data.ALP_lead_photon_ecalPFClusterIso
+    data['pho1IetaIeta55'] = data.ALP_lead_photon_sieie_corr
+    data['pho1PIso_noCorr'] = data.ALP_lead_photon_ecalPFClusterIso_corr
     data['pho2Pt'] = data.ALP_sublead_photon_pt
     data['pho2R9'] = data.ALP_sublead_photon_r9
-    data['pho2IetaIeta55'] = data.ALP_sublead_photon_sieie
-    data['pho2PIso_noCorr'] = data.ALP_sublead_photon_ecalPFClusterIso
+    data['pho2IetaIeta55'] = data.ALP_sublead_photon_sieie_corr
+    data['pho2PIso_noCorr'] = data.ALP_sublead_photon_ecalPFClusterIso_corr
     data['ALP_calculatedPhotonIso'] = data.ALP_PhotonIso
     data['var_PtaOverMh'] = data.ALP_pt / data.H_mass
     data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1) 
