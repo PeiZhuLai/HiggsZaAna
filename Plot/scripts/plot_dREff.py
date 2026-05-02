@@ -25,7 +25,7 @@ import math   # NEW: significance formula
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptFit(0)
 
-baseDir = "/eos/home-p/pelai/HZa/root_P2Root/run3"
+baseDir = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
 
 outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/dREff"
 

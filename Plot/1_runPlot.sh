@@ -52,7 +52,6 @@ if [ $? -eq 0 ]; then
 else
     echo "[Batch 2] table_interpolate_bkgYield_1.py failed; skip table_interpolate_bkgYield_2.py"
 fi
-
 wait
 
 ## Batch 3
