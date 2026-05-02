@@ -143,6 +143,19 @@ def _root_color(hexstr: str, *, fallback: int = 1) -> int:
     except Exception:
         return fallback
 
+def _warn(msg: str) -> None:
+    print(f"[plot_dREff] WARNING: {msg}", file=sys.stderr)
+
+def _info(msg: str) -> None:
+    print(f"[plot_dREff] {msg}")
+
+def _brief_list(items: List[str], max_items: int = 5) -> str:
+    if not items:
+        return ""
+    shown = items[:max_items]
+    suffix = "" if len(items) <= max_items else f", ... (+{len(items) - max_items} more)"
+    return ", ".join(shown) + suffix
+
 # NEW: var_dR_g1g2 cut parsing utilities
 _VAR_DR_RE = re.compile(r"var[_ ]?dR[_ ]?g1g2[^0-9]*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
 
@@ -192,7 +205,19 @@ def _load_eff_scan_from_root_by_year_ma(
     n_steps = int(round((dr_max - dr_min) / dr_step))
     cuts = [round(dr_min + i * dr_step, 10) for i in range(n_steps + 1)]
 
+    base_dir = Path(base_dir)
+    if not base_dir.is_dir():
+        _warn(f"input baseDir does not exist: {base_dir}")
+        return {}
+
     out: Dict[str, Dict[int, Dict[float, float]]] = {y: {} for y in years}
+    missing_ma_dirs: List[str] = []
+    missing_files: List[str] = []
+    missing_trees: List[str] = []
+    missing_branches: List[str] = []
+    empty_arrays: List[str] = []
+    read_errors: List[str] = []
+    loaded = 0
 
     for ma_tag in ma_dirs:
         m = re.match(r"mA_M(\d+)$", ma_tag)
@@ -201,37 +226,55 @@ def _load_eff_scan_from_root_by_year_ma(
         ma = int(m.group(1))
         ma_path = base_dir / ma_tag
         if not ma_path.is_dir():
+            missing_ma_dirs.append(str(ma_path))
             continue
 
         for year in years:
             fpath = ma_path / f"{year}.root"
             if not fpath.exists():
+                missing_files.append(f"{ma_tag}/{year}.root")
                 continue
 
             try:
                 with uproot.open(str(fpath)) as f:
-                    t = f[tree_name]
+                    try:
+                        t = f[tree_name]
+                    except Exception as exc:
+                        keys = [str(k) for k in f.keys()[:8]]
+                        missing_trees.append(f"{fpath} (wanted tree '{tree_name}', keys: {keys}, error: {exc})")
+                        continue
                     keys = set(t.keys())
                     if dr_branch not in keys:
+                        sample_keys = sorted(str(k) for k in keys)[:12]
+                        missing_branches.append(f"{fpath} (wanted branch '{dr_branch}', branches: {sample_keys})")
                         continue
                     arrs = t.arrays([dr_branch], library="ak")
-            except Exception:
+            except Exception as exc:
+                read_errors.append(f"{fpath}: {exc}")
                 continue
 
             try:
                 dr = arrs[dr_branch]
-            except Exception:
+            except Exception as exc:
+                read_errors.append(f"{fpath}: cannot extract branch '{dr_branch}': {exc}")
                 continue
             if dr is None:
+                empty_arrays.append(str(fpath))
                 continue
 
             # flatten + numeric mask
-            dr = ak.to_numpy(ak.flatten(dr, axis=None))
+            try:
+                dr = ak.to_numpy(ak.flatten(dr, axis=None))
+            except Exception as exc:
+                read_errors.append(f"{fpath}: cannot flatten branch '{dr_branch}': {exc}")
+                continue
             if dr.size == 0:
+                empty_arrays.append(str(fpath))
                 continue
             msk = np.isfinite(dr) & (dr >= 0.0)
             dr = dr[msk]
             if dr.size == 0:
+                empty_arrays.append(f"{fpath} (all values are non-finite or < 0)")
                 continue
 
             # N_all after cleaning
@@ -249,8 +292,26 @@ def _load_eff_scan_from_root_by_year_ma(
                 n_pass = int(drs.size - n_le)
                 eff = (float(n_pass) / n_all) if n_all > 0 else 0.0
                 ym[x] = eff  # overwrite is fine (one file per year/mA)
+            loaded += 1
 
     out = {y: m for y, m in out.items() if m}
+    if loaded == 0:
+        _warn(
+            f"loaded 0 valid ROOT trees from {base_dir}; no curves will be drawn "
+            f"for years={years}, mA dirs={ma_dirs}"
+        )
+    if missing_ma_dirs:
+        _warn(f"missing mA directories ({len(missing_ma_dirs)}): {_brief_list(missing_ma_dirs)}")
+    if missing_files:
+        _warn(f"missing ROOT files ({len(missing_files)}): {_brief_list(missing_files)}")
+    if missing_trees:
+        _warn(f"missing/unreadable trees ({len(missing_trees)}): {_brief_list(missing_trees, 2)}")
+    if missing_branches:
+        _warn(f"missing dR branches ({len(missing_branches)}): {_brief_list(missing_branches, 2)}")
+    if empty_arrays:
+        _warn(f"empty dR arrays ({len(empty_arrays)}): {_brief_list(empty_arrays)}")
+    if read_errors:
+        _warn(f"read errors ({len(read_errors)}): {_brief_list(read_errors, 2)}")
     return out
 
 def _plot_sumw_vs_var_dR_year(
@@ -260,10 +321,11 @@ def _plot_sumw_vs_var_dR_year(
     *,
     scenario_label: str = "efficiency",
     out_name: Optional[str] = None,  # NEW
-) -> None:
+) -> bool:
     mas = sorted(by_ma.keys())
     if not mas:
-        return
+        _warn(f"{year}: no mA entries to plot")
+        return False
 
     c = ROOT.TCanvas(f"c_sumw_vs_var_dR_{year}", "", 800, 600)
     ROOT.gStyle.SetOptStat(0)
@@ -337,28 +399,41 @@ def _plot_sumw_vs_var_dR_year(
     #     ROOT.TColor.GetColor("#1A1A1A"),
     # ]
 
+    palette_hex = [
+        "#0B3C5D",  # deep navy
+        "#1F618D",
+        "#2874A6",
+        "#3498DB",
+        "#5DADE2",
+        "#117864",
+        "#17A589",
+        "#48C9B0",
+        "#7D3C98",
+        "#C0392B",
+        "#E74C3C",
+        "#FF6F00",
+        "#FF1744",
+        "#000000",
+    ]
+    fallback_palette = [
+        ROOT.kBlue + 2,
+        ROOT.kAzure + 2,
+        ROOT.kAzure + 7,
+        ROOT.kCyan + 2,
+        ROOT.kCyan + 1,
+        ROOT.kGreen + 3,
+        ROOT.kGreen + 2,
+        ROOT.kTeal + 2,
+        ROOT.kViolet + 1,
+        ROOT.kRed + 2,
+        ROOT.kRed + 1,
+        ROOT.kOrange + 7,
+        ROOT.kPink + 7,
+        ROOT.kBlack,
+    ]
     palette = [
-        # Cold & dark (背景用)
-        ROOT.TColor.GetColor("#0B3C5D"),  # deep navy
-        ROOT.TColor.GetColor("#1F618D"),
-        ROOT.TColor.GetColor("#2874A6"),
-        ROOT.TColor.GetColor("#3498DB"),
-        ROOT.TColor.GetColor("#5DADE2"),
-
-        # Green → cyan
-        ROOT.TColor.GetColor("#117864"),
-        ROOT.TColor.GetColor("#17A589"),
-        ROOT.TColor.GetColor("#48C9B0"),
-
-        # Purple / pink
-        ROOT.TColor.GetColor("#7D3C98"),
-        ROOT.TColor.GetColor("#C0392B"),  # dark red jump
-        ROOT.TColor.GetColor("#E74C3C"),
-
-        # Nuclear highlights (後畫王者)
-        ROOT.TColor.GetColor("#FF6F00"),  # neon orange
-        ROOT.TColor.GetColor("#FF1744"),  # hot red
-        ROOT.TColor.GetColor("#000000"),  # final boss
+        _root_color(hex_color, fallback=fallback_palette[i % len(fallback_palette)])
+        for i, hex_color in enumerate(palette_hex)
     ]
 
 
@@ -372,14 +447,22 @@ def _plot_sumw_vs_var_dR_year(
         xy = by_ma.get(ma) or {}
         xs = sorted(xy.keys())
         if len(xs) < 1:
+            _warn(f"{year} mA={ma}: empty scan, skipping this curve")
             continue
         ys = [float(xy[x]) for x in xs]
-        g = _g_from_xy([0]*len(xs), ys)  # placeholder, will overwrite X below
+        points = [(float(x), float(y)) for x, y in zip(xs, ys) if math.isfinite(float(x)) and math.isfinite(float(y))]
+        if not points:
+            _warn(f"{year} mA={ma}: no finite scan points, skipping this curve")
+            continue
+        xs_f = [p[0] for p in points]
+        ys_f = [p[1] for p in points]
+        if max(ys_f) <= 0.0:
+            _warn(f"{year} mA={ma}: all efficiencies are zero; curve will sit on the x axis")
         # overwrite X with float cuts
         from array import array as carray
-        xarr = carray("d", [float(x) for x in xs])
-        yarr = carray("d", [float(y) for y in ys])
-        g = ROOT.TGraph(len(xs), xarr, yarr)
+        xarr = carray("d", xs_f)
+        yarr = carray("d", ys_f)
+        g = ROOT.TGraph(len(xs_f), xarr, yarr)
 
         col = palette[i % len(palette)]
         g.SetLineColor(col)
@@ -393,6 +476,14 @@ def _plot_sumw_vs_var_dR_year(
         graphs.append((ma, g))
 
         _keepalive.append(g)
+
+    if not graphs:
+        _warn(f"{year}: created 0 non-empty TGraphs; skip writing an empty frame")
+        try:
+            c.Close()
+        except Exception:
+            pass
+        return False
 
     # legend
     leg = ROOT.TLegend(0.745, 0.24, 0.99, 0.90)
@@ -427,6 +518,7 @@ def _plot_sumw_vs_var_dR_year(
     if ROOT.gPad:
         ROOT.gPad.RedrawAxis()  # NEW: 確保軸/格線最終刷新在正確層
     c.SaveAs(str(out_pdf))
+    _info(f"wrote {out_pdf}")
 
     try:
         prim = c.GetListOfPrimitives()
@@ -440,6 +532,7 @@ def _plot_sumw_vs_var_dR_year(
         pass
     del frame, c
     _ = _keepalive
+    return True
 
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
@@ -479,18 +572,26 @@ def main():
                 scenario_label="Efficiency / 0.05",
                 out_name=f"EffVdRg1g2_{args.year}.pdf",
             )
+        else:
+            _warn(f"{args.year}: no efficiency scan loaded; no output written")
         return
 
+    n_plots = 0
     for year in YEAR_ORDER:
         by_ma = eff_scan.get(year)
         if by_ma:
-            _plot_sumw_vs_var_dR_year(
+            if _plot_sumw_vs_var_dR_year(
                 year,
                 by_ma,
                 out_dir,
                 scenario_label="Efficiency / 0.05",
                 out_name=f"EffVdRg1g2_{year}.pdf",
-            )
+            ):
+                n_plots += 1
+        else:
+            _warn(f"{year}: no efficiency scan loaded; skipping")
+    if n_plots == 0:
+        _warn("no output PDFs were written")
 
 if __name__ == "__main__":
     main()
