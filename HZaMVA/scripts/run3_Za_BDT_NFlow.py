@@ -255,7 +255,7 @@ variables = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", 
 mass_variables = ["ALP_m", "H_m"]
 wt_variables = ['factor']
 
-file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow"
 bkg_name = ['All_Bkg']
 data_name = ['Data']
 sig_name = ['All_Sig']
@@ -633,12 +633,12 @@ def objective(trial):
     return auc_test, overfit
 
 # Optimize hyperparameters for XGBoost
-study_name = "Za-study"
+study_name = "Za-study_NFlow"
 storage_name = "sqlite:///{}.db".format(study_name)
 xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name, storage=storage_name, load_if_exists=True)
 # n=5, timeout=300 is enough
-# xgb_study.optimize(objective, n_trials=5, timeout=300)
-# Not that necessary 
+xgb_study.optimize(objective, n_trials=5, timeout=300)
+# Not that necessary
 # xgb_study.optimize(objective, n_trials=20, timeout=5000)
 
 # --- replace .show() with PDF export ---
@@ -668,7 +668,7 @@ for trial in trials:
     print("    Params: ", trial.params, '\n')
 
 
-model_file = './model_Za_BDT_run3.pkl'
+model_file = './model_Za_BDT_run3_NFlow.pkl'
 
 #XGBClassifier/BDT model parameters
 #https://xgboost.readthedocs.io/en/latest/python/python_api.html
