@@ -11,6 +11,7 @@ import argparse
 import traceback
 import os
 import uuid
+import sys
 
 # NEW: run ROOT in batch to avoid GUI issues / silent pad problems on batch nodes
 ROOT.gROOT.SetBatch(True)
@@ -39,29 +40,35 @@ ALT_WEIGHT_CANDS = ["weight", "genWeight", "eventWeight"]
 
 palette = [
     # Cold & dark (背景用)
-    ROOT.TColor.GetColor("#0B3C5D"),  # deep navy
-    ROOT.TColor.GetColor("#1F618D"),
-    ROOT.TColor.GetColor("#2874A6"),
-    ROOT.TColor.GetColor("#3498DB"),
-    ROOT.TColor.GetColor("#5DADE2"),
+    "#0B3C5D",  # deep navy
+    "#1F618D",
+    "#2874A6",
+    "#3498DB",
+    "#5DADE2",
 
     # Green → cyan
-    ROOT.TColor.GetColor("#117864"),
-    ROOT.TColor.GetColor("#17A589"),
-    ROOT.TColor.GetColor("#48C9B0"),
+    "#117864",
+    "#17A589",
+    "#48C9B0",
 
     # Purple / pink
-    ROOT.TColor.GetColor("#7D3C98"),
-    ROOT.TColor.GetColor("#C0392B"),  # dark red jump
-    ROOT.TColor.GetColor("#E74C3C"),
+    "#7D3C98",
+    "#C0392B",  # dark red jump
+    "#E74C3C",
 
     # Nuclear highlights (後畫王者)
-    ROOT.TColor.GetColor("#FF6F00"),  # neon orange
-    ROOT.TColor.GetColor("#FF1744"),  # hot red
-    ROOT.TColor.GetColor("#000000"),  # final boss
+    "#FF6F00",  # neon orange
+    "#FF1744",  # hot red
+    "#000000",  # final boss
 ]
 
 line_syles = [1, 2, 3]
+
+def _warn(msg: str) -> None:
+    print(f"[plot_mAmigratedHist] WARNING: {msg}", file=sys.stderr)
+
+def _info(msg: str) -> None:
+    print(f"[plot_mAmigratedHist] {msg}")
 
 # NEW: y-axis label with bin width
 def _ylabel_with_binwidth(hist: ROOT.TH1, base: str, *, unit: str = "GeV") -> str:
@@ -218,7 +225,11 @@ def _pick_score_prefix(keys: set, prefer: str = "auto") -> Optional[str]:
     if prefer == "bdt":
         return "BDT_Score_mA_M" if has_bdt else None
 
-    return "MVA_Score_mA_M"
+    if has_mva:
+        return "MVA_Score_mA_M"
+    if has_bdt:
+        return "BDT_Score_mA_M"
+    return None
 
 def _true_ma_from_dir(ma_tag: str) -> Optional[int]:
     m = re.match(r"mA_M(\d+)$", str(ma_tag))
@@ -362,9 +373,27 @@ def _accumulate_pred_pass_sumw_by_year(
 def _root_color(hex_color: str, fallback: int = 1) -> int:
     """Return ROOT color index for a hex string (e.g. '#FF00AA')."""
     try:
-        return int(ROOT.TColor.GetColor(str(hex_color)))
+        ci = int(ROOT.TColor.GetColor(str(hex_color)))
+        if ci > 0:
+            return ci
     except Exception:
-        return int(fallback)
+        pass
+
+    try:
+        s = str(hex_color).strip()
+        if s.startswith("#"):
+            s = s[1:]
+        if len(s) == 6:
+            r = int(s[0:2], 16)
+            g = int(s[2:4], 16)
+            b = int(s[4:6], 16)
+            ci = int(ROOT.TColor.GetColor(r, g, b))
+            if ci > 0:
+                return ci
+    except Exception:
+        pass
+
+    return int(fallback)
 
 def _merge_pred_pass_years_to_run3(
     pred_pass_by_year: Dict[str, Dict[int, Dict[int, float]]],
@@ -410,6 +439,17 @@ def _root_style_line(h, color: int, mstyle: int, lstyle: int = 1) -> None:
     h.SetMarkerStyle(mstyle)
     h.SetMarkerSize(0.9)
 
+def _hist_bin_minmax(h: ROOT.TH1) -> Tuple[float, float]:
+    vals = []
+    try:
+        for ibin in range(1, int(h.GetNbinsX()) + 1):
+            vals.append(float(h.GetBinContent(ibin)))
+    except Exception:
+        vals = []
+    if not vals:
+        return 0.0, 0.0
+    return min(vals), max(vals)
+
 def _plot_single_hist_sigstyle(
     *,
     year: str,
@@ -422,6 +462,7 @@ def _plot_single_hist_sigstyle(
     strict: bool = False,  # NEW
 ) -> None:
     if not hist:
+        _warn(f"{year}: no histogram object for {out_path}")
         return
 
     cname = f"c_{_safe_root_name(out_path.stem)}_{_safe_root_name(year)}_{uuid.uuid4().hex[:8]}"
@@ -456,9 +497,24 @@ def _plot_single_hist_sigstyle(
     ytitle_off = 1.15 if not normalize else 1.45
     frame.GetYaxis().SetTitleOffset(ytitle_off)
 
-    ymax = h.GetMaximum()
+    entries = float(h.GetEntries())
+    integral = float(h.Integral())
+    ymin_bin, ymax_bin = _hist_bin_minmax(h)
+    ymax = max(float(h.GetMaximum()), ymax_bin)
+    if entries <= 0:
+        _warn(f"{year}: {out_path.name} has 0 entries; skip writing an empty frame")
+        try:
+            c.Close()
+        except Exception:
+            pass
+        return
+    if ymax <= 0.0 and ymin_bin >= 0.0:
+        _warn(
+            f"{year}: {out_path.name} has entries={entries:.0f} integral={integral:.6g} "
+            "but no positive in-range bin content; histogram would be invisible"
+        )
     frame.SetMaximum(1.25 * ymax if ymax > 0 else 1.0)
-    frame.SetMinimum(0.0)
+    frame.SetMinimum(1.25 * ymin_bin if ymin_bin < 0 else 0.0)
     frame.Draw()
 
     h.Draw("HIST SAME")
@@ -505,7 +561,9 @@ def _plot_single_hist_sigstyle(
         msg = f"[WARN] SaveAs did not create file: {out_str}"
         if strict:
             raise RuntimeError(msg)
-        print(msg)
+        _warn(msg)
+    else:
+        _info(f"wrote {out_path}")
 
     try:
         c.Close()
@@ -913,7 +971,11 @@ def _palette_color(i: int, fallback: int = 1) -> int:
     try:
         if not palette:
             return int(fallback)
-        return int(palette[int(i) % len(palette)])
+        col = palette[int(i) % len(palette)]
+        if isinstance(col, str):
+            return _root_color(col, fallback=fallback)
+        ci = int(col)
+        return ci if ci > 0 else int(fallback)
     except Exception:
         return int(fallback)
 
@@ -929,6 +991,7 @@ def _plot_multi_hists_sigstyle(
 ) -> None:
     hists = [(ma, h) for (ma, h) in (hists or []) if h]
     if not hists:
+        _warn(f"{year}: no histograms to draw for {out_path}")
         return
 
     cname = f"c_multi_{_safe_root_name(out_path.stem)}_{_safe_root_name(year)}_{uuid.uuid4().hex[:8]}"
@@ -943,6 +1006,9 @@ def _plot_multi_hists_sigstyle(
     # normalize (clone to avoid touching originals)
     draw_hists: List[Tuple[int, ROOT.TH1F]] = []
     for ma, h in hists:
+        if float(h.GetEntries()) <= 0:
+            _warn(f"{year}: mA={ma} histogram for {out_path.name} has 0 entries; skipping")
+            continue
         hh = h
         if normalize:
             hh = h.Clone(_safe_root_name(f"{h.GetName()}_{year}_norm_{uuid.uuid4().hex[:6]}"))
@@ -950,13 +1016,29 @@ def _plot_multi_hists_sigstyle(
             if hh.Integral() > 0:
                 hh.Scale(1.0 / hh.Integral())
         draw_hists.append((ma, hh))
+    if not draw_hists:
+        _warn(f"{year}: all histograms are empty for {out_path}; no output written")
+        try:
+            c.Close()
+        except Exception:
+            pass
+        return
 
     # frame range from first hist; y max over all
     xax = draw_hists[0][1].GetXaxis()
     xmin, xmax = xax.GetXmin(), xax.GetXmax()
     ymax = 0.0
+    ymin = 0.0
     for _, h in draw_hists:
-        ymax = max(ymax, float(h.GetMaximum()))
+        ymin_bin, ymax_bin = _hist_bin_minmax(h)
+        ymax = max(ymax, float(h.GetMaximum()), ymax_bin)
+        ymin = min(ymin, ymin_bin)
+    if ymax <= 0.0 and ymin >= 0.0:
+        summary = ", ".join(
+            f"mA={ma}: entries={float(h.GetEntries()):.0f}, integral={float(h.Integral()):.6g}"
+            for ma, h in draw_hists[:5]
+        )
+        _warn(f"{year}: no positive in-range bin content for {out_path.name}; {summary}")
 
     frame = ROOT.TH1F(f"frame_{out_path.stem}_{year}_{uuid.uuid4().hex[:6]}", "", 1, float(xmin), float(xmax))
     frame.SetDirectory(0)
@@ -971,7 +1053,7 @@ def _plot_multi_hists_sigstyle(
     frame.GetYaxis().SetLabelSize(0.05)
     frame.GetYaxis().SetTitleOffset(1.15 if not normalize else 1.45)
     frame.SetMaximum(1.30 * ymax if ymax > 0 else 1.0)
-    frame.SetMinimum(0.0)
+    frame.SetMinimum(1.30 * ymin if ymin < 0 else 0.0)
     frame.Draw()
 
     # legend
@@ -1022,7 +1104,9 @@ def _plot_multi_hists_sigstyle(
         msg = f"[WARN] SaveAs did not create file: {out_str}"
         if strict:
             raise RuntimeError(msg)
-        print(msg)
+        _warn(msg)
+    else:
+        _info(f"wrote {out_path}")
 
     try:
         c.Close()
@@ -1328,6 +1412,8 @@ def main():
     out_dir = Path(output_plot_dir)
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    if not in_dir.is_dir():
+        _warn(f"input_root_dir does not exist: {in_dir}")
 
     if args.debug:
         print(f"[DEBUG] ROOT batch={ROOT.gROOT.IsBatch()} version={ROOT.gROOT.GetVersion()}")
@@ -1376,8 +1462,8 @@ def main():
         strict=args.strict,  # NEW
     )
 
-    if args.debug and not pred_pass:
-        print("[DEBUG] pred_pass is empty: likely原因=找不到tree/branch、mva cut缺、或全都沒通過cut(加權為0)。")
+    if not pred_pass:
+        _warn("pred_pass is empty: likely原因=找不到tree/branch、mva cut缺、score prefix不符、或全都沒通過cut(加權為0)。")
 
     pred_run3 = _merge_pred_pass_years_to_run3(pred_pass, years, run3_label="Run3")
     by_pred_run3 = pred_run3.get("Run3") or {}
@@ -1402,12 +1488,13 @@ def main():
 
         if args.debug:
             print(f"[DEBUG] alp_h_by_year years={list(alp_h_by_year.keys())}")
+        if not alp_h_by_year:
+            _warn("ALP_m histograms are empty for all requested years; no pred/true single hist plots will be written.")
 
         for y in years:
             d = alp_h_by_year.get(y)
             if not d:
-                if args.debug:
-                    print(f"[DEBUG] skip ALP_m plot for {y}: no hist in alp_h_by_year")
+                _warn(f"skip ALP_m plot for {y}: no histogram was filled")
                 continue
             if args.debug:
                 print(f"[DEBUG] {y}: h_pred.Integral={d['pred'].Integral()} h_true.Integral={d['true'].Integral()}")
@@ -1458,8 +1545,7 @@ def main():
                 strict=args.strict,
             )
             if not by_ma:
-                if args.debug:
-                    print(f"[DEBUG] predtrue14(ALP_m): no hists for year={y}")
+                _warn(f"predtrue14(ALP_m): no histograms were filled for year={y}")
                 continue
 
             pred_list: List[Tuple[int, ROOT.TH1F]] = []
