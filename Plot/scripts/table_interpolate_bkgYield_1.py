@@ -18,7 +18,8 @@ INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/"
 years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
 years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
 years_23   = ["2023preBPix","2023postBPix", "2024"]
-years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]
+years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]
+years_dyll_2024 = ["2024"]
 
 # 扫描的 ma 列表（背景也按你的原脚本扫）
 current_ma_list = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
@@ -34,10 +35,28 @@ sig_samples = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","
 bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
 bkg_2023 = ["DYGto2LG_10to100"]
 bkg_dyll = ["DYJetsToLL"]
+bkg_dyll_2024 = ["DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"]
 # 如需其它：["ZGToLLG","WGToLNuG","ZG2JToG2L2J","EWKZ2J","TT","TTGJets","TGJets","ttWJets","ttZJets","WW","WZ","ZZ"]
+
+# 背景 ROOT 是 merged-score 格式：
+#   INPUT_BASE/<sample>/<year>.root
+# 檔內同時含 MVA_Score_mA_M1 ... MVA_Score_mA_M30。
+bkg_samples_by_year = {
+    "2022preEE": bkg_2022 + bkg_dyll,
+    "2022postEE": bkg_2022 + bkg_dyll,
+    "2023preBPix": bkg_2023 + bkg_dyll,
+    "2023postBPix": bkg_2023 + bkg_dyll,
+    "2024": bkg_2023 + bkg_dyll_2024,
+}
 
 MVA_CANDIDATES = ["MVA_Score"]
 WEIGHT_CANDIDATES = ["weight"]
+BKG_MVA_BRANCH_PREFIXES = [
+    "MVA_Score_mA_M",
+    "MVA_Score_ma_M",
+    "BDT_Score_mA_M",
+    "BDT_Score_ma_M",
+]
 optimized_BDT_Cut="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 
 # 新增：signal 的 BDT binning（用來把連續 cut 值對齊到確切邊界）
@@ -80,15 +99,65 @@ def first_tree(file_path: str):
         f = uproot.open(file_path)
     except Exception:
         return None
+    for name in ["inclusive", "test", "Events", "tree", "t"]:
+        if name in f:
+            try:
+                if "TTree" in f[name].classname:
+                    return f[name]
+            except Exception:
+                continue
     # 找第一个 TTree
     for k, cls in f.classnames().items():
         if "TTree" in cls:
             return f[k]
-    # 后备名称
-    for name in ["Events", "tree", "t"]:
-        if name in f:
-            return f[name]
     return None
+
+def _stat_add(stats, key, amount=1):
+    if stats is not None:
+        stats[key] = stats.get(key, 0) + amount
+
+def _candidate_mva_branches(mass_tag: str):
+    candidates = []
+    for prefix in BKG_MVA_BRANCH_PREFIXES:
+        candidates.append(f"{prefix}{int(mass_tag.replace('M', ''))}")
+    candidates.extend([
+        f"MVA_Score_mA_{mass_tag}",
+        f"MVA_Score_{mass_tag}",
+        f"MVA_score_{mass_tag}",
+        f"BDTScore_{mass_tag}",
+        f"BDT_{mass_tag}",
+        "MVA_Score",
+    ])
+
+    expanded = []
+    seen = set()
+    for name in candidates:
+        for variant in [name, name + ".0", name + ".1", name + "_0", name + "_1"]:
+            if variant not in seen:
+                expanded.append(variant)
+                seen.add(variant)
+    return expanded
+
+def resolve_mva_branch(tree, mass_tag: str):
+    if tree is None:
+        return None
+    keys = set(tree.keys())
+    for branch in _candidate_mva_branches(mass_tag):
+        if branch in keys:
+            return branch
+    return None
+
+def background_sample_years():
+    sample_years = {}
+    for year, samples in bkg_samples_by_year.items():
+        for sample in samples:
+            sample_years.setdefault(sample, []).append(year)
+    return sample_years
+
+def iter_background_inputs():
+    for sample, years in background_sample_years().items():
+        for year in years:
+            yield sample, year, os.path.join(INPUT_BASE, sample, f"{year}.root")
 
 def read_arrays(file_path: str):
     """Return (mva, weight) numpy arrays, or (None, None) if not available."""
@@ -127,31 +196,25 @@ def read_arrays(file_path: str):
     n = min(len(mva), len(w))
     return mva[:n], w[:n]
 
-def read_arrays_with_mass(file_path: str, mass_tag: str):
+def read_arrays_with_mass(file_path: str, mass_tag: str, stats=None):
     """
     参照 plot_variable_dataVmc.py 的候选规则读取 MVA 分支（含 mass_tag），回传 (mva, weight)。
     若存在 H_m 分支，会在 115–135 GeV 视窗内进行过滤。
     """
     tree = first_tree(file_path)
     if tree is None:
+        _stat_add(stats, "tree_missing")
         return None, None
-    # 分支候选（依序尝试）
-    candidates = [
-        f"MVA_Score_{mass_tag}",
-        f"MVA_score_{mass_tag}",
-        f"BDTScore_{mass_tag}",
-        f"BDT_{mass_tag}",
-        "MVA_Score",
-    ]
-    mva = None
-    for v in candidates:
-        if v in tree.keys():
-            try:
-                mva = tree[v].array(library="np")
-                break
-            except Exception:
-                continue
-    if mva is None:
+
+    mva_branch = resolve_mva_branch(tree, mass_tag)
+    if mva_branch is None:
+        _stat_add(stats, "branch_missing")
+        return None, None
+
+    try:
+        mva = tree[mva_branch].array(library="np")
+    except Exception:
+        _stat_add(stats, "mva_read_error")
         return None, None
 
     # 权重
@@ -180,6 +243,7 @@ def read_arrays_with_mass(file_path: str, mass_tag: str):
         if H is not None:
             H = np.asarray(H).astype(np.float64)
     except Exception:
+        _stat_add(stats, "array_convert_error")
         return None, None
 
     # 对齐长度（含 H）
@@ -190,12 +254,15 @@ def read_arrays_with_mass(file_path: str, mass_tag: str):
     mva = mva[:n]
     w   = w[:n]
 
-    # 套用 H_m 视窗遮罩
+    # 套用 H_m 视窗遮罩，并移除 NaN/inf，避免 ROOT Fill 靜默吞掉異常值。
+    mask = np.isfinite(mva) & np.isfinite(w)
     if H is not None:
-        mask = (H >= 115.0) & (H <= 135.0)
-        if mask.size != 0:
-            mva = mva[mask]
-            w   = w[mask]
+        mask = mask & np.isfinite(H) & (H >= 115.0) & (H <= 135.0)
+    if mask.size != 0:
+        mva = mva[mask]
+        w   = w[mask]
+    if len(mva) == 0:
+        _stat_add(stats, "empty_arrays")
 
     return mva, w
 
@@ -236,13 +303,6 @@ def plot_bkg_mva_distributions():
     outdir = ensure_outdir() / "bkg_mva"
     outdir.mkdir(parents=True, exist_ok=True)
 
-    # 三组背景与对应年份（与既有流程一致）
-    groups = [
-        (bkg_2022, years_22),
-        (bkg_2023, years_23),
-        (bkg_dyll, years_dyll),
-    ]
-
     # 与后续 hist 设置一致的 binning
     bins = np.linspace(-0.1, 1.1, 241)
 
@@ -252,37 +312,36 @@ def plot_bkg_mva_distributions():
         plotted_any = False
 
         # 逐样本汇整跨年份的 MVA 与权重，并画在同一张图上
-        for samples, years in groups:
-            for sample in samples:
-                mva_all = []
-                w_all = []
-                for y in years:
-                    fpath = os.path.join(INPUT_BASE, sample, f"mA_M{int(ma)}", f"{y}.root")
-                    if not os.path.exists(fpath):
-                        continue
-                    mva, w = read_arrays_with_mass(fpath, mass_tag)
-                    if mva is None or len(mva) == 0:
-                        continue
-                    mva_all.append(mva)
-                    w_all.append(w)
-                if len(mva_all) == 0:
+        for sample, years in background_sample_years().items():
+            mva_all = []
+            w_all = []
+            for y in years:
+                fpath = os.path.join(INPUT_BASE, sample, f"{y}.root")
+                if not os.path.exists(fpath):
                     continue
-
-                mva_all = np.concatenate(mva_all)
-                w_all = np.concatenate(w_all)
-                if mva_all.size == 0 or np.sum(w_all) <= 0:
+                mva, w = read_arrays_with_mass(fpath, mass_tag)
+                if mva is None or len(mva) == 0:
                     continue
+                mva_all.append(mva)
+                w_all.append(w)
+            if len(mva_all) == 0:
+                continue
 
-                plt.hist(
-                    mva_all,
-                    bins=bins,
-                    weights=w_all,
-                    histtype="step",
-                    density=False,
-                    label=f"{sample} (N={int(np.sum(w_all))})",
-                    linewidth=1.5,
-                )
-                plotted_any = True
+            mva_all = np.concatenate(mva_all)
+            w_all = np.concatenate(w_all)
+            if mva_all.size == 0 or np.sum(w_all) <= 0:
+                continue
+
+            plt.hist(
+                mva_all,
+                bins=bins,
+                weights=w_all,
+                histtype="step",
+                density=False,
+                label=f"{sample} (N={int(np.sum(w_all))})",
+                linewidth=1.5,
+            )
+            plotted_any = True
 
         if not plotted_any:
             plt.close()
@@ -426,44 +485,89 @@ def upper_cut_for_mass(cut_dict, mass, anchors, default=0.97):
 
 # 建立背景直方图：histos['mvaVal_M{ma}'][sample] = TH1F(...)
 def build_interpolated_bkg_hists(mva_bins=240, mva_min=-0.1, mva_max=1.1, mva_branch_candidates=None, weight_candidates=None):
-    # groups 定义：样本对应年份
-    groups = [
-        (bkg_2022, years_22),
-        (bkg_2023, years_23),
-        (bkg_dyll, years_dyll),
-    ]
     histos = {}
+    stats_by_ma = {}
     # 填充
     for ma in interploate_ma_list:
         mass_tag = f"M{int(ma)}"
         key = f"mvaVal_{mass_tag}"
         histos[key] = {}
-        for samples, years in groups:
-            for sample in samples:
-                hname = f"{key}_{sample}"
-                htitle = hname
-                h = TH1F(hname, htitle, mva_bins, mva_min, mva_max)
-                h.Sumw2()
-                # 搜集各年资料
-                filled = False
-                for y in years:
-                    fpath = os.path.join(INPUT_BASE, sample, f"mA_M{int(ma)}", f"{y}.root")
-                    if not os.path.exists(fpath):
+        stats = {
+            "files_expected": 0,
+            "files_missing": 0,
+            "files_found": 0,
+            "tree_missing": 0,
+            "branch_missing": 0,
+            "mva_read_error": 0,
+            "array_convert_error": 0,
+            "empty_arrays": 0,
+            "fill_errors": 0,
+            "events_filled": 0,
+            "sumw_filled": 0.0,
+        }
+        stats_by_ma[int(ma)] = stats
+
+        for sample, years in background_sample_years().items():
+            hname = f"{key}_{sample}"
+            htitle = hname
+            h = TH1F(hname, htitle, mva_bins, mva_min, mva_max)
+            h.Sumw2()
+            # 搜集各年资料
+            filled = False
+            for y in years:
+                stats["files_expected"] += 1
+                fpath = os.path.join(INPUT_BASE, sample, f"{y}.root")
+                if not os.path.exists(fpath):
+                    stats["files_missing"] += 1
+                    continue
+                stats["files_found"] += 1
+                # 背景檔為 merged-score 格式，依 mass_tag 讀 MVA_Score_mA_M{ma}
+                mva, w = read_arrays_with_mass(fpath, mass_tag, stats=stats)
+                if mva is None or len(mva) == 0:
+                    continue
+                # 逐项填入（含权重）
+                for val, wt in zip(mva, w):
+                    try:
+                        h.Fill(float(val), float(wt))
+                        filled = True
+                        stats["events_filled"] += 1
+                        stats["sumw_filled"] += float(wt)
+                    except Exception:
+                        stats["fill_errors"] += 1
                         continue
-                    # 以 mass_tag 解析对应的 MVA 分支（与 plot_variable_dataVmc.py 一致）
-                    mva, w = read_arrays_with_mass(fpath, mass_tag)
-                    if mva is None:
-                        continue
-                    # 逐项填入（含权重）
-                    for val, wt in zip(mva, w):
-                        try:
-                            h.Fill(float(val), float(wt))
-                            filled = True
-                        except Exception:
-                            continue
-                if filled and (h.GetEntries() > 0 or h.Integral() > 0.0):
-                    histos[key][sample] = h
-    return histos
+            if filled and (h.GetEntries() > 0 or h.Integral() != 0.0):
+                histos[key][sample] = h
+    return histos, stats_by_ma
+
+def print_bkg_input_summary(stats_by_ma):
+    total_expected = sum(s.get("files_expected", 0) for s in stats_by_ma.values())
+    total_found = sum(s.get("files_found", 0) for s in stats_by_ma.values())
+    total_filled = sum(s.get("events_filled", 0) for s in stats_by_ma.values())
+    print(
+        "[interp][input] "
+        f"masses={len(stats_by_ma)} expected_files={total_expected} "
+        f"found_files={total_found} filled_events={total_filled}"
+    )
+    for ma in sorted(stats_by_ma):
+        s = stats_by_ma[ma]
+        if (
+            s.get("events_filled", 0) == 0
+            or s.get("files_missing", 0) > 0
+            or s.get("tree_missing", 0) > 0
+            or s.get("branch_missing", 0) > 0
+            or s.get("mva_read_error", 0) > 0
+            or s.get("array_convert_error", 0) > 0
+            or s.get("fill_errors", 0) > 0
+        ):
+            print(
+                f"[interp][input][mA={ma}] "
+                f"expected={s.get('files_expected', 0)} found={s.get('files_found', 0)} "
+                f"missing={s.get('files_missing', 0)} no_tree={s.get('tree_missing', 0)} "
+                f"no_branch={s.get('branch_missing', 0)} read_err={s.get('mva_read_error', 0)} "
+                f"convert_err={s.get('array_convert_error', 0)} "
+                f"empty={s.get('empty_arrays', 0)} fill_err={s.get('fill_errors', 0)} "
+                f"filled_events={s.get('events_filled', 0)} sumw={s.get('sumw_filled', 0.0):.6g}"
+            )
 
 # 新增：将相同 binning 的 TH1F 字典加总为单一 TH1F
 def sum_background_hists(hdict: dict, sum_name: str):
@@ -526,27 +630,19 @@ def integral_above_cut(h, cut_val):
 # ==== Collectors ====
 def collect_background_xyw():
     xs, ys, ws = [], [], []
-    # 三类背景各自对应年份
-    groups = [
-        (bkg_2022, years_22),
-        (bkg_2023, years_23),
-        (bkg_dyll, years_dyll),
-    ]
     missing = 0
-    for samples, years in groups:
-        for s in samples:
-            for y in years:
-                for ma in ma_list:
-                    fpath = os.path.join(INPUT_BASE, s, f"mA_M{ma}", f"{y}.root")
-                    if not os.path.exists(fpath):
-                        missing += 1
-                        continue
-                    mva, w = read_arrays(fpath)
-                    if mva is None:
-                        continue
-                    xs.append(mva)
-                    ws.append(w)
-                    ys.append(np.full_like(mva, float(ma), dtype=np.float64))
+    for s, y, fpath in iter_background_inputs():
+        if not os.path.exists(fpath):
+            missing += 1
+            continue
+        for ma in ma_list:
+            mass_tag = f"M{int(ma)}"
+            mva, w = read_arrays_with_mass(fpath, mass_tag)
+            if mva is None:
+                continue
+            xs.append(mva)
+            ws.append(w)
+            ys.append(np.full_like(mva, float(ma), dtype=np.float64))
     if missing > 0:
         print(f"[bkg] missing files skipped: {missing}")
     if len(xs) == 0:
@@ -563,7 +659,7 @@ def collect_signal_xyw():
             if not os.path.exists(fpath):
                 missing += 1
                 continue
-            mva, w = read_arrays(fpath)
+            mva, w = read_arrays_with_mass(fpath, f"M{int(ma)}")
             if mva is None:
                 continue
             xs.append(mva)
@@ -588,7 +684,19 @@ def main():
 
     # ==== 新增：为 interploate_ma_list 产生背景直方图、平滑并依优化 cut 计算通过数量 ====
     print("[interp] building background histograms for interpolated masses...")
-    histos = build_interpolated_bkg_hists()
+    histos, input_stats = build_interpolated_bkg_hists()
+    print_bkg_input_summary(input_stats)
+    empty_masses = [
+        int(ma)
+        for ma in interploate_ma_list
+        if not histos.get(f"mvaVal_M{int(ma)}")
+    ]
+    if empty_masses:
+        raise RuntimeError(
+            "No background histograms were filled for requested mA values: "
+            f"{empty_masses}. Refusing to write zero-yield output; check INPUT_BASE, "
+            "sample/year ROOT files, and MVA_Score_mA_M* branches."
+        )
     cut_dict = load_cut_dict(optimized_BDT_Cut)
 
     results = []
@@ -644,10 +752,10 @@ def main():
         json.dump({
             "optimized_BDT_Cut": optimized_BDT_Cut,
             "hist_def": {"nbins": 240, "xmin": -0.1, "xmax": 1.1, "mva_low": 0.01},
+            "input_format": f"{INPUT_BASE.rstrip('/')}/<sample>/<year>.root with MVA_Score_mA_M<mA>",
             "results": results
         }, f, indent=2)
     print(f"[interp] saved yields -> {out_json}")
 
 if __name__ == "__main__":
     main()
-
