@@ -483,6 +483,34 @@ def compute_delta_phi_g1Z(x):
 
     return true_delta_phi(abs(x.ALP_lead_photon_phi-x.Z_phi))
 
+def use_corrected_alp_photon_columns(data):
+    corrected_columns = {
+        "ALP_sublead_photon_ecalPFClusterIso": "ALP_sublead_photon_ecalPFClusterIso_corr",
+        "ALP_sublead_photon_sieie": "ALP_sublead_photon_sieie_corr",
+        "ALP_lead_photon_ecalPFClusterIso": "ALP_lead_photon_ecalPFClusterIso_corr",
+        "ALP_lead_photon_sieie": "ALP_lead_photon_sieie_corr",
+    }
+
+    missing_columns = [
+        source for source in corrected_columns.values() if source not in data.columns
+    ]
+    if missing_columns:
+        raise KeyError(
+            "Missing corrected ALP photon branches: %s. "
+            "These branches are required to replace the nominal ALP photon inputs."
+            % ", ".join(missing_columns)
+        )
+
+    for target, source in corrected_columns.items():
+        data[target] = data[source]
+
+    print(
+        "Replaced ALP photon isolation/sieie branches with corrected versions: %s"
+        % ", ".join(corrected_columns.values())
+    )
+
+    return data
+
 def ensure_za_compatibility(data):
     """
     Some ZA parquet configs only write ALP photon branches, while this converter
@@ -802,6 +830,7 @@ def main():
 #    for data in tqdm(read_root(args.input, key='DiMuonNtuple', columns=variables, chunksize=args.chunksize), desc='Processing %s' % args.input, bar_format='{desc}: {percentage:3.0f}%|{bar:20}{r_bar}'):
 
     data = pd.read_parquet(args.input)
+    data = use_corrected_alp_photon_columns(data)
     data = ensure_za_compatibility(data)
     initial_events += data.shape[0]
     #data = preprocess(data)
