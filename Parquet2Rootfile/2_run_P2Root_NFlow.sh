@@ -56,15 +56,20 @@ execute_command() {
 process_sample() {
     local sample="$1"
     local type="$2"
+    local input_base="$input"
     if [ -z "$3" ]; then
         local corr="nominal"
     else
         local corr="$3"
     fi
+
+    if [ "$type" = "Data" ]; then
+        input_base="$dataInput"
+    fi
     
     for year in "${years[@]}"; do
         command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_za_NFlow.py "
-        command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
+        command+="-i ${input_base}${type}/${sample}_${year}/merged_${corr}.parquet "
         if [ "$type" = "Data" ]; then
             command+="-o ${target}Data/${year}.root"
         else
