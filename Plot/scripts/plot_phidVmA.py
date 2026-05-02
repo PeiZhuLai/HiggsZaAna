@@ -24,7 +24,7 @@ import ctypes  # 新增：取代 ROOT.Double，避免某些 PyROOT 環境沒有 
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptFit(0)
 
-baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/cutflow/cutflow_list"
+baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
 
 outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/phidVmA"
 

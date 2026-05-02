@@ -25,7 +25,7 @@ import math   # NEW: significance formula
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptFit(0)
 
-baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/cutflow/cutflow_list"
+baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
 
 outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/phidsigniVmA"
 
