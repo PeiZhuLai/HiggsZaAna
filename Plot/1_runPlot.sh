@@ -20,19 +20,16 @@ outputDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots'
 export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
 
 
-## MVA Score whole region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
+# ## MVA Score signal region
+# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln &
 
-## MVA Score signal region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln &
+# ## MVA Score control region
+# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
 
-## MVA Score control region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
+# wait
 
-wait
-
-## ALP Optimization 2 categories
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2
+# ## ALP Optimization 2 categories
+# python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2
 
 ## ALP Optimization 1 category
 python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1
@@ -78,7 +75,13 @@ wait
 ## Batch 6
 python3 $scriptsDir/plot_trigEffVlepPt.py &
 python3 $scriptsDir/plot_mAmigratedBar.py &
+python3 $scriptsDir/plot_mAmigratedHist.py &
+python3 $scriptsDir/plot_mAmigratedMatrix.py &
+wait
 
+python3 $scriptsDir/plot_bkgmcSculptingCheck.py &
+python3 $scriptsDir/plot_mH_phopT_2D.py &
+python3 $scriptsDir/plot_mH_mZ_2D.py &
 wait
 
 ## Validate SF
@@ -87,3 +90,7 @@ python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
 ## fast variable plot
 python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
 wait
+
+# ## MVA Score whole region
+# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
+# wait

@@ -11,7 +11,7 @@ baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/cutflow/cutflow_lis
 
 outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/trigEffCompareVlepPt"
 
-rootDir = "/eos/home-p-pelai/HZa/root_P2Root/run3"
+rootDir = "/eos/home-p-pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
 
 treeName = "inclusive"
 

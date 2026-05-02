@@ -12,7 +12,7 @@ from ROOT import TH1F, TGraph, TGraphSmooth, gROOT
 gROOT.SetBatch(True)
 from array import array
 
-INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_BDT/"
+INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/"
 
 # 你之前实际使用的组合：
 years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
