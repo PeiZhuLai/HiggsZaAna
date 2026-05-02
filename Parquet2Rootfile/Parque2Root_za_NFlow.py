@@ -485,23 +485,25 @@ def use_corrected_alp_photon_columns(data):
         "ALP_lead_photon_sieie": "ALP_lead_photon_sieie_corr",
     }
 
-    missing_columns = [
-        source for source in corrected_columns.values() if source not in data.columns
-    ]
+    replaced_columns = []
+    missing_columns = []
+    for target, source in corrected_columns.items():
+        if source in data.columns:
+            data[target] = data[source]
+            replaced_columns.append(source)
+        else:
+            missing_columns.append(source)
+
+    if replaced_columns:
+        print(
+            "Replaced ALP photon isolation/sieie branches with corrected versions: %s"
+            % ", ".join(replaced_columns)
+        )
     if missing_columns:
-        raise KeyError(
-            "Missing corrected ALP photon branches: %s. "
-            "These branches are required to replace the nominal ALP photon inputs."
+        print(
+            "Corrected ALP photon branches not found; keeping nominal branches for: %s"
             % ", ".join(missing_columns)
         )
-
-    for target, source in corrected_columns.items():
-        data[target] = data[source]
-
-    print(
-        "Replaced ALP photon isolation/sieie branches with corrected versions: %s"
-        % ", ".join(corrected_columns.values())
-    )
 
     return data
 

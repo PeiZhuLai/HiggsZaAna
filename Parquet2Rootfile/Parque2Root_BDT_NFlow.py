@@ -491,23 +491,25 @@ def use_corrected_alp_photon_columns(data):
         "ALP_lead_photon_sieie": "ALP_lead_photon_sieie_corr",
     }
 
-    missing_columns = [
-        source for source in corrected_columns.values() if source not in data.columns
-    ]
+    replaced_columns = []
+    missing_columns = []
+    for target, source in corrected_columns.items():
+        if source in data.columns:
+            data[target] = data[source]
+            replaced_columns.append(source)
+        else:
+            missing_columns.append(source)
+
+    if replaced_columns:
+        print(
+            "Replaced ALP photon isolation/sieie branches with corrected versions: %s"
+            % ", ".join(replaced_columns)
+        )
     if missing_columns:
-        raise KeyError(
-            "Missing corrected ALP photon branches: %s. "
-            "These branches are required to replace the nominal ALP photon inputs."
+        print(
+            "Corrected ALP photon branches not found; keeping nominal branches for: %s"
             % ", ".join(missing_columns)
         )
-
-    for target, source in corrected_columns.items():
-        data[target] = data[source]
-
-    print(
-        "Replaced ALP photon isolation/sieie branches with corrected versions: %s"
-        % ", ".join(corrected_columns.values())
-    )
 
     return data
 
@@ -670,12 +672,12 @@ def decorate(data):
     # Za training Variables
     data['pho1Pt'] = data.ALP_lead_photon_pt
     data['pho1R9'] = data.ALP_lead_photon_r9
-    data['pho1IetaIeta55'] = data.ALP_lead_photon_sieie_corr
-    data['pho1PIso_noCorr'] = data.ALP_lead_photon_ecalPFClusterIso_corr
+    data['pho1IetaIeta55'] = data.ALP_lead_photon_sieie
+    data['pho1PIso_noCorr'] = data.ALP_lead_photon_ecalPFClusterIso
     data['pho2Pt'] = data.ALP_sublead_photon_pt
     data['pho2R9'] = data.ALP_sublead_photon_r9
-    data['pho2IetaIeta55'] = data.ALP_sublead_photon_sieie_corr
-    data['pho2PIso_noCorr'] = data.ALP_sublead_photon_ecalPFClusterIso_corr
+    data['pho2IetaIeta55'] = data.ALP_sublead_photon_sieie
+    data['pho2PIso_noCorr'] = data.ALP_sublead_photon_ecalPFClusterIso
     data['ALP_calculatedPhotonIso'] = data.ALP_PhotonIso
     data['var_PtaOverMh'] = data.ALP_pt / data.H_mass
     data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1) 
