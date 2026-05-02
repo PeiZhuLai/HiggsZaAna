@@ -62,10 +62,10 @@ prepare_dygto2lg() {
 #########################################################################
 # # Prepare annoying DYGto2LG
 #########################################################################
-DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG
-DYGto2LG_10to50_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG_10to50
-DYGto2LG_50to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG_50to100
-DYGto2LG_10to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG_10to100
+DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYGto2LG
+DYGto2LG_10to50_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYGto2LG_10to50
+DYGto2LG_50to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYGto2LG_50to100
+DYGto2LG_10to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYGto2LG_10to100
 
 # 正規化路徑（移除 \r）
 DYGto2LG_path="$(strip_cr "$DYGto2LG_path")"
@@ -136,10 +136,10 @@ prepare_dyjets() {
 #########################################################################
 # # Prepare DYJetsToLL
 #########################################################################
-DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsToLL
-DYJetsTo2E_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsTo2E
-DYJetsTo2Mu_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsTo2Mu
-DYJetsTo2Tau_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsTo2Tau
+DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYJetsToLL
+DYJetsTo2E_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYJetsTo2E
+DYJetsTo2Mu_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYJetsTo2Mu
+DYJetsTo2Tau_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYJetsTo2Tau
 
 DYJetsToLL_path="$(strip_cr "$DYJetsToLL_path")"
 DYJetsTo2E_path="$(strip_cr "$DYJetsTo2E_path")"
@@ -205,9 +205,9 @@ if [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsToLL/r
   exit 1
 fi
 
-DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYJetsToLL
-DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3/DYGto2LG
-Bkg_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3/All_Bkg
+DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYJetsToLL
+DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/DYGto2LG
+Bkg_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/All_Bkg
 if [ -d "$Bkg_MC_path" ]; then
     echo "Directory exists: $Bkg_MC_path — removing it."
     rm -rf "$Bkg_MC_path"
@@ -224,7 +224,7 @@ prepare_data() {
 #########################################################################
 # # Prepare Data
 #########################################################################
-Data_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/Data
+Data_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/Data
 Data_path="$(strip_cr "$Data_path")"
 
 years=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
@@ -264,7 +264,7 @@ prepare_sig() {
 #########################################################################
 # # Prepare Sig
 #########################################################################
-base_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal
+base_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow
 massList=( M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M15 M20 M25 M30 )
 years=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024 )
 
@@ -288,7 +288,7 @@ for mass in "${massList[@]}"; do
 done
 
 # Add run3.root in all ALP mass points
-Sig_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/All_Sig
+Sig_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_NFlow/All_Sig
 if [ -d "$Sig_MC_path" ]; then
     echo "Directory exists: $Sig_MC_path — removing it."
     rm -rf "$Sig_MC_path"

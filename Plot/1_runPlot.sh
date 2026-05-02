@@ -88,11 +88,11 @@ python3 $scriptsDir/plot_mH_mZ_2D.py &
 wait
 
 ## Validate SF
-python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
+# python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
 
 ## fast variable plot
-python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
-wait
+# python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
+# wait
 
 # ## MVA Score whole region
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
