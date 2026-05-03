@@ -172,11 +172,11 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     plt.hist(0,
              color='w', alpha=0.5, range=low_high, bins=bins,
              histtype='stepfilled', density=True, 
-             label='Sig weighted K-S p-value: {0:.3g}'.format(pval_signal))
+             label='Sig K-S p-value: {0:.3g}'.format(pval_signal))
     plt.hist(0,
              color='w', alpha=0.5, range=low_high, bins=bins,
              histtype='stepfilled', density=True, 
-             label='Bkg weighted K-S p-value: {0:.3g}'.format(pval_bkg))
+             label='Bkg K-S p-value: {0:.3g}'.format(pval_bkg))
     
     
     plt.hist(decisions[0],
