@@ -47,6 +47,12 @@ lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
 # 移除：YEAR 未定義時會直接噴錯；改為在 _plot_year() 依 year 動態取用
 # LUMI_FB = float(lumiMap[YEAR])
 
+def _warn(msg: str) -> None:
+    print(f"[plot_phidsigniVmA] WARNING: {msg}", file=sys.stderr)
+
+def _info(msg: str) -> None:
+    print(f"[plot_phidsigniVmA] {msg}")
+
 # Name of Bkg Sample
 name_DYG_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
 name_DYG_2023 = ["DYGto2LG_10to100"]
@@ -153,7 +159,7 @@ def _load_bkg_event_count_by_year(in_dir: Path) -> Dict[str, float]:
             for _, cf in cutflows.items():
                 if not isinstance(cf, dict):
                     continue
-                evt = cf.get("event") if cf.get("event") is None else cf.get("all cuts")
+                evt = cf.get("event") if cf.get("event") is not None else cf.get("all cuts")
                 if evt is None:
                     continue
                 try:
@@ -214,12 +220,15 @@ def _root_color(hexstr: str, *, fallback: int = 1) -> int:
     except Exception:
         return fallback
 
-def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_dir: Path) -> None:
+def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_dir: Path) -> bool:
     mas = sorted(points.keys())
     if not mas:
-        return
+        _warn(f"{year}: no mA points to plot")
+        return False
     # NEW: bkg event count for this year (precomputed in main, injected via global)
     b_evt = float(_BKG_EVENT_BY_YEAR.get(year, 0.0))
+    if b_evt <= 0.0:
+        _warn(f"{year}: background event count is {b_evt}; all AMS significance values will be 0")
 
     # scenario -> graph(significance vs mA)
     scenario_graphs: Dict[str, ROOT.TGraph] = {}
@@ -237,7 +246,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             scenario_graphs[scenario] = _g_from_xy(xs, ys)
 
     if not scenario_graphs:
-        return
+        _warn(f"{year}: no scenario graphs were built")
+        return False
 
     # kind 用顏色
     kind_colors = {
@@ -285,32 +295,38 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     def _scenario_key(kind: str, wp: str) -> str:
         return f"zgammas_phid_{kind}_{wp}"
 
-    def _positive_ys_from_graph(g: ROOT.TGraph) -> List[float]:
+    def _ys_from_graph(g: ROOT.TGraph, *, positive_only: bool = False) -> List[float]:
         ys: List[float] = []
         for i in range(int(g.GetN())):
             x = ctypes.c_double(0.0)
             y = ctypes.c_double(0.0)
             g.GetPoint(i, x, y)
             yv = float(y.value)
-            if yv > 0.0:
+            if not math.isfinite(yv):
+                continue
+            if positive_only and yv <= 0.0:
+                continue
+            if (not positive_only) or yv > 0.0:
                 ys.append(yv)
         return ys
 
-    _ref_key = _scenario_key("custom", "tight")
-    _ref_graph = scenario_graphs.get(_ref_key)
+    _all_ys: List[float] = []
+    _all_pos_ys: List[float] = []
+    for _g in scenario_graphs.values():
+        _all_ys.extend(_ys_from_graph(_g))
+        _all_pos_ys.extend(_ys_from_graph(_g, positive_only=True))
 
-    # fallback: keep original fixed range if reference graph missing/empty
-    y_min_frame, y_max_frame = 10.0, 200.0
-    if _ref_graph is not None:
-        _ys_ref = _positive_ys_from_graph(_ref_graph)
-        if _ys_ref:
-            _ymin = min(_ys_ref)
-            _ymax = max(_ys_ref)
-            # padding (and protect degenerate range)
-            if _ymax <= _ymin:
-                _ymax = _ymin * 2.0 if _ymin > 0 else 1.0
-            y_min_frame = max(1e-6, _ymin * 0.1)
-            y_max_frame = _ymax * 1.7
+    if not _all_ys:
+        _warn(f"{year}: all scenario graphs have no finite y values")
+        return False
+
+    if _all_pos_ys:
+        _ymax = max(_all_pos_ys)
+        y_min_frame = 0.0
+        y_max_frame = _ymax * 1.35 if _ymax > 0 else 1.0
+    else:
+        _warn(f"{year}: all graph y values are zero/non-positive; drawing linear plot with expanded zero baseline")
+        y_min_frame, y_max_frame = -0.05, 1.0
 
     c1 = ROOT.TCanvas(f"c_phid_event_{year}", "", 800, 600)
     # NEW (safety): ensure stat box stays off on this canvas
@@ -435,22 +451,19 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     c1.Update()
 
     c1.SaveAs(str(out_png))
+    if not out_png.exists():
+        _warn(f"SaveAs did not create file: {out_png}")
+    else:
+        _info(f"wrote {out_png}")
     # c1.SaveAs(str(out_png.with_suffix(".pdf")))
 
     # ========== log(y) version ==========
     # 收集所有正的 y 值，避免 log scale 下出現 0/負值導致問題
-    _all_pos_ys = []
-    for _g in scenario_graphs.values():
-        for i in range(int(_g.GetN())):
-            x = ctypes.c_double(0.0)
-            y = ctypes.c_double(0.0)
-            _g.GetPoint(i, x, y)
-            if float(y.value) > 0.0:
-                _all_pos_ys.append(float(y.value))
-
     if _all_pos_ys:
         y_min_pos = min(_all_pos_ys)
         y_max_pos = max(_all_pos_ys)
+        y_min_frame_log = max(1e-6, y_min_pos * 0.5)
+        y_max_frame_log = y_max_pos * 1.7 if y_max_pos > 0 else 1.0
 
         c2 = ROOT.TCanvas(f"c_phid_event_{year}_logy", "", 800, 600)
         # NEW (safety): ensure stat box stays off on this canvas
@@ -467,8 +480,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         _keepalive.append(h_frame_log)
 
         h_frame_log.SetTitle("")
-        h_frame_log.SetMinimum(y_min_frame)
-        h_frame_log.SetMaximum(y_max_frame)
+        h_frame_log.SetMinimum(y_min_frame_log)
+        h_frame_log.SetMaximum(y_max_frame_log)
         h_frame_log.GetXaxis().SetTitle("m_{a} [GeV]")
         h_frame_log.GetYaxis().SetTitle("Significance (AMS)")
         h_frame_log.GetXaxis().SetTitleOffset(1.1)
@@ -543,6 +556,10 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         c2.Modified()
         c2.Update()
         c2.SaveAs(str(out_png_log))
+        if not out_png_log.exists():
+            _warn(f"SaveAs did not create file: {out_png_log}")
+        else:
+            _info(f"wrote {out_png_log}")
         # c2.SaveAs(str(out_png_log.with_suffix(".pdf")))
 
         # --- cleanup: remove only the frames we own ---
@@ -557,6 +574,8 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         except Exception:
             pass
         del h_frame_log, c2
+    else:
+        _warn(f"{year}: skip log-y plot because no positive significance values were found")
 
     # --- cleanup: remove only the frame ---
     try:
@@ -573,6 +592,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
 
     # keep refs alive until after canvases are closed
     _ = (_keepalive, _legend_keepalive)
+    return True
 
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
@@ -581,10 +601,14 @@ def main():
 
     in_dir = Path(baseDir)
     out_dir = Path(outDir)
+    if not in_dir.is_dir():
+        _warn(f"input baseDir does not exist: {in_dir}")
 
     # NEW: load bkg counts once (year -> bkg event count)
     global _BKG_EVENT_BY_YEAR
     _BKG_EVENT_BY_YEAR = _load_bkg_event_count_by_year(in_dir)
+    if not _BKG_EVENT_BY_YEAR:
+        _warn(f"loaded 0 background event-count entries from {in_dir}")
 
     # year -> ma -> scenario -> {cut:eff}
     store: Dict[str, Dict[int, Dict[str, Dict[str, float]]]] = {}
@@ -595,15 +619,25 @@ def main():
             continue
         year, ma, effs_by_scenario = got
         store.setdefault(year, {})[ma] = effs_by_scenario
+    if not store:
+        _warn(f"loaded 0 signal cutflow points from {in_dir}")
 
     if args.year != "all":
         if args.year in store:
             _plot_year(args.year, store[args.year], out_dir)
+        else:
+            _warn(f"{args.year}: no signal cutflow points found; no output written")
         return
 
+    n_plots = 0
     for year in YEAR_ORDER:
         if year in store:
-            _plot_year(year, store[year], out_dir)
+            if _plot_year(year, store[year], out_dir):
+                n_plots += 1
+        else:
+            _warn(f"{year}: no signal cutflow points found; skipping")
+    if n_plots == 0:
+        _warn("no output PDFs were written")
 
 if __name__ == "__main__":
     main()
