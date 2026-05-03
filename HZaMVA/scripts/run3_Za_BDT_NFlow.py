@@ -75,11 +75,11 @@ def convert(tree, branches, selection):
                         #branches = wt_variables + variables + mass_variables,
                         branches = branches,
                         selection = selection
-                        # selection = 'passChaHadIso && passNeuHadIso && passdR_gl && passHOverE && H_m>110 && H_m<180'
+                        # selection = 'passChaHadIso && passNeuHadIso && passdR_gl && passHOverE && H_m>95 && H_m<180'
                         )
     return feature
 
-def convert_ntuple_dataframe(path, filename, treename, branches, selections="H_m>110 && H_m<180"):
+def convert_ntuple_dataframe(path, filename, treename, branches, selections="H_m>95 && H_m<180"):
     rootfile = rt.TFile.Open(path+filename)
     tree = rootfile.Get(treename)
     np = convert(tree, branches, selections)
@@ -265,6 +265,8 @@ mass_list = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 15., 20., 25., 30.]
 years = ['run3']
 bkg_tree_name = "inclusive"
 sig_tree_name = "train"
+bkg_data_selection = "H_m>95 && H_m<180"
+sig_selection = "H_m>115 && H_m<135"
 
 dfs = {}
 tree = {}
@@ -272,7 +274,7 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections=bkg_data_selection)
         dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
         dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
 
@@ -280,7 +282,7 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
@@ -300,8 +302,8 @@ df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name
 
 # Get sideband/signal region data
 # sideband 95 <𝑚llgg <115 GeV and 135 <𝑚llgg <180 GeV)
-data_SB = df_data_all[( (df_data_all["H_m"] > 110) & (df_data_all["H_m"] < 115) ) | ( (df_data_all["H_m"] > 135) & (df_data_all["H_m"] < 180) )]
-bkg_SB = df_bkg_all[( (df_bkg_all["H_m"] > 110) & (df_bkg_all["H_m"] < 115) ) | ( (df_bkg_all["H_m"] > 135) & (df_bkg_all["H_m"] < 180) )]
+data_SB = df_data_all[( (df_data_all["H_m"] > 95) & (df_data_all["H_m"] < 115) ) | ( (df_data_all["H_m"] > 135) & (df_data_all["H_m"] < 180) )]
+bkg_SB = df_bkg_all[( (df_bkg_all["H_m"] > 95) & (df_bkg_all["H_m"] < 115) ) | ( (df_bkg_all["H_m"] > 135) & (df_bkg_all["H_m"] < 180) )]
 
 wt_var_indices = [df_sig_all.columns.get_loc(v) for v in wt_variables]
 
@@ -1084,7 +1086,7 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections=bkg_data_selection)
         dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
         dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
 
@@ -1092,7 +1094,7 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
 
@@ -1149,7 +1151,7 @@ data_all_pred = model.predict_proba(data_all_reduced)[:, 1]
 
 data_all_frame = pd.DataFrame({'truth':None, 'disc':data_all_pred, 'label':None, 'weight':data_all_w, 'H_mass':data_all_mass})
 
-data_SB = data_all_frame[( (data_all_frame["H_mass"] > 110) & (data_all_frame["H_mass"] < 115) ) | ( (data_all_frame["H_mass"] > 135) & (data_all_frame["H_mass"] < 180) )]
+data_SB = data_all_frame[( (data_all_frame["H_mass"] > 95) & (data_all_frame["H_mass"] < 115) ) | ( (data_all_frame["H_mass"] > 135) & (data_all_frame["H_mass"] < 180) )]
 data_SR = data_all_frame[( (data_all_frame["H_mass"] > 115) & (data_all_frame["H_mass"] < 135) )]
 
 x_reduced = x[:,var_indices]
@@ -1159,10 +1161,10 @@ x_pred = model.predict_proba(x_reduced)[:, 1]
 
 bkg_all_frame = pd.DataFrame({'truth':z, 'disc':x_pred, 'label':y, 'weight':x_w, 'H_mass':x_mass})
 
-bkg_SB = bkg_all_frame[ (( (bkg_all_frame["H_mass"] > 110) & (bkg_all_frame["H_mass"] < 115) ) | ( (bkg_all_frame["H_mass"] > 135) & (bkg_all_frame["H_mass"] < 180) )) & (bkg_all_frame['truth'] > 0)]
+bkg_SB = bkg_all_frame[ (( (bkg_all_frame["H_mass"] > 95) & (bkg_all_frame["H_mass"] < 115) ) | ( (bkg_all_frame["H_mass"] > 135) & (bkg_all_frame["H_mass"] < 180) )) & (bkg_all_frame['truth'] > 0)]
 bkg_SR = bkg_all_frame[(( (bkg_all_frame["H_mass"] > 115) & (bkg_all_frame["H_mass"] < 135) )) & (bkg_all_frame['truth'] > 0)]
 
-sig_SB = bkg_all_frame[ (( (bkg_all_frame["H_mass"] > 110) & (bkg_all_frame["H_mass"] < 115) ) | ( (bkg_all_frame["H_mass"] > 135) & (bkg_all_frame["H_mass"] < 180) )) & (bkg_all_frame['truth'] < 0)]
+sig_SB = bkg_all_frame[ (( (bkg_all_frame["H_mass"] > 95) & (bkg_all_frame["H_mass"] < 115) ) | ( (bkg_all_frame["H_mass"] > 135) & (bkg_all_frame["H_mass"] < 180) )) & (bkg_all_frame['truth'] < 0)]
 sig_SR = bkg_all_frame[(( (bkg_all_frame["H_mass"] > 115) & (bkg_all_frame["H_mass"] < 135) )) & (bkg_all_frame['truth'] < 0)]
 
 def draw_dataMC(var_name, nbins = 50,range_hl=(0,1)):
@@ -1643,7 +1645,7 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections=bkg_data_selection)
         dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
         dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
 
@@ -1651,7 +1653,7 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
 
