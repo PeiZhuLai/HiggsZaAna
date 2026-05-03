@@ -154,8 +154,8 @@ def main():
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
 
-    # 在 mva + run3 下，自動按 self.sig_names 跑每個 mA；其他情況維持單一目標質量
-    if args.mva and analyzer_cfg.year == 'run3':
+    # 在 mva + run3/run3_NFlow 下，自動按 self.sig_names 跑每個 mA；其他情況維持單一目標質量
+    if args.mva and analyzer_cfg.year in ['run3', 'run3_NFlow']:
         target_masses = list(analyzer_cfg.sig_names)
     else:
         target_masses = [analyzer_cfg.mva_alp_mass] if args.mva else []
@@ -608,5 +608,4 @@ def main():
 
 
 main()
-
 

@@ -217,7 +217,7 @@ def _run3_build_chain(sample, ana_cfg):
 def LoadNtuples(ana_cfg):
     ntuples = {}
     # run3 special aggregation
-    if ana_cfg.year == 'run3':
+    if ana_cfg.year in ['run3', 'run3_NFlow']:
         for sample in ana_cfg.samp_names:
             # Decide by sample type
             ntuples[sample] = _run3_build_chain(sample, ana_cfg)

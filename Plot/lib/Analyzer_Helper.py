@@ -32,7 +32,7 @@ def getMassSigma(ana_cfg):
     for sample in ana_cfg.sig_names:
         # 收集可嘗試的檔案路徑
         candidate_paths = []
-        if ana_cfg.year == 'run3':
+        if ana_cfg.year in ['run3', 'run3_NFlow']:
             for y in getattr(ana_cfg, "years_sig", []):
                 candidate_paths.append(os.path.join(ana_cfg.sample_loc, f"mA_{sample}", f"{y}.root"))
         # 舊結構 (若仍存在)

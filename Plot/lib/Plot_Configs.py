@@ -33,7 +33,7 @@ class Plot_Config:
             self.lumi    = '9.45'
         elif year == '2024':
             self.lumi    = '108.95'    
-        elif year == 'run3':
+        elif year in ['run3', 'run3_NFlow']:
             self.lumi    = '170.84'
         else:
             print('do not in 2016/2017/2018!')
