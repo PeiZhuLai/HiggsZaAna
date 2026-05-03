@@ -1,4 +1,17 @@
 #!/bin/bash
+timer_start=$(date +%s)
+echo "==============TIMER STARTED: $(date '+%F %T')=============="
+print_runtime() {
+    local timer_end elapsed hours minutes seconds
+    timer_end=$(date +%s)
+    elapsed=$((timer_end - timer_start))
+    hours=$((elapsed / 3600))
+    minutes=$(((elapsed % 3600) / 60))
+    seconds=$((elapsed % 60))
+    printf "==============RUNTIME: %02d:%02d:%02d==============\n" "$hours" "$minutes" "$seconds"
+}
+trap print_runtime EXIT
+
 pwd
 #------------------------------Dry Run---------------------------------------
 #1
