@@ -486,6 +486,9 @@ var_indices = [df_sig_all.columns.get_loc(v) for v in variables+['param']]
 mass_var_indices = [df_sig_all.columns.get_loc(v) for v in mass_variables]
 wt_var_indices = [df_sig_all.columns.get_loc(v) for v in wt_variables]
 Hm_var_indices = [df_sig_all.columns.get_loc(v) for v in ['H_m']]
+mass_hyp_var_indices = [df_sig_all.columns.get_loc(v) for v in ['mass']]
+alp_m_var_indices = [df_sig_all.columns.get_loc(v) for v in ['ALP_m']]
+param_reduced_idx = (variables + ['param']).index('param')
 
 signal = df_sig_all.values
 signal_a = df_sig_a.values
@@ -798,6 +801,73 @@ def evaluate_train_test_ks(clf):
     auc_test = auc(fpr_test, tpr_test)
     return p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, auc_test
 
+def evaluate_mass_hypothesis_ranking(clf, masses=(1.0, 2.0)):
+    """
+    Diagnostic for the parameterized mass behavior.
+
+    For each signal event in the test split, recompute `param` under each mass
+    hypothesis and check whether the true mass hypothesis receives the largest
+    BDT score.  The mA=1/2 pair score is especially useful for the observed
+    mA=2 -> mA=1 migration.
+    """
+    sig_mask = y_test > 0.5
+    if not np.any(sig_mask):
+        return np.nan, np.nan
+
+    x_sig_full = x_test[sig_mask]
+    x_sig = x_test_reduced[sig_mask]
+    w_sig = np.abs(x_test_w[sig_mask])
+    true_mass = x_sig_full[:, mass_hyp_var_indices].flatten()
+    alp_m = x_sig_full[:, alp_m_var_indices].flatten()
+    h_m = x_sig_full[:, Hm_var_indices].flatten()
+
+    finite = (
+        np.isfinite(true_mass)
+        & np.isfinite(alp_m)
+        & np.isfinite(h_m)
+        & np.isfinite(w_sig)
+        & (h_m != 0.0)
+        & (w_sig > 0.0)
+    )
+    if not np.any(finite):
+        return np.nan, np.nan
+
+    x_sig = x_sig[finite]
+    w_sig = w_sig[finite]
+    true_mass = true_mass[finite]
+    alp_m = alp_m[finite]
+    h_m = h_m[finite]
+
+    masses = np.asarray(masses, dtype=float)
+    scores = []
+    for mass in masses:
+        x_hyp = x_sig.copy()
+        x_hyp[:, param_reduced_idx] = (alp_m - mass) / h_m
+        scores.append(clf.predict_proba(x_hyp)[:, 1])
+    scores = np.vstack(scores).T
+
+    pred_mass = masses[np.argmax(scores, axis=1)]
+    true_in_scan = np.isin(true_mass, masses)
+    if np.any(true_in_scan):
+        top1 = np.average(pred_mass[true_in_scan] == true_mass[true_in_scan], weights=w_sig[true_in_scan])
+    else:
+        top1 = np.nan
+
+    pair_mask = np.isin(true_mass, [1.0, 2.0])
+    if np.any(pair_mask) and set([1.0, 2.0]).issubset(set(masses)):
+        idx1 = int(np.where(masses == 1.0)[0][0])
+        idx2 = int(np.where(masses == 2.0)[0][0])
+        correct_pair = np.where(
+            true_mass[pair_mask] == 1.0,
+            scores[pair_mask, idx1] > scores[pair_mask, idx2],
+            scores[pair_mask, idx2] > scores[pair_mask, idx1],
+        )
+        pair12 = np.average(correct_pair, weights=w_sig[pair_mask])
+    else:
+        pair12 = np.nan
+
+    return float(top1), float(pair12)
+
 def fit_model_with_ks_target():
     eval_set = [(x_train_reduced, y_train), (x_test_reduced, y_test)]
     results = []
@@ -813,24 +883,68 @@ def fit_model_with_ks_target():
             verbose=False,
         )
         p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, auc_test = evaluate_train_test_ks(model)
-        min_ks_pvalue = min(p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted)
-        results.append((min_ks_pvalue, auc_test, name, params, model, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted))
+        mass_top1, mass_pair12 = evaluate_mass_hypothesis_ranking(model, masses=mass_list)
+        min_weighted_ks_pvalue = min(p_sig, p_bkg)
+        min_unweighted_ks_pvalue = min(p_sig_unweighted, p_bkg_unweighted)
+        results.append((
+            min_weighted_ks_pvalue,
+            auc_test,
+            mass_pair12,
+            mass_top1,
+            name,
+            params,
+            model,
+            p_sig,
+            p_bkg,
+            p_sig_unweighted,
+            p_bkg_unweighted,
+        ))
         print(
             "KS candidate {}: p_sig_w={:.4g}, p_bkg_w={:.4g}, "
-            "p_sig_unw={:.4g}, p_bkg_unw={:.4g}, min_p={:.4g}, auc_test={:.4f}".format(
-                name, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, min_ks_pvalue, auc_test
+            "p_sig_unw={:.4g}, p_bkg_unw={:.4g}, min_weighted_p={:.4g}, "
+            "min_unweighted_p={:.4g}, auc_test={:.4f}, mA_top1={:.4f}, mA12_pair={:.4f}".format(
+                name, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted,
+                min_weighted_ks_pvalue, min_unweighted_ks_pvalue, auc_test,
+                mass_top1, mass_pair12
             )
         )
-        if min_ks_pvalue > KS_PVALUE_TARGET:
-            print("Selected KS-safe model:", name)
-            return model, name, params
 
-    results.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    min_ks_pvalue, auc_test, name, params, model, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted = results[0]
+    passing = [item for item in results if item[0] > KS_PVALUE_TARGET]
+    if passing:
+        passing.sort(
+            key=lambda item: (
+                item[1],  # keep S/B discrimination high
+                np.nan_to_num(item[2], nan=-1.0),  # then prefer less mA=1/2 migration
+                np.nan_to_num(item[3], nan=-1.0),
+                item[0],
+            ),
+            reverse=True,
+        )
+        min_weighted_ks_pvalue, auc_test, mass_pair12, mass_top1, name, params, model, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted = passing[0]
+        print(
+            "Selected weighted-KS-safe model: {} with min_weighted_p={:.4g}, "
+            "auc_test={:.4f}, mA_top1={:.4f}, mA12_pair={:.4f}".format(
+                name, min_weighted_ks_pvalue, auc_test, mass_top1, mass_pair12
+            )
+        )
+        return model, name, params
+
+    results.sort(
+        key=lambda item: (
+            item[0],
+            item[1],
+            np.nan_to_num(item[2], nan=-1.0),
+            np.nan_to_num(item[3], nan=-1.0),
+        ),
+        reverse=True,
+    )
+    min_weighted_ks_pvalue, auc_test, mass_pair12, mass_top1, name, params, model, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted = results[0]
     print(
-        "No candidate reached KS p-value target {:.3g} for both classes; selected best available {} "
-        "with p_sig_w={:.4g}, p_bkg_w={:.4g}, p_sig_unw={:.4g}, p_bkg_unw={:.4g}, auc_test={:.4f}".format(
-            KS_PVALUE_TARGET, name, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted, auc_test
+        "No candidate reached weighted KS p-value target {:.3g}; selected best available {} "
+        "with p_sig_w={:.4g}, p_bkg_w={:.4g}, p_sig_unw={:.4g}, p_bkg_unw={:.4g}, "
+        "auc_test={:.4f}, mA_top1={:.4f}, mA12_pair={:.4f}".format(
+            KS_PVALUE_TARGET, name, p_sig, p_bkg, p_sig_unweighted, p_bkg_unweighted,
+            auc_test, mass_top1, mass_pair12
         )
     )
     return model, name, params
