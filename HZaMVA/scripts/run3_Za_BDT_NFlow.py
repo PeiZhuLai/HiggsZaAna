@@ -260,7 +260,7 @@ bkg_name = ['All_Bkg']
 data_name = ['Data']
 sig_name = ['All_Sig']
 mass_list = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 15., 20., 25., 30.]
-search_mA_list = [float(m) for m in range(1, 31)]
+# mass_list = [float(m) for m in range(1, 31)]
 
 years = ['run3']
 bkg_tree_name = "inclusive"
@@ -273,7 +273,7 @@ for year in years:
     tree[year] = {}
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
-        dfs[year][dataset]['mass'] = list(random.choice(search_mA_list) for _ in range(dfs[year][dataset].shape[0]))
+        dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
         dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
 
     for dataset in sig_name:
@@ -637,9 +637,9 @@ study_name = "Za-study_NFlow"
 storage_name = "sqlite:///{}.db".format(study_name)
 xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name, storage=storage_name, load_if_exists=True)
 # n=5, timeout=300 is enough
-xgb_study.optimize(objective, n_trials=5, timeout=300)
-# Not that necessary
-# xgb_study.optimize(objective, n_trials=20, timeout=5000)
+# xgb_study.optimize(objective, n_trials=5, timeout=300)
+# nTrain
+xgb_study.optimize(objective, n_trials=20, timeout=5000)
 
 # --- replace .show() with PDF export ---
 fig = optuna.visualization.plot_pareto_front(
@@ -971,7 +971,7 @@ for year in years:
     tree[year] = {}
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
-        dfs[year][dataset]['mass'] = list(random.choice(search_mA_list) for _ in range(dfs[year][dataset].shape[0]))
+        dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
         dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
 
     for dataset in sig_name:
@@ -1530,7 +1530,7 @@ for year in years:
     tree[year] = {}
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections="H_m>110 && H_m<180")
-        dfs[year][dataset]['mass'] = list(random.choice(search_mA_list) for _ in range(dfs[year][dataset].shape[0]))
+        dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
         dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
 
     for dataset in sig_name:

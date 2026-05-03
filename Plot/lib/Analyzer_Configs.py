@@ -78,10 +78,10 @@ class Analyzer_Config:
                 self.root_output_name = "ALP_plot_run3_{0}.root".format(self.out_region_name)
                 self.BDT_filename     = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_run3.pkl"
                 self.mvaCut           = {'M1':0.955, 'M2':0.98, 'M3':0.985, 'M4':0.98, 'M5':0.985, 'M6':0.99, 'M7':0.985, 'M8':0.99, 'M9':0.99, 'M10':0.99, 'M15':0.99, 'M20':0.99, 'M25':0.985, 'M30':0.98}
-           elif self.year == 'run3_NFlow':
+            elif self.year == 'run3_NFlow':
                 self.sample_loc       = '/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_NFlow'
                 self.out_dir          = '/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/variables_dataVmc_NFlow'
-                self.root_output_name = "ALP_plot_run3_{0}.root".format(self.out_region_name)
+                self.root_output_name = "ALP_plot_run3_NFlow_{0}.root".format(self.out_region_name)
                 self.BDT_filename     = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_run3_NFlow.pkl"
                 self.mvaCut           = {'M1':0.955, 'M2':0.98, 'M3':0.985, 'M4':0.98, 'M5':0.985, 'M6':0.99, 'M7':0.985, 'M8':0.99, 'M9':0.99, 'M10':0.99, 'M15':0.99, 'M20':0.99, 'M25':0.985, 'M30':0.98}
             else:
