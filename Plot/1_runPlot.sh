@@ -26,6 +26,12 @@ python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln &
 ## MVA Score control region
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
 
+## MVA Score signal region NFlow
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --region 1 --ln &
+
+## MVA Score control region NFlow
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --region 2 --ln &
+
 wait
 
 ## ALP Optimization 2 categories
@@ -33,6 +39,12 @@ python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --
 
 ## ALP Optimization 1 category
 python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1
+
+## ALP Optimization 2 categories NFlow
+python3 $scriptsDir/ALP_Optimization.py -y run3_NFlow -o $outputDir/optimize_run3UL_NFlow --region 2 -p --sigVSscore -s --doOpt -c 2
+
+## ALP Optimization 1 category NFlow
+python3 $scriptsDir/ALP_Optimization.py -y run3_NFlow -o $outputDir/optimize_run3UL_NFlow --region 2 -p --sigVSscore -s --doOpt -c 1
 
 ## Signal efficinecy after MVA cut
 python3 $scriptsDir/collect_MVAcut_points_run3.py
@@ -96,4 +108,7 @@ wait
 
 ## MVA Score whole region
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
+
+## MVA Score whole region NFlow
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --ln -b &
 wait

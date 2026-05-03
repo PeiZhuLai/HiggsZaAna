@@ -92,7 +92,18 @@ elif options.year == 'run2':
         #name_SR = "ALP_plot_run2_UL_Ns_10_SR.root"
         #name_CR = "ALP_plot_run2_UL_Ns_10_CR.root"
 elif options.year == 'run3':
-    file_out = os.path.join(PLOT_OUTPUT_DIR, 'plots_run3UL')
+    file_out = os.path.join(PLOT_OUTPUT_DIR, 'variables_dataVmc')
+    if options.ele:
+        name_SR = "ALP_plot_run3_UL_SR_ele.root"
+        name_CR = "ALP_plot_run3_UL_CR_ele.root"
+    elif options.mu:
+        name_SR = "ALP_plot_run3_UL_SR_mu.root"
+        name_CR = "ALP_plot_run3_UL_CR_mu.root"
+    else:
+        name_SR = "ALP_plot_run3_UL_SR.root"
+        name_CR = "ALP_plot_run3_UL_CR.root"
+elif options.year == 'run3_NFlow':
+    file_out = os.path.join(PLOT_OUTPUT_DIR, 'variables_dataVmc_NFlow')
     if options.ele:
         name_SR = "ALP_plot_run3_UL_SR_ele.root"
         name_CR = "ALP_plot_run3_UL_CR_ele.root"
@@ -103,11 +114,6 @@ elif options.year == 'run3':
         name_SR = "ALP_plot_run3_UL_SR.root"
         name_CR = "ALP_plot_run3_UL_CR.root"
 
-        #name_SR = "ALP_plot_run3_UL_onlyM10_SR.root"
-        #name_CR = "ALP_plot_run3_UL_onlyM10_CR.root"
-        
-        #name_SR = "ALP_plot_run3_UL_Ns_10_SR.root"
-        #name_CR = "ALP_plot_run3_UL_Ns_10_CR.root"  
 else:
     print ("do not include at 2016/2017/2018")
     exit(0)
