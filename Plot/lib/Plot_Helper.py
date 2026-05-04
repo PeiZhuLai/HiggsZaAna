@@ -629,7 +629,7 @@ def Draw_unc(graph, color, alpha=0.1, draw_option="2 SAME", on_top=True, fill_st
         gPad.Modified()
         gPad.Update()
 
-def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY, y_axis_title=None, axis_var_name=None):
+def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY, y_axis_title=None, axis_var_name=None, x_axis_title=None):
     axis_var_name = axis_var_name or var_name
     axis_signal_name = axis_var_name.split("_")[-1]
 
@@ -838,7 +838,9 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     lower_pad.SetTickx(1)
     lower_pad.SetTicky(1)
 
-    if axis_signal_name in plt_cfg.ana_cfg.sig_names:
+    if x_axis_title is not None:
+        ratio_plot.GetXaxis().SetTitle(x_axis_title)
+    elif axis_signal_name in plt_cfg.ana_cfg.sig_names:
         ratio_plot.GetXaxis().SetTitle('BDT Score')
     else:
         ratio_plot.GetXaxis().SetTitle(plt_cfg.var_title_map[axis_var_name])

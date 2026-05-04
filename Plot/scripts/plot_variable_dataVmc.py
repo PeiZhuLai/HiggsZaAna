@@ -75,70 +75,89 @@ def _visible_integral(hist):
         return 0.0
     return float(hist.Integral(1, hist.GetNbinsX()))
 
-def _make_cdf_hist(hist, name, norm):
-    cdf_hist = hist.Clone(name)
-    cdf_hist.Reset("ICES")
-    cdf_hist.SetDirectory(0)
-    if norm <= 0.0:
-        return cdf_hist
+def _cdf_edges_from_reference_hist(reference_hist):
+    if not reference_hist or _visible_integral(reference_hist) <= 0.0:
+        return None
 
+    nbins = reference_hist.GetNbinsX()
+    bin_weights = [
+        max(0.0, float(reference_hist.GetBinContent(i_bin)))
+        for i_bin in range(1, nbins + 1)
+    ]
+    total = sum(bin_weights)
+    if total <= 0.0:
+        return None
+
+    cdf_edges = [0.0]
     running = 0.0
-    running_err2 = 0.0
-    for i_bin in range(1, hist.GetNbinsX() + 1):
-        running += hist.GetBinContent(i_bin)
-        running_err2 += hist.GetBinError(i_bin) * hist.GetBinError(i_bin)
-        cdf_hist.SetBinContent(i_bin, running / norm)
-        cdf_hist.SetBinError(i_bin, np.sqrt(running_err2) / norm)
+    for weight in bin_weights:
+        running += weight
+        cdf_edges.append(min(1.0, max(0.0, running / total)))
+    cdf_edges[-1] = 1.0
+    return cdf_edges
 
-    cdf_hist.SetEntries(hist.GetEntries())
-    return cdf_hist
+def _make_cdf_transformed_hist(hist, name, cdf_edges):
+    transformed_hist = hist.Clone(name)
+    transformed_hist.Reset("ICES")
+    transformed_hist.SetDirectory(0)
+
+    if not cdf_edges:
+        return transformed_hist
+
+    out_axis = transformed_hist.GetXaxis()
+    out_nbins = transformed_hist.GetNbinsX()
+    for i_bin in range(1, hist.GetNbinsX() + 1):
+        content = float(hist.GetBinContent(i_bin))
+        error = float(hist.GetBinError(i_bin))
+        if content == 0.0 and error == 0.0:
+            continue
+
+        u_low = min(1.0, max(0.0, cdf_edges[i_bin - 1]))
+        u_high = min(1.0, max(0.0, cdf_edges[i_bin]))
+        if u_high <= u_low:
+            out_bin = transformed_hist.FindFixBin(u_high)
+            out_bin = min(out_nbins, max(1, out_bin))
+            transformed_hist.SetBinContent(out_bin, transformed_hist.GetBinContent(out_bin) + content)
+            transformed_hist.SetBinError(out_bin, np.sqrt(transformed_hist.GetBinError(out_bin) ** 2 + error ** 2))
+            continue
+
+        width = u_high - u_low
+        for out_bin in range(1, out_nbins + 1):
+            bin_low = out_axis.GetBinLowEdge(out_bin)
+            bin_high = out_axis.GetBinUpEdge(out_bin)
+            overlap = max(0.0, min(u_high, bin_high) - max(u_low, bin_low))
+            if overlap <= 0.0:
+                continue
+            frac = overlap / width
+            transformed_hist.SetBinContent(out_bin, transformed_hist.GetBinContent(out_bin) + content * frac)
+            transformed_hist.SetBinError(out_bin, np.sqrt(transformed_hist.GetBinError(out_bin) ** 2 + (error * frac) ** 2))
+
+    transformed_hist.SetEntries(hist.GetEntries())
+    return transformed_hist
 
 def _build_cdf_histo_maps(var_name, histos_var, histos_sys_var, analyzer_cfg):
     """
-    Build normalized CDF histograms:
-      - Data is normalized to the visible Data integral.
-      - Background components share the total visible background integral, so their
-        stack is the SM MC CDF.
-      - Each signal sample is normalized to its own visible integral.
+    Build normal histograms after a CDF-based score transform.
+    The reference CDF is taken from the matching signal mass when available,
+    matching the usual BDT score_t convention.
     """
-    data_norm = _visible_integral(histos_var.get("Data"))
-    bkg_norm = sum(_visible_integral(histos_var.get(sample)) for sample in analyzer_cfg.bkg_names)
-    bkg_sys_norm = {
-        sys_name: sum(_visible_integral(histos_sys_var[sample][sys_name]) for sample in analyzer_cfg.bkg_names)
-        for sys_name in analyzer_cfg.sys_names
-    }
+    mass_tag = var_name.split("_")[-1]
+    reference_hist = histos_var.get(mass_tag) or histos_var.get("Data")
+    cdf_edges = _cdf_edges_from_reference_hist(reference_hist)
 
     histos_cdf = {}
     histos_sys_cdf = {}
 
     for sample in analyzer_cfg.samp_names:
-        if sample == "Data":
-            norm = data_norm
-        elif sample in analyzer_cfg.bkg_names:
-            norm = bkg_norm
-        else:
-            norm = _visible_integral(histos_var.get(sample))
-
-        histos_cdf[sample] = _make_cdf_hist(histos_var[sample], f"{var_name}_{sample}_cdf", norm)
+        histos_cdf[sample] = _make_cdf_transformed_hist(histos_var[sample], f"{var_name}_{sample}_cdf", cdf_edges)
         histos_sys_cdf[sample] = {}
 
         for sys_name in analyzer_cfg.sys_names:
-            if sample == "Data":
-                histos_sys_cdf[sample][sys_name] = histos_cdf[sample].Clone(f"{var_name}_{sample}_{sys_name}_cdf")
-                histos_sys_cdf[sample][sys_name].SetDirectory(0)
-            elif sample in analyzer_cfg.bkg_names:
-                histos_sys_cdf[sample][sys_name] = _make_cdf_hist(
-                    histos_sys_var[sample][sys_name],
-                    f"{var_name}_{sample}_{sys_name}_cdf",
-                    bkg_sys_norm[sys_name],
-                )
-            else:
-                sig_norm = _visible_integral(histos_sys_var[sample][sys_name])
-                histos_sys_cdf[sample][sys_name] = _make_cdf_hist(
-                    histos_sys_var[sample][sys_name],
-                    f"{var_name}_{sample}_{sys_name}_cdf",
-                    sig_norm,
-                )
+            histos_sys_cdf[sample][sys_name] = _make_cdf_transformed_hist(
+                histos_sys_var[sample][sys_name],
+                f"{var_name}_{sample}_{sys_name}_cdf",
+                cdf_edges,
+            )
 
     return histos_cdf, histos_sys_cdf
 
@@ -703,6 +722,7 @@ def main():
             ratio_plot_cdf = MakeRatioPlot(histos_cdf['Data'], stacks_cdf['all'].GetStack().Last(), cdf_var_name)
             legend_cdf = MakeLegend(plot_cfg, histos_cdf, scaled_sig_cdf)
             total_unc_cdf = Total_Unc(stacks_cdf['bkg'], histos_sys_cdf, analyzer_cfg)
+            cdf_y_axis_title = "Entries / %.3f" % histos_cdf['Data'].GetBinWidth(1)
 
             if args.ln:
                 canv_cdf = CreateCanvas(cdf_var_name + "_log")
@@ -721,8 +741,9 @@ def main():
                     args.cut,
                     args.mA,
                     logY=True,
-                    y_axis_title="CDF",
+                    y_axis_title=cdf_y_axis_title,
                     axis_var_name=var_name,
+                    x_axis_title="Transformed BDT Score",
                 )
                 canv_cdf.Write()
                 SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf_log")
@@ -743,8 +764,9 @@ def main():
                     args.cut,
                     args.mA,
                     logY=False,
-                    y_axis_title="CDF",
+                    y_axis_title=cdf_y_axis_title,
                     axis_var_name=var_name,
+                    x_axis_title="Transformed BDT Score",
                 )
                 canv_cdf.Write()
                 SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf")
