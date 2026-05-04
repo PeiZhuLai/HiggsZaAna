@@ -309,6 +309,15 @@ sig_tree_name = "train"
 bkg_data_selection = "H_m>95 && H_m<180"
 sig_selection = "H_m>115 && H_m<135"
 
+def bdt_matrix_columns():
+    return variables + mass_variables + wt_variables + ["mass", "param"]
+
+def keep_bdt_matrix_columns(dataframe, label):
+    missing = [column for column in bdt_matrix_columns() if column not in dataframe.columns]
+    if missing:
+        raise KeyError("{} is missing BDT matrix columns: {}".format(label, ", ".join(missing)))
+    return dataframe.loc[:, bdt_matrix_columns()].copy()
+
 dfs = {}
 tree = {}
 for year in years:
@@ -337,6 +346,12 @@ df_sig_a    = pd.concat([dfs[y]["All_Sig"][m] for y in years for m in mass_list]
 df_sig_all  = pd.concat([dfs[y][sig][m] for y in years for sig in sig_name for m in mass_list])
 
 df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name])
+
+df_bkg_dy = keep_bdt_matrix_columns(df_bkg_dy, "df_bkg_dy")
+df_bkg_all = keep_bdt_matrix_columns(df_bkg_all, "df_bkg_all")
+df_sig_a = keep_bdt_matrix_columns(df_sig_a, "df_sig_a")
+df_sig_all = keep_bdt_matrix_columns(df_sig_all, "df_sig_all")
+df_data_all = keep_bdt_matrix_columns(df_data_all, "df_data_all")
 
 
 [df_sig_all['mass']]
@@ -1151,6 +1166,12 @@ df_sig_all  = pd.concat([dfs[y][sig][m] for y in years for sig in sig_name for m
 
 df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name])
 
+df_bkg_dy = keep_bdt_matrix_columns(df_bkg_dy, "df_bkg_dy")
+df_bkg_all = keep_bdt_matrix_columns(df_bkg_all, "df_bkg_all")
+df_sig_a = keep_bdt_matrix_columns(df_sig_a, "df_sig_a")
+df_sig_all = keep_bdt_matrix_columns(df_sig_all, "df_sig_all")
+df_data_all = keep_bdt_matrix_columns(df_data_all, "df_data_all")
+
 
 signal_a = df_sig_a.values
 signal = df_sig_all.values
@@ -1709,6 +1730,12 @@ df_sig_a    = pd.concat([dfs[y]["All_Sig"][m] for y in years for m in mass_list]
 df_sig_all  = pd.concat([dfs[y][sig][m] for y in years for sig in sig_name for m in mass_list])
 
 df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name])
+
+df_bkg_dy = keep_bdt_matrix_columns(df_bkg_dy, "df_bkg_dy")
+df_bkg_all = keep_bdt_matrix_columns(df_bkg_all, "df_bkg_all")
+df_sig_a = keep_bdt_matrix_columns(df_sig_a, "df_sig_a")
+df_sig_all = keep_bdt_matrix_columns(df_sig_all, "df_sig_all")
+df_data_all = keep_bdt_matrix_columns(df_data_all, "df_data_all")
 
 
 var_indices = [df_sig_all.columns.get_loc(v) for v in variables+['param']] # get positions of all the variables set above
