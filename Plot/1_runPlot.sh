@@ -33,11 +33,11 @@ outputDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots'
 export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
 
 
-# ## MVA Score signal region
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln &
+## MVA Score signal region
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln &
 
-# ## MVA Score control region
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
+## MVA Score control region
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
 
 # ## MVA Score signal region NFlow
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --region 1 --ln &
@@ -87,30 +87,30 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 # wait
 
 ## Batch 4
-python3 $scriptsDir/plot_phidVmA.py &
-python3 $scriptsDir/plot_eachphidVmA.py &
-python3 $scriptsDir/plot_phidsigniVmA.py &
+# python3 $scriptsDir/plot_phidVmA.py &
+# python3 $scriptsDir/plot_eachphidVmA.py &
+# python3 $scriptsDir/plot_phidsigniVmA.py &
 
-wait
+# wait
 
 ## Batch 5
-python3 $scriptsDir/plot_SIP3DsigniVmA.py &
+# python3 $scriptsDir/plot_SIP3DsigniVmA.py &
 # python3 $scriptsDir/plot_dREff.py &
 # python3 $scriptsDir/plot_dREffBar.py &
 
-wait
+# wait
 
 ## Batch 6
 # python3 $scriptsDir/plot_trigEffVlepPt.py &
 # python3 $scriptsDir/plot_mAmigratedBar.py &
 # python3 $scriptsDir/plot_mAmigratedHist.py &
 # python3 $scriptsDir/plot_mAmigratedMatrix.py &
-wait
+# wait
 
 # python3 $scriptsDir/plot_mH_phopT_2D.py &
 # python3 $scriptsDir/plot_mH_mZ_2D.py &
 # python3 $scriptsDir/plot_bkgmcSculptingCheck.py &
-wait
+# wait
 
 # # Validate SF
 # python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
@@ -119,8 +119,8 @@ wait
 # python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
 # wait
 
-# ## MVA Score whole region
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
+## MVA Score whole region
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
 
 # ## MVA Score whole region NFlow
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --ln -b &
