@@ -52,6 +52,7 @@ parser.add_option('--sigVSscore', dest='sigVSscore', action='store_true', defaul
 parser.add_option('--doOpt', dest='doOpt', action='store_true', default=False, help='whether optimize the category?')
 parser.add_option('--ele', dest='ele', action='store_true', default=False, help='electron channel?')
 parser.add_option('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
+parser.add_option('--inputTag', dest='inputTag', default=None, type="string", help='tag appended to input ROOT files from plot_variable_dataVmc.py')
 parser.add_option("-c", "--nCats",   dest="nCats",    default=5,    type="int",    help="nCats"  )
 
 (options, args) = parser.parse_args()
@@ -118,6 +119,15 @@ else:
     print ("do not include at 2016/2017/2018")
     exit(0)
 
+if options.inputTag:
+    input_tag = os.path.basename(str(options.inputTag).strip().strip('/'))
+    if input_tag:
+        def add_input_tag(root_name):
+            root_base, root_ext = os.path.splitext(root_name)
+            return f"{root_base}_{input_tag}{root_ext or '.root'}"
+        name_SR = add_input_tag(name_SR)
+        name_CR = add_input_tag(name_CR)
+
 
 def SetgStyle():
 
@@ -169,6 +179,8 @@ def SetgStyle():
 
 def open_file(file_name):
     in_file = TFile( file_name , "r")
+    if not in_file or in_file.IsZombie():
+        raise RuntimeError("Cannot open input ROOT file: %s" % file_name)
     return in_file
 
 def get_hist(file, mvaVal_name):
@@ -566,8 +578,12 @@ def main():
     analyzer_cfg = AC.Analyzer_Config('inclusive', options.year, options.region, options.mva)
 
     file = {}
-    file['SR'] = open_file(file_out + '/' + name_SR)
-    file['CR'] = open_file(file_out + '/' + name_CR)
+    input_SR = os.path.join(file_out, name_SR)
+    input_CR = os.path.join(file_out, name_CR)
+    print("[Input] SR ROOT:", input_SR)
+    print("[Input] CR ROOT:", input_CR)
+    file['SR'] = open_file(input_SR)
+    file['CR'] = open_file(input_CR)
 
 
     signal_region = ['1sigma', '1P5sigma', '2sigma', '3sigma','all']

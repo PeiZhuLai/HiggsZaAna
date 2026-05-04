@@ -45,10 +45,10 @@ python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --output
 wait
 
 ## ALP Optimization 2 categories
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2
+python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
 
 ## ALP Optimization 1 category
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1
+python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
 
 # Signal efficinecy after MVA cut
 python3 $scriptsDir/collect_MVAcut_points_run3.py
