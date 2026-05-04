@@ -82,19 +82,19 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 ## Batch 3
 # python3 $scriptsDir/plot_preselectSigEffVmA.py &
 # python3 $scriptsDir/plot_preselectSigEffSumwVmA.py &
-python3 $scriptsDir/plot_MVASigEffVmA.py &
+# python3 $scriptsDir/plot_MVASigEffVmA.py &
 
 # wait
 
 ## Batch 4
-# python3 $scriptsDir/plot_phidVmA.py &
-# python3 $scriptsDir/plot_eachphidVmA.py &
-# python3 $scriptsDir/plot_phidsigniVmA.py &
+python3 $scriptsDir/plot_phidVmA.py &
+python3 $scriptsDir/plot_eachphidVmA.py &
+python3 $scriptsDir/plot_phidsigniVmA.py &
 
 wait
 
 ## Batch 5
-# python3 $scriptsDir/plot_SIP3DsigniVmA.py &
+python3 $scriptsDir/plot_SIP3DsigniVmA.py &
 # python3 $scriptsDir/plot_dREff.py &
 # python3 $scriptsDir/plot_dREffBar.py &
 
