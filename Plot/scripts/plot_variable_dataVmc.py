@@ -58,6 +58,90 @@ pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_
 def _pdf_output_name(var_name: str) -> str:
     return pdfName_map.get(var_name, var_name)
 
+MVA_LARGER_NBINS = 20
+MVA_LARGER_XMIN = 0.0
+MVA_LARGER_XMAX = 1.0
+MVA_FULL_RANGE_BLIND_BINS = 2
+MVA_FULL_RANGE_DATA_BLIND_THRESHOLD = (
+    MVA_LARGER_XMAX
+    - MVA_FULL_RANGE_BLIND_BINS * (MVA_LARGER_XMAX - MVA_LARGER_XMIN) / MVA_LARGER_NBINS
+)
+
+def _is_full_range_mva_larger_var(var_name, target_masses):
+    return var_name in [f"mvaVal_larger_{mass}" for mass in target_masses]
+
+def _visible_integral(hist):
+    if not hist:
+        return 0.0
+    return float(hist.Integral(1, hist.GetNbinsX()))
+
+def _make_cdf_hist(hist, name, norm):
+    cdf_hist = hist.Clone(name)
+    cdf_hist.Reset("ICES")
+    cdf_hist.SetDirectory(0)
+    if norm <= 0.0:
+        return cdf_hist
+
+    running = 0.0
+    running_err2 = 0.0
+    for i_bin in range(1, hist.GetNbinsX() + 1):
+        running += hist.GetBinContent(i_bin)
+        running_err2 += hist.GetBinError(i_bin) * hist.GetBinError(i_bin)
+        cdf_hist.SetBinContent(i_bin, running / norm)
+        cdf_hist.SetBinError(i_bin, np.sqrt(running_err2) / norm)
+
+    cdf_hist.SetEntries(hist.GetEntries())
+    return cdf_hist
+
+def _build_cdf_histo_maps(var_name, histos_var, histos_sys_var, analyzer_cfg):
+    """
+    Build normalized CDF histograms:
+      - Data is normalized to the visible Data integral.
+      - Background components share the total visible background integral, so their
+        stack is the SM MC CDF.
+      - Each signal sample is normalized to its own visible integral.
+    """
+    data_norm = _visible_integral(histos_var.get("Data"))
+    bkg_norm = sum(_visible_integral(histos_var.get(sample)) for sample in analyzer_cfg.bkg_names)
+    bkg_sys_norm = {
+        sys_name: sum(_visible_integral(histos_sys_var[sample][sys_name]) for sample in analyzer_cfg.bkg_names)
+        for sys_name in analyzer_cfg.sys_names
+    }
+
+    histos_cdf = {}
+    histos_sys_cdf = {}
+
+    for sample in analyzer_cfg.samp_names:
+        if sample == "Data":
+            norm = data_norm
+        elif sample in analyzer_cfg.bkg_names:
+            norm = bkg_norm
+        else:
+            norm = _visible_integral(histos_var.get(sample))
+
+        histos_cdf[sample] = _make_cdf_hist(histos_var[sample], f"{var_name}_{sample}_cdf", norm)
+        histos_sys_cdf[sample] = {}
+
+        for sys_name in analyzer_cfg.sys_names:
+            if sample == "Data":
+                histos_sys_cdf[sample][sys_name] = histos_cdf[sample].Clone(f"{var_name}_{sample}_{sys_name}_cdf")
+                histos_sys_cdf[sample][sys_name].SetDirectory(0)
+            elif sample in analyzer_cfg.bkg_names:
+                histos_sys_cdf[sample][sys_name] = _make_cdf_hist(
+                    histos_sys_var[sample][sys_name],
+                    f"{var_name}_{sample}_{sys_name}_cdf",
+                    bkg_sys_norm[sys_name],
+                )
+            else:
+                sig_norm = _visible_integral(histos_sys_var[sample][sys_name])
+                histos_sys_cdf[sample][sys_name] = _make_cdf_hist(
+                    histos_sys_var[sample][sys_name],
+                    f"{var_name}_{sample}_{sys_name}_cdf",
+                    sig_norm,
+                )
+
+    return histos_cdf, histos_sys_cdf
+
 def SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115., signal_high=135.):
     """
     只針對 histos['H_m']：
@@ -293,11 +377,11 @@ def main():
                 histos['mvaVal_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_2sigma_'+ALP_mass    + '_' + sample, 240,  -0.1, 1.1)
                 histos['mvaVal_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_3sigma_'+ALP_mass    + '_' + sample, 240,  -0.1, 1.1)
 
-                histos['mvaVal_larger_'+ALP_mass][sample]           = TH1F('mvaVal_larger_'+ALP_mass           + '_' + sample, 'mvaVal_larger_'+ALP_mass    + '_' + sample, 20, 0, 1.0)
-                histos['mvaVal_larger_1sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
-                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample]  = TH1F('mvaVal_larger_1P5sigma_'+ALP_mass  + '_' + sample, 'mvaVal_larger_1P5sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
-                histos['mvaVal_larger_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
-                histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
+                histos['mvaVal_larger_'+ALP_mass][sample]           = TH1F('mvaVal_larger_'+ALP_mass           + '_' + sample, 'mvaVal_larger_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_1sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample]  = TH1F('mvaVal_larger_1P5sigma_'+ALP_mass  + '_' + sample, 'mvaVal_larger_1P5sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
 
 
     for var_name in var_names:
@@ -372,7 +456,7 @@ def main():
 
                     for ALP_mass in target_masses:
                         if args.blind:
-                            if not (sample == 'Data' and MVA_value[ALP_mass] > 0.95):
+                            if not (sample == 'Data' and MVA_value[ALP_mass] >= MVA_FULL_RANGE_DATA_BLIND_THRESHOLD):
                                 histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                                 histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                         else:
@@ -596,6 +680,75 @@ def main():
             canv.Write()
             SaveCanvPic(canv, analyzer_cfg.plot_output_path, _pdf_output_name(var_name))
 
+        if args.mva and _is_full_range_mva_larger_var(var_name, target_masses):
+            histos_cdf, histos_sys_cdf = _build_cdf_histo_maps(
+                var_name,
+                histos[var_name],
+                histos_sys[var_name],
+                analyzer_cfg,
+            )
+            cdf_var_name = var_name + "_cdf"
+            stacks_cdf = MakeStack(histos_cdf, analyzer_cfg, cdf_var_name)
+
+            if stacks_cdf['all'].GetStack().GetEntries() == 0:
+                stack_entry = stacks_cdf['all'].GetStack().GetEntries()
+                print(f"stack_entry: {stack_entry}")
+                print(f"[Warning] CDF stack for {var_name} is empty. Skipping drawing.")
+                continue
+
+            scaled_sig_cdf = {}
+            for sample in analyzer_cfg.sig_names:
+                scaled_sig_cdf[sample] = ScaleSignal(plot_cfg, stacks_cdf[sample], histos_cdf[sample], cdf_var_name)
+
+            ratio_plot_cdf = MakeRatioPlot(histos_cdf['Data'], stacks_cdf['all'].GetStack().Last(), cdf_var_name)
+            legend_cdf = MakeLegend(plot_cfg, histos_cdf, scaled_sig_cdf)
+            total_unc_cdf = Total_Unc(stacks_cdf['bkg'], histos_sys_cdf, analyzer_cfg)
+
+            if args.ln:
+                canv_cdf = CreateCanvas(cdf_var_name + "_log")
+                DrawOnCanv(
+                    canv_cdf,
+                    cdf_var_name + "_log",
+                    plot_cfg,
+                    stacks_cdf,
+                    histos_cdf,
+                    scaled_sig_cdf,
+                    ratio_plot_cdf,
+                    legend_cdf,
+                    lumi_label,
+                    cms_label,
+                    total_unc_cdf,
+                    args.cut,
+                    args.mA,
+                    logY=True,
+                    y_axis_title="CDF",
+                    axis_var_name=var_name,
+                )
+                canv_cdf.Write()
+                SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf_log")
+            else:
+                canv_cdf = CreateCanvas(cdf_var_name)
+                DrawOnCanv(
+                    canv_cdf,
+                    cdf_var_name,
+                    plot_cfg,
+                    stacks_cdf,
+                    histos_cdf,
+                    scaled_sig_cdf,
+                    ratio_plot_cdf,
+                    legend_cdf,
+                    lumi_label,
+                    cms_label,
+                    total_unc_cdf,
+                    args.cut,
+                    args.mA,
+                    logY=False,
+                    y_axis_title="CDF",
+                    axis_var_name=var_name,
+                )
+                canv_cdf.Write()
+                SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf")
+
 
     
     print('\n\n')
@@ -608,4 +761,3 @@ def main():
 
 
 main()
-

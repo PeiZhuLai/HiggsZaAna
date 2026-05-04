@@ -629,7 +629,9 @@ def Draw_unc(graph, color, alpha=0.1, draw_option="2 SAME", on_top=True, fill_st
         gPad.Modified()
         gPad.Update()
 
-def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY):
+def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY, y_axis_title=None, axis_var_name=None):
+    axis_var_name = axis_var_name or var_name
+    axis_signal_name = axis_var_name.split("_")[-1]
 
     canv.SetBottomMargin(0.012)
     canv.cd()
@@ -686,7 +688,9 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].GetXaxis().SetLabelSize(0)
     histos['Data'].GetXaxis().SetTitleOffset(0.95)
     
-    if var_name in ["H_m","ALP_m","Z_m"]:
+    if y_axis_title is not None:
+        histos['Data'].GetYaxis().SetTitle(y_axis_title)
+    elif axis_var_name in ["H_m","ALP_m","Z_m"]:
         histos['Data'].GetYaxis().SetTitle('Events / %.2f GeV' %histos['Data'].GetBinWidth(1))
     else:
         histos['Data'].GetYaxis().SetTitle('Events / %.3f' %histos['Data'].GetBinWidth(1))
@@ -696,8 +700,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].GetYaxis().SetTitleOffset(1.15)
     stacks['all'].Draw('HISTSAME')
 
-    if (var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names):
-        scaled_sig[var_name.split("_")[-1]].Draw('HISTSAME')
+    if (axis_signal_name in plt_cfg.ana_cfg.sig_names):
+        scaled_sig[axis_signal_name].Draw('HISTSAME')
     else:
         if bdtCut:
             scaled_sig[mA].Draw('HISTSAME')
@@ -728,7 +732,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     histos['Data'].Draw('SAMEPE')
     histos['Data'].Draw("AXIS SAME")
 
-    if var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names:
+    if axis_signal_name in plt_cfg.ana_cfg.sig_names:
         # -------------------------------------------------------------------------------------------
         legend_1 = TLegend(0.66, 0.59, 0.97, 0.86)
         ROOT.SetOwnership(legend_1, False)
@@ -744,7 +748,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         # -------------------------------------------------------------------------------------------
         legend_2 = TLegend(0.40, 0.80, 0.66, 0.86)
         ROOT.SetOwnership(legend_2, False)
-        legend_2.AddEntry(scaled_sig[var_name.split("_")[-1]], r"m_{a} = %s GeV" % (var_name.split("_")[-1].lstrip("M")), "l" )
+        legend_2.AddEntry(scaled_sig[axis_signal_name], r"m_{a} = %s GeV" % (axis_signal_name.lstrip("M")), "l" )
         # -------------------------------------------------------------------------------------------
         legend_1.SetBorderSize(0)
         legend_1.SetFillStyle(0)
@@ -834,10 +838,10 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     lower_pad.SetTickx(1)
     lower_pad.SetTicky(1)
 
-    if var_name.split("_")[-1] in plt_cfg.ana_cfg.sig_names:
+    if axis_signal_name in plt_cfg.ana_cfg.sig_names:
         ratio_plot.GetXaxis().SetTitle('BDT Score')
     else:
-        ratio_plot.GetXaxis().SetTitle(plt_cfg.var_title_map[var_name])
+        ratio_plot.GetXaxis().SetTitle(plt_cfg.var_title_map[axis_var_name])
     ratio_plot.GetXaxis().SetTitleOffset(1.0)
     ratio_plot.Draw("APZ SAME")
 
