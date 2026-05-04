@@ -629,6 +629,19 @@ def Draw_unc(graph, color, alpha=0.1, draw_option="2 SAME", on_top=True, fill_st
         gPad.Modified()
         gPad.Update()
 
+def _hist_content_max(hist):
+    if not hist:
+        return 0.0
+    max_bin = hist.GetMaximumBin()
+    if max_bin <= 0:
+        return 0.0
+    return hist.GetBinContent(max_bin)
+
+def _stack_content_max(stack):
+    if not stack or not stack.GetStack() or not stack.GetStack().Last():
+        return 0.0
+    return _hist_content_max(stack.GetStack().Last())
+
 def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY, y_axis_title=None, axis_var_name=None, x_axis_title=None, log_y_max_scale=1.5e4):
     axis_var_name = axis_var_name or var_name
     axis_signal_name = axis_var_name.split("_")[-1]
@@ -657,12 +670,11 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
 
     if logY:
         
-        if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
-            h_max = histos['Data'].GetMaximum()
-        else:
-            h_max = stacks['all'].GetMaximum()
-        if h_max < stacks['sig'].GetMaximum():
-            h_max = stacks['sig'].GetMaximum()
+        h_max = max(
+            _hist_content_max(histos['Data']),
+            _stack_content_max(stacks['all']),
+            _stack_content_max(stacks['sig']),
+        )
 
         upper_pad.SetLogy()
         stacks['all'].SetMinimum(1e-2)
@@ -674,12 +686,11 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         histos['Data'].SetMaximum(h_max*log_y_max_scale)
         stacks['all'].SetMaximum(h_max*log_y_max_scale)
 
-    if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
-        h_max = histos['Data'].GetMaximum()
-    else:
-        h_max = stacks['all'].GetMaximum()
-    if h_max < stacks['sig'].GetMaximum():
-        h_max = stacks['sig'].GetMaximum()
+    h_max = max(
+        _hist_content_max(histos['Data']),
+        _stack_content_max(stacks['all']),
+        _stack_content_max(stacks['sig']),
+    )
 
     if not logY:
         histos['Data'].SetMaximum(h_max*1.4)

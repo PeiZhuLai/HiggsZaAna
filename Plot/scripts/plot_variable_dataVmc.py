@@ -99,6 +99,8 @@ def _cdf_edges_from_reference_hist(reference_hist):
 def _make_cdf_transformed_hist(hist, name, cdf_edges):
     transformed_hist = hist.Clone(name)
     transformed_hist.Reset("ICES")
+    transformed_hist.SetMaximum(-1111)
+    transformed_hist.SetMinimum(-1111)
     transformed_hist.SetDirectory(0)
 
     if not cdf_edges:
