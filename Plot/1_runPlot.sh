@@ -34,10 +34,10 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 
 
 ## MVA Score signal region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --useSidebandReweight --sidebandReweightJson /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json &
 
 ## MVA Score control region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --useSidebandReweight --sidebandReweightJson /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json &
 
 # ## MVA Score signal region NFlow
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --region 1 --ln &
@@ -120,7 +120,7 @@ python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln &
 # wait
 
 ## MVA Score whole region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --useSidebandReweight --sidebandReweightJson /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json &
 
 # ## MVA Score whole region NFlow
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3_NFlow -m --ln -b &
