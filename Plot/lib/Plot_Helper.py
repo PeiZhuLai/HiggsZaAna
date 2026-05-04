@@ -671,8 +671,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         # stacks['all'].SetMaximum(1e10)
         # histos['Data'].SetMaximum(1e10)
 
-        histos['Data'].SetMaximum(h_max*1.1e4)
-        stacks['all'].SetMaximum(h_max*1.1e4)
+        histos['Data'].SetMaximum(h_max*1.5e4)
+        stacks['all'].SetMaximum(h_max*1.5e4)
 
     if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
         h_max = histos['Data'].GetMaximum()
