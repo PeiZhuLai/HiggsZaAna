@@ -111,6 +111,8 @@ def _load_cutflow_point(path: str) -> Optional[Tuple[str, int, Dict[str, Dict[st
 
         for c in CUTS_TO_PLOT:
             v = cf.get(c)
+            if v is None and c == "event":
+                v = cf.get("all cuts")
             if v is None:
                 continue
             effs[c] = float(v)  # store count
@@ -158,7 +160,7 @@ def _load_bkg_event_count_by_year(in_dir: Path) -> Dict[str, float]:
             for _, cf in cutflows.items():
                 if not isinstance(cf, dict):
                     continue
-                evt = cf.get("event") if cf.get("event") is None else cf.get("all cuts")
+                evt = cf.get("event") if cf.get("event") is not None else cf.get("all cuts")
                 if evt is None:
                     continue
                 try:

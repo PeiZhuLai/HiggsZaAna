@@ -87,6 +87,8 @@ def _load_cutflow_point(path: str) -> Optional[Tuple[str, int, Dict[str, Dict[st
         effs: Dict[str, float] = {}
         for c in CUTS_TO_PLOT:
             v = cf.get(c)
+            if v is None and c == "event":
+                v = cf.get("all cuts")
             if v is None:
                 continue
             effs[c] = float(v) / float(allv)
