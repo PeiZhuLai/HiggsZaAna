@@ -7,6 +7,7 @@ import ROOT
 import numpy as np
 import re
 import ast
+import math
 from typing import Dict, List, Tuple, Optional
 import uproot
 import awkward as ak
@@ -70,7 +71,7 @@ OFFSET = 0.01
 MARKER_SIZE = 1.3
 LINE_WIDTH = 3
 # 新增：固定 y 軸範圍
-Y_MIN = 15.0
+Y_MIN = 0.0
 Y_MAX_GROUPS = 90   # 3條線(2022/2023/2024)用
 Y_MAX_5YEARS = 90   # 5條線(逐年)用：請改成你想要的值
 
@@ -83,6 +84,34 @@ USE_VIS_FLOOR = False  # True 會強制 error bar 至少顯示到 floor（只為
 PRINT_SYST_BREAKDOWN = False # False
 # 新增：是否也列印每個 systematic base 的分量（更長）
 PRINT_SYST_COMPONENTS = False # False
+
+def _warn(msg: str) -> None:
+    print(f"[plot_MVASigEffVmA] WARNING: {msg}", file=sys.stderr)
+
+def _info(msg: str) -> None:
+    print(f"[plot_MVASigEffVmA] {msg}")
+
+def _hex_to_rgb01(hexstr: str) -> Tuple[int, int, int]:
+    s = str(hexstr).strip()
+    if s.startswith("#"):
+        s = s[1:]
+    if len(s) != 6:
+        raise ValueError(f"Invalid hex color: {hexstr}")
+    return int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16)
+
+def _root_color(hexstr: str, *, fallback: int = 1) -> int:
+    try:
+        ci = int(ROOT.TColor.GetColor(str(hexstr)))
+    except Exception:
+        ci = 0
+    if ci > 0:
+        return ci
+    try:
+        r, g, b = _hex_to_rgb01(hexstr)
+        ci = int(ROOT.TColor.GetColor(r, g, b))
+        return ci if ci > 0 else int(fallback)
+    except Exception:
+        return int(fallback)
 
 # ====== 解析 BDT 門檻 ======
 def _to_int(v) -> Optional[int]:
@@ -235,6 +264,15 @@ def _list_root_files(base: str, sample: str, years: List[str]) -> List[str]:
             seen.add(f); out.append(f)
     return sorted(out)
 
+def _pick_tree_name(f) -> Optional[str]:
+    for cand in (INPUT_BASE_TREE_NAME, "test", "inclusive"):
+        try:
+            if cand in f:
+                return cand
+        except Exception:
+            pass
+    return None
+
 def _discover_sys_branches(sample_map: Dict[int, str], years: List[str]) -> Tuple[List[str], List[str]]:
     """
     自動從一個可用的 ROOT 檔案中掃描 systematics weight branches。
@@ -258,10 +296,11 @@ def _discover_sys_branches(sample_map: Dict[int, str], years: List[str]) -> Tupl
 
     try:
         with uproot.open(rep_file) as f:
-            if INPUT_BASE_TREE_NAME not in f:
-                print(f"[警告] {rep_file} 沒有 tree={INPUT_BASE_TREE_NAME}，無法掃描 systematics branches。")
+            tname = _pick_tree_name(f)
+            if tname is None:
+                print(f"[警告] {rep_file} 沒有 tree={INPUT_BASE_TREE_NAME}/test/inclusive，無法掃描 systematics branches。")
                 return [], []
-            t = f[INPUT_BASE_TREE_NAME]
+            t = f[tname]
             fields = list(getattr(t, "keys", lambda: [])())
             # uproot v4: t.keys() 回傳 branch 名稱
             # 只抓 weight_* 且帶 _up/_down 的 branches；central 會另外嘗試從同一個 base 名稱推回來
@@ -347,11 +386,14 @@ def _pick_mva_score_branch(t, sample: str) -> Optional[str]:
     若不存在則 fallback 到舊的 MVA_Score。
     """
     keys = set(map(str, t.keys()))
-    cand = f"MVA_Score_{sample}"
-    if cand in keys:
-        return cand
+    for prefix in ("MVA_Score", "BDT_Score"):
+        cand = f"{prefix}_{sample}"
+        if cand in keys:
+            return cand
     if "MVA_Score" in keys:
         return "MVA_Score"
+    if "BDT_Score" in keys:
+        return "BDT_Score"
     return None
 
 # ====== 計算某個質量的 (w_pass_mu, w_pass_ele) ======
@@ -379,9 +421,10 @@ def _accumulate_pass_weights(ma: int,
     for fp in files:
         try:
             with uproot.open(fp) as f:
-                if INPUT_BASE_TREE_NAME not in f:
+                tname = _pick_tree_name(f)
+                if tname is None:
                     continue
-                t = f[INPUT_BASE_TREE_NAME]
+                t = f[tname]
 
                 mva_branch = _pick_mva_score_branch(t, sample)
                 if not mva_branch:
@@ -463,9 +506,10 @@ def _accumulate_sumw_systs_pass_total(ma: int,
     for fp in files:
         try:
             with uproot.open(fp) as f:
-                if INPUT_BASE_TREE_NAME not in f:
+                tname = _pick_tree_name(f)
+                if tname is None:
                     continue
-                t = f[INPUT_BASE_TREE_NAME]
+                t = f[tname]
 
                 mva_branch = _pick_mva_score_branch(t, sample)
                 if not mva_branch:
@@ -767,7 +811,32 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
                         y_max: float = Y_MAX_GROUPS) -> Optional[Path]:
     from array import array as carray
     if not series_by_year:
+        _warn(f"{channel_label}{name_suffix}: no series to draw")
         return None
+
+    finite_y_values: List[float] = []
+    finite_y_high: List[float] = []
+    for label, payload in series_by_year.items():
+        x, yy, ylo, yhi = payload
+        for yv, yh in zip(yy, yhi):
+            if math.isfinite(float(yv)):
+                finite_y_values.append(float(yv))
+                hi = float(yv) + (float(yh) if math.isfinite(float(yh)) else 0.0)
+                finite_y_high.append(hi)
+    if not finite_y_values:
+        _warn(f"{channel_label}{name_suffix}: all y values are non-finite")
+        return None
+
+    data_y_min = min(finite_y_values)
+    data_y_max = max(finite_y_high) if finite_y_high else max(finite_y_values)
+    if data_y_max <= 0.0 and data_y_min >= 0.0:
+        _warn(f"{channel_label}{name_suffix}: all efficiencies are zero/non-positive")
+    if data_y_min < y_min:
+        y_min = min(0.0, data_y_min * 1.15)
+    if data_y_max >= y_max:
+        y_max = data_y_max * 1.25 if data_y_max > 0 else 1.0
+    if y_max <= y_min:
+        y_max = y_min + 1.0
 
     palette_hex_mu = [
         "#540D6E", "#EE4266", "#FFB640",
@@ -849,7 +918,11 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
             continue
 
         # styles (不足就循環)
-        color = ROOT.TColor.GetColor(palette_hex[i % len(palette_hex)])
+        fallback_palette = [ROOT.kViolet + 1, ROOT.kRed + 1, ROOT.kOrange + 7, ROOT.kGreen + 2, ROOT.kBlue + 1]
+        color = _root_color(
+            palette_hex[i % len(palette_hex)],
+            fallback=fallback_palette[i % len(fallback_palette)],
+        )
         ls = line_syles[i % len(line_syles)]
         ms = marker_styles[i % len(marker_styles)]
         msz = marker_size[i % len(marker_size)]
@@ -924,6 +997,7 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
         leg.AddEntry(g_pts, f"{y}", "lp")
 
     if not g_store:
+        _warn(f"{channel_label}{name_suffix}: no drawable TGraphs were created")
         return None
 
     # 軸（用第一條線的 axis）
@@ -964,6 +1038,10 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     fname = f"MVASigEffVmA_{'muon' if channel_label.lower().startswith('muon') else 'ele'}_byYear{name_suffix}"
     out_path = out_dir / f"{fname}.pdf"
     c.SaveAs(str(out_path))
+    if not out_path.exists():
+        _warn(f"SaveAs did not create file: {out_path}")
+    else:
+        _info(f"wrote {out_path}")
 
     # 新增：在 5years 模式把 interpolated y 寫成 JSON（每個 channel 一份）
     # if name_suffix == "_5years" and interp_payload["values"]:
@@ -1019,16 +1097,24 @@ def main():
     }
 
     mu_series = _build_sumw_series_by_year_group("muon", ma_list, sample_map, mva_cuts, year_groups)
+    if not mu_series:
+        _warn("Muon grouped series is empty; check ROOT files, tree name, z_mumu branch, score branch, and MVA cuts")
     _plot_lines_by_year(mu_series, "Muon", out_dir, y_max=Y_MAX_GROUPS)
 
     ele_series = _build_sumw_series_by_year_group("ele", ma_list, sample_map, mva_cuts, year_groups)
+    if not ele_series:
+        _warn("Electron grouped series is empty; check ROOT files, tree name, z_ee branch, score branch, and MVA cuts")
     _plot_lines_by_year(ele_series, "Electron", out_dir, y_max=Y_MAX_GROUPS)
 
     # 4. 新增：逐子年份（5 條線）各輸出一張圖
     mu_series_5 = _build_sumw_series_by_year("muon", ma_list, sample_map, mva_cuts, years_sig)
+    if not mu_series_5:
+        _warn("Muon 5-year series is empty; check per-year ROOT files")
     _plot_lines_by_year(mu_series_5, "Muon", out_dir, name_suffix="_5years", y_max=Y_MAX_5YEARS)
 
     ele_series_5 = _build_sumw_series_by_year("ele", ma_list, sample_map, mva_cuts, years_sig)
+    if not ele_series_5:
+        _warn("Electron 5-year series is empty; check per-year ROOT files")
     _plot_lines_by_year(ele_series_5, "Electron", out_dir, name_suffix="_5years", y_max=Y_MAX_5YEARS)
 
 if __name__ == "__main__":
