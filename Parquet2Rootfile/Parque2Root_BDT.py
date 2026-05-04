@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import os
 import math
+import sys
 from argparse import ArgumentParser
+from pathlib import Path
 import numpy as np
 #import time
 import pandas as pd
@@ -14,6 +16,13 @@ from ROOT import Math, TVector2, TVector3, TLorentzVector
 from xgboost import XGBClassifier
 import pickle
 import re
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+HZA_MVA_SCRIPTS_DIR = PROJECT_DIR / "HZaMVA" / "scripts"
+if str(HZA_MVA_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(HZA_MVA_SCRIPTS_DIR))
+
+from sideband_reweight import load_sideband_reweighter
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -32,9 +41,58 @@ def getArgs():
     parser.add_argument('-i', '--input', action='store', default='inputs', help='Path to the input ntuple')
     parser.add_argument('-o', '--output', action='store', default='outputs', help='Path to the output ntuple')
     parser.add_argument('-s', '--split', action='store_true', help='Split train and test branch')
+    parser.add_argument(
+        '--sideband-reweight-json',
+        default=None,
+        help='Sideband reweight JSON. If omitted, use HZA_SIDEBAND_REWEIGHT_JSON or the default HZaMVA/reweights path when it exists.',
+    )
+    parser.add_argument(
+        '--sideband-reweight-mode',
+        choices=['auto', 'always', 'never'],
+        default='auto',
+        help='Apply sideband reweight to background MC automatically, force it for all samples, or disable it.',
+    )
     # 修正: 使用正確型別與安全的預設值
     parser.add_argument('--chunksize', type=int, default=500000000, help='size to process at a time') 
     return  parser.parse_args()
+
+def get_sideband_reweighter(args):
+    if args.sideband_reweight_mode == 'never':
+        return None
+    if args.sideband_reweight_json:
+        return load_sideband_reweighter(args.sideband_reweight_json, required=True)
+    return load_sideband_reweighter()
+
+def should_apply_sideband_reweight(args):
+    if args.sideband_reweight_mode == 'always':
+        return True
+    if args.sideband_reweight_mode == 'never':
+        return False
+
+    input_parts = set(Path(os.path.normpath(str(args.input))).parts)
+    output_parts = set(Path(os.path.normpath(str(args.output))).parts)
+    if "Bkg_MC" in input_parts or "All_Bkg" in input_parts or "All_Bkg" in output_parts:
+        return True
+    return False
+
+def add_sideband_reweight_branches(data, reweighter, label):
+    data['weight_nominal'] = data['weight']
+    data['factor_nominal'] = data['factor']
+    reweighter.apply_to_dataframe(
+        data,
+        base_weight_col='weight_nominal',
+        output_weight_col='weight_sideband_rwgt',
+        output_reweight_col='sideband_rwgt',
+    )
+    data['factor_sideband_rwgt'] = data['factor_nominal'].to_numpy(dtype=float) * data['sideband_rwgt'].to_numpy(dtype=float)
+    print(
+        "Applied sideband reweight to {}: nominal weight sum={:.6g}, sideband weight sum={:.6g}".format(
+            label,
+            np.sum(data['weight_nominal']),
+            np.sum(data['weight_sideband_rwgt']),
+        )
+    )
+    return data
 
 def true_delta_phi(delta_phi):
     if delta_phi > math.pi:
@@ -773,6 +831,8 @@ def decorate(data):
 def main():
     
     args = getArgs()
+    sideband_reweighter = get_sideband_reweighter(args)
+    apply_sideband_reweight = sideband_reweighter is not None and should_apply_sideband_reweight(args)
 
     variables = [
         'H_pt', 'H_eta', 'H_phi', 'H_mass',
@@ -793,6 +853,12 @@ def main():
     ]
 
     print("Now!!! Porcessing {:s} ......".format(args.input))
+    if sideband_reweighter is None:
+        print("Sideband reweight JSON not found; writing nominal weights only.")
+    elif apply_sideband_reweight:
+        print("Will add sideband reweight branches from:", sideband_reweighter.source_path)
+    else:
+        print("Sideband reweight JSON found but skipped for this sample:", sideband_reweighter.source_path)
 
     if os.path.isfile(args.output): os.remove(args.output)
 
@@ -807,6 +873,8 @@ def main():
     #data = preprocess(data)
     data = preselect(data) #TODO add cutflow
     data = decorate(data)
+    if apply_sideband_reweight:
+        data = add_sideband_reweight_branches(data, sideband_reweighter, args.input)
     final_events += data.shape[0]
 
     indices = np.arange(len(data))

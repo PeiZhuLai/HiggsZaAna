@@ -24,6 +24,7 @@ import pickle
 import os
 import inspect
 from typing import Optional
+from sideband_reweight import load_sideband_reweighter
 try:
     import plotly.io as pio
 except Exception:
@@ -31,6 +32,46 @@ except Exception:
 
 PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3")
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+SIDEBAND_REWEIGHTER = load_sideband_reweighter()
+if SIDEBAND_REWEIGHTER is not None:
+    print("Loaded sideband reweight JSON:", SIDEBAND_REWEIGHTER.source_path)
+else:
+    print("Sideband reweight JSON not found; training uses nominal background weights.")
+
+
+def bdt_input_branches(base_branches):
+    branches = list(base_branches)
+    if SIDEBAND_REWEIGHTER is not None and "event" not in branches:
+        branches.append("event")
+    return branches
+
+
+def assign_background_param(dataframe):
+    if SIDEBAND_REWEIGHTER is not None:
+        SIDEBAND_REWEIGHTER.ensure_param(dataframe, output_col="param", mass_output_col="mass")
+    else:
+        dataframe["mass"] = list(random.choice(mass_list) for _ in range(dataframe.shape[0]))
+        dataframe["param"] = (dataframe["ALP_m"] - dataframe["mass"]) / dataframe["H_m"]
+
+
+def apply_sideband_reweight_to_bkg(dataframe, label):
+    if SIDEBAND_REWEIGHTER is None:
+        return dataframe
+    dataframe["factor_nominal"] = dataframe["factor"]
+    SIDEBAND_REWEIGHTER.apply_to_dataframe(
+        dataframe,
+        base_weight_col="factor_nominal",
+        output_weight_col="factor",
+        output_reweight_col="sideband_rwgt",
+    )
+    print(
+        "Applied sideband reweight to {}: nominal sum={:.6g}, reweighted sum={:.6g}".format(
+            label,
+            np.sum(dataframe["factor_nominal"]),
+            np.sum(dataframe["factor"]),
+        )
+    )
+    return dataframe
 
 def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
     """
@@ -274,15 +315,16 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections=bkg_data_selection)
-        dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
-        dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        assign_background_param(dfs[year][dataset])
+        if dataset in bkg_name:
+            apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
     for dataset in sig_name:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections=sig_selection)
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
@@ -1086,15 +1128,16 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections=bkg_data_selection)
-        dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
-        dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        assign_background_param(dfs[year][dataset])
+        if dataset in bkg_name:
+            apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
     for dataset in sig_name:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections=sig_selection)
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
 
@@ -1645,15 +1688,16 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, variables+mass_variables+wt_variables, selections=bkg_data_selection)
-        dfs[year][dataset]['mass'] = list(random.choice(mass_list) for _ in range(dfs[year][dataset].shape[0]))
-        dfs[year][dataset]['param'] = (dfs[year][dataset]['ALP_m'] - dfs[year][dataset]['mass']) / dfs[year][dataset]['H_m']
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        assign_background_param(dfs[year][dataset])
+        if dataset in bkg_name:
+            apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
     for dataset in sig_name:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, variables+mass_variables+wt_variables, selections=sig_selection)
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
 

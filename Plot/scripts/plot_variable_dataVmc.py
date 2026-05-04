@@ -8,6 +8,11 @@ import gc
 import time  # NEW
 
 sys.path.insert(0, '%s/lib' % os.getcwd())
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+HZA_MVA_SCRIPTS_DIR = os.path.join(PROJECT_DIR, 'HZaMVA', 'scripts')
+if HZA_MVA_SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, HZA_MVA_SCRIPTS_DIR)
+
 from ROOT import *
 from Plot_Helper import LoadNtuples, MakeStack, CreateCanvas, DrawOnCanv, SaveCanvPic, MakeLumiLabel, MakeCMSDASLabel, ScaleSignal, MakeRatioPlot, MakeLegend, Total_Unc, ScaleBkgToData
 from Analyzer_Helper import getMassSigma
@@ -22,6 +27,7 @@ from xgboost import XGBClassifier
 import pickle
 import copy 
 import random
+from sideband_reweight import load_sideband_reweighter
 
 import argparse
 parser = argparse.ArgumentParser(description="A simple ttree plotter")
@@ -35,10 +41,41 @@ parser.add_argument('-b', '--blind', dest='blind', action='store_true', default=
 parser.add_argument('-ln', '--ln', dest='ln', action='store_true', default=False, help='log plot?')
 parser.add_argument('--ele', dest='ele', action='store_true', default=False, help='electron channel?')
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
+parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', action='store_true', default=False, help='use sideband-reweighted background weights')
+parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
 parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, help='max debug prints per (sample,mA)')
 args = parser.parse_args()
+
+SIDEBAND_REWEIGHTER = None
+if args.use_sideband_reweight:
+    if args.sideband_reweight_json:
+        SIDEBAND_REWEIGHTER = load_sideband_reweighter(args.sideband_reweight_json, required=True)
+    else:
+        SIDEBAND_REWEIGHTER = load_sideband_reweighter()
+    if SIDEBAND_REWEIGHTER is not None:
+        print("[SidebandReweight] Loaded JSON:", SIDEBAND_REWEIGHTER.source_path)
+    else:
+        print("[SidebandReweight] JSON not found; will use ROOT weight_sideband_rwgt branch when available.")
+
+def is_background_sample(sample, analyzer_cfg):
+    return sample in analyzer_cfg.bkg_names
+
+def get_event_weight(ntup, sample, analyzer_cfg, row_index=None):
+    weight = ntup.weight
+    if not args.use_sideband_reweight or not is_background_sample(sample, analyzer_cfg):
+        return weight
+
+    try:
+        return ntup.weight_sideband_rwgt
+    except Exception:
+        pass
+
+    if SIDEBAND_REWEIGHTER is not None:
+        return weight * SIDEBAND_REWEIGHTER.weight_for_object(ntup, row_index=row_index)
+
+    return weight
 
 
 gROOT.SetBatch(True)
@@ -443,7 +480,7 @@ def main():
             
 
             # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
-            weight = ntup.weight
+            weight = get_event_weight(ntup, sample, analyzer_cfg, row_index=iEvt)
 
             if (ntup.H_m > -90):
                 if ntup.H_m>180. or ntup.H_m<95.: continue
