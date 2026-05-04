@@ -629,7 +629,7 @@ def Draw_unc(graph, color, alpha=0.1, draw_option="2 SAME", on_top=True, fill_st
         gPad.Modified()
         gPad.Update()
 
-def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY, y_axis_title=None, axis_var_name=None, x_axis_title=None):
+def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, legend, lumi_label, cms_label, total_unc, bdtCut, mA, logY, y_axis_title=None, axis_var_name=None, x_axis_title=None, log_y_max_scale=1.5e4):
     axis_var_name = axis_var_name or var_name
     axis_signal_name = axis_var_name.split("_")[-1]
 
@@ -671,8 +671,8 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
         # stacks['all'].SetMaximum(1e10)
         # histos['Data'].SetMaximum(1e10)
 
-        histos['Data'].SetMaximum(h_max*1.5e4)
-        stacks['all'].SetMaximum(h_max*1.5e4)
+        histos['Data'].SetMaximum(h_max*log_y_max_scale)
+        stacks['all'].SetMaximum(h_max*log_y_max_scale)
 
     if histos['Data'].GetMaximum() > stacks['all'].GetMaximum():
         h_max = histos['Data'].GetMaximum()
@@ -681,8 +681,9 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
     if h_max < stacks['sig'].GetMaximum():
         h_max = stacks['sig'].GetMaximum()
 
-    histos['Data'].SetMaximum(h_max*1.4)
-    stacks['all'].SetMaximum(h_max*1.4)
+    if not logY:
+        histos['Data'].SetMaximum(h_max*1.4)
+        stacks['all'].SetMaximum(h_max*1.4)
 
     histos['Data'].Draw('PE')
     histos['Data'].GetXaxis().SetLabelSize(0)

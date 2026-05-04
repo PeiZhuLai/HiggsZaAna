@@ -744,6 +744,7 @@ def main():
                     y_axis_title=cdf_y_axis_title,
                     axis_var_name=var_name,
                     x_axis_title="Transformed BDT Score",
+                    log_y_max_scale=1.5e4,
                 )
                 canv_cdf.Write()
                 SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf_log")
