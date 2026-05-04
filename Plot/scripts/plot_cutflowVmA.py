@@ -174,7 +174,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str,float]], out_dir: Path) -> 
     g0.GetXaxis().SetLabelSize(0.05)
     g0.GetYaxis().SetLabelSize(0.05)
     g0.SetMinimum(0.0)
-    g0.SetMaximum(47)
+    g0.SetMaximum(52)
     g0.SetLineColor(color_map.get(first_key, 1))
     g0.SetMarkerColor(color_map.get(first_key, 1))
     g0.SetMarkerStyle(marker_map.get(first_key, 20))

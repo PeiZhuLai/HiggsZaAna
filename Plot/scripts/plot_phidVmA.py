@@ -231,7 +231,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     h_frame.GetXaxis().SetLabelSize(0.05)
     h_frame.GetYaxis().SetLabelSize(0.05)
     h_frame.SetMinimum(0.008)
-    h_frame.SetMaximum(0.09)
+    h_frame.SetMaximum(0.11)
 
     h_frame.Draw("AXIS")
 
