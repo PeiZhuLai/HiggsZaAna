@@ -43,6 +43,7 @@ parser.add_argument('--ele', dest='ele', action='store_true', default=False, hel
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
 parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', action='store_true', default=False, help='use sideband-reweighted background weights')
 parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
+parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
 parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, help='max debug prints per (sample,mA)')
@@ -295,6 +296,12 @@ def main():
 
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
+    if args.output_tag:
+        output_tag = os.path.basename(str(args.output_tag).strip().strip('/'))
+        if output_tag:
+            root_base, root_ext = os.path.splitext(analyzer_cfg.root_output_name)
+            analyzer_cfg.root_output_name = f"{root_base}_{output_tag}{root_ext or '.root'}"
+            analyzer_cfg.plot_output_path = os.path.join(analyzer_cfg.plot_output_path, output_tag)
 
     # 在 mva + run3/run3_NFlow 下，自動按 self.sig_names 跑每個 mA；其他情況維持單一目標質量
     if args.mva and analyzer_cfg.year in ['run3', 'run3_NFlow']:

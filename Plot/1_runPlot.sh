@@ -30,14 +30,17 @@ pwd
 #-----------------------------Parallel Run-----------------------------------
 scriptsDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/scripts'
 outputDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots'
+sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json'
 export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib
 
 
 ## MVA Score signal region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --useSidebandReweight --sidebandReweightJson /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
 ## MVA Score control region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --useSidebandReweight --sidebandReweightJson /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
 wait
 
@@ -108,7 +111,9 @@ python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys 
 wait
 
 ## MVA Score whole region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --useSidebandReweight --sidebandReweightJson /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
+wait
 
 ###########################################################################################
 # ## MVA Score whole region NFlow
