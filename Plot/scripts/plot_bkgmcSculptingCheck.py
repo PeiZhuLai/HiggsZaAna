@@ -844,9 +844,9 @@ def _draw_bkg_mass_shapes_by_bdt(
     y_axis_min = 1e-5 if logy else 0.0
 
     canvas = TCanvas(f"canv_bkg_mass_shapes_by_bdt_mA_{mass}", "", 800, 700)
-    canvas.SetLeftMargin(0.14)
+    canvas.SetLeftMargin(0.16)
     canvas.SetRightMargin(0.05)
-    canvas.SetBottomMargin(0.13)
+    canvas.SetBottomMargin(0.14)
     canvas.SetTopMargin(0.10)
     canvas.SetTickx(1)
     canvas.SetTicky(1)
@@ -864,15 +864,16 @@ def _draw_bkg_mass_shapes_by_bdt(
     frame.SetMinimum(y_axis_min)
     frame.SetMaximum(y_axis_max)
     frame.GetXaxis().SetTitle(plot_cfg.var_title_map["H_m"])
-    frame.GetXaxis().SetTitleSize(0.045)
-    frame.GetXaxis().SetLabelSize(0.04)
-    frame.GetYaxis().SetTitle("Normalized weighted events / GeV")
-    frame.GetYaxis().SetTitleSize(0.045)
-    frame.GetYaxis().SetLabelSize(0.04)
-    frame.GetYaxis().SetTitleOffset(1.35)
+    frame.GetXaxis().SetTitleSize(0.055)
+    frame.GetXaxis().SetLabelSize(0.05)
+    frame.GetXaxis().SetTitleOffset(1.35)
+    frame.GetYaxis().SetTitle(f"A.U. / {frame.GetXaxis().GetBinWidth(1):.2f} GeV")
+    frame.GetYaxis().SetTitleSize(0.055)
+    frame.GetYaxis().SetLabelSize(0.05)
+    frame.GetYaxis().SetTitleOffset(1.55)
     frame.Draw("AXIS")
 
-    legend = TLegend(0.50, 0.48, 0.93, 0.86)
+    legend = TLegend(0.55, 0.48, 0.98, 0.86)
     ROOT.SetOwnership(legend, False)
     legend.SetBorderSize(0)
     legend.SetFillStyle(0)
@@ -882,7 +883,7 @@ def _draw_bkg_mass_shapes_by_bdt(
 
     for idx, hist in draw_histos:
         hist.Draw("HIST SAME")
-        legend.AddEntry(hist, f"{score_edges[idx]:.2f} < BDT #leq {score_edges[idx + 1]:.2f}", "l")
+        legend.AddEntry(hist, f"{score_edges[idx]:.1f} < BDT #leq {score_edges[idx + 1]:.1f}", "l")
 
     vertical_lines = []
     for x_value in (BLIND_LOW, BLIND_HIGH):
