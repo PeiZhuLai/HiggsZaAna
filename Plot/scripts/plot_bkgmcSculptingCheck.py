@@ -840,14 +840,14 @@ def _draw_bkg_mass_shapes_by_bdt(
         print(f"[mA={mass:02d}] No background entries for BDT-binned mass-shape plot.")
         return
 
-    y_axis_max = 1.4 * max(ymax, 1e-6)
+    y_axis_max = 1.5 * max(ymax, 1e-6)
     y_axis_min = 1e-5 if logy else 0.0
 
-    canvas = TCanvas(f"canv_bkg_mass_shapes_by_bdt_mA_{mass}", "", 800, 700)
+    canvas = TCanvas(f"canv_bkg_mass_shapes_by_bdt_mA_{mass}", "", 800, 600)
     canvas.SetLeftMargin(0.16)
     canvas.SetRightMargin(0.05)
     canvas.SetBottomMargin(0.14)
-    canvas.SetTopMargin(0.10)
+    canvas.SetTopMargin(0.08)
     canvas.SetTickx(1)
     canvas.SetTicky(1)
     if logy:
@@ -867,13 +867,13 @@ def _draw_bkg_mass_shapes_by_bdt(
     frame.GetXaxis().SetTitleSize(0.055)
     frame.GetXaxis().SetLabelSize(0.05)
     frame.GetXaxis().SetTitleOffset(1.35)
-    frame.GetYaxis().SetTitle(f"A.U. / {frame.GetXaxis().GetBinWidth(1):.2f} GeV")
+    frame.GetYaxis().SetTitle(f"A.U. / {draw_hist.GetXaxis().GetBinWidth(1):.2f} GeV")
     frame.GetYaxis().SetTitleSize(0.055)
     frame.GetYaxis().SetLabelSize(0.05)
     frame.GetYaxis().SetTitleOffset(1.55)
     frame.Draw("AXIS")
 
-    legend = TLegend(0.55, 0.48, 0.98, 0.86)
+    legend = TLegend(0.69, 0.45, 0.99, 0.84)
     ROOT.SetOwnership(legend, False)
     legend.SetBorderSize(0)
     legend.SetFillStyle(0)
@@ -899,29 +899,32 @@ def _draw_bkg_mass_shapes_by_bdt(
     tag = ROOT.TLatex()
     tag.SetNDC()
     tag.SetTextFont(42)
-    tag.SetTextSize(0.040)
-    tag.DrawLatex(0.18, 0.84, f"Background MC, m_{{a}} = {mass} GeV")
+    tag.SetTextSize(0.035)
+    tag.DrawLatex(0.765, 0.86, f"m_{{a}} = {mass} GeV")
 
     cms_label = ROOT.TLatex()
     cms_label.SetNDC()
     cms_label.SetTextAlign(11)
     cms_label.SetTextFont(61)
+    cms_label.SetTextSize(0.075)
     cms_label.SetTextSize(BDT_SHAPE_CMS_TEXT_SIZE)
-    cms_label.DrawLatex(0.14, 0.915, "CMS")
+    cms_label.DrawLatex(0.16, 0.935, "CMS")
 
     prelim_label = ROOT.TLatex()
     prelim_label.SetNDC()
     prelim_label.SetTextAlign(11)
     prelim_label.SetTextFont(52)
+    prelim_label.SetTextSize(0.075)
     prelim_label.SetTextSize(BDT_SHAPE_PRELIM_TEXT_SIZE)
-    prelim_label.DrawLatex(0.225, 0.915, "Preliminary")
+    prelim_label.DrawLatex(0.23, 0.935, "Preliminary")
 
     lumi_label = ROOT.TLatex()
     lumi_label.SetNDC()
     lumi_label.SetTextAlign(31)
     lumi_label.SetTextFont(42)
+    lumi_label.SetTextSize(0.075)
     lumi_label.SetTextSize(BDT_SHAPE_LUMI_TEXT_SIZE)
-    lumi_label.DrawLatex(0.95, 0.915, BDT_SHAPE_LUMI_TEXT)
+    lumi_label.DrawLatex(0.95, 0.935, BDT_SHAPE_LUMI_TEXT)
 
     save_name = f"bkg_mass_shapes_by_bdt_mA{mass:02d}"
     if logy:
@@ -973,7 +976,7 @@ def _fill_histograms(
         for i_evt in range(entries):
             ntup.GetEvent(i_evt)
             # For short test to tune the style
-            if i_evt == 10:
+            if i_evt == 1000:
                 break
             if i_evt % 100000 == 1:
                 print(f"  looking at event {i_evt}")
