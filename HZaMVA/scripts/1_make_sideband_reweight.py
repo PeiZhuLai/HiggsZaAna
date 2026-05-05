@@ -26,20 +26,31 @@ uproot = None
 
 
 REWEIGHT_VARS = [
-    "H_pt",
-    "pho1Pt",
-    "pho2Pt",
-    "var_dR_g1g2",
+    # 1. angular variables: high importance and strongly correlated with topology
     "var_dR_Za",
+    "var_dR_g1g2",
     "var_dR_g1Z",
-    "var_PtaOverMh",
-    "pho1R9",
-    "pho2R9",
+
+    # 2. photon shower-shape variables: very important for BDT
     "pho1IetaIeta55",
     "pho2IetaIeta55",
+
+    # 3. photon isolation variables: important and likely related to fake/photon mismodeling
     "pho1ECALIso",
     "pho2ECALIso",
     "ALP_calculatedPhotonIso",
+
+    # 4. photon R9 variables
+    "pho1R9",
+    "pho2R9",
+
+    # 5. kinematic variables
+    "var_PtaOverMh",
+    "pho1Pt",
+    "pho2Pt",
+    "H_pt",
+
+    # 6. mass-hypothesis variable: most important, but safest to correct last
     "param",
 ]
 

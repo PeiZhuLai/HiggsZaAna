@@ -61,16 +61,12 @@ python3 $scriptsDir/table_MVAScore_sigEff_bkgYield.py &
 wait
 
 # Batch 2
-python3 $scriptsDir/plot_cutflowVmA.py &
 python $scriptsDir/table_interpolate_bkgYield_1.py
-if [ $? -eq 0 ]; then
-    python $scriptsDir/table_interpolate_bkgYield_2.py &
-else
-    echo "[Batch 2] table_interpolate_bkgYield_1.py failed; skip table_interpolate_bkgYield_2.py"
-fi
+python $scriptsDir/table_interpolate_bkgYield_2.py
 wait
 
 # Batch 3
+python3 $scriptsDir/plot_cutflowVmA.py &
 python3 $scriptsDir/plot_preselectSigEffVmA.py &
 python3 $scriptsDir/plot_preselectSigEffSumwVmA.py &
 python3 $scriptsDir/plot_MVASigEffVmA.py &
