@@ -60,9 +60,9 @@ BDT_SHAPE_NBINS = 10
 BDT_SHAPE_SCORE_MIN = 0.0
 BDT_SHAPE_SCORE_MAX = 1.0
 BDT_SHAPE_LUMI_TEXT = "170.8 fb^{-1} (13.6 TeV)"
-BDT_SHAPE_CMS_TEXT_SIZE = 0.040
-BDT_SHAPE_PRELIM_TEXT_SIZE = 0.032
-BDT_SHAPE_LUMI_TEXT_SIZE = 0.034
+BDT_SHAPE_CMS_TEXT_SIZE = 0.050
+BDT_SHAPE_PRELIM_TEXT_SIZE = 0.042
+BDT_SHAPE_LUMI_TEXT_SIZE = 0.044
 SIGNAL_DRAW_SCALE = 0.5
 SIGNAL_DRAW_SCALE_NEAREST_BIN5 = 0.2
 LUMI_MAP = {
@@ -866,7 +866,7 @@ def _draw_bkg_mass_shapes_by_bdt(
     frame.GetXaxis().SetTitle(plot_cfg.var_title_map["H_m"])
     frame.GetXaxis().SetTitleSize(0.055)
     frame.GetXaxis().SetLabelSize(0.05)
-    frame.GetXaxis().SetTitleOffset(1.35)
+    frame.GetXaxis().SetTitleOffset(1.34)
     frame.GetYaxis().SetTitle(f"A.U. / {draw_hist.GetXaxis().GetBinWidth(1):.2f} GeV")
     frame.GetYaxis().SetTitleSize(0.055)
     frame.GetYaxis().SetLabelSize(0.05)
@@ -906,7 +906,6 @@ def _draw_bkg_mass_shapes_by_bdt(
     cms_label.SetNDC()
     cms_label.SetTextAlign(11)
     cms_label.SetTextFont(61)
-    cms_label.SetTextSize(0.075)
     cms_label.SetTextSize(BDT_SHAPE_CMS_TEXT_SIZE)
     cms_label.DrawLatex(0.16, 0.935, "CMS")
 
@@ -914,15 +913,13 @@ def _draw_bkg_mass_shapes_by_bdt(
     prelim_label.SetNDC()
     prelim_label.SetTextAlign(11)
     prelim_label.SetTextFont(52)
-    prelim_label.SetTextSize(0.075)
     prelim_label.SetTextSize(BDT_SHAPE_PRELIM_TEXT_SIZE)
-    prelim_label.DrawLatex(0.23, 0.935, "Preliminary")
+    prelim_label.DrawLatex(0.24, 0.935, "Preliminary")
 
     lumi_label = ROOT.TLatex()
     lumi_label.SetNDC()
     lumi_label.SetTextAlign(31)
     lumi_label.SetTextFont(42)
-    lumi_label.SetTextSize(0.075)
     lumi_label.SetTextSize(BDT_SHAPE_LUMI_TEXT_SIZE)
     lumi_label.DrawLatex(0.95, 0.935, BDT_SHAPE_LUMI_TEXT)
 
