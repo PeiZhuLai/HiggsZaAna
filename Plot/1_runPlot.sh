@@ -42,6 +42,10 @@ python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --output
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag nominal &
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
+## MVA Score whole region
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
+
 wait
 
 ## ALP Optimization 2 categories
@@ -106,10 +110,6 @@ python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
 python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
 wait
 
-## MVA Score whole region
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
-python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
-wait
 
 ###########################################################################################
 # ## MVA Score whole region NFlow
