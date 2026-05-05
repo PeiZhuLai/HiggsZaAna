@@ -59,6 +59,10 @@ H_M_BIN_SIGNAL_OVERLAY_XMAX = 181.0
 BDT_SHAPE_NBINS = 10
 BDT_SHAPE_SCORE_MIN = 0.0
 BDT_SHAPE_SCORE_MAX = 1.0
+BDT_SHAPE_LUMI_TEXT = "170.8 fb^{-1} (13.6 TeV)"
+BDT_SHAPE_CMS_TEXT_SIZE = 0.040
+BDT_SHAPE_PRELIM_TEXT_SIZE = 0.032
+BDT_SHAPE_LUMI_TEXT_SIZE = 0.034
 SIGNAL_DRAW_SCALE = 0.5
 SIGNAL_DRAW_SCALE_NEAREST_BIN5 = 0.2
 LUMI_MAP = {
@@ -836,6 +840,9 @@ def _draw_bkg_mass_shapes_by_bdt(
         print(f"[mA={mass:02d}] No background entries for BDT-binned mass-shape plot.")
         return
 
+    y_axis_max = 1.4 * max(ymax, 1e-6)
+    y_axis_min = 1e-5 if logy else 0.0
+
     canvas = TCanvas(f"canv_bkg_mass_shapes_by_bdt_mA_{mass}", "", 800, 700)
     canvas.SetLeftMargin(0.14)
     canvas.SetRightMargin(0.05)
@@ -854,8 +861,8 @@ def _draw_bkg_mass_shapes_by_bdt(
         H_M_XMAX,
     )
     frame.SetDirectory(0)
-    frame.SetMinimum(1e-5 if logy else 0.0)
-    frame.SetMaximum((50.0 if logy else 1.35) * max(ymax, 1e-6))
+    frame.SetMinimum(y_axis_min)
+    frame.SetMaximum(y_axis_max)
     frame.GetXaxis().SetTitle(plot_cfg.var_title_map["H_m"])
     frame.GetXaxis().SetTitleSize(0.045)
     frame.GetXaxis().SetLabelSize(0.04)
@@ -877,6 +884,15 @@ def _draw_bkg_mass_shapes_by_bdt(
         hist.Draw("HIST SAME")
         legend.AddEntry(hist, f"{score_edges[idx]:.2f} < BDT #leq {score_edges[idx + 1]:.2f}", "l")
 
+    vertical_lines = []
+    for x_value in (BLIND_LOW, BLIND_HIGH):
+        line = ROOT.TLine(x_value, y_axis_min, x_value, y_axis_max)
+        line.SetLineColor(ROOT.kBlue)
+        line.SetLineStyle(2)
+        line.SetLineWidth(3)
+        line.Draw("SAME")
+        vertical_lines.append(line)
+
     legend.Draw("SAME")
 
     tag = ROOT.TLatex()
@@ -885,13 +901,26 @@ def _draw_bkg_mass_shapes_by_bdt(
     tag.SetTextSize(0.040)
     tag.DrawLatex(0.18, 0.84, f"Background MC, m_{{a}} = {mass} GeV")
 
-    CMS_lumi.cmsText = "CMS"
-    CMS_lumi.extraText = "Preliminary"
-    CMS_lumi.cmsTextSize = 0.95
-    CMS_lumi.CMSText_posX = -0.03
-    CMS_lumi.outOfFrame = True
-    CMS_lumi.lumiText_posX = -0.000
-    CMS_lumi.CMS_lumi(canvas, 5, 0, plot_cfg.year)
+    cms_label = ROOT.TLatex()
+    cms_label.SetNDC()
+    cms_label.SetTextAlign(11)
+    cms_label.SetTextFont(61)
+    cms_label.SetTextSize(BDT_SHAPE_CMS_TEXT_SIZE)
+    cms_label.DrawLatex(0.14, 0.915, "CMS")
+
+    prelim_label = ROOT.TLatex()
+    prelim_label.SetNDC()
+    prelim_label.SetTextAlign(11)
+    prelim_label.SetTextFont(52)
+    prelim_label.SetTextSize(BDT_SHAPE_PRELIM_TEXT_SIZE)
+    prelim_label.DrawLatex(0.225, 0.915, "Preliminary")
+
+    lumi_label = ROOT.TLatex()
+    lumi_label.SetNDC()
+    lumi_label.SetTextAlign(31)
+    lumi_label.SetTextFont(42)
+    lumi_label.SetTextSize(BDT_SHAPE_LUMI_TEXT_SIZE)
+    lumi_label.DrawLatex(0.95, 0.915, BDT_SHAPE_LUMI_TEXT)
 
     save_name = f"bkg_mass_shapes_by_bdt_mA{mass:02d}"
     if logy:
