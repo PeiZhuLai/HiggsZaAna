@@ -972,6 +972,9 @@ def _fill_histograms(
 
         for i_evt in range(entries):
             ntup.GetEvent(i_evt)
+            # For short test to tune the style
+            if i_evt == 10:
+                break
             if i_evt % 100000 == 1:
                 print(f"  looking at event {i_evt}")
 
