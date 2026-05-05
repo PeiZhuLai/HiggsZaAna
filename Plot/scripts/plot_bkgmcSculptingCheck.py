@@ -59,6 +59,7 @@ H_M_BIN_SIGNAL_OVERLAY_XMAX = 181.0
 BDT_SHAPE_NBINS = 10
 BDT_SHAPE_SCORE_MIN = 0.0
 BDT_SHAPE_SCORE_MAX = 1.0
+BDT_SHAPE_MASS_BIN_WIDTH = 5.0
 BDT_SHAPE_LUMI_TEXT = "170.8 fb^{-1} (13.6 TeV)"
 BDT_SHAPE_CMS_TEXT_SIZE = 0.050
 BDT_SHAPE_PRELIM_TEXT_SIZE = 0.042
@@ -751,11 +752,12 @@ def _book_bdt_shape_histograms(
     n_bdt_bins: int = BDT_SHAPE_NBINS,
     score_min: float = BDT_SHAPE_SCORE_MIN,
     score_max: float = BDT_SHAPE_SCORE_MAX,
-    nbins: int = 50,
+    mass_bin_width: float = BDT_SHAPE_MASS_BIN_WIDTH,
     xmin: float = H_M_XMIN,
     xmax: float = H_M_XMAX,
 ) -> Tuple[Dict[int, List[TH1F]], List[float]]:
     score_edges = _build_n_uniform_edges(score_min, score_max, n_bdt_bins)
+    mass_nbins = int(round((xmax - xmin) / mass_bin_width))
     histos: Dict[int, List[TH1F]] = {}
     for mass in TARGET_MASSES:
         histos[mass] = []
@@ -763,7 +765,7 @@ def _book_bdt_shape_histograms(
             hist = TH1F(
                 f"h_bkg_mass_shape_mA_{mass}_bdt_{idx}",
                 f"h_bkg_mass_shape_mA_{mass}_bdt_{idx}",
-                nbins,
+                mass_nbins,
                 xmin,
                 xmax,
             )
