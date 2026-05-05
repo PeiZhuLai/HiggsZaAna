@@ -56,6 +56,9 @@ H_M_BIN_COARSE_WIDTH = 5.0
 H_M_BIN_COARSE_XMAX = 180.0
 H_M_BIN_SIGNAL_OVERLAY_WIDTH = 2.0
 H_M_BIN_SIGNAL_OVERLAY_XMAX = 181.0
+BDT_SHAPE_NBINS = 10
+BDT_SHAPE_SCORE_MIN = 0.0
+BDT_SHAPE_SCORE_MAX = 1.0
 SIGNAL_DRAW_SCALE = 0.5
 SIGNAL_DRAW_SCALE_NEAREST_BIN5 = 0.2
 LUMI_MAP = {
@@ -68,6 +71,18 @@ LUMI_MAP = {
 BKG_LABELS = {"DYJetsToLL": "Z + jets", "DYGto2LG": "Z + #gamma"}
 _EFF_CACHE: Dict[str, dict] = {}
 DATA_MARKER_SIZE = 1.3
+BDT_SHAPE_COLORS = [
+    ROOT.kBlack,
+    ROOT.kBlue + 1,
+    ROOT.kAzure + 7,
+    ROOT.kCyan + 2,
+    ROOT.kTeal + 3,
+    ROOT.kGreen + 2,
+    ROOT.kSpring + 5,
+    ROOT.kOrange + 1,
+    ROOT.kRed + 1,
+    ROOT.kMagenta + 1,
+]
 SIGNAL_COLOR_HEX = {
     "M1":  "#2563EB",
     "M2":  "#14B8A6",
@@ -427,6 +442,11 @@ def _build_uniform_bin_edges(xmin: float, xmax: float, step: float) -> List[floa
     return [xmin + step * idx for idx in range(n_steps + 1)]
 
 
+def _build_n_uniform_edges(xmin: float, xmax: float, nbins: int) -> List[float]:
+    width = (xmax - xmin) / float(nbins)
+    return [xmin + width * idx for idx in range(nbins + 1)]
+
+
 def _format_elapsed_hms(elapsed_seconds: float) -> str:
     total_seconds = int(round(elapsed_seconds))
     hours, remainder = divmod(total_seconds, 3600)
@@ -723,12 +743,170 @@ def _book_histograms(
     return histos
 
 
+def _book_bdt_shape_histograms(
+    n_bdt_bins: int = BDT_SHAPE_NBINS,
+    score_min: float = BDT_SHAPE_SCORE_MIN,
+    score_max: float = BDT_SHAPE_SCORE_MAX,
+    nbins: int = 50,
+    xmin: float = H_M_XMIN,
+    xmax: float = H_M_XMAX,
+) -> Tuple[Dict[int, List[TH1F]], List[float]]:
+    score_edges = _build_n_uniform_edges(score_min, score_max, n_bdt_bins)
+    histos: Dict[int, List[TH1F]] = {}
+    for mass in TARGET_MASSES:
+        histos[mass] = []
+        for idx in range(n_bdt_bins):
+            hist = TH1F(
+                f"h_bkg_mass_shape_mA_{mass}_bdt_{idx}",
+                f"h_bkg_mass_shape_mA_{mass}_bdt_{idx}",
+                nbins,
+                xmin,
+                xmax,
+            )
+            hist.Sumw2()
+            hist.SetDirectory(0)
+            histos[mass].append(hist)
+    return histos, score_edges
+
+
+def _bdt_shape_bin_index(score: float, score_edges: List[float]) -> Optional[int]:
+    if score < score_edges[0] or score > score_edges[-1]:
+        return None
+    if score == score_edges[-1]:
+        return len(score_edges) - 2
+
+    width = score_edges[1] - score_edges[0]
+    idx = int((score - score_edges[0]) / width)
+    if idx < 0 or idx >= len(score_edges) - 1:
+        return None
+    return idx
+
+
+def _fill_bdt_shape_histogram(
+    sample: str,
+    mass: int,
+    score: float,
+    h_mass: float,
+    weight: float,
+    analyzer_cfg: Analyzer_Config,
+    bdt_shape_histos: Optional[Dict[int, List[TH1F]]],
+    bdt_shape_edges: Optional[List[float]],
+) -> None:
+    if bdt_shape_histos is None or bdt_shape_edges is None:
+        return
+    if sample not in analyzer_cfg.bkg_names:
+        return
+
+    idx = _bdt_shape_bin_index(float(score), bdt_shape_edges)
+    if idx is None:
+        return
+
+    bdt_shape_histos[mass][idx].Fill(h_mass, weight)
+
+
+def _draw_bkg_mass_shapes_by_bdt(
+    mass: int,
+    histos: List[TH1F],
+    score_edges: List[float],
+    plot_cfg: Plot_Config,
+    output_dir: Path,
+    logy: bool = False,
+) -> None:
+    draw_histos = []
+    ymax = 0.0
+
+    for idx, hist in enumerate(histos):
+        if hist.Integral() <= 0.0:
+            continue
+        draw_hist = hist.Clone(f"{hist.GetName()}_norm")
+        draw_hist.SetDirectory(0)
+        norm = draw_hist.Integral("width")
+        if norm > 0.0:
+            draw_hist.Scale(1.0 / norm)
+
+        color = BDT_SHAPE_COLORS[idx % len(BDT_SHAPE_COLORS)]
+        draw_hist.SetLineColor(color)
+        draw_hist.SetLineWidth(3)
+        draw_hist.SetMarkerSize(0)
+        draw_hist.SetFillStyle(0)
+        ymax = max(ymax, draw_hist.GetMaximum())
+        draw_histos.append((idx, draw_hist))
+
+    if not draw_histos:
+        print(f"[mA={mass:02d}] No background entries for BDT-binned mass-shape plot.")
+        return
+
+    canvas = TCanvas(f"canv_bkg_mass_shapes_by_bdt_mA_{mass}", "", 800, 700)
+    canvas.SetLeftMargin(0.14)
+    canvas.SetRightMargin(0.05)
+    canvas.SetBottomMargin(0.13)
+    canvas.SetTopMargin(0.10)
+    canvas.SetTickx(1)
+    canvas.SetTicky(1)
+    if logy:
+        canvas.SetLogy()
+
+    frame = TH1F(
+        f"frame_bkg_mass_shapes_by_bdt_mA_{mass}",
+        "",
+        1,
+        H_M_XMIN,
+        H_M_XMAX,
+    )
+    frame.SetDirectory(0)
+    frame.SetMinimum(1e-5 if logy else 0.0)
+    frame.SetMaximum((50.0 if logy else 1.35) * max(ymax, 1e-6))
+    frame.GetXaxis().SetTitle(plot_cfg.var_title_map["H_m"])
+    frame.GetXaxis().SetTitleSize(0.045)
+    frame.GetXaxis().SetLabelSize(0.04)
+    frame.GetYaxis().SetTitle("Normalized weighted events / GeV")
+    frame.GetYaxis().SetTitleSize(0.045)
+    frame.GetYaxis().SetLabelSize(0.04)
+    frame.GetYaxis().SetTitleOffset(1.35)
+    frame.Draw("AXIS")
+
+    legend = TLegend(0.50, 0.48, 0.93, 0.86)
+    ROOT.SetOwnership(legend, False)
+    legend.SetBorderSize(0)
+    legend.SetFillStyle(0)
+    legend.SetFillColor(0)
+    legend.SetTextFont(42)
+    legend.SetTextSize(0.032)
+
+    for idx, hist in draw_histos:
+        hist.Draw("HIST SAME")
+        legend.AddEntry(hist, f"{score_edges[idx]:.2f} < BDT #leq {score_edges[idx + 1]:.2f}", "l")
+
+    legend.Draw("SAME")
+
+    tag = ROOT.TLatex()
+    tag.SetNDC()
+    tag.SetTextFont(42)
+    tag.SetTextSize(0.040)
+    tag.DrawLatex(0.18, 0.84, f"Background MC, m_{{a}} = {mass} GeV")
+
+    CMS_lumi.cmsText = "CMS"
+    CMS_lumi.extraText = "Preliminary"
+    CMS_lumi.cmsTextSize = 0.95
+    CMS_lumi.CMSText_posX = -0.03
+    CMS_lumi.outOfFrame = True
+    CMS_lumi.lumiText_posX = -0.000
+    CMS_lumi.CMS_lumi(canvas, 5, 0, plot_cfg.year)
+
+    save_name = f"bkg_mass_shapes_by_bdt_mA{mass:02d}"
+    if logy:
+        save_name += "_log"
+    SaveCanvPic(canvas, str(output_dir), save_name)
+
+
 def _fill_histograms(
     ntuples,
     analyzer_cfg: Analyzer_Config,
     mva_cuts: Dict[int, float],
     histos: Dict[int, Dict[str, TH1F]],
     extra_histos: Optional[List[Dict[int, Dict[str, TH1F]]]],
+    bdt_shape_histos: Optional[Dict[int, List[TH1F]]],
+    bdt_shape_edges: Optional[List[float]],
     blind: bool,
     only_ele: bool,
     only_mu: bool,
@@ -789,7 +967,21 @@ def _fill_histograms(
                     continue
 
                 score = getattr(ntup, branch, None)
-                if score is None or score < cut:
+                if score is None:
+                    continue
+
+                _fill_bdt_shape_histogram(
+                    sample=sample,
+                    mass=mass,
+                    score=float(score),
+                    h_mass=h_mass,
+                    weight=weight,
+                    analyzer_cfg=analyzer_cfg,
+                    bdt_shape_histos=bdt_shape_histos,
+                    bdt_shape_edges=bdt_shape_edges,
+                )
+
+                if score < cut:
                     continue
 
                 if sample == "Data" and blind and BLIND_LOW <= h_mass <= BLIND_HIGH:
@@ -813,12 +1005,26 @@ def main():
     parser.add_argument("-ln", "--ln", dest="ln", action="store_true", default=False, help="Save logY plots.")
     parser.add_argument("--ele", dest="ele", action="store_true", default=False, help="Electron channel only.")
     parser.add_argument("--mu", dest="mu", action="store_true", default=False, help="Muon channel only.")
+    parser.add_argument(
+        "--skip-bdt-shape-plots",
+        action="store_true",
+        default=False,
+        help="Do not save normalized background H_m shapes in BDT-score bins.",
+    )
+    parser.add_argument(
+        "--bdt-shape-bins",
+        type=int,
+        default=BDT_SHAPE_NBINS,
+        help="Number of uniform BDT-score bins for bkg_mass_shapes_by_bdt plots.",
+    )
     args = parser.parse_args()
 
     if args.year != "run3":
         raise ValueError("plot_bkgmcScupltingCheck.py currently supports only --Year run3.")
     if args.ele and args.mu:
         raise ValueError("Choose at most one of --ele or --mu.")
+    if args.bdt_shape_bins <= 0:
+        raise ValueError("--bdt-shape-bins must be positive.")
 
     gROOT.SetBatch(True)
     tdrstyle.setTDRStyle()
@@ -829,16 +1035,21 @@ def main():
     output_dir_bkg_only = output_dir / "bkgOnly"
     output_dir_bkg_only_bin5 = output_dir / "bkgOnly_bin5GeV"
     output_dir_signal_nearest_bin5 = output_dir / "signalNearest_bin5GeV"
+    output_dir_bdt_mass_shapes = output_dir / "bdtMassShapes"
     output_dir_signal_mixture.mkdir(parents=True, exist_ok=True)
     output_dir_bkg_only.mkdir(parents=True, exist_ok=True)
     output_dir_bkg_only_bin5.mkdir(parents=True, exist_ok=True)
     output_dir_signal_nearest_bin5.mkdir(parents=True, exist_ok=True)
+    if not args.skip_bdt_shape_plots:
+        output_dir_bdt_mass_shapes.mkdir(parents=True, exist_ok=True)
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
     print(f"[Output] Plot directory: {output_dir}")
     print(f"[Output] Signal mixture directory: {output_dir_signal_mixture}")
     print(f"[Output] Bkg-only directory: {output_dir_bkg_only}")
     print(f"[Output] Bkg-only 5 GeV directory: {output_dir_bkg_only_bin5}")
     print(f"[Output] Signal nearest 5 GeV directory: {output_dir_signal_nearest_bin5}")
+    if not args.skip_bdt_shape_plots:
+        print(f"[Output] BDT-binned bkg mass-shape directory: {output_dir_bdt_mass_shapes}")
 
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
@@ -873,12 +1084,19 @@ def main():
             H_M_BIN_SIGNAL_OVERLAY_WIDTH,
         ),
     )
+    if args.skip_bdt_shape_plots:
+        bdt_shape_histos = None
+        bdt_shape_edges = None
+    else:
+        bdt_shape_histos, bdt_shape_edges = _book_bdt_shape_histograms(n_bdt_bins=args.bdt_shape_bins)
     _fill_histograms(
         ntuples=ntuples,
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
         extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_overlay_2gev],
+        bdt_shape_histos=bdt_shape_histos,
+        bdt_shape_edges=bdt_shape_edges,
         blind=args.blind,
         only_ele=args.ele,
         only_mu=args.mu,
@@ -948,6 +1166,15 @@ def main():
             signal_source_histos=histos_signal_nearest_overlay_2gev[mass],
             signal_source_all_histos=histos_signal_nearest_overlay_2gev,
         )
+        if bdt_shape_histos is not None and bdt_shape_edges is not None:
+            _draw_bkg_mass_shapes_by_bdt(
+                mass=mass,
+                histos=bdt_shape_histos[mass],
+                score_edges=bdt_shape_edges,
+                plot_cfg=plot_cfg,
+                output_dir=output_dir_bdt_mass_shapes,
+                logy=args.ln,
+            )
 
     elapsed = time.time() - start_time
     print(f"Total runtime: {_format_elapsed_hms(elapsed)}")
