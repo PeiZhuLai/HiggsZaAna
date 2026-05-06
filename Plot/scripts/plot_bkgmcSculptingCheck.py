@@ -88,6 +88,7 @@ BDT_SHAPE_COLORS = [
     ROOT.kRed + 1,
     ROOT.kMagenta + 1,
 ]
+BDT_SHAPE_LINE_STYLES = [1, 2, 7, 9]
 SIGNAL_COLOR_HEX = {
     "M1":  "#2563EB",
     "M2":  "#14B8A6",
@@ -831,7 +832,9 @@ def _draw_bkg_mass_shapes_by_bdt(
             draw_hist.Scale(1.0 / norm)
 
         color = BDT_SHAPE_COLORS[idx % len(BDT_SHAPE_COLORS)]
+        line_style = BDT_SHAPE_LINE_STYLES[idx % len(BDT_SHAPE_LINE_STYLES)]
         draw_hist.SetLineColor(color)
+        draw_hist.SetLineStyle(line_style)
         draw_hist.SetLineWidth(3)
         draw_hist.SetMarkerSize(0)
         draw_hist.SetFillStyle(0)
