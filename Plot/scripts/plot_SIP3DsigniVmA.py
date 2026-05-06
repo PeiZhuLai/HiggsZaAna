@@ -55,9 +55,10 @@ PLOT_GROUPS = [
             "zgammas_mu_muiso04_w": "#mu Iso_{0.4} < 0.2",
             "zgammas_mu_w": "#mu Iso_{0.3} < 0.35",
         },
+        "legend_order": ["zgammas_mu_w", "zgammas_mu_muiso04_w"],
         "style": {
-            "zgammas_mu_muiso04_w": {"color": "#2ca02c", "ls": 1, "ms": 20},
-            "zgammas_mu_w": {"color": "#9467bd", "ls": 2, "ms": 21},
+            "zgammas_mu_muiso04_w": {"color": "#2ca02c", "ls": 2, "ms": 20},
+            "zgammas_mu_w": {"color": "#9467bd", "ls": 1, "ms": 21},
         },
     },
     {
@@ -333,6 +334,7 @@ def _plot_group_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], 
     group_key = str(group["key"])
     out_prefix = str(group["out_prefix"])
     scenarios_to_plot = list(group["scenarios"])
+    legend_order = list(group.get("legend_order", scenarios_to_plot))
     group_legend = dict(group.get("legend", {}))
     group_style_cfg = dict(group.get("style", {}))
 
@@ -457,7 +459,7 @@ def _plot_group_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], 
     leg.SetTextSize(0.045)
 
     leg.AddEntry("", f"{year}", "")
-    for scenario in scenarios_to_plot:
+    for scenario in legend_order:
         g = scenario_graphs.get(scenario)
         if not g:
             continue
@@ -623,7 +625,7 @@ def _plot_group_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], 
         leg2.SetTextFont(42)
         leg2.SetTextSize(0.045)
         leg2.AddEntry("", f"{year}", "")
-        for scenario in scenarios_to_plot:
+        for scenario in legend_order:
             g = scenario_ratio_graphs.get(scenario)
             if not g:
                 continue
