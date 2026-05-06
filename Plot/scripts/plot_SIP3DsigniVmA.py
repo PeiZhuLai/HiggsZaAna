@@ -32,11 +32,60 @@ outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/SIP3DsigniVmA"
 # 你指定要畫的 cuts（分母皆為 all）
 CUTS_TO_PLOT = ["event"]
 
-# JSON 裡 cutflow 的 key：改成只比較這兩條
-SCENARIOS_TO_PLOT = ["zgammas_ele_w", "zgammas_ele_elesip3d_w"]
+# JSON 裡 cutflow 的 key：每一組會各自畫一張 comparison plot
+PLOT_GROUPS = [
+    {
+        "key": "ele_sip3d",
+        "out_prefix": "SIP3D",
+        "scenarios": ["zgammas_ele_w", "zgammas_ele_elesip3d_w"],
+        "legend": {
+            "zgammas_ele_w": "Removed e SIP_{3D} < 4",
+            "zgammas_ele_elesip3d_w": "Applied e SIP_{3D} < 4",
+        },
+        "style": {
+            "zgammas_ele_w": {"color": "#d62728", "ls": 1, "ms": 20},
+            "zgammas_ele_elesip3d_w": {"color": "#1f77b4", "ls": 2, "ms": 21},
+        },
+    },
+    {
+        "key": "mu_iso",
+        "out_prefix": "MuIso",
+        "scenarios": ["zgammas_mu_muiso04_w", "zgammas_mu_w"],
+        "legend": {
+            "zgammas_mu_muiso04_w": "#mu Iso_{0.4} < 0.2",
+            "zgammas_mu_w": "#mu Iso_{0.3} < 0.35",
+        },
+        "style": {
+            "zgammas_mu_muiso04_w": {"color": "#2ca02c", "ls": 1, "ms": 20},
+            "zgammas_mu_w": {"color": "#9467bd", "ls": 2, "ms": 21},
+        },
+    },
+    {
+        "key": "mu_sip3d",
+        "out_prefix": "MuSIP3D",
+        "scenarios": ["zgammas_mu_munosip3d_w", "zgammas_mu_w"],
+        "legend": {
+            "zgammas_mu_munosip3d_w": "Removed #mu SIP_{3D} < 4",
+            "zgammas_mu_w": "Applied #mu SIP_{3D} < 4",
+        },
+        "style": {
+            "zgammas_mu_munosip3d_w": {"color": "#ff7f0e", "ls": 1, "ms": 20},
+            "zgammas_mu_w": {"color": "#9467bd", "ls": 2, "ms": 21},
+        },
+    },
+]
 
-legend_map = { "zgammas_ele_w" : "Removed e SIP_{3D} < 4",
-               "zgammas_ele_elesip3d_w" : "Applied e SIP_{3D} < 4"}
+SCENARIOS_TO_PLOT = sorted({
+    scenario
+    for group in PLOT_GROUPS
+    for scenario in group["scenarios"]
+})
+
+legend_map = {
+    scenario: label
+    for group in PLOT_GROUPS
+    for scenario, label in group["legend"].items()
+}
 
 YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
 
@@ -275,16 +324,21 @@ def _root_color(hexstr: str, *, fallback: int = 1) -> int:
     except Exception:
         return fallback
 
-def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_dir: Path) -> None:
+def _plot_group_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_dir: Path, group: Dict) -> None:
     mas = sorted(points.keys())
     if not mas:
         return
     # NEW: bkg event count for this year (precomputed in main, injected via global)
     b_evt = float(_BKG_EVENT_BY_YEAR.get(year, 0.0))
+    group_key = str(group["key"])
+    out_prefix = str(group["out_prefix"])
+    scenarios_to_plot = list(group["scenarios"])
+    group_legend = dict(group.get("legend", {}))
+    group_style_cfg = dict(group.get("style", {}))
 
     # scenario -> graph(significance vs mA)
     scenario_graphs: Dict[str, ROOT.TGraph] = {}
-    for scenario in SCENARIOS_TO_PLOT:
+    for scenario in scenarios_to_plot:
         xs, ys = [], []
         for ma in mas:
             per_ma = points.get(ma) or {}
@@ -302,11 +356,15 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
 
     # 兩條線的外觀（固定顏色）
     scenario_style = {
-        "zgammas_ele_w":            {"color": _root_color("#d62728"), "ls": 1, "ms": 20},
-        "zgammas_ele_elesip3d_w":   {"color": _root_color("#1f77b4"), "ls": 2, "ms": 21},
+        scenario: {
+            "color": _root_color(str(st.get("color", "#000000"))),
+            "ls": int(st.get("ls", 1)),
+            "ms": int(st.get("ms", 20)),
+        }
+        for scenario, st in group_style_cfg.items()
     }
 
-    c1 = ROOT.TCanvas(f"c_w_vs_eleip3d_{year}", "", 800, 600)
+    c1 = ROOT.TCanvas(f"c_{group_key}_significance_{year}", "", 800, 600)
     # NEW (safety): ensure stat box stays off on this canvas
     ROOT.gStyle.SetOptStat(0)
     ROOT.gStyle.SetOptFit(0)
@@ -322,7 +380,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     g_axis = scenario_graphs[first_key]
 
     # --- FIX: use TH1 frame (robust) instead of TGraph clone as dummy frame ---
-    frame_name = f"frame_phid_event_{year}"
+    frame_name = f"frame_{group_key}_significance_{year}"
     x_min = 0
     x_max = 31
     h_frame = ROOT.TH1F(frame_name, "", 1, x_min, x_max)
@@ -358,7 +416,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         return y_min_frame, y_max_frame
 
     # pick a reference scenario graph (prefer first scenario in list)
-    _ref_graph = scenario_graphs.get(SCENARIOS_TO_PLOT[0]) if SCENARIOS_TO_PLOT else None
+    _ref_graph = scenario_graphs.get(scenarios_to_plot[0]) if scenarios_to_plot else None
     y_min_frame, y_max_frame = _auto_yrange_from_ref_graph(_ref_graph)
 
     h_frame.SetTitle("")
@@ -376,7 +434,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     h_frame.Draw("AXIS")
 
     # --- draw graphs one-by-one ---
-    for scenario in SCENARIOS_TO_PLOT:
+    for scenario in scenarios_to_plot:
         g = scenario_graphs.get(scenario)
         if not g:
             continue
@@ -399,11 +457,11 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     leg.SetTextSize(0.045)
 
     leg.AddEntry("", f"{year}", "")
-    for scenario in SCENARIOS_TO_PLOT:
+    for scenario in scenarios_to_plot:
         g = scenario_graphs.get(scenario)
         if not g:
             continue
-        label = legend_map.get(scenario, scenario)
+        label = group_legend.get(scenario, legend_map.get(scenario, scenario))
         leg.AddEntry(g, label, "lp")
     leg.Draw()
 
@@ -423,7 +481,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         lat_lumi.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_pdf = out_dir / f"SIP3D_significanceVmA_{year}.pdf"
+    out_pdf = out_dir / f"{out_prefix}_significanceVmA_{year}.pdf"
 
     # 讓 ROOT 先完成 paint（在某些環境可降低 SaveAs 時的 legend paint 問題）
     c1.Modified()
@@ -457,10 +515,10 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
     # - sig_allcuts (all cuts)
     # - sig_eff = allcuts/all
     # - bkg_eff (year-level), plus ratio for quick validation
-    print(f"[DEBUG] year={year}  bkg_eff(allcuts/all)={eff_bkg:.6g}")
+    print(f"[DEBUG] group={group_key} year={year}  bkg_eff(allcuts/all)={eff_bkg:.6g}")
 
     scenario_ratio_graphs: Dict[str, ROOT.TGraph] = {}
-    for scenario in SCENARIOS_TO_PLOT:
+    for scenario in scenarios_to_plot:
         xs, ys = [], []
         for ma in mas:
             per_ma = points.get(ma) or {}
@@ -476,7 +534,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             # NEW: print 4 numbers for the plot (plus ratio)
             ratio = eff_sig / eff_bkg
             print(
-                f"[DEBUG] year={year} mA={ma:>2d} scenario={scenario} "
+                f"[DEBUG] group={group_key} year={year} mA={ma:>2d} scenario={scenario} "
                 f"sig_all={a:.6g} sig_allcuts={ac:.6g} sig_eff={eff_sig:.6g} bkg_eff={eff_bkg:.6g} "
                 f"(sig_eff/bkg_eff)={ratio:.6g}"
             )
@@ -528,7 +586,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             y_max_frame = ymax * 1.2
             return y_min_frame, y_max_frame
 
-        _ref_ratio = scenario_ratio_graphs.get(SCENARIOS_TO_PLOT[0]) if SCENARIOS_TO_PLOT else None
+        _ref_ratio = scenario_ratio_graphs.get(scenarios_to_plot[0]) if scenarios_to_plot else None
         y2_min, y2_max = _auto_yrange_effratio(_ref_ratio)
 
         frame2.SetTitle("")
@@ -545,7 +603,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
 
         frame2.Draw("AXIS")
 
-        for scenario in SCENARIOS_TO_PLOT:
+        for scenario in scenarios_to_plot:
             g = scenario_ratio_graphs.get(scenario)
             if not g:
                 continue
@@ -565,11 +623,11 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
         leg2.SetTextFont(42)
         leg2.SetTextSize(0.045)
         leg2.AddEntry("", f"{year}", "")
-        for scenario in SCENARIOS_TO_PLOT:
+        for scenario in scenarios_to_plot:
             g = scenario_ratio_graphs.get(scenario)
             if not g:
                 continue
-            label = legend_map.get(scenario, scenario)
+            label = group_legend.get(scenario, legend_map.get(scenario, scenario))
             leg2.AddEntry(g, label, "lp")
         leg2.Draw()
 
@@ -589,7 +647,7 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             lat_lumi2.DrawLatex(0.96, 0.93, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        out2 = out_dir / f"SIP3D_effSigOverEffBkgVmA_{year}.pdf"
+        out2 = out_dir / f"{out_prefix}_effSigOverEffBkgVmA_{year}.pdf"
         c2.Modified()
         c2.Update()
         c2.SaveAs(str(out2))
@@ -606,6 +664,10 @@ def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_di
             pass
         del frame2, c2
         _ = _keepalive2
+
+def _plot_year(year: str, points: Dict[int, Dict[str, Dict[str, float]]], out_dir: Path) -> None:
+    for group in PLOT_GROUPS:
+        _plot_group_year(year, points, out_dir, group)
 
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
