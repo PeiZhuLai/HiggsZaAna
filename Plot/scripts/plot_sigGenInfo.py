@@ -324,6 +324,8 @@ def _plot_overlay_hists(
     norm_y_title_offset: Optional[float] = None,    # NEW
     cms_label_x: Optional[float] = None,            # NEW: CMS label x (NDC)
     cms_label_y: Optional[float] = None,            # NEW: CMS label y (NDC)
+    legend_x0: Optional[float] = None,
+    legend_x1: Optional[float] = None,
 ) -> None:
     if not hists:
         return
@@ -400,8 +402,8 @@ def _plot_overlay_hists(
     n_lines = len(header_lines) + (len(hists) if do_legend else 0)
 
     # geometry: keep same top-right anchor, vary height with lines
-    x1, y1 = 0.98, 0.88
-    x0 = 0.68
+    x1, y1 = (0.98 if legend_x1 is None else float(legend_x1)), 0.88
+    x0 = 0.68 if legend_x0 is None else float(legend_x0)
     line_h = 0.042     # per-line height in NDC (tune if needed)
     pad = 0.018        # extra padding
     h_leg = pad + n_lines * line_h
@@ -483,13 +485,13 @@ def _plot_gen_distributions_for_year(
     # 你指定要畫的分布
     single_vars = [
         ("GenHzaHiggs_pt", "Gen Higgs P_{T} [GeV]", 120, 0.0, 300.0),
-        ("GenHzaHiggs_eta", "Gen Higgs #eta", 60, -6.0, 6.0),
+        ("GenHzaHiggs_eta", "Gen Higgs #eta", 80, -10.0, 10.0),
         ("GenHzaZ_pt",     "Gen Z P_{T} [GeV]",     100, 0.0, 250.0),
         ("GenHzaZ_costheta", "Gen Z cos#theta", 50, -1.0, 1.0),
-        ("GenHzaZ_eta",     "Gen Z #eta",           60, -6.0, 6.0),
+        ("GenHzaZ_eta",     "Gen Z #eta",           80, -10.0, 10.0),
         ("GenHzaALP_pt",   "Gen a P_{T} [GeV]",     60, 0.0, 150.0),
         ("GenHzaALP_costheta", "Gen a cos#theta", 50, -1.0, 1.0),
-        ("GenHzaALP_eta",   "Gen a #eta",           60, -6.0, 6.0),
+        ("GenHzaALP_eta",   "Gen a #eta",           80, -10.0, 10.0),
         ("GenHza_dR_ZALP", "#DeltaR(Z, ALP)",       60, 0.0, 6.0),
         ("GenHza_dR_ll",   "#DeltaR(l, l)",         60, 0.0, 6.0),
         ("GenALP_dR_gg",   "#DeltaR(#gamma, #gamma)",100, 0.0, 3.0),
@@ -600,6 +602,7 @@ def _plot_gen_distributions_for_year(
     for (b, xlabel, nb, xl, xh) in single_vars:
         hs = []
         legend_map_by_ma: Dict[str, str] = {}
+        is_costheta = "costheta" in b
 
         for i, ma_tag in enumerate(ma_dirs):
             arr_ma = _load_arrays_for_years_ma(
@@ -640,6 +643,8 @@ def _plot_gen_distributions_for_year(
                 normalize=False,
                 legend_map=legend_map_by_ma,
                 subtitle_lines=None,
+                legend_x0=0.54 if is_costheta else None,
+                legend_x1=0.84 if is_costheta else None,
             )
             # NEW：歸一化到 1
             _plot_overlay_hists(
@@ -654,6 +659,8 @@ def _plot_gen_distributions_for_year(
                 subtitle_lines=None,
                 norm_left_margin=0.15,      
                 norm_y_title_offset=1.25,
+                legend_x0=0.54 if is_costheta else None,
+                legend_x1=0.84 if is_costheta else None,
             )
 
     # ------------------------------------------------------------------
