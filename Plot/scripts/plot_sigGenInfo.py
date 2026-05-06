@@ -483,8 +483,13 @@ def _plot_gen_distributions_for_year(
     # 你指定要畫的分布
     single_vars = [
         ("GenHzaHiggs_pt", "Gen Higgs P_{T} [GeV]", 120, 0.0, 300.0),
+        ("GenHzaHiggs_eta", "Gen Higgs #eta", 60, -6.0, 6.0),
         ("GenHzaZ_pt",     "Gen Z P_{T} [GeV]",     100, 0.0, 250.0),
+        ("GenHzaZ_costheta", "Gen Z cos#theta", 50, -1.0, 1.0),
+        ("GenHzaZ_eta",     "Gen Z #eta",           60, -6.0, 6.0),
         ("GenHzaALP_pt",   "Gen a P_{T} [GeV]",     60, 0.0, 150.0),
+        ("GenHzaALP_costheta", "Gen a cos#theta", 50, -1.0, 1.0),
+        ("GenHzaALP_eta",   "Gen a #eta",           60, -6.0, 6.0),
         ("GenHza_dR_ZALP", "#DeltaR(Z, ALP)",       60, 0.0, 6.0),
         ("GenHza_dR_ll",   "#DeltaR(l, l)",         60, 0.0, 6.0),
         ("GenALP_dR_gg",   "#DeltaR(#gamma, #gamma)",100, 0.0, 3.0),
