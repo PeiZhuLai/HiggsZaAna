@@ -85,7 +85,7 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 # wait
 
 # # Batch 5
-# python3 $scriptsDir/plot_SIP3DsigniVmA.py &
+python3 $scriptsDir/plot_SIP3DsigniVmA.py &
 # python3 $scriptsDir/plot_dREff.py &
 # python3 $scriptsDir/plot_dREffBar.py &
 
