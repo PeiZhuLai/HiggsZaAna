@@ -12,6 +12,7 @@ Key features (requested):
 - Support the default 6 CUTFLOW_TYPES plus:
   - 15 photonID scenarios: 5 kinds × 3 WPs (tight/medium/loose)
   - 1 sip3d scenario: zgammas_eleip3d (and optionally its _w variant if present)
+  - muon isolation/sip3d studies: zgammas_mu_muiso04 and zgammas_mu_munosip3d
 
 Output:
 - Writes directly usable LaTeX cutflow tables to an output text file.
@@ -126,8 +127,20 @@ SIP3D_CUTFLOW_TYPES = [
     "zgammas_ele_elesip3d_w",  # keep in case it exists
 ]
 
+MUON_STUDY_CUTFLOW_TYPES = [
+    "zgammas_mu_muiso04",
+    "zgammas_mu_muiso04_w",
+    "zgammas_mu_munosip3d",
+    "zgammas_mu_munosip3d_w",
+]
+
 # --- CHANGED: include PHID *_w types in default list ---
-DEFAULT_CUTFLOW_TYPES = BASE_CUTFLOW_TYPES + PHID_CUTFLOW_TYPES + SIP3D_CUTFLOW_TYPES
+DEFAULT_CUTFLOW_TYPES = (
+    BASE_CUTFLOW_TYPES
+    + SIP3D_CUTFLOW_TYPES
+    + MUON_STUDY_CUTFLOW_TYPES
+    + PHID_CUTFLOW_TYPES
+)
 
 # A minimal mapping for nicer printing
 LABELS_COMMON = {
