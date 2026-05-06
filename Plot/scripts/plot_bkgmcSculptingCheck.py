@@ -842,7 +842,7 @@ def _draw_bkg_mass_shapes_by_bdt(
         print(f"[mA={mass:02d}] No background entries for BDT-binned mass-shape plot.")
         return
 
-    y_axis_max = 1.5 * max(ymax, 1e-6)
+    y_axis_max = 1.6 * max(ymax, 1e-6)
     y_axis_min = 1e-5 if logy else 0.0
 
     canvas = TCanvas(f"canv_bkg_mass_shapes_by_bdt_mA_{mass}", "", 800, 600)
@@ -868,7 +868,7 @@ def _draw_bkg_mass_shapes_by_bdt(
     frame.GetXaxis().SetTitle(plot_cfg.var_title_map["H_m"])
     frame.GetXaxis().SetTitleSize(0.055)
     frame.GetXaxis().SetLabelSize(0.05)
-    frame.GetXaxis().SetTitleOffset(1.34)
+    frame.GetXaxis().SetTitleOffset(1.25)
     frame.GetYaxis().SetTitle(f"A.U. / {draw_hist.GetXaxis().GetBinWidth(1):.2f} GeV")
     frame.GetYaxis().SetTitleSize(0.055)
     frame.GetYaxis().SetLabelSize(0.05)
@@ -974,9 +974,9 @@ def _fill_histograms(
 
         for i_evt in range(entries):
             ntup.GetEvent(i_evt)
-            # For short test to tune the style
-            if i_evt == 1000:
-                break
+            ### For short test to tune the style
+            # if i_evt == 1000:
+            #     break
             if i_evt % 100000 == 1:
                 print(f"  looking at event {i_evt}")
 
