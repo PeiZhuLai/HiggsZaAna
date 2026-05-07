@@ -552,7 +552,7 @@ def main():
         for iEvt in range( ntup.GetEntries() ):
     
             ntup.GetEvent(iEvt)
-            # if (iEvt == 10): break
+            if (iEvt == 100): break
 
             if (iEvt % 100000 == 1):
                 print("looking at event %d" %iEvt)

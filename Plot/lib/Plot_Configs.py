@@ -49,21 +49,21 @@ class Plot_Config:
 
     def LoadColors(self):
         self.colors["Data"] = kBlack
-        self.colors["M1"]  = TColor.GetColor("#2563EB")
-        self.colors["M2"]  = TColor.GetColor("#14B8A6")
-        self.colors["M3"]  = TColor.GetColor("#10B981")
-        self.colors["M4"]  = TColor.GetColor("#22C55E")
-        self.colors["M5"]  = TColor.GetColor("#65A30D")
-        self.colors["M6"]  = TColor.GetColor("#84CC16")
-        self.colors["M7"]  = TColor.GetColor("#A3E635")
-        self.colors["M8"]  = TColor.GetColor("#D9F99D")
-        self.colors["M9"]  = TColor.GetColor("#FDE047")
-        self.colors["M10"] = TColor.GetColor("#CA8A04")
-        self.colors["M15"] = TColor.GetColor("#DC2626")
-        self.colors["M20"] = TColor.GetColor("#DB2777")
-        self.colors["M25"] = TColor.GetColor("#6D28D9")
-        self.colors["M30"] = TColor.GetColor("#111827")
-        
+        self.colors["M1"]  = TColor.GetColor("#F4A259")  # deep red
+        self.colors["M2"]  = TColor.GetColor("#DC2626")  # red
+        self.colors["M3"]  = TColor.GetColor("#059669")  # dark green
+        self.colors["M4"]  = TColor.GetColor("#7C3AED")  # purple
+        self.colors["M5"]  = TColor.GetColor("#84CC16")  # lime
+        self.colors["M6"]  = TColor.GetColor("#0F766E")  # teal
+        self.colors["M7"]  = TColor.GetColor("#BE185D")  # magenta
+        self.colors["M8"]  = TColor.GetColor("#4B5563")  # dark gray
+        self.colors["M9"]  = TColor.GetColor("#FACC15")  # yellow, only if line is thick
+        self.colors["M10"] = TColor.GetColor("#EF476F")  # pink-red
+        self.colors["M15"] = TColor.GetColor("#991B1B")  # dark red
+        self.colors["M20"] = TColor.GetColor("#1B9AAA")  # violet-magenta
+        self.colors["M25"] = TColor.GetColor("#5B21B6")  # indigo
+        self.colors["M30"] = TColor.GetColor("#06D6A0")  # mint
+    
         # self.colors["DYJetsToLL"]  =  kAzure + 7
         self.colors["DYJetsToLL"]  =  TColor.GetColor("#48BEFF") # blue
         self.colors["DYGto2LG"]    =  TColor.GetColor("#ffa90e") # orange

@@ -36,17 +36,17 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 
 # ## MVA Score signal region
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag nominal &
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
 # ## MVA Score control region
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag nominal &
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
 # ## MVA Score whole region
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
-# wait
+wait
 
 # ## ALP Optimization 2 categories
 # python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
@@ -85,7 +85,7 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 # wait
 
 # # Batch 5
-python3 $scriptsDir/plot_SIP3DsigniVmA.py &
+# python3 $scriptsDir/plot_SIP3DsigniVmA.py &
 # python3 $scriptsDir/plot_dREff.py &
 # python3 $scriptsDir/plot_dREffBar.py &
 
@@ -100,8 +100,8 @@ python3 $scriptsDir/plot_SIP3DsigniVmA.py &
 
 # python3 $scriptsDir/plot_mH_phopT_2D.py &
 # python3 $scriptsDir/plot_mH_mZ_2D.py &
-python3 $scriptsDir/plot_bkgmcSculptingCheck.py &
-wait
+# python3 $scriptsDir/plot_bkgmcSculptingCheck.py &
+# wait
 
 # Validate SF
 # python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
