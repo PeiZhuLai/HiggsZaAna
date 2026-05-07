@@ -43,6 +43,7 @@ parser.add_argument('--ele', dest='ele', action='store_true', default=False, hel
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
 parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', action='store_true', default=False, help='use sideband-reweighted background weights')
 parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
+parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', default=True, help='do not add sideband reweight uncertainty to the MC error band')
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
@@ -50,6 +51,8 @@ parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, hel
 args = parser.parse_args()
 
 SIDEBAND_REWEIGHTER = None
+SIDEBAND_REWEIGHT_UNC_SYS_NAMES = ("sideband_rwgt_reweight_up", "sideband_rwgt_reweight_down")
+SIDEBAND_REWEIGHT_UNCERTAINTY_FRACTION = 1.0
 if args.use_sideband_reweight:
     if args.sideband_reweight_json:
         SIDEBAND_REWEIGHTER = load_sideband_reweighter(args.sideband_reweight_json, required=True)
@@ -59,6 +62,78 @@ if args.use_sideband_reweight:
         print("[SidebandReweight] Loaded JSON:", SIDEBAND_REWEIGHTER.source_path)
     else:
         print("[SidebandReweight] JSON not found; will use ROOT weight_sideband_rwgt branch when available.")
+
+def _lookup_sideband_factor(value, edges, factors):
+    try:
+        value = float(value)
+    except Exception:
+        return 1.0
+    if not np.isfinite(value):
+        return 1.0
+    idx = np.searchsorted(np.asarray(edges, dtype=float), value, side="right") - 1
+    idx = int(np.clip(idx, 0, len(factors) - 1))
+    out = float(factors[idx])
+    return out if np.isfinite(out) else 1.0
+
+def _sideband_step_weight(reweighter, ntup, step, row_index=None):
+    value = reweighter._object_value(ntup, step["var"], row_index=row_index)
+    factor = _lookup_sideband_factor(value, step["edges"], step["clipped_factors"])
+    norm = step.get("normalization_scale", 1.0)
+    try:
+        norm = float(norm)
+    except Exception:
+        norm = 1.0
+    if not np.isfinite(norm):
+        norm = 1.0
+    return factor * norm
+
+def _sideband_reweight_for_object(reweighter, ntup, row_index=None, varied_var=None, variation_scale=1.0):
+    weight = 1.0
+    for iteration in getattr(reweighter, "iterations", []):
+        for step in iteration.get("steps", []):
+            step_weight = _sideband_step_weight(reweighter, ntup, step, row_index=row_index)
+            if varied_var is not None and step.get("var") == varied_var:
+                step_weight = 1.0 + variation_scale * (step_weight - 1.0)
+            weight *= step_weight
+    return weight if np.isfinite(weight) else 1.0
+
+def get_sideband_reweight_uncertainty_weights(ntup, sample, analyzer_cfg, central_weight, row_index=None):
+    if (
+        not args.use_sideband_reweight
+        or not args.sideband_reweight_unc
+        or SIDEBAND_REWEIGHTER is None
+        or not is_background_sample(sample, analyzer_cfg)
+    ):
+        return {}
+
+    nominal = _sideband_reweight_for_object(SIDEBAND_REWEIGHTER, ntup, row_index=row_index)
+    if nominal == 0.0 or not np.isfinite(nominal):
+        return {
+            SIDEBAND_REWEIGHT_UNC_SYS_NAMES[0]: central_weight,
+            SIDEBAND_REWEIGHT_UNC_SYS_NAMES[1]: central_weight,
+        }
+
+    ratios = [1.0]
+    for var in getattr(SIDEBAND_REWEIGHTER, "reweight_vars", []):
+        for scale in (
+            1.0 + SIDEBAND_REWEIGHT_UNCERTAINTY_FRACTION,
+            1.0 - SIDEBAND_REWEIGHT_UNCERTAINTY_FRACTION,
+        ):
+            varied = _sideband_reweight_for_object(
+                SIDEBAND_REWEIGHTER,
+                ntup,
+                row_index=row_index,
+                varied_var=var,
+                variation_scale=scale,
+            )
+            ratio = varied / nominal
+            if np.isfinite(ratio) and ratio > 0.0:
+                ratios.append(ratio)
+
+    return {
+        SIDEBAND_REWEIGHT_UNC_SYS_NAMES[0]: central_weight * max(ratios),
+        SIDEBAND_REWEIGHT_UNC_SYS_NAMES[1]: central_weight * min(ratios),
+    }
 
 def is_background_sample(sample, analyzer_cfg):
     return sample in analyzer_cfg.bkg_names
@@ -296,6 +371,11 @@ def main():
 
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
+    if args.use_sideband_reweight and args.sideband_reweight_unc and SIDEBAND_REWEIGHTER is not None:
+        for sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
+            if sys_name not in analyzer_cfg.sys_names:
+                analyzer_cfg.sys_names.append(sys_name)
+        print("[SidebandReweight] Add uncertainty pair to MC error band:", SIDEBAND_REWEIGHT_UNC_SYS_NAMES)
     if args.output_tag:
         output_tag = os.path.basename(str(args.output_tag).strip().strip('/'))
         if output_tag:
@@ -488,6 +568,13 @@ def main():
 
             # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
             weight = get_event_weight(ntup, sample, analyzer_cfg, row_index=iEvt)
+            sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
+                ntup,
+                sample,
+                analyzer_cfg,
+                weight,
+                row_index=iEvt,
+            )
 
             if (ntup.H_m > -90):
                 if ntup.H_m>180. or ntup.H_m<95.: continue
@@ -611,7 +698,9 @@ def main():
 
                 for sys_name in analyzer_cfg.sys_names:
                     if sample != "Data": 
-                        if sys_name =='weight_hlt_sf_up':
+                        if sys_name in sideband_rwgt_sys_weights:
+                            weight_sys = sideband_rwgt_sys_weights[sys_name]
+                        elif sys_name =='weight_hlt_sf_up':
                             weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
                         elif sys_name =='weight_hlt_sf_down':
                             weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
@@ -653,6 +742,8 @@ def main():
                             weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_up / ntup.weight_photon_csev_sf_SelectedPhoton_central
                         elif sys_name =='weight_photon_csev_sf_SelectedPhoton_down':
                             weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_down / ntup.weight_photon_csev_sf_SelectedPhoton_central
+                        else:
+                            weight_sys = weight
 
                         for var in var_names:
                             histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
