@@ -45,6 +45,7 @@ parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', actio
 parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
 parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', default=True, help='do not add sideband reweight uncertainty to the MC error band')
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
+parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
 parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, help='max debug prints per (sample,mA)')
@@ -179,9 +180,38 @@ MVA_FULL_RANGE_DATA_BLIND_THRESHOLD = (
     MVA_LARGER_XMAX
     - MVA_FULL_RANGE_BLIND_BINS * (MVA_LARGER_XMAX - MVA_LARGER_XMIN) / MVA_LARGER_NBINS
 )
+SIGMA_REGION_SCALES = {
+    "1sigma": 1.0,
+    "1P5sigma": 1.5,
+    "2sigma": 2.0,
+    "3sigma": 3.0,
+}
 
 def _is_full_range_mva_larger_var(var_name, target_masses):
     return var_name in [f"mvaVal_larger_{mass}" for mass in target_masses]
+
+def _sigma_region_info(var_name, target_masses):
+    for mass in target_masses:
+        for region, scale in SIGMA_REGION_SCALES.items():
+            if var_name in (
+                f"mvaVal_{region}_{mass}",
+                f"mvaVal_larger_{region}_{mass}",
+            ):
+                return mass, scale
+    return None
+
+def _passes_sigma_region(h_mass, sigma_low, sigma_hig, mass, scale):
+    return (
+        h_mass < 125.0 + sigma_hig[mass] * scale
+        and h_mass > 125.0 + sigma_low[mass] * scale
+    )
+
+def _should_fill_var_for_event(var_name, h_mass, sigma_low, sigma_hig, target_masses):
+    sigma_info = _sigma_region_info(var_name, target_masses)
+    if sigma_info is None:
+        return True
+    mass, scale = sigma_info
+    return _passes_sigma_region(h_mass, sigma_low, sigma_hig, mass, scale)
 
 def _visible_integral(hist):
     if not hist:
@@ -552,7 +582,8 @@ def main():
         for iEvt in range( ntup.GetEntries() ):
     
             ntup.GetEvent(iEvt)
-            if (iEvt == 100): break
+            if args.max_events > 0 and iEvt >= args.max_events:
+                break
 
             if (iEvt % 100000 == 1):
                 print("looking at event %d" %iEvt)
@@ -615,19 +646,19 @@ def main():
                             histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]) and ntup.H_m>(125.+sigma_low[ALP_mass]): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 1.0):
                             histos['mvaVal_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*1.5) and ntup.H_m>(125.+sigma_low[ALP_mass]*1.5): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 1.5):
                             histos['mvaVal_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*2.) and ntup.H_m>(125.+sigma_low[ALP_mass]*2.): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 2.0):
                             histos['mvaVal_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*3.) and ntup.H_m>(125.+sigma_low[ALP_mass]*3.): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 3.0):
                             histos['mvaVal_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
@@ -746,10 +777,12 @@ def main():
                             weight_sys = weight
 
                         for var in var_names:
-                            histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
+                            if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
+                                histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
                     else:
                         for var in var_names:
-                            histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
+                            if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
+                                histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
                 
 
 
