@@ -61,7 +61,7 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 # python3 $scriptsDir/signal_eff_sumw.py &
 # python $scriptsDir/BDT_ma_2D_lib.py &
 # python3 $scriptsDir/table_MVAScore_sigEff_bkgYield.py &
-
+# python3 $scriptsDir/plot_sigGenInfo.py &
 # wait
 
 # # Batch 2
