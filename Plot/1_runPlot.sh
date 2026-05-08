@@ -42,7 +42,7 @@ python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --output
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag nominal &
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
-# ## MVA Score whole region
+# ## MVA Score whole region 
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 wait

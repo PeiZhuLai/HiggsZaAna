@@ -8,6 +8,11 @@ import gc
 import time  # NEW
 
 sys.path.insert(0, '%s/lib' % os.getcwd())
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+HZA_MVA_SCRIPTS_DIR = os.path.join(PROJECT_DIR, 'HZaMVA', 'scripts')
+if HZA_MVA_SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, HZA_MVA_SCRIPTS_DIR)
+
 from ROOT import *
 from Plot_Helper import LoadNtuples, MakeStack, CreateCanvas, DrawOnCanv, SaveCanvPic, MakeLumiLabel, MakeCMSDASLabel, ScaleSignal, MakeRatioPlot, MakeLegend, Total_Unc, ScaleBkgToData
 from Analyzer_Helper import getMassSigma
@@ -22,6 +27,7 @@ from xgboost import XGBClassifier
 import pickle
 import copy 
 import random
+from sideband_reweight import load_sideband_reweighter
 
 import argparse
 parser = argparse.ArgumentParser(description="A simple ttree plotter")
@@ -35,10 +41,118 @@ parser.add_argument('-b', '--blind', dest='blind', action='store_true', default=
 parser.add_argument('-ln', '--ln', dest='ln', action='store_true', default=False, help='log plot?')
 parser.add_argument('--ele', dest='ele', action='store_true', default=False, help='electron channel?')
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
+parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', action='store_true', default=False, help='use sideband-reweighted background weights')
+parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
+parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', default=True, help='do not add sideband reweight uncertainty to the MC error band')
+parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
+parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
 parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, help='max debug prints per (sample,mA)')
 args = parser.parse_args()
+
+SIDEBAND_REWEIGHTER = None
+SIDEBAND_REWEIGHT_UNC_SYS_NAMES = ("sideband_rwgt_reweight_up", "sideband_rwgt_reweight_down")
+SIDEBAND_REWEIGHT_UNCERTAINTY_FRACTION = 1.0
+if args.use_sideband_reweight:
+    if args.sideband_reweight_json:
+        SIDEBAND_REWEIGHTER = load_sideband_reweighter(args.sideband_reweight_json, required=True)
+    else:
+        SIDEBAND_REWEIGHTER = load_sideband_reweighter()
+    if SIDEBAND_REWEIGHTER is not None:
+        print("[SidebandReweight] Loaded JSON:", SIDEBAND_REWEIGHTER.source_path)
+    else:
+        print("[SidebandReweight] JSON not found; will use ROOT weight_sideband_rwgt branch when available.")
+
+def _lookup_sideband_factor(value, edges, factors):
+    try:
+        value = float(value)
+    except Exception:
+        return 1.0
+    if not np.isfinite(value):
+        return 1.0
+    idx = np.searchsorted(np.asarray(edges, dtype=float), value, side="right") - 1
+    idx = int(np.clip(idx, 0, len(factors) - 1))
+    out = float(factors[idx])
+    return out if np.isfinite(out) else 1.0
+
+def _sideband_step_weight(reweighter, ntup, step, row_index=None):
+    value = reweighter._object_value(ntup, step["var"], row_index=row_index)
+    factor = _lookup_sideband_factor(value, step["edges"], step["clipped_factors"])
+    norm = step.get("normalization_scale", 1.0)
+    try:
+        norm = float(norm)
+    except Exception:
+        norm = 1.0
+    if not np.isfinite(norm):
+        norm = 1.0
+    return factor * norm
+
+def _sideband_reweight_for_object(reweighter, ntup, row_index=None, varied_var=None, variation_scale=1.0):
+    weight = 1.0
+    for iteration in getattr(reweighter, "iterations", []):
+        for step in iteration.get("steps", []):
+            step_weight = _sideband_step_weight(reweighter, ntup, step, row_index=row_index)
+            if varied_var is not None and step.get("var") == varied_var:
+                step_weight = 1.0 + variation_scale * (step_weight - 1.0)
+            weight *= step_weight
+    return weight if np.isfinite(weight) else 1.0
+
+def get_sideband_reweight_uncertainty_weights(ntup, sample, analyzer_cfg, central_weight, row_index=None):
+    if (
+        not args.use_sideband_reweight
+        or not args.sideband_reweight_unc
+        or SIDEBAND_REWEIGHTER is None
+        or not is_background_sample(sample, analyzer_cfg)
+    ):
+        return {}
+
+    nominal = _sideband_reweight_for_object(SIDEBAND_REWEIGHTER, ntup, row_index=row_index)
+    if nominal == 0.0 or not np.isfinite(nominal):
+        return {
+            SIDEBAND_REWEIGHT_UNC_SYS_NAMES[0]: central_weight,
+            SIDEBAND_REWEIGHT_UNC_SYS_NAMES[1]: central_weight,
+        }
+
+    ratios = [1.0]
+    for var in getattr(SIDEBAND_REWEIGHTER, "reweight_vars", []):
+        for scale in (
+            1.0 + SIDEBAND_REWEIGHT_UNCERTAINTY_FRACTION,
+            1.0 - SIDEBAND_REWEIGHT_UNCERTAINTY_FRACTION,
+        ):
+            varied = _sideband_reweight_for_object(
+                SIDEBAND_REWEIGHTER,
+                ntup,
+                row_index=row_index,
+                varied_var=var,
+                variation_scale=scale,
+            )
+            ratio = varied / nominal
+            if np.isfinite(ratio) and ratio > 0.0:
+                ratios.append(ratio)
+
+    return {
+        SIDEBAND_REWEIGHT_UNC_SYS_NAMES[0]: central_weight * max(ratios),
+        SIDEBAND_REWEIGHT_UNC_SYS_NAMES[1]: central_weight * min(ratios),
+    }
+
+def is_background_sample(sample, analyzer_cfg):
+    return sample in analyzer_cfg.bkg_names
+
+def get_event_weight(ntup, sample, analyzer_cfg, row_index=None):
+    weight = ntup.weight
+    if not args.use_sideband_reweight or not is_background_sample(sample, analyzer_cfg):
+        return weight
+
+    try:
+        return ntup.weight_sideband_rwgt
+    except Exception:
+        pass
+
+    if SIDEBAND_REWEIGHTER is not None:
+        return weight * SIDEBAND_REWEIGHTER.weight_for_object(ntup, row_index=row_index)
+
+    return weight
 
 
 gROOT.SetBatch(True)
@@ -57,6 +171,140 @@ pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_
 # NEW: 輸出檔名依 pdfName_map 排序；沒對應就用原本 var_name
 def _pdf_output_name(var_name: str) -> str:
     return pdfName_map.get(var_name, var_name)
+
+MVA_LARGER_NBINS = 20
+MVA_LARGER_XMIN = 0.0
+MVA_LARGER_XMAX = 1.0
+MVA_FULL_RANGE_BLIND_BINS = 2
+MVA_FULL_RANGE_DATA_BLIND_THRESHOLD = (
+    MVA_LARGER_XMAX
+    - MVA_FULL_RANGE_BLIND_BINS * (MVA_LARGER_XMAX - MVA_LARGER_XMIN) / MVA_LARGER_NBINS
+)
+SIGMA_REGION_SCALES = {
+    "1sigma": 1.0,
+    "1P5sigma": 1.5,
+    "2sigma": 2.0,
+    "3sigma": 3.0,
+}
+
+def _is_full_range_mva_larger_var(var_name, target_masses):
+    return var_name in [f"mvaVal_larger_{mass}" for mass in target_masses]
+
+def _sigma_region_info(var_name, target_masses):
+    for mass in target_masses:
+        for region, scale in SIGMA_REGION_SCALES.items():
+            if var_name in (
+                f"mvaVal_{region}_{mass}",
+                f"mvaVal_larger_{region}_{mass}",
+            ):
+                return mass, scale
+    return None
+
+def _passes_sigma_region(h_mass, sigma_low, sigma_hig, mass, scale):
+    return (
+        h_mass < 125.0 + sigma_hig[mass] * scale
+        and h_mass > 125.0 + sigma_low[mass] * scale
+    )
+
+def _should_fill_var_for_event(var_name, h_mass, sigma_low, sigma_hig, target_masses):
+    sigma_info = _sigma_region_info(var_name, target_masses)
+    if sigma_info is None:
+        return True
+    mass, scale = sigma_info
+    return _passes_sigma_region(h_mass, sigma_low, sigma_hig, mass, scale)
+
+def _visible_integral(hist):
+    if not hist:
+        return 0.0
+    return float(hist.Integral(1, hist.GetNbinsX()))
+
+def _cdf_edges_from_reference_hist(reference_hist):
+    if not reference_hist or _visible_integral(reference_hist) <= 0.0:
+        return None
+
+    nbins = reference_hist.GetNbinsX()
+    bin_weights = [
+        max(0.0, float(reference_hist.GetBinContent(i_bin)))
+        for i_bin in range(1, nbins + 1)
+    ]
+    total = sum(bin_weights)
+    if total <= 0.0:
+        return None
+
+    cdf_edges = [0.0]
+    running = 0.0
+    for weight in bin_weights:
+        running += weight
+        cdf_edges.append(min(1.0, max(0.0, running / total)))
+    cdf_edges[-1] = 1.0
+    return cdf_edges
+
+def _make_cdf_transformed_hist(hist, name, cdf_edges):
+    transformed_hist = hist.Clone(name)
+    transformed_hist.Reset("ICES")
+    transformed_hist.SetMaximum(-1111)
+    transformed_hist.SetMinimum(-1111)
+    transformed_hist.SetDirectory(0)
+
+    if not cdf_edges:
+        return transformed_hist
+
+    out_axis = transformed_hist.GetXaxis()
+    out_nbins = transformed_hist.GetNbinsX()
+    for i_bin in range(1, hist.GetNbinsX() + 1):
+        content = float(hist.GetBinContent(i_bin))
+        error = float(hist.GetBinError(i_bin))
+        if content == 0.0 and error == 0.0:
+            continue
+
+        u_low = min(1.0, max(0.0, cdf_edges[i_bin - 1]))
+        u_high = min(1.0, max(0.0, cdf_edges[i_bin]))
+        if u_high <= u_low:
+            out_bin = transformed_hist.FindFixBin(u_high)
+            out_bin = min(out_nbins, max(1, out_bin))
+            transformed_hist.SetBinContent(out_bin, transformed_hist.GetBinContent(out_bin) + content)
+            transformed_hist.SetBinError(out_bin, np.sqrt(transformed_hist.GetBinError(out_bin) ** 2 + error ** 2))
+            continue
+
+        width = u_high - u_low
+        for out_bin in range(1, out_nbins + 1):
+            bin_low = out_axis.GetBinLowEdge(out_bin)
+            bin_high = out_axis.GetBinUpEdge(out_bin)
+            overlap = max(0.0, min(u_high, bin_high) - max(u_low, bin_low))
+            if overlap <= 0.0:
+                continue
+            frac = overlap / width
+            transformed_hist.SetBinContent(out_bin, transformed_hist.GetBinContent(out_bin) + content * frac)
+            transformed_hist.SetBinError(out_bin, np.sqrt(transformed_hist.GetBinError(out_bin) ** 2 + (error * frac) ** 2))
+
+    transformed_hist.SetEntries(hist.GetEntries())
+    return transformed_hist
+
+def _build_cdf_histo_maps(var_name, histos_var, histos_sys_var, analyzer_cfg):
+    """
+    Build normal histograms after a CDF-based score transform.
+    The reference CDF is taken from the matching signal mass when available,
+    matching the usual BDT score_t convention.
+    """
+    mass_tag = var_name.split("_")[-1]
+    reference_hist = histos_var.get(mass_tag) or histos_var.get("Data")
+    cdf_edges = _cdf_edges_from_reference_hist(reference_hist)
+
+    histos_cdf = {}
+    histos_sys_cdf = {}
+
+    for sample in analyzer_cfg.samp_names:
+        histos_cdf[sample] = _make_cdf_transformed_hist(histos_var[sample], f"{var_name}_{sample}_cdf", cdf_edges)
+        histos_sys_cdf[sample] = {}
+
+        for sys_name in analyzer_cfg.sys_names:
+            histos_sys_cdf[sample][sys_name] = _make_cdf_transformed_hist(
+                histos_sys_var[sample][sys_name],
+                f"{var_name}_{sample}_{sys_name}_cdf",
+                cdf_edges,
+            )
+
+    return histos_cdf, histos_sys_cdf
 
 def SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115., signal_high=135.):
     """
@@ -153,9 +401,20 @@ def main():
 
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
+    if args.use_sideband_reweight and args.sideband_reweight_unc and SIDEBAND_REWEIGHTER is not None:
+        for sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
+            if sys_name not in analyzer_cfg.sys_names:
+                analyzer_cfg.sys_names.append(sys_name)
+        print("[SidebandReweight] Add uncertainty pair to MC error band:", SIDEBAND_REWEIGHT_UNC_SYS_NAMES)
+    if args.output_tag:
+        output_tag = os.path.basename(str(args.output_tag).strip().strip('/'))
+        if output_tag:
+            root_base, root_ext = os.path.splitext(analyzer_cfg.root_output_name)
+            analyzer_cfg.root_output_name = f"{root_base}_{output_tag}{root_ext or '.root'}"
+            analyzer_cfg.plot_output_path = os.path.join(analyzer_cfg.plot_output_path, output_tag)
 
-    # 在 mva + run3 下，自動按 self.sig_names 跑每個 mA；其他情況維持單一目標質量
-    if args.mva and analyzer_cfg.year == 'run3':
+    # 在 mva + run3/run3_NFlow 下，自動按 self.sig_names 跑每個 mA；其他情況維持單一目標質量
+    if args.mva and analyzer_cfg.year in ['run3', 'run3_NFlow']:
         target_masses = list(analyzer_cfg.sig_names)
     else:
         target_masses = [analyzer_cfg.mva_alp_mass] if args.mva else []
@@ -293,11 +552,11 @@ def main():
                 histos['mvaVal_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_2sigma_'+ALP_mass    + '_' + sample, 240,  -0.1, 1.1)
                 histos['mvaVal_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_3sigma_'+ALP_mass    + '_' + sample, 240,  -0.1, 1.1)
 
-                histos['mvaVal_larger_'+ALP_mass][sample]           = TH1F('mvaVal_larger_'+ALP_mass           + '_' + sample, 'mvaVal_larger_'+ALP_mass    + '_' + sample, 20, 0, 1.0)
-                histos['mvaVal_larger_1sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
-                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample]  = TH1F('mvaVal_larger_1P5sigma_'+ALP_mass  + '_' + sample, 'mvaVal_larger_1P5sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
-                histos['mvaVal_larger_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
-                histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 20,  0., 1.0)
+                histos['mvaVal_larger_'+ALP_mass][sample]           = TH1F('mvaVal_larger_'+ALP_mass           + '_' + sample, 'mvaVal_larger_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_1sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_1sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample]  = TH1F('mvaVal_larger_1P5sigma_'+ALP_mass  + '_' + sample, 'mvaVal_larger_1P5sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_2sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_2sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
+                histos['mvaVal_larger_3sigma_'+ALP_mass][sample]    = TH1F('mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, 'mvaVal_larger_3sigma_'+ALP_mass    + '_' + sample, MVA_LARGER_NBINS, MVA_LARGER_XMIN, MVA_LARGER_XMAX)
 
 
     for var_name in var_names:
@@ -310,6 +569,7 @@ def main():
 
     ### loop over samples and events
     mass_list = {'M1':1.0, 'M2':2.0, 'M3':3.0, 'M4':4.0, 'M5':5.0, 'M6':6.0, 'M7':7.0, 'M8':8.0, 'M9':9.0, 'M10':10.0, 'M15':15.0, 'M20':20.0, 'M25':25.0, 'M30':30.0}
+    search_mA_list = [float(m) for m in range(1, 31)] 
     # 新增：控制每個 (sample, mA) 的偵錯輸出次數
     debug_printed = {}
 
@@ -322,7 +582,8 @@ def main():
         for iEvt in range( ntup.GetEntries() ):
     
             ntup.GetEvent(iEvt)
-            # if (iEvt == 10): break
+            if args.max_events > 0 and iEvt >= args.max_events:
+                break
 
             if (iEvt % 100000 == 1):
                 print("looking at event %d" %iEvt)
@@ -337,7 +598,14 @@ def main():
             
 
             # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
-            weight = ntup.weight
+            weight = get_event_weight(ntup, sample, analyzer_cfg, row_index=iEvt)
+            sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
+                ntup,
+                sample,
+                analyzer_cfg,
+                weight,
+                row_index=iEvt,
+            )
 
             if (ntup.H_m > -90):
                 if ntup.H_m>180. or ntup.H_m<95.: continue
@@ -371,26 +639,26 @@ def main():
 
                     for ALP_mass in target_masses:
                         if args.blind:
-                            if not (sample == 'Data' and MVA_value[ALP_mass] > 0.95):
+                            if not (sample == 'Data' and MVA_value[ALP_mass] >= MVA_FULL_RANGE_DATA_BLIND_THRESHOLD):
                                 histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                                 histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                         else:
                             histos['mvaVal_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]) and ntup.H_m>(125.+sigma_low[ALP_mass]): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 1.0):
                             histos['mvaVal_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_1sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*1.5) and ntup.H_m>(125.+sigma_low[ALP_mass]*1.5): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 1.5):
                             histos['mvaVal_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_1P5sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*2.) and ntup.H_m>(125.+sigma_low[ALP_mass]*2.): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 2.0):
                             histos['mvaVal_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_2sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                        if ntup.H_m<(125.+sigma_hig[ALP_mass]*3.) and ntup.H_m>(125.+sigma_low[ALP_mass]*3.): 
+                        if _passes_sigma_region(ntup.H_m, sigma_low, sigma_hig, ALP_mass, 3.0):
                             histos['mvaVal_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
@@ -450,6 +718,7 @@ def main():
                 if sample in analyzer_cfg.sig_names:
                     param_val['param'] = (ntup.ALP_m - mass_list[sample])/ntup.H_m
                 else:
+                    # mass_random = random.choice(search_mA_list)
                     mass_random = random.choice(list(mass_list.values()))
                     param_val['param'] = (ntup.ALP_m - mass_random)/ntup.H_m
                 
@@ -460,7 +729,9 @@ def main():
 
                 for sys_name in analyzer_cfg.sys_names:
                     if sample != "Data": 
-                        if sys_name =='weight_hlt_sf_up':
+                        if sys_name in sideband_rwgt_sys_weights:
+                            weight_sys = sideband_rwgt_sys_weights[sys_name]
+                        elif sys_name =='weight_hlt_sf_up':
                             weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
                         elif sys_name =='weight_hlt_sf_down':
                             weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
@@ -498,12 +769,20 @@ def main():
                             weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_up / ntup.weight_photon_id_sf_SelectedPhoton_central
                         elif sys_name =='weight_photon_id_sf_SelectedPhoton_down':
                             weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_down / ntup.weight_photon_id_sf_SelectedPhoton_central
+                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_up':
+                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_up / ntup.weight_photon_csev_sf_SelectedPhoton_central
+                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_down':
+                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_down / ntup.weight_photon_csev_sf_SelectedPhoton_central
+                        else:
+                            weight_sys = weight
 
                         for var in var_names:
-                            histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
+                            if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
+                                histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
                     else:
                         for var in var_names:
-                            histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
+                            if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
+                                histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
                 
 
 
@@ -590,6 +869,79 @@ def main():
             canv.Write()
             SaveCanvPic(canv, analyzer_cfg.plot_output_path, _pdf_output_name(var_name))
 
+        if args.mva and _is_full_range_mva_larger_var(var_name, target_masses):
+            histos_cdf, histos_sys_cdf = _build_cdf_histo_maps(
+                var_name,
+                histos[var_name],
+                histos_sys[var_name],
+                analyzer_cfg,
+            )
+            cdf_var_name = var_name + "_cdf"
+            stacks_cdf = MakeStack(histos_cdf, analyzer_cfg, cdf_var_name)
+
+            if stacks_cdf['all'].GetStack().GetEntries() == 0:
+                stack_entry = stacks_cdf['all'].GetStack().GetEntries()
+                print(f"stack_entry: {stack_entry}")
+                print(f"[Warning] CDF stack for {var_name} is empty. Skipping drawing.")
+                continue
+
+            scaled_sig_cdf = {}
+            for sample in analyzer_cfg.sig_names:
+                scaled_sig_cdf[sample] = ScaleSignal(plot_cfg, stacks_cdf[sample], histos_cdf[sample], cdf_var_name)
+
+            ratio_plot_cdf = MakeRatioPlot(histos_cdf['Data'], stacks_cdf['all'].GetStack().Last(), cdf_var_name)
+            legend_cdf = MakeLegend(plot_cfg, histos_cdf, scaled_sig_cdf)
+            total_unc_cdf = Total_Unc(stacks_cdf['bkg'], histos_sys_cdf, analyzer_cfg)
+            cdf_y_axis_title = "Entries / %.3f" % histos_cdf['Data'].GetBinWidth(1)
+
+            if args.ln:
+                canv_cdf = CreateCanvas(cdf_var_name + "_log")
+                DrawOnCanv(
+                    canv_cdf,
+                    cdf_var_name + "_log",
+                    plot_cfg,
+                    stacks_cdf,
+                    histos_cdf,
+                    scaled_sig_cdf,
+                    ratio_plot_cdf,
+                    legend_cdf,
+                    lumi_label,
+                    cms_label,
+                    total_unc_cdf,
+                    args.cut,
+                    args.mA,
+                    logY=True,
+                    y_axis_title=cdf_y_axis_title,
+                    axis_var_name=var_name,
+                    x_axis_title="Transformed BDT Score",
+                    log_y_max_scale=1.5e4,
+                )
+                canv_cdf.Write()
+                SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf_log")
+            else:
+                canv_cdf = CreateCanvas(cdf_var_name)
+                DrawOnCanv(
+                    canv_cdf,
+                    cdf_var_name,
+                    plot_cfg,
+                    stacks_cdf,
+                    histos_cdf,
+                    scaled_sig_cdf,
+                    ratio_plot_cdf,
+                    legend_cdf,
+                    lumi_label,
+                    cms_label,
+                    total_unc_cdf,
+                    args.cut,
+                    args.mA,
+                    logY=False,
+                    y_axis_title=cdf_y_axis_title,
+                    axis_var_name=var_name,
+                    x_axis_title="Transformed BDT Score",
+                )
+                canv_cdf.Write()
+                SaveCanvPic(canv_cdf, analyzer_cfg.plot_output_path, _pdf_output_name(var_name) + "_cdf")
+
 
     
     print('\n\n')
@@ -602,5 +954,3 @@ def main():
 
 
 main()
-
-
