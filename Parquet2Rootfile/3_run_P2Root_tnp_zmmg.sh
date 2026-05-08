@@ -159,21 +159,17 @@ process_sample_syst() {
 #  DYJetsTo2Tau
 
 ## 处理 bkgmc 样本
-for i in {1..4};do
+for i in {1..3};do
 # for i in 2; do # Compliment Study
     if [ "$i" = "1" ]; then
-        samples=(DYJetsToLL_MLM)
-        years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
-
-    elif [ "$i" = "2" ]; then
         samples=(DYJetsToLL)
         years=(2022preEE 2022postEE 2023preBPix 2023postBPix)
 
-    elif [ "$i" = "3" ]; then
+    elif [ "$i" = "2" ]; then
         samples=(DYJetsTo2Mu)
         years=(2024)
 
-    elif [ "$i" = "4" ]; then
+    elif [ "$i" = "3" ]; then
         samples=(TT)
         years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
     fi

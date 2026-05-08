@@ -12,7 +12,7 @@ OUTPUT_BASE="$(strip_cr /eos/home-p/pelai/HZa/root_P2Root/run3_tnp_zmmg)"
 YEARS=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024 )
 DYJETS_LEGACY_YEARS=( 2022preEE 2022postEE 2023preBPix 2023postBPix )
 
-AVAILABLE_MODULES=( data dyjets dyjets-mlm tt-dyjets )
+AVAILABLE_MODULES=( data dyjets tt-dyjets )
 
 print_usage() {
   cat <<'EOF_USAGE'
