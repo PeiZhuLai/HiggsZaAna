@@ -141,8 +141,6 @@ DEFAULT_OPTIONS = {
         "fsr": {
             "min_muon_gamma_dr": 0.8,
             "near_muon_gamma_dr_min": 0.4,
-        "far_muon_pt": 20.0,
-        "dimuon_mass_min": 35.0,
         "photon_mva_min": -0.7,
         "zmmg_mass": [80.0, 100.0],
         "mass_sum_max": 180.0,
@@ -338,8 +336,6 @@ class TnPZmmgTagger(Tagger):
         near_dr_min_cut = (
             zmmg_candidates_all.minMuonGammaDR > self.options["fsr"]["near_muon_gamma_dr_min"]
         )
-        far_pt_cut = zmmg_candidates_all.FarMuon.pt > self.options["fsr"]["far_muon_pt"]
-        dimuon_mass_cut = zmmg_candidates_all.Dimuon.mass > self.options["fsr"]["dimuon_mass_min"]
         zmmg_mass_cut = (
             zmmg_candidates_all.Zmmg.mass > self.options["fsr"]["zmmg_mass"][0]
         ) & (
@@ -352,8 +348,6 @@ class TnPZmmgTagger(Tagger):
         fsr_candidate_cut = (
             near_dr_max_cut
             & near_dr_min_cut
-            & far_pt_cut
-            & dimuon_mass_cut
             & zmmg_mass_cut
             & mass_sum_cut
         )
@@ -377,23 +371,11 @@ class TnPZmmgTagger(Tagger):
         near_dr_min_event_cut = photon_cut & (
             ak.num(zmmg_candidates_all[near_dr_max_cut & near_dr_min_cut]) >= 1
         )
-        far_pt_event_cut = photon_cut & (
-            ak.num(zmmg_candidates_all[near_dr_max_cut & near_dr_min_cut & far_pt_cut]) >= 1
-        )
-        dimuon_mass_event_cut = photon_cut & (
-            ak.num(
-                zmmg_candidates_all[
-                    near_dr_max_cut & near_dr_min_cut & far_pt_cut & dimuon_mass_cut
-                ]
-            ) >= 1
-        )
         zmmg_mass_event_cut = photon_cut & (
             ak.num(
                 zmmg_candidates_all[
                     near_dr_max_cut
                     & near_dr_min_cut
-                    & far_pt_cut
-                    & dimuon_mass_cut
                     & zmmg_mass_cut
                 ]
             ) >= 1
@@ -596,8 +578,6 @@ class TnPZmmgTagger(Tagger):
                 "photon",
                 "min dR(mu,gamma) < 0.8",
                 "dR(gamma, near muon) > 0.4",
-                "pT_far > 20",
-                "m_mumu > 35",
                 "80 < m_mumugamma < 100",
                 "m_mumu + m_mumugamma < 180",
                 "all",
@@ -608,8 +588,6 @@ class TnPZmmgTagger(Tagger):
                 photon_cut,
                 near_dr_max_event_cut,
                 near_dr_min_event_cut,
-                far_pt_event_cut,
-                dimuon_mass_event_cut,
                 zmmg_mass_event_cut,
                 mass_sum_event_cut,
                 presel_cut,
