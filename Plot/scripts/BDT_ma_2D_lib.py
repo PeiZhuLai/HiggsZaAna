@@ -353,7 +353,7 @@ def draw_hist2d(
     cms_bb = t_cms.get_window_extent(renderer=renderer)
     dx = cms_bb.width / fig.bbox.width + 0.006
     fig.text(x0 + dx, y0, "Preliminary", ha="left", va="top", fontsize=19)
-    fig.text(0.84, 0.965, r"$170.84\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
+    fig.text(0.84, 0.965, r"$172.13\,\mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$", ha="right", va="top", fontsize=16)
     plt.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.92)
 
     out_pdf = out_png.with_suffix(".pdf")

@@ -47,7 +47,7 @@ python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nomi
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 wait
 
-# Test Run with maxEvents
+#### Test Run with maxEvents
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson  --maxEvents 100 &
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson  --maxEvents 100 &
 # python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson  --maxEvents 100 &
@@ -69,12 +69,12 @@ wait
 # python3 $scriptsDir/plot_sigGenInfo.py &
 # wait
 
-# # Batch 2
+# ### Batch 2
 # python $scriptsDir/table_interpolate_bkgYield_1.py
 # python $scriptsDir/table_interpolate_bkgYield_2.py
 # wait
 
-# # Batch 3
+# #### Batch 3
 # python3 $scriptsDir/plot_cutflowVmA.py &
 # python3 $scriptsDir/plot_preselectSigEffVmA.py &
 # python3 $scriptsDir/plot_preselectSigEffSumwVmA.py &
@@ -82,21 +82,21 @@ wait
 
 # wait
 
-# # Batch 4
+# #### Batch 4
 # python3 $scriptsDir/plot_phidVmA.py &
 # python3 $scriptsDir/plot_eachphidVmA.py &
 # python3 $scriptsDir/plot_phidsigniVmA.py &
 
 # wait
 
-# # Batch 5
+# #### Batch 5
 # python3 $scriptsDir/plot_SIP3DsigniVmA.py &
 # python3 $scriptsDir/plot_dREff.py &
 # python3 $scriptsDir/plot_dREffBar.py &
 
 # wait
 
-# # Batch 6
+# ### Batch 6
 # python3 $scriptsDir/plot_trigEffVlepPt.py &
 # python3 $scriptsDir/plot_mAmigratedBar.py &
 # python3 $scriptsDir/plot_mAmigratedHist.py &
@@ -108,10 +108,10 @@ wait
 # python3 $scriptsDir/plot_bkgmcSculptingCheck.py &
 # wait
 
-# Validate SF
+# ### Validate SF
 # python3 $scriptsDir/plot_SF_validation.py -y run3 -m --ln -b &
 
-# fast variable plot
+# ### fast variable plot
 # python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
 # wait
 

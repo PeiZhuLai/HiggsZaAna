@@ -24,17 +24,17 @@ class Plot_Config:
         elif year == 'run2':
             self.lumi    = '138'
         elif year == '2022preEE':
-            self.lumi    = '7.98'
+            self.lumi    = '7.99'
         elif year == '2022postEE':
-            self.lumi    = '26.67'
+            self.lumi    = '26.68'
         elif year == '2023preBPix':
-            self.lumi    = '17.79'
+            self.lumi    = '17.96'
         elif year == '2023postBPix':
-            self.lumi    = '9.45'
+            self.lumi    = '9.68'
         elif year == '2024':
-            self.lumi    = '108.95'    
+            self.lumi    = '109.82'    
         elif year in ['run3', 'run3_NFlow']:
-            self.lumi    = '170.84'
+            self.lumi    = '172.13'
         else:
             print('do not in 2016/2017/2018!')
             exit(0)

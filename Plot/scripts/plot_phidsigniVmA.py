@@ -41,9 +41,23 @@ PHID_CUTFLOW_TYPES = [f"zgammas_phid_{kind}_{wp}" for wp in _PHID_WPS for kind i
 
 YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
 
-lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
-            '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95,
-            'combined_run3':61.89 }
+lumiMap = {
+    "2016" : 36.31,
+    "2016preVFP" : 19.51, 
+    "2016postVFP" : 16.80, 
+    "2017" : 41.48,
+    "2018" : 59.83,
+    "2022" : 34.6521,
+    "2022preEE": 7.99,
+    "2022postEE": 26.68,
+    "2022": 34.67,
+    "2023preBPix": 17.96,
+    "2023postBPix": 9.68,
+    "2023" : 27.64,
+    "2024": 109.82,
+    "2025": 110.67,
+    "combined_run3" : 172.13
+}
 # 移除：YEAR 未定義時會直接噴錯；改為在 _plot_year() 依 year 動態取用
 # LUMI_FB = float(lumiMap[YEAR])
 
