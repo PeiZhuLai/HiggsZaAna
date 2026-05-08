@@ -13,13 +13,13 @@ unset CPLUS_INCLUDE_PATH
 unset C_INCLUDE_PATH
 export PYTHONPATH="${repo_dir}"
 
-outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg/data"
+outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg_tmp/data"
 unretire_jobs="${UNRETIRE_JOBS:-1}" # 1 re-run unfinished jobs # 0 no re-run
 retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all jobs finished
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 
-# rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/data/job_1
+# rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg_tmp/data/job_1
 # rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/data/analysis_manager.pkl
 
 cmd=(
