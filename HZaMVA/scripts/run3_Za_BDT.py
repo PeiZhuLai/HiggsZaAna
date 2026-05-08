@@ -306,8 +306,11 @@ mass_list = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 15., 20., 25., 30.]
 years = ['run3']
 bkg_tree_name = "inclusive"
 sig_tree_name = "train"
-bkg_data_selection = "H_m>95 && H_m<180"
+BKG_TRAIN_MASS_LOW = 95
+BKG_TRAIN_MASS_HIGH = 180
+bkg_data_selection = "H_m>{} && H_m<{}".format(BKG_TRAIN_MASS_LOW, BKG_TRAIN_MASS_HIGH)
 sig_selection = "H_m>115 && H_m<135"
+print("Background training mass range:", bkg_data_selection)
 
 def bdt_matrix_columns():
     return variables + mass_variables + wt_variables + ["mass", "param"]
