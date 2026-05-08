@@ -45,11 +45,47 @@ parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', actio
 parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
 parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', default=True, help='do not add sideband reweight uncertainty to the MC error band')
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
+parser.add_argument('--samples', dest='samples', default=None, help='comma-separated sample names to run; aliases: all, data, bkg, sig')
+parser.add_argument('--histOnly', dest='hist_only', action='store_true', default=False, help='write raw_plots/sys_dir only; skip stack and PDF drawing')
 parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
 parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, help='max debug prints per (sample,mA)')
 args = parser.parse_args()
+
+def _parse_sample_filter(sample_filter, analyzer_cfg):
+    if sample_filter is None:
+        return None
+
+    allowed = list(analyzer_cfg.samp_names)
+    selected = []
+    for token in str(sample_filter).replace(";", ",").split(","):
+        token = token.strip()
+        if not token:
+            continue
+
+        token_lower = token.lower()
+        if token_lower in ("all", "*"):
+            return None
+        if token_lower in ("data",):
+            expanded = ["Data"]
+        elif token_lower in ("bkg", "bkgs", "background", "backgrounds"):
+            expanded = list(analyzer_cfg.bkg_names)
+        elif token_lower in ("sig", "sigs", "signal", "signals"):
+            expanded = list(analyzer_cfg.sig_names)
+        else:
+            expanded = [token]
+
+        for sample in expanded:
+            if sample not in allowed:
+                raise ValueError(
+                    "Unknown sample '%s'. Allowed samples are: %s"
+                    % (sample, ", ".join(allowed))
+                )
+            if sample not in selected:
+                selected.append(sample)
+
+    return selected if selected else None
 
 SIDEBAND_REWEIGHTER = None
 SIDEBAND_REWEIGHT_UNC_SYS_NAMES = ("sideband_rwgt_reweight_up", "sideband_rwgt_reweight_down")
@@ -401,6 +437,7 @@ def main():
 
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
+    all_sig_names = list(analyzer_cfg.sig_names)
     if args.use_sideband_reweight and args.sideband_reweight_unc and SIDEBAND_REWEIGHTER is not None:
         for sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
             if sys_name not in analyzer_cfg.sys_names:
@@ -415,7 +452,7 @@ def main():
 
     # 在 mva + run3/run3_NFlow 下，自動按 self.sig_names 跑每個 mA；其他情況維持單一目標質量
     if args.mva and analyzer_cfg.year in ['run3', 'run3_NFlow']:
-        target_masses = list(analyzer_cfg.sig_names)
+        target_masses = list(all_sig_names)
     else:
         target_masses = [analyzer_cfg.mva_alp_mass] if args.mva else []
 
@@ -433,6 +470,24 @@ def main():
         analyzer_cfg.sig_names = [args.mA]
         # 修正大小寫，與其他地方一致使用 'Data'
         analyzer_cfg.samp_names = analyzer_cfg.bkg_names + analyzer_cfg.sig_names + ['Data']
+
+    if args.samples:
+        try:
+            selected_samples = _parse_sample_filter(args.samples, analyzer_cfg)
+        except ValueError as exc:
+            print("[Samples][ERROR]", exc)
+            sys.exit(1)
+
+        if selected_samples:
+            if not args.hist_only:
+                print("[Samples] --samples is set; enabling --histOnly because partial sample files cannot draw complete stacks.")
+                args.hist_only = True
+            selected_set = set(selected_samples)
+            analyzer_cfg.samp_names = [s for s in analyzer_cfg.samp_names if s in selected_set]
+            if not analyzer_cfg.samp_names:
+                print("[Samples][ERROR] No samples selected after applying --samples=%s" % args.samples)
+                sys.exit(1)
+            print("[Samples] Running selected samples:", analyzer_cfg.samp_names)
 
 
     analyzer_cfg.Print_Config()
@@ -824,6 +879,14 @@ def main():
             for sys in analyzer_cfg.sys_names:
                 plot_cfg.SetHistStyles(histos_sys[var_name][sample][sys], sample)
                 histos_sys[var_name][sample][sys].Write()
+
+    if args.hist_only:
+        out_file.Close()
+        elapsed = time.time() - start_time
+        print("[histOnly] Wrote raw_plots/sys_dir only; skipped stack/PDF drawing.")
+        print(f"Total runtime: {time.strftime('%H:%M:%S', time.gmtime(elapsed))}")
+        print('Done')
+        return
 
     ### save stack plots and make ratio plots
     out_file.cd()
