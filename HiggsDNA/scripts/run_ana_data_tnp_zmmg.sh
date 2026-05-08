@@ -14,6 +14,7 @@ unset C_INCLUDE_PATH
 export PYTHONPATH="${repo_dir}"
 
 outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg_tmp/data"
+fpo="${FPO:-5}"
 unretire_jobs="${UNRETIRE_JOBS:-1}" # 1 re-run unfinished jobs # 0 no re-run
 retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all jobs finished
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
@@ -44,6 +45,10 @@ fi
 
 if [[ "${merge_outputs}" == "1" ]]; then
     cmd+=(--merge_outputs)
+fi
+
+if [[ -n "${fpo}" ]]; then
+    cmd+=(--fpo "${fpo}")
 fi
 
 "${cmd[@]}" #--short #--batch_system "local" "condor" INFO DEBUG #--with_skimmed
