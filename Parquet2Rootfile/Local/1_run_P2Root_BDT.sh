@@ -45,6 +45,7 @@ years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 # years=(2023preBPix 2023postBPix)
 systs=("FNUF" "Material" "Electron_scale" "Electron_smear" "Muon_scale" "Muon_smear" "Photon_scale" "Photon_smear")
 # systs=("FNUF" "Material" "Scale" "Smearing" "JER" "JES" "MET_JES" "MET_Unclustered" "Muon_pt")
+MAX_PARALLEL_JOBS=6
 
 # 函数定义：执行命令并处理错误
 execute_command() {
@@ -62,6 +63,26 @@ execute_command() {
     if [ $attempt -gt $max_retries ]; then
         echo "Error: Maximum retries reached. Command failed: $cmd"
     fi
+}
+
+wait_for_job_slot() {
+    while [ "$(jobs -pr | wc -l)" -ge "$MAX_PARALLEL_JOBS" ]; do
+        wait -n || true
+    done
+}
+
+submit_background_job() {
+    local cmd="$1"
+    wait_for_job_slot
+    execute_command "$cmd" &
+}
+
+wait_for_background_jobs() {
+    local label="$1"
+    while [ "$(jobs -pr | wc -l)" -gt 0 ]; do
+        wait -n || true
+    done
+    echo "$label completed successfully."
 }
 
 # 函数定义：处理样本数据
@@ -88,16 +109,10 @@ process_sample() {
         fi
 
         # 使用函数执行命令
-        execute_command "$command" &
-        pid_list+=($!)
+        submit_background_job "$command"
     done
 
-    # 等待所有后台任务完成
-    for pid in "${pid_list[@]}"; do
-        wait $pid
-    done
-
-    echo "Sample $sample completed successfully."
+    echo "Sample $sample submitted."
 }
 
 # 函数定义：处理样本数据
@@ -118,16 +133,10 @@ process_sample_syst() {
         fi
 
         # 使用函数执行命令
-        execute_command "$command" &
-        pid_list+=($!)
+        submit_background_job "$command"
     done
 
-    # 等待所有后台任务完成
-    for pid in "${pid_list[@]}"; do
-        wait $pid
-    done
-
-    echo "Sample $sample completed successfully."
+    echo "Sample $sample $year $uod systematics submitted."
 }
 
 #---------------------------------------------------------------------------------------
@@ -138,12 +147,11 @@ samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_
 type="Sig_MC"
 for sample in "${samples[@]}"; do
     mkdir -p "$target${sample}/"
-    # 存储后台任务的进程ID列表
-    pid_list=()
 
     # 调用函数处理样本数据
     process_sample "$sample" "$type"
 done
+wait_for_background_jobs "Signal nominal jobs"
 
 samples=(mA_M1 mA_M2 mA_M3 mA_M4 mA_M5 mA_M6 mA_M7 mA_M8 mA_M9 mA_M10 mA_M15 mA_M20 mA_M25 mA_M30)
 # samples=(mA_M7 mA_M8)
@@ -154,14 +162,12 @@ for sample in "${samples[@]}"; do
             mkdir -p "$target${sample}_${syst}_${sf}"
         done
         for year in "${years[@]}"; do
-            # 存储后台任务的进程ID列表
-            pid_list=()
-
             # 调用函数处理样本数据
             process_sample_syst "$sample" "$type" "$year" "$sf"
         done
     done
 done
+wait_for_background_jobs "Signal systematic jobs"
 
 # ****************************
 # ********** Bkg *************
@@ -211,13 +217,12 @@ for i in {1..4};do
     type="Bkg_MC"
     for sample in "${samples[@]}"; do
         mkdir -p "$target$sample"
-        # 存储后台任务的进程ID列表
-        pid_list=()
 
         # 调用函数处理样本数据
         process_sample "$sample" "$type"
     done
 done 
+wait_for_background_jobs "Background jobs"
 
 # ****************************
 # ********** Data ************
@@ -233,12 +238,11 @@ years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 type="Data"
 for sample in "${samples[@]}"; do
     mkdir -p "$target$sample"
-    # 存储后台任务的进程ID列表
-    pid_list=()
 
     # 调用函数处理样本数据
     process_sample "$sample" "$type"
 done
+wait_for_background_jobs "Data jobs"
 
 # Use fake photon background estimation with data-driven
 # mkdir -p /eos/home-j/jiehan/root/2017/skimmed_ntuples/data_med/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/data_fake/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/mc_true/ /eos/home-j/jiehan/root/2017/skimmed_ntuples/mc_med/
