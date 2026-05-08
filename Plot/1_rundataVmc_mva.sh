@@ -26,6 +26,7 @@ export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot
 
 MAX_PLOT_JOBS="${MAX_PLOT_JOBS:-6}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
+RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 MAX_EVENTS="${MAX_EVENTS:-}"
 logDir="${outputDir}/logs_split"
 mkdir -p "$logDir" "$variablesDir"
@@ -190,6 +191,43 @@ for finalTag in nominal sideband_rwgt; do
         merge_plot_output "$regionKey" "$finalTag"
     done
 done
+
+draw_plot_output() {
+    local region_key="$1"
+    local final_tag="$2"
+    local log_file="${logDir}/draw_${final_tag}_${region_key}.log"
+    local cmd=(python3 "$scriptsDir/plot_variable_dataVmc_hist.py" -y run3 -m --ln --inputTag "$final_tag" --outputTag "$final_tag")
+
+    case "$region_key" in
+        SR)  cmd+=(--region 1) ;;
+        CR)  cmd+=(--region 2) ;;
+        mva) cmd+=(-b) ;;
+        *)
+            echo "[ERROR] Unknown region key: $region_key" >&2
+            return 1
+            ;;
+    esac
+
+    {
+        echo "[START] $(date '+%F %T') draw tag=${final_tag} region=${region_key}"
+        printf '[CMD]'
+        printf ' %q' "${cmd[@]}"
+        echo
+    } > "$log_file"
+
+    "${cmd[@]}" >> "$log_file" 2>&1
+    echo "[DONE] $(date '+%F %T')" >> "$log_file"
+}
+
+if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
+    for finalTag in nominal sideband_rwgt; do
+        for regionKey in SR CR mva; do
+            draw_plot_output "$regionKey" "$finalTag"
+        done
+    done
+else
+    echo "[Info] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS; skip plot_variable_dataVmc_hist.py"
+fi
 
 if [[ "$RUN_OPTIMIZATION" == "1" ]]; then
     for finalTag in nominal sideband_rwgt; do
