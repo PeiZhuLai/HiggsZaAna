@@ -49,7 +49,7 @@ class Plot_Config:
 
     def LoadColors(self):
         self.colors["Data"] = kBlack
-        self.colors["M1"]  = TColor.GetColor("#8B1E3F")  # deep red
+        self.colors["M1"]  = TColor.GetColor("#2541B2")  # deep red
         self.colors["M2"]  = TColor.GetColor("#DC2626")  # red
         self.colors["M3"]  = TColor.GetColor("#059669")  # dark green
         self.colors["M4"]  = TColor.GetColor("#7C3AED")  # purple
@@ -60,7 +60,7 @@ class Plot_Config:
         self.colors["M9"]  = TColor.GetColor("#FACC15")  # yellow, only if line is thick
         self.colors["M10"] = TColor.GetColor("#EF476F")  # pink-red
         self.colors["M15"] = TColor.GetColor("#991B1B")  # dark red
-        self.colors["M20"] = TColor.GetColor("#C026D3")  # violet-magenta
+        self.colors["M20"] = TColor.GetColor("#1B9AAA")  # violet-magenta
         self.colors["M25"] = TColor.GetColor("#5B21B6")  # indigo
         self.colors["M30"] = TColor.GetColor("#06D6A0")  # mint
         

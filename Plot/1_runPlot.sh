@@ -35,18 +35,23 @@ export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:
 
 
 # ## MVA Score signal region
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag nominal &
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
 # ## MVA Score control region
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag nominal &
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
 
 # ## MVA Score whole region
-# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
+python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag nominal &
 python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson &
-
 wait
+
+# Test Run with maxEvents
+# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 1 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson  --maxEvents 100 &
+# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --region 2 --ln --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson  --maxEvents 100 &
+# python3 $scriptsDir/plot_variable_dataVmc.py -y run3 -m --ln -b --outputTag sideband_rwgt --useSidebandReweight --sidebandReweightJson $sidebandReweightJson  --maxEvents 100 &
+# wait
 
 # ## ALP Optimization 2 categories
 # python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
