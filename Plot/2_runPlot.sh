@@ -12,6 +12,11 @@ print_runtime() {
 }
 trap print_runtime EXIT
 
+scriptsDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/scripts'
+outputDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots'
+variablesDir="${outputDir}/variables_dataVmc"
+sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json'
+export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 
 # ## ALP Optimization 2 categories
 # RUN_OPTIMIZATION=1 bash /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/1_runPlot.sh

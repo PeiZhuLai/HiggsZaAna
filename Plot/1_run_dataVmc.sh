@@ -69,7 +69,7 @@ run_plot_task() {
     local samples="$4"
     local partial_tag="${final_tag}_part_${sample_tag}"
     local log_file="${logDir}/${final_tag}_${region_key}_${sample_tag}.log"
-    local cmd=(python3 "$scriptsDir/plot_variable_dataVmc.py" -y run3 -m --ln --histOnly --samples "$samples" --outputTag "$partial_tag")
+    local cmd=(python3 "$scriptsDir/1_prepare_dataVmc.py" -y run3 -m --ln --histOnly --samples "$samples" --outputTag "$partial_tag")
 
     case "$region_key" in
         SR)  cmd+=(--region 1) ;;
@@ -196,7 +196,7 @@ draw_plot_output() {
     local region_key="$1"
     local final_tag="$2"
     local log_file="${logDir}/draw_${final_tag}_${region_key}.log"
-    local cmd=(python3 "$scriptsDir/plot_variable_dataVmc_hist.py" -y run3 -m --ln --inputTag "$final_tag" --outputTag "$final_tag")
+    local cmd=(python3 "$scriptsDir/2_plot_dataVmc.py" -y run3 -m --ln --inputTag "$final_tag" --outputTag "$final_tag")
 
     case "$region_key" in
         SR)  cmd+=(--region 1) ;;
@@ -226,7 +226,7 @@ if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
         done
     done
 else
-    echo "[Info] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS; skip plot_variable_dataVmc_hist.py"
+    echo "[Info] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS; skip 2_plot_dataVmc.py"
 fi
 
 if [[ "$RUN_OPTIMIZATION" == "1" ]]; then
