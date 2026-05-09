@@ -29,6 +29,11 @@ reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 short="${SHORT:-0}"
 dry_run="${DRY_RUN:-0}"
+condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-1}"
+condor_q_timeout="${CONDOR_Q_TIMEOUT:-60}"
+
+export HIGGSDNA_CONDOR_SUBMIT_CHUNK_SIZE="${condor_submit_chunk_size}"
+export HIGGSDNA_CONDOR_Q_TIMEOUT="${condor_q_timeout}"
 
 if [[ "${clean_analysis_state}" == "1" ]]; then
     rm -f "${outdir}/analysis_manager.pkl" "${outdir}/analysis_manager_temp.pkl"

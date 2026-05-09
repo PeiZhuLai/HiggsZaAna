@@ -528,9 +528,13 @@ class CondorManager(JobsManager):
         Merge per-job HTCondor submit files into one submit file.
         """
         with open(output_file, "w") as f_out:
-            for submit_file in submit_files:
+            for submit_idx, submit_file in enumerate(submit_files):
+                f_out.write("# HiggsDNA source submit file %d: %s\n" % (submit_idx, submit_file))
                 with open(submit_file, "r") as f_in:
-                    f_out.write(f_in.read())
+                    content = f_in.read()
+                    f_out.write(content)
+                    if content and not content.endswith("\n"):
+                        f_out.write("\n")
                     f_out.write("\n")
 
     def parse_condor_submit_results(self, results):
@@ -546,11 +550,46 @@ class CondorManager(JobsManager):
     def format_condor_submit_failure(self, chunk_idx, submit_file, expected_jobs, n_submitted, submit_status, results):
         output_tail = [line for line in results if line.strip()][-20:]
         output = "\n".join(output_tail)
+        submit_file_context = self.get_condor_submit_file_context(submit_file, results)
+        if submit_file_context:
+            output += "\n\n" + submit_file_context
         status_msg = "exit status %d" % submit_status if submit_status is not None else "unknown exit status"
         return (
                 "condor_submit failed for chunk %d (%s): submitted %d/%d jobs from %s.\n"
                 "Last condor_submit output lines:\n%s"
         ) % (chunk_idx, status_msg, n_submitted, expected_jobs, submit_file, output)
+
+    def get_condor_submit_file_context(self, submit_file, results, context_lines = 6):
+        match = re.search(r"line\s+(\d+)", "\n".join(results), re.IGNORECASE)
+        if match is None:
+            return ""
+
+        line_number = int(match.group(1))
+        try:
+            with open(submit_file, "r") as f_in:
+                lines = f_in.readlines()
+        except IOError:
+            return "Could not read merged submit file to show context: %s" % submit_file
+
+        start_idx = max(0, line_number - context_lines - 1)
+        end_idx = min(len(lines), line_number + context_lines)
+
+        source_file = None
+        for idx in range(min(line_number - 1, len(lines) - 1), -1, -1):
+            source_match = re.match(r"# HiggsDNA source submit file \d+: (.+)", lines[idx].strip())
+            if source_match is not None:
+                source_file = source_match.group(1)
+                break
+
+        context = ["Merged submit-file context around line %d:" % line_number]
+        if source_file is not None:
+            context.append("Source per-job submit file: %s" % source_file)
+
+        for idx in range(start_idx, end_idx):
+            marker = ">>" if idx + 1 == line_number else "  "
+            context.append("%s %6d: %s" % (marker, idx + 1, lines[idx].rstrip("\n")))
+
+        return "\n".join(context)
 
     def can_retry_condor_submit(self, results, n_submitted):
         if n_submitted != 0:

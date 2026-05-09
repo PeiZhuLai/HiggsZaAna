@@ -19,6 +19,11 @@ unretire_jobs="${UNRETIRE_JOBS:-1}" # 1 re-run unfinished jobs # 0 no re-run
 retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all jobs finished
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
+condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-1}"
+condor_q_timeout="${CONDOR_Q_TIMEOUT:-60}"
+
+export HIGGSDNA_CONDOR_SUBMIT_CHUNK_SIZE="${condor_submit_chunk_size}"
+export HIGGSDNA_CONDOR_Q_TIMEOUT="${condor_q_timeout}"
 
 # rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg_tmp/data/job_1
 # rm -fr /eos/home-p/pelai/HZa/parquet_tnp_zmmg/data/analysis_manager.pkl
