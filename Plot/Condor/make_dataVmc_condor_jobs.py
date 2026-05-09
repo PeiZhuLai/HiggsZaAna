@@ -78,7 +78,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--request-disk",
-        default="10000MB",
+        default="20000MB",
         help="Condor request_disk value; needed when localizing the conda env to worker scratch",
     )
     parser.add_argument(
@@ -95,7 +95,7 @@ def parse_args() -> argparse.Namespace:
         "--localize-conda-env",
         default="auto",
         choices=("auto", "1", "0"),
-        help="copy EOS conda env to worker scratch before running; auto localizes only when CONDA_PREFIX is under /eos",
+        help="extract a prebuilt conda tarball to worker scratch before running; auto localizes only when CONDA_PREFIX is under /eos",
     )
     parser.add_argument(
         "--setup-conda-env",
@@ -112,6 +112,11 @@ def parse_args() -> argparse.Namespace:
         "--anaconda-setup",
         default="/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh",
         help="anaconda setup script sourced before conda activate",
+    )
+    parser.add_argument(
+        "--conda-tarball",
+        default=None,
+        help="prebuilt conda env tarball used by Condor jobs",
     )
     parser.add_argument(
         "--submit",
@@ -148,6 +153,7 @@ def write_submit_file(
     setup_conda_env: str,
     conda_env_name: str,
     anaconda_setup: str,
+    conda_tarball: str,
 ) -> None:
     executable = project_dir / "Plot" / "Condor" / "run_dataVmc_condor_job.sh"
     log_dir = condor_dir / "logs"
@@ -162,6 +168,8 @@ def write_submit_file(
         environment_parts.append(f"CONDA_ENV_NAME={conda_env_name}")
     if anaconda_setup:
         environment_parts.append(f"ANACONDA_SETUP={anaconda_setup}")
+    if conda_tarball:
+        environment_parts.append(f"CONDA_TARBALL={conda_tarball}")
     environment = " ".join(environment_parts)
 
     content = f"""universe = vanilla
@@ -193,6 +201,11 @@ def main() -> int:
     condor_dir = Path(args.condor_dir).resolve() if args.condor_dir else project_dir / "Plot" / "Condor"
     jobs_file = condor_dir / args.jobs_name
     submit_file = condor_dir / args.submit_name
+    conda_tarball = (
+        Path(args.conda_tarball).resolve()
+        if args.conda_tarball
+        else condor_dir / "env_cache" / f"{args.conda_env_name}.tar.gz"
+    )
 
     condor_dir.mkdir(parents=True, exist_ok=True)
     (condor_dir / "logs").mkdir(parents=True, exist_ok=True)
@@ -212,6 +225,7 @@ def main() -> int:
         setup_conda_env=str(args.setup_conda_env).strip(),
         conda_env_name=str(args.conda_env_name).strip(),
         anaconda_setup=str(args.anaconda_setup).strip(),
+        conda_tarball=str(conda_tarball),
     )
 
     print(f"Wrote {len(jobs)} jobs to {jobs_file}")

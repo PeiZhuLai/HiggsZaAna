@@ -39,6 +39,7 @@ CONDA_ENV_NAME="${CONDA_ENV_NAME:-higgs-alp-ana}"
 ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
 LOCALIZE_CONDA_ENV="${LOCALIZE_CONDA_ENV:-auto}"
 LOCAL_CONDA_DIR="${LOCAL_CONDA_DIR:-${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/higgs-alp-ana-conda}"
+CONDA_TARBALL="${CONDA_TARBALL:-${PROJECT_DIR}/Plot/Condor/env_cache/higgs-alp-ana.tar.gz}"
 
 activate_conda_env_if_needed() {
     local should_activate=0
@@ -104,21 +105,21 @@ localize_conda_env_if_needed() {
     if [[ "$should_localize" -ne 1 ]]; then
         return 0
     fi
-    if [[ -z "$source_env" || ! -x "$source_env/bin/python3" ]]; then
-        echo "[WARN] LOCALIZE_CONDA_ENV requested, but CONDA_PREFIX is not a usable conda env: ${source_env:-<unset>}" >&2
-        return 0
+
+    if [[ ! -s "$CONDA_TARBALL" ]]; then
+        echo "[ERROR] Conda localization requested, but tarball is missing: $CONDA_TARBALL" >&2
+        echo "[ERROR] Run Plot/Condor/pack_conda_env_for_condor.sh once before condor_submit." >&2
+        exit 2
     fi
 
-    echo "[ENV] Copy conda env from $source_env to $LOCAL_CONDA_DIR"
-    mkdir -p "$(dirname "$LOCAL_CONDA_DIR")"
-    if command -v rsync >/dev/null 2>&1; then
-        rsync -a --delete \
-            --exclude '__pycache__/' \
-            --exclude '*.pyc' \
-            "$source_env/" "$LOCAL_CONDA_DIR/"
-    else
-        rm -rf "$LOCAL_CONDA_DIR"
-        cp -a "$source_env" "$LOCAL_CONDA_DIR"
+    echo "[ENV] Extract conda tarball from $CONDA_TARBALL to $LOCAL_CONDA_DIR"
+    rm -rf "$LOCAL_CONDA_DIR"
+    mkdir -p "$LOCAL_CONDA_DIR"
+    tar -xzf "$CONDA_TARBALL" -C "$LOCAL_CONDA_DIR"
+
+    if [[ -x "$LOCAL_CONDA_DIR/bin/conda-unpack" ]]; then
+        echo "[ENV] Run conda-unpack"
+        "$LOCAL_CONDA_DIR/bin/conda-unpack"
     fi
 
     export CONDA_PREFIX="$LOCAL_CONDA_DIR"
@@ -146,6 +147,7 @@ cd "$PLOT_DIR"
     echo "[ENV] CONDA_ENV_NAME=${CONDA_ENV_NAME}"
     echo "[ENV] ANACONDA_SETUP=${ANACONDA_SETUP}"
     echo "[ENV] LOCALIZE_CONDA_ENV=${LOCALIZE_CONDA_ENV}"
+    echo "[ENV] CONDA_TARBALL=${CONDA_TARBALL}"
 } > "$log_file"
 
 activate_conda_env_if_needed >> "$log_file" 2>&1
