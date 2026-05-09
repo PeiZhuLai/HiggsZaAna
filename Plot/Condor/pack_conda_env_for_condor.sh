@@ -32,7 +32,11 @@ if [[ -z "${CONDA_PREFIX:-}" || ! -x "${CONDA_PREFIX}/bin/python3" ]]; then
     exit 2
 fi
 
-tmp_tarball="${CONDA_TARBALL}.tmp"
+case "$CONDA_TARBALL" in
+    *.tar.gz) tmp_tarball="${CONDA_TARBALL%.tar.gz}.tmp.tar.gz" ;;
+    *.tgz)    tmp_tarball="${CONDA_TARBALL%.tgz}.tmp.tgz" ;;
+    *)        tmp_tarball="${CONDA_TARBALL}.tmp.tar.gz" ;;
+esac
 rm -f "$tmp_tarball"
 
 echo "[ENV] Pack conda env: $CONDA_PREFIX"
