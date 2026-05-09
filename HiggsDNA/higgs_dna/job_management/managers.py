@@ -495,7 +495,16 @@ class CondorManager(JobsManager):
                     status_msg = "" if submit_status == 0 else " Exit status: %d." % submit_status
                     logger.error("[CondorManager : submit_to_batch] condor_submit output for chunk %d:\n%s", i, "\n".join(results))
                     logger.error("[CondorManager : submit_to_batch] We found %d jobs to submit in chunk %d, but only %d were successfully submitted.%s" % (len(chunk), i, n_submitted, status_msg))
-                    raise RuntimeError("condor_submit failed for chunk %d" % i)
+                    raise RuntimeError(
+                            self.format_condor_submit_failure(
+                                    chunk_idx = i,
+                                    submit_file = submit_file,
+                                    expected_jobs = len(chunk),
+                                    n_submitted = n_submitted,
+                                    submit_status = submit_status,
+                                    results = results
+                            )
+                    )
 
                 # Assign cluster id's to jobs
                 for n_jobs, cluster_id in submitted_clusters:
@@ -533,6 +542,15 @@ class CondorManager(JobsManager):
                         (int(match.group(1)), match.group(2))
                 )
         return submitted_clusters
+
+    def format_condor_submit_failure(self, chunk_idx, submit_file, expected_jobs, n_submitted, submit_status, results):
+        output_tail = [line for line in results if line.strip()][-20:]
+        output = "\n".join(output_tail)
+        status_msg = "exit status %d" % submit_status if submit_status is not None else "unknown exit status"
+        return (
+                "condor_submit failed for chunk %d (%s): submitted %d/%d jobs from %s.\n"
+                "Last condor_submit output lines:\n%s"
+        ) % (chunk_idx, status_msg, n_submitted, expected_jobs, submit_file, output)
 
     def can_retry_condor_submit(self, results, n_submitted):
         if n_submitted != 0:
