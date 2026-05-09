@@ -34,8 +34,54 @@ LOG_DIR="${OUTPUT_DIR}/logs_split"
 SIDEBAND_REWEIGHT_JSON="${SIDEBAND_REWEIGHT_JSON:-${PROJECT_DIR}/HZaMVA/reweights/sideband_run3_iterative.json}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 MAX_EVENTS="${MAX_EVENTS:-}"
+SETUP_CONDA_ENV="${SETUP_CONDA_ENV:-auto}"
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-higgs-alp-ana}"
+ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
 LOCALIZE_CONDA_ENV="${LOCALIZE_CONDA_ENV:-auto}"
 LOCAL_CONDA_DIR="${LOCAL_CONDA_DIR:-${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/higgs-alp-ana-conda}"
+
+activate_conda_env_if_needed() {
+    local should_activate=0
+
+    case "$SETUP_CONDA_ENV" in
+        1|true|TRUE|yes|YES) should_activate=1 ;;
+        0|false|FALSE|no|NO) should_activate=0 ;;
+        auto|AUTO)
+            if [[ "${CONDA_DEFAULT_ENV:-}" != "$CONDA_ENV_NAME" ]]; then
+                should_activate=1
+            fi
+            ;;
+        *)
+            echo "[ERROR] SETUP_CONDA_ENV must be auto, 1, or 0; got '$SETUP_CONDA_ENV'" >&2
+            exit 2
+            ;;
+    esac
+
+    if [[ "$should_activate" -ne 1 ]]; then
+        return 0
+    fi
+
+    echo "[ENV] Activate conda env: $CONDA_ENV_NAME"
+    if [[ ! -r "$ANACONDA_SETUP" ]]; then
+        echo "[ERROR] Cannot read ANACONDA_SETUP: $ANACONDA_SETUP" >&2
+        exit 2
+    fi
+
+    echo "[ENV] Source anaconda setup: $ANACONDA_SETUP"
+    set +u
+    source "$ANACONDA_SETUP"
+    conda activate "$CONDA_ENV_NAME"
+    set -u
+
+    if [[ -z "${CONDA_PREFIX:-}" || ! -x "${CONDA_PREFIX}/bin/python3" ]]; then
+        echo "[ERROR] Failed to activate conda env: $CONDA_ENV_NAME" >&2
+        exit 2
+    fi
+
+    PYTHON_BIN="${CONDA_PREFIX}/bin/python3"
+    echo "[ENV] active CONDA_PREFIX=${CONDA_PREFIX:-<unset>}"
+    echo "[ENV] active python=${PYTHON_BIN}"
+}
 
 localize_conda_env_if_needed() {
     local source_env="${CONDA_PREFIX:-}"
@@ -96,9 +142,13 @@ cd "$PLOT_DIR"
     echo "[JOB] tag=${final_tag} region=${region_key} sample_tag=${sample_tag} samples=${samples}"
     echo "[ENV] initial PYTHON_BIN=${PYTHON_BIN}"
     echo "[ENV] initial CONDA_PREFIX=${CONDA_PREFIX:-<unset>}"
+    echo "[ENV] SETUP_CONDA_ENV=${SETUP_CONDA_ENV}"
+    echo "[ENV] CONDA_ENV_NAME=${CONDA_ENV_NAME}"
+    echo "[ENV] ANACONDA_SETUP=${ANACONDA_SETUP}"
     echo "[ENV] LOCALIZE_CONDA_ENV=${LOCALIZE_CONDA_ENV}"
 } > "$log_file"
 
+activate_conda_env_if_needed >> "$log_file" 2>&1
 localize_conda_env_if_needed >> "$log_file" 2>&1
 "$PYTHON_BIN" -c 'import numpy; import ROOT; import xgboost; print("[ENV] python imports OK")' >> "$log_file" 2>&1
 

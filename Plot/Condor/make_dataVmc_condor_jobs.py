@@ -98,6 +98,22 @@ def parse_args() -> argparse.Namespace:
         help="copy EOS conda env to worker scratch before running; auto localizes only when CONDA_PREFIX is under /eos",
     )
     parser.add_argument(
+        "--setup-conda-env",
+        default="auto",
+        choices=("auto", "1", "0"),
+        help="run use-anaconda, anaconda, and conda activate inside each Condor job",
+    )
+    parser.add_argument(
+        "--conda-env-name",
+        default="higgs-alp-ana",
+        help="conda environment name activated inside each Condor job",
+    )
+    parser.add_argument(
+        "--anaconda-setup",
+        default="/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh",
+        help="anaconda setup script sourced before conda activate",
+    )
+    parser.add_argument(
         "--submit",
         action="store_true",
         help="run condor_submit after generating files",
@@ -129,6 +145,9 @@ def write_submit_file(
     job_flavour: str,
     max_events: str,
     localize_conda_env: str,
+    setup_conda_env: str,
+    conda_env_name: str,
+    anaconda_setup: str,
 ) -> None:
     executable = project_dir / "Plot" / "Condor" / "run_dataVmc_condor_job.sh"
     log_dir = condor_dir / "logs"
@@ -137,6 +156,12 @@ def write_submit_file(
         environment_parts.append(f"MAX_EVENTS={max_events}")
     if localize_conda_env:
         environment_parts.append(f"LOCALIZE_CONDA_ENV={localize_conda_env}")
+    if setup_conda_env:
+        environment_parts.append(f"SETUP_CONDA_ENV={setup_conda_env}")
+    if conda_env_name:
+        environment_parts.append(f"CONDA_ENV_NAME={conda_env_name}")
+    if anaconda_setup:
+        environment_parts.append(f"ANACONDA_SETUP={anaconda_setup}")
     environment = " ".join(environment_parts)
 
     content = f"""universe = vanilla
@@ -184,6 +209,9 @@ def main() -> int:
         job_flavour=args.job_flavour,
         max_events=str(args.max_events).strip(),
         localize_conda_env=str(args.localize_conda_env).strip(),
+        setup_conda_env=str(args.setup_conda_env).strip(),
+        conda_env_name=str(args.conda_env_name).strip(),
+        anaconda_setup=str(args.anaconda_setup).strip(),
     )
 
     print(f"Wrote {len(jobs)} jobs to {jobs_file}")
