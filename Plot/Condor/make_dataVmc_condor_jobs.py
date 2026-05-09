@@ -77,6 +77,11 @@ def parse_args() -> argparse.Namespace:
         help="Condor request_memory value",
     )
     parser.add_argument(
+        "--request-disk",
+        default="10000MB",
+        help="Condor request_disk value; needed when localizing the conda env to worker scratch",
+    )
+    parser.add_argument(
         "--job-flavour",
         default="workday",
         help="CERN HTCondor +JobFlavour value",
@@ -85,6 +90,12 @@ def parse_args() -> argparse.Namespace:
         "--max-events",
         default="",
         help="optional MAX_EVENTS value passed to each job",
+    )
+    parser.add_argument(
+        "--localize-conda-env",
+        default="auto",
+        choices=("auto", "1", "0"),
+        help="copy EOS conda env to worker scratch before running; auto localizes only when CONDA_PREFIX is under /eos",
     )
     parser.add_argument(
         "--submit",
@@ -114,14 +125,18 @@ def write_submit_file(
     condor_dir: Path,
     jobs_file: Path,
     request_memory: str,
+    request_disk: str,
     job_flavour: str,
     max_events: str,
+    localize_conda_env: str,
 ) -> None:
     executable = project_dir / "Plot" / "Condor" / "run_dataVmc_condor_job.sh"
     log_dir = condor_dir / "logs"
     environment_parts = [f"PROJECT_DIR={project_dir}"]
     if max_events:
         environment_parts.append(f"MAX_EVENTS={max_events}")
+    if localize_conda_env:
+        environment_parts.append(f"LOCALIZE_CONDA_ENV={localize_conda_env}")
     environment = " ".join(environment_parts)
 
     content = f"""universe = vanilla
@@ -133,6 +148,7 @@ should_transfer_files = NO
 
 request_cpus = 1
 request_memory = {request_memory}
+request_disk = {request_disk}
 +JobFlavour = "{job_flavour}"
 
 environment = "{environment}"
@@ -164,8 +180,10 @@ def main() -> int:
         condor_dir=condor_dir,
         jobs_file=jobs_file,
         request_memory=args.request_memory,
+        request_disk=args.request_disk,
         job_flavour=args.job_flavour,
         max_events=str(args.max_events).strip(),
+        localize_conda_env=str(args.localize_conda_env).strip(),
     )
 
     print(f"Wrote {len(jobs)} jobs to {jobs_file}")
