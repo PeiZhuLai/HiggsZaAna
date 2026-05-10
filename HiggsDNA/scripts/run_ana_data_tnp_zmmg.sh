@@ -15,10 +15,10 @@ export PYTHONPATH="${repo_dir}"
 
 outdir="/eos/home-p/pelai/HZa/parquet_tnp_zmmg_tmp/data"
 fpo="${FPO:-5}"
-unretire_jobs="${UNRETIRE_JOBS:-1}" # 1 re-run unfinished jobs # 0 no re-run
+unretire_jobs="${UNRETIRE_JOBS:-0}" # 1 re-run unfinished jobs # 0 no re-run
 retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all jobs finished
 reconfigure_jobs="${RECONFIGURE_JOBS:-1}"
-merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
+merge_outputs="${MERGE_OUTPUTS:-1}" # 1 merge # 0 no merge
 condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-1}"
 condor_q_timeout="${CONDOR_Q_TIMEOUT:-60}"
 
