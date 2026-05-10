@@ -18,11 +18,12 @@ variablesDir="${outputDir}/variables_dataVmc"
 sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json'
 export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 
+# 0: Full Region, 1: Signal Region, 2: Contral Region
 # ## ALP Optimization 2 categories
-# RUN_OPTIMIZATION=1 bash /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/1_runPlot.sh
+# python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
 
 # ## ALP Optimization 1 category
-# python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
+# python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
 
 # # Signal efficinecy after MVA cut
 # python3 $scriptsDir/collect_MVAcut_points_run3.py
