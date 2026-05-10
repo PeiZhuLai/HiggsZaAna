@@ -19,6 +19,8 @@ ROOT_DTYPE_OVERRIDES = {
 # and numeric rather than matching one exact C++ primitive type.
 HISTUTILS_FORMULA_COLUMNS = (
     "totWeight",
+    "totWeight_puUp",
+    "totWeight_puDown",
     "ph_passElectronVeto",
     "ph_r9",
     "ph_et",
@@ -35,6 +37,12 @@ EVENT_SOURCE_COLUMNS = [
     "event",
     "luminosityBlock",
     "weight_central",
+    "weight_pu_reweight_sf_central",
+    "weight_pu_reweight_sf_up",
+    "weight_pu_reweight_sf_down",
+    "pu_reweight_sf_central",
+    "pu_reweight_sf_up",
+    "pu_reweight_sf_down",
     "fixedGridRhoAll",
     "rho",
     "PV",
@@ -126,6 +134,12 @@ OPTIONAL_SOURCE_COLUMNS = {
     "PV_z",
     "dZ",
     "probe_photon_genPartFlav",
+    "weight_pu_reweight_sf_central",
+    "weight_pu_reweight_sf_up",
+    "weight_pu_reweight_sf_down",
+    "pu_reweight_sf_central",
+    "pu_reweight_sf_up",
+    "pu_reweight_sf_down",
 }
 
 
@@ -202,6 +216,22 @@ def build_egm_compatible_dataframe(data, keep_all):
     rho = first_existing_series(data, ["rho", "fixedGridRhoAll"], 0.0)
     pv = first_existing_series(data, ["PV", "PV_z"], np.nan)
     weight = source_series(data, "weight_central", 1.0)
+    pu_weight_central = first_existing_series(
+        data, ["weight_pu_reweight_sf_central", "pu_reweight_sf_central"], 1.0
+    )
+    pu_weight_up = first_existing_series(
+        data, ["weight_pu_reweight_sf_up", "pu_reweight_sf_up"], pu_weight_central
+    )
+    pu_weight_down = first_existing_series(
+        data, ["weight_pu_reweight_sf_down", "pu_reweight_sf_down"], pu_weight_central
+    )
+    pu_weight_central_nonzero = pu_weight_central.where(pu_weight_central != 0, 1.0)
+    pu_weight_up_ratio = (pu_weight_up / pu_weight_central_nonzero).where(
+        pu_weight_central != 0, 1.0
+    )
+    pu_weight_down_ratio = (pu_weight_down / pu_weight_central_nonzero).where(
+        pu_weight_central != 0, 1.0
+    )
     tag_pt = source_series(data, "dimuon_pt", np.nan)
     tag_eta = source_series(data, "dimuon_eta", np.nan)
     tag_phi = source_series(data, "dimuon_phi", np.nan)
@@ -219,6 +249,11 @@ def build_egm_compatible_dataframe(data, keep_all):
     alias_series(output, "weight_central", weight)
     alias_series(output, "weight", weight)
     alias_series(output, "totWeight", weight)
+    alias_series(output, "weight_pu_reweight_sf_central", pu_weight_central)
+    alias_series(output, "weight_pu_reweight_sf_up", pu_weight_up)
+    alias_series(output, "weight_pu_reweight_sf_down", pu_weight_down)
+    alias_series(output, "totWeight_puUp", weight * pu_weight_up_ratio)
+    alias_series(output, "totWeight_puDown", weight * pu_weight_down_ratio)
     alias_series(output, "fixedGridRhoAll", source_series(data, "fixedGridRhoAll", rho))
     alias_series(output, "rho", rho)
     alias_series(output, "event_rho", rho)
