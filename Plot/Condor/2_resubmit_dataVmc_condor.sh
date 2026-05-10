@@ -16,6 +16,8 @@ missing_list="${script_dir}/dataVmc_missing_outputs.txt"
 
 DRY_RUN="${DRY_RUN:-0}"
 REMAKE_JOBS="${REMAKE_JOBS:-1}"
+CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 region_suffix() {
     local region_key="$1"
@@ -38,6 +40,47 @@ expected_output() {
 
     suffix="$(region_suffix "$region_key")"
     echo "${VARIABLES_DIR}/ALP_plot_run3_${suffix}_${final_tag}_part_${sample_tag}.root"
+}
+
+output_problem() {
+    local path="$1"
+
+    if [[ ! -e "$path" ]]; then
+        echo "missing"
+        return 0
+    fi
+
+    if [[ ! -s "$path" ]]; then
+        echo "empty"
+        return 0
+    fi
+
+    if [[ "$CHECK_ROOT_KEYS" != "1" ]]; then
+        return 1
+    fi
+
+    if "$PYTHON_BIN" - "$path" <<'PY' >/dev/null 2>&1; then
+import sys
+
+try:
+    import ROOT
+except Exception:
+    sys.exit(2)
+
+path = sys.argv[1]
+ROOT.gROOT.SetBatch(True)
+root_file = ROOT.TFile.Open(path, "READ")
+if not root_file or root_file.IsZombie():
+    sys.exit(1)
+
+keys = root_file.GetListOfKeys()
+sys.exit(0 if keys and keys.GetEntries() > 0 else 1)
+PY
+        return 1
+    fi
+
+    echo "no_root_keys_or_unreadable"
+    return 0
 }
 
 if [[ "$REMAKE_JOBS" == "1" || ! -s "$submit_file" || ! -s "$jobs_file" ]]; then
@@ -76,10 +119,10 @@ while read -r region_key final_tag sample_tag samples extra; do
     total_jobs=$((total_jobs + 1))
     output_path="$(expected_output "$region_key" "$final_tag" "$sample_tag")"
 
-    if [[ ! -s "$output_path" ]]; then
+    if problem="$(output_problem "$output_path")"; then
         missing_jobs=$((missing_jobs + 1))
         printf "%s %s %s %s\n" "$region_key" "$final_tag" "$sample_tag" "$samples" >> "$resubmit_jobs_file"
-        printf "%s %s %s %s -> %s\n" "$region_key" "$final_tag" "$sample_tag" "$samples" "$output_path" >> "$missing_list"
+        printf "%s %s %s %s -> %s (%s)\n" "$region_key" "$final_tag" "$sample_tag" "$samples" "$output_path" "$problem" >> "$missing_list"
     fi
 done < "$jobs_file"
 
