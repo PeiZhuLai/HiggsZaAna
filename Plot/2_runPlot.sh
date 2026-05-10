@@ -18,6 +18,10 @@ variablesDir="${outputDir}/variables_dataVmc"
 sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json'
 export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 
+RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
+logDir="${outputDir}/logs_split"
+mkdir -p "$logDir"
+
 # 0: Full Region, 1: Signal Region, 2: Contral Region
 # ## ALP Optimization 2 categories
 # python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
@@ -80,6 +84,43 @@ export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot
 # ### fast variable plot
 # python3 $scriptsDir/plot_fast_variable_dataVmc.py -y run3 -m --ln -b --skip-sys &
 # wait
+
+draw_plot_output() {
+    local region_key="$1"
+    local final_tag="$2"
+    local log_file="${logDir}/draw_${final_tag}_${region_key}.log"
+    local cmd=(python3 "$scriptsDir/2_plot_dataVmc.py" -y run3 -m --ln --inputTag "$final_tag" --outputTag "$final_tag")
+
+    case "$region_key" in
+        SR)  cmd+=(--region 1) ;;
+        CR)  cmd+=(--region 2) ;;
+        mva) cmd+=(-b) ;;
+        *)
+            echo "[ERROR] Unknown region key: $region_key" >&2
+            return 1
+            ;;
+    esac
+
+    {
+        echo "[START] $(date '+%F %T') draw tag=${final_tag} region=${region_key}"
+        printf '[CMD]'
+        printf ' %q' "${cmd[@]}"
+        echo
+    } > "$log_file"
+
+    "${cmd[@]}" >> "$log_file" 2>&1
+    echo "[DONE] $(date '+%F %T')" >> "$log_file"
+}
+
+if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
+    for finalTag in nominal sideband_rwgt; do
+        for regionKey in SR CR mva; do
+            draw_plot_output "$regionKey" "$finalTag"
+        done
+    done
+else
+    echo "[Info] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS; skip 2_plot_dataVmc.py"
+fi
 
 
 ###########################################################################################
