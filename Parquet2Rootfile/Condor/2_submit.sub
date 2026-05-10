@@ -16,14 +16,13 @@ stream_error    = False
 universe        = vanilla
 request_cpus    = 1
 request_memory  = 2GB
-request_disk    = 2GB
+request_disk    = 20000MB
 +JobFlavour     = "workday"
 +JobBatchName   = "p2root_MVAScore"
 nice_user       = True
 
-# EOS can be slow to serve shared libraries from the conda env.
-# These values are consumed by run_parquet2root.sh.
-environment     = "ENV_MAX_RETRY=8 ENV_RETRY_SLEEP=90 EOS_WARMUP_SLEEP=60"
+# Reuse the conda tarball built by Plot/Condor; do not create a second env_cache here.
+environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
 
 # 用新的参数名（避开 INPUT/OUTPUT/IN/OUT）
 arguments       = $(ARG_IN) $(ARG_OUT) $(ARG_CORR) $(ARG_SPLIT)
