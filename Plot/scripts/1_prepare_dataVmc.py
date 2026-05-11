@@ -45,7 +45,8 @@ parser.add_argument('--ele', dest='ele', action='store_true', default=False, hel
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
 parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', action='store_true', default=False, help='use sideband-reweighted background weights')
 parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
-parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', default=True, help='do not add sideband reweight uncertainty to the MC error band')
+parser.add_argument('--sidebandReweightUnc', dest='sideband_reweight_unc', action='store_true', default=False, help='add sideband reweight uncertainty to the MC error band')
+parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', help=argparse.SUPPRESS)
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
 parser.add_argument('--samples', dest='samples', default=None, help='comma-separated sample names to run; aliases: all, data, bkg, sig')
 parser.add_argument('--histOnly', dest='hist_only', action='store_true', default=False, help='write raw_plots/sys_dir only; skip stack and PDF drawing')
@@ -101,6 +102,8 @@ if args.use_sideband_reweight:
         print("[SidebandReweight] Loaded JSON:", SIDEBAND_REWEIGHTER.source_path)
     else:
         print("[SidebandReweight] JSON not found; will use ROOT weight_sideband_rwgt branch when available.")
+    if not args.sideband_reweight_unc:
+        print("[SidebandReweight] Reweight uncertainty is disabled. Use --sidebandReweightUnc to enable it.")
 
 def _lookup_sideband_factor(value, edges, factors):
     try:
@@ -689,22 +692,15 @@ def main():
                 if abs(ntup.z_ee) == 1: 
                     continue
             
-
-            # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
-            weight = get_event_weight(ntup, sample, analyzer_cfg, row_index=iEvt)
-            sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
-                ntup,
-                sample,
-                analyzer_cfg,
-                weight,
-                row_index=iEvt,
-            )
-
             if (ntup.H_m > -90):
                 if ntup.H_m>180. or ntup.H_m<95.: continue
 
                 if  args.region == 1 and (ntup.H_m>135. or ntup.H_m<115.): continue
                 if  args.region == 2 and (ntup.H_m<135. and ntup.H_m>115.): continue
+
+                # weight = ntup.factor * ntup.pho1SFs * ntup.pho2SFs
+                weight = get_event_weight(ntup, sample, analyzer_cfg, row_index=iEvt)
+                sideband_rwgt_sys_weights = {}
 
                 MVA_value = {}
                 if args.mva:
@@ -818,7 +814,15 @@ def main():
                 var_map.update(param_val)
 
                 histos['param'][sample].Fill( param_val['param'], weight )
-                    
+
+                if args.sideband_reweight_unc:
+                    sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
+                        ntup,
+                        sample,
+                        analyzer_cfg,
+                        weight,
+                        row_index=iEvt,
+                    )
 
                 for sys_name in analyzer_cfg.sys_names:
                     if sample != "Data": 
