@@ -87,7 +87,12 @@ if [[ "$REMAKE_JOBS" == "1" || ! -s "$submit_file" || ! -s "$jobs_file" ]]; then
     if [[ "${SKIP_ENV_PACK:-0}" != "1" ]]; then
         "$script_dir/pack_conda_env_for_condor.sh"
     fi
-    python3 "$script_dir/make_dataVmc_condor_jobs.py" --condor-dir "$script_dir"
+    make_jobs_args=()
+    if [[ -n "${DATA_VMC_MAKE_JOBS_ARGS:-}" ]]; then
+        # shellcheck disable=SC2206
+        make_jobs_args=(${DATA_VMC_MAKE_JOBS_ARGS})
+    fi
+    python3 "$script_dir/make_dataVmc_condor_jobs.py" --condor-dir "$script_dir" "${make_jobs_args[@]}"
 fi
 
 if [[ ! -s "$submit_file" ]]; then

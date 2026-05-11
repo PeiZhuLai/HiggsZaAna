@@ -6,6 +6,8 @@ import sys
 import numpy as np
 import gc
 import time  # NEW
+import errno
+import shutil
 
 sys.path.insert(0, '%s/lib' % os.getcwd())
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -429,6 +431,27 @@ def _resolve_mva_branch_for_mass(chain, mass_tag):
             return name
     return "MVA_Score"
 
+def _validate_and_publish_output(out_file, tmp_output_path, final_output_path):
+    out_file.Close()
+
+    check_file = TFile.Open(tmp_output_path, "READ")
+    if not check_file or check_file.IsZombie():
+        raise RuntimeError("[Output][ERROR] temporary ROOT file is unreadable: %s" % tmp_output_path)
+
+    keys = check_file.GetListOfKeys()
+    n_keys = keys.GetEntries() if keys else 0
+    check_file.Close()
+    if n_keys <= 0:
+        raise RuntimeError("[Output][ERROR] temporary ROOT file has no keys: %s" % tmp_output_path)
+
+    try:
+        os.replace(tmp_output_path, final_output_path)
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+        shutil.move(tmp_output_path, final_output_path)
+    print("[Output] Published ROOT file: %s (%d top-level keys)" % (final_output_path, n_keys))
+
 
 def main():
     start_time = time.time()  # NEW
@@ -462,7 +485,22 @@ def main():
     if not os.path.exists(analyzer_cfg.plot_output_path):
         os.makedirs(analyzer_cfg.plot_output_path)
 
-    out_file = TFile( analyzer_cfg.out_dir + '/' + analyzer_cfg.root_output_name , "RECREATE")
+    final_output_path = os.path.join(analyzer_cfg.out_dir, analyzer_cfg.root_output_name)
+    tmp_output_dir = os.environ.get("ALP_OUTPUT_TMP_DIR", analyzer_cfg.out_dir)
+    if not os.path.exists(tmp_output_dir):
+        os.makedirs(tmp_output_dir)
+    tmp_output_path = os.path.join(
+        tmp_output_dir,
+        ".%s.%d.tmp" % (analyzer_cfg.root_output_name, os.getpid()),
+    )
+    if os.path.exists(tmp_output_path):
+        os.remove(tmp_output_path)
+
+    print("[Output] Writing temporary ROOT file: %s" % tmp_output_path)
+    print("[Output] Final ROOT file: %s" % final_output_path)
+    out_file = TFile(tmp_output_path, "RECREATE")
+    if not out_file or out_file.IsZombie():
+        raise RuntimeError("[Output][ERROR] cannot create temporary ROOT file: %s" % tmp_output_path)
     # model = pickle.load(open(analyzer_cfg.BDT_filename, 'rb'))
 
     
@@ -881,7 +919,7 @@ def main():
                 histos_sys[var_name][sample][sys].Write()
 
     if args.hist_only:
-        out_file.Close()
+        _validate_and_publish_output(out_file, tmp_output_path, final_output_path)
         elapsed = time.time() - start_time
         print("[histOnly] Wrote raw_plots/sys_dir only; skipped stack/PDF drawing.")
         print(f"Total runtime: {time.strftime('%H:%M:%S', time.gmtime(elapsed))}")
@@ -1009,7 +1047,7 @@ def main():
     
     print('\n\n')
     #CountYield(analyzer_cfg, histos['ALP_m'])
-    out_file.Close()
+    _validate_and_publish_output(out_file, tmp_output_path, final_output_path)
 
     elapsed = time.time() - start_time  # NEW
     print(f"Total runtime: {time.strftime('%H:%M:%S', time.gmtime(elapsed))}")  # NEW
