@@ -15,9 +15,12 @@ resubmit_jobs_file="${script_dir}/dataVmc_resubmit_jobs.txt"
 missing_list="${script_dir}/dataVmc_missing_outputs.txt"
 
 DRY_RUN="${DRY_RUN:-0}"
-REMAKE_JOBS="${REMAKE_JOBS:-1}"
+REMAKE_JOBS="${REMAKE_JOBS:-0}"
 CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+RESUBMIT_REQUEST_MEMORY="${RESUBMIT_REQUEST_MEMORY:-}"
+RESUBMIT_REQUEST_DISK="${RESUBMIT_REQUEST_DISK:-}"
+RESUBMIT_JOB_FLAVOUR="${RESUBMIT_JOB_FLAVOUR:-}"
 
 region_suffix() {
     local region_key="$1"
@@ -84,6 +87,7 @@ PY
 }
 
 if [[ "$REMAKE_JOBS" == "1" || ! -s "$submit_file" || ! -s "$jobs_file" ]]; then
+    echo "[Info] Regenerating $submit_file and $jobs_file"
     if [[ "${SKIP_ENV_PACK:-0}" != "1" ]]; then
         "$script_dir/pack_conda_env_for_condor.sh"
     fi
@@ -93,6 +97,9 @@ if [[ "$REMAKE_JOBS" == "1" || ! -s "$submit_file" || ! -s "$jobs_file" ]]; then
         make_jobs_args=(${DATA_VMC_MAKE_JOBS_ARGS})
     fi
     python3 "$script_dir/make_dataVmc_condor_jobs.py" --condor-dir "$script_dir" "${make_jobs_args[@]}"
+else
+    echo "[Info] Reusing existing submit template: $submit_file"
+    echo "[Info] Reusing existing job list: $jobs_file"
 fi
 
 if [[ ! -s "$submit_file" ]]; then
@@ -151,7 +158,32 @@ awk -v jobs_file="$resubmit_jobs_file" '
     { print }
 ' "$submit_file" > "$resubmit_file"
 
+if [[ -n "$RESUBMIT_REQUEST_MEMORY" ]]; then
+    awk -v value="$RESUBMIT_REQUEST_MEMORY" '
+        /^request_memory[[:space:]]*=/ { print "request_memory = " value; next }
+        { print }
+    ' "$resubmit_file" > "${resubmit_file}.tmp"
+    mv "${resubmit_file}.tmp" "$resubmit_file"
+fi
+
+if [[ -n "$RESUBMIT_REQUEST_DISK" ]]; then
+    awk -v value="$RESUBMIT_REQUEST_DISK" '
+        /^request_disk[[:space:]]*=/ { print "request_disk = " value; next }
+        { print }
+    ' "$resubmit_file" > "${resubmit_file}.tmp"
+    mv "${resubmit_file}.tmp" "$resubmit_file"
+fi
+
+if [[ -n "$RESUBMIT_JOB_FLAVOUR" ]]; then
+    awk -v value="$RESUBMIT_JOB_FLAVOUR" '
+        /^\+JobFlavour[[:space:]]*=/ { print "+JobFlavour = \"" value "\""; next }
+        { print }
+    ' "$resubmit_file" > "${resubmit_file}.tmp"
+    mv "${resubmit_file}.tmp" "$resubmit_file"
+fi
+
 echo "[Info] Resubmit file: $resubmit_file"
+grep -E '^(request_memory|request_disk|\+JobFlavour)[[:space:]]*=' "$resubmit_file"
 
 if [[ "$DRY_RUN" == "1" ]]; then
     echo "[DryRun] Missing jobs that would be resubmitted:"
