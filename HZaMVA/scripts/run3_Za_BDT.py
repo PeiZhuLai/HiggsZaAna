@@ -90,8 +90,8 @@ def add_cms_preliminary_matplotlib(fig):
 
     # Many plots below use top=0.94-0.97, leaving no room for a figure-level
     # CMS label.  Reserve a consistent top band before saving.
-    if fig.subplotpars.top > 0.86:
-        fig.subplots_adjust(top=0.86)
+    if fig.subplotpars.top > 0.90:
+        fig.subplots_adjust(top=0.90)
 
     fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
     fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
@@ -831,7 +831,7 @@ else:
 # n=5, timeout=300 is enough
 # xgb_study.optimize(objective, n_trials=5, timeout=300)
 # nTrain
-# xgb_study.optimize(objective, n_trials=20, timeout=5000)
+xgb_study.optimize(objective, n_trials=20, timeout=5000)
 
 # --- replace .show() with PDF export ---
 fig = optuna.visualization.plot_pareto_front(
@@ -1384,7 +1384,7 @@ def draw_dataMC(var_name, nbins = 50,range_hl=(0,1)):
     plt.legend()
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
-    plt.title('Stacked Weighted Histogram of Mass by Truth')
+    # plt.title('Stacked Weighted Histogram of Mass by Truth')
     plt.subplots_adjust(left=0.15, right=0.96, top=0.94, bottom=0.1)
     savefig_and_show(f"weight_check_{var_name}_full_run3.pdf")
 
@@ -1802,7 +1802,7 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_n
     plt.legend()
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
-    plt.title('Stacked Weighted Histogram of Mass by Truth')
+    # plt.title('Stacked Weighted Histogram of Mass by Truth')
     if output_name is not None:
         savefig_and_show(output_name)
 
@@ -1826,7 +1826,7 @@ def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_n
     plt.legend()
     plt.xlabel(var_name)
     plt.ylabel('Weighted Frequency')
-    plt.title('Stacked Weighted Histogram of Mass by Truth')
+    # plt.title('Stacked Weighted Histogram of Mass by Truth')
     if output_name is not None:
         savefig_and_show(output_name)
 
@@ -1995,7 +1995,7 @@ plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label
 plt.legend()
 plt.xlabel("Discriminator")
 plt.ylabel('Weighted Frequency')
-plt.title('Stacked Weighted Histogram of Mass by Truth')
+# plt.title('Stacked Weighted Histogram of Mass by Truth')
 plt.yscale('log')
 savefig_and_show("disc_transfer_hist_log.pdf")
 
@@ -2031,7 +2031,7 @@ for i in range(n_bdt_bin):
 plt.legend()
 plt.xlabel("H_mass")
 plt.ylabel('Weighted Frequency')
-plt.title('Stacked Weighted Histogram of Mass by Truth')
+# plt.title('Stacked Weighted Histogram of Mass by Truth')
 plt.xlim(range_hl)
 
 savefig_and_show("bkg_mass_shapes_by_bdt.pdf")
