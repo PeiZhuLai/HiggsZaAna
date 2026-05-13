@@ -25,10 +25,10 @@ sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/
 export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 
 MAX_PLOT_JOBS="${MAX_PLOT_JOBS:-6}"
-RUN_PREPARE_DATAVMC="${RUN_PREPARE_DATAVMC:-1}"
-RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
-RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
+RUN_PREPARE_DATAVMC="${RUN_PREPARE_DATAVMC:-0}"
+RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-0}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
+RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
 MAX_EVENTS="${MAX_EVENTS:-}"
 logDir="${outputDir}/logs_split"
 mkdir -p "$logDir" "$variablesDir"
