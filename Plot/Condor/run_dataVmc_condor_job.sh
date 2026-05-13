@@ -161,6 +161,7 @@ cmd=(
     --ln
     --histOnly
     --skipSystematics
+    --optimizeBranches
     --samples "$samples"
     --outputTag "$partial_tag"
 )

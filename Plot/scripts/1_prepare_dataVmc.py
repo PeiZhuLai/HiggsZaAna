@@ -51,6 +51,7 @@ parser.add_argument('--outputTag', dest='output_tag', default=None, help='append
 parser.add_argument('--samples', dest='samples', default=None, help='comma-separated sample names to run; aliases: all, data, bkg, sig')
 parser.add_argument('--histOnly', dest='hist_only', action='store_true', default=False, help='write raw_plots/sys_dir only; skip stack and PDF drawing')
 parser.add_argument('--skipSystematics', dest='skip_systematics', action='store_true', default=False, help='write nominal histograms and copy them into sys_dir instead of filling per-event systematic variations')
+parser.add_argument('--optimizeBranches', dest='optimize_branches', action='store_true', default=False, help='disable unused TTree branches before the event loop')
 parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
@@ -456,6 +457,95 @@ def _validate_and_publish_output(out_file, tmp_output_path, final_output_path):
         shutil.move(tmp_output_path, final_output_path)
     print("[Output] Published ROOT file: %s (%d top-level keys)" % (final_output_path, n_keys))
 
+def _systematic_branch_names():
+    suffix_groups = (
+        "weight_hlt_sf",
+        "weight_pu_reweight_sf",
+        "weight_electron_wplid_sf_SelectedElectron",
+        "weight_electron_reco_sf_SelectedElectron",
+        "weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron",
+        "weight_muon_looseid_sf_SelectedMuon",
+        "weight_muon_reco_sf_SelectedMuon",
+        "weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon",
+        "weight_photon_id_sf_SelectedPhoton",
+        "weight_photon_csev_sf_SelectedPhoton",
+    )
+    names = []
+    for base in suffix_groups:
+        names.extend((base + "_central", base + "_up", base + "_down"))
+    return names
+
+def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
+    if not chain:
+        return
+
+    needed = {
+        "weight",
+        "H_m",
+        "Z_mass",
+        "ALP_m",
+        "H_pt",
+        "pho1Pt",
+        "ALP_lead_photon_pt",
+        "ALP_lead_photon_eta",
+        "ALP_lead_photon_phi",
+        "ALP_lead_photon_r9",
+        "ALP_lead_photon_sieie",
+        "ALP_lead_photon_ecalPFClusterIso",
+        "ALP_lead_photon_chiso",
+        "ALP_lead_photon_hcalPFClusterIso",
+        "ALP_lead_photon_hoe_PUcorr",
+        "ALP_sublead_photon_pt",
+        "ALP_sublead_photon_eta",
+        "ALP_sublead_photon_phi",
+        "ALP_sublead_photon_r9",
+        "ALP_sublead_photon_sieie",
+        "ALP_sublead_photon_ecalPFClusterIso",
+        "ALP_sublead_photon_chiso",
+        "ALP_sublead_photon_hcalPFClusterIso",
+        "ALP_sublead_photon_hoe_PUcorr",
+        "ALP_calculatedPhotonIso",
+        "var_dR_Za",
+        "var_dR_g1g2",
+        "var_dR_g1Z",
+        "var_PtaOverMh",
+        "var_PtaOverMa",
+        "var_Pta",
+        "var_MhMa",
+        "var_MhMZ",
+    }
+
+    if args.ele:
+        needed.add("z_mumu")
+    if args.mu:
+        needed.add("z_ee")
+    if args.mva:
+        needed.update(branch for branch in mva_branches if branch)
+    if args.use_sideband_reweight and is_background_sample(sample, analyzer_cfg):
+        needed.update((
+            "weight_sideband_rwgt",
+            "event",
+            "param",
+            "H_mass",
+            "ALP_mass",
+            "pho1ECALIso",
+            "pho1PIso_noCorr",
+            "pho2ECALIso",
+            "pho2PIso_noCorr",
+        ))
+    if not args.skip_systematics and sample != "Data":
+        needed.update(_systematic_branch_names())
+
+    branch_list = chain.GetListOfBranches()
+    chain.SetBranchStatus("*", 0)
+    enabled = 0
+    for name in sorted(needed):
+        if branch_list and branch_list.FindObject(name):
+            chain.SetBranchStatus(name, 1)
+            enabled += 1
+
+    print("[Branches] sample=%s enabled %d/%d requested branches" % (sample, enabled, len(needed)))
+
 
 def main():
     start_time = time.time()  # NEW
@@ -599,6 +689,9 @@ def main():
                 mva_branch_map[s][ALP_mass] = br
                 print(f"[MVA] sample={s:>12s} mass={ALP_mass:>3s} uses branch '{br}'")
 
+    if args.optimize_branches:
+        for s in analyzer_cfg.samp_names:
+            _enable_used_branches(ntuples.get(s, None), s, analyzer_cfg, mva_branch_map.get(s, {}).values())
 
     ### declare histograms
 
@@ -669,7 +762,7 @@ def main():
 
     ### loop over samples and events
     mass_list = {'M1':1.0, 'M2':2.0, 'M3':3.0, 'M4':4.0, 'M5':5.0, 'M6':6.0, 'M7':7.0, 'M8':8.0, 'M9':9.0, 'M10':10.0, 'M15':15.0, 'M20':20.0, 'M25':25.0, 'M30':30.0}
-    search_mA_list = [float(m) for m in range(1, 31)] 
+    mass_values = list(mass_list.values())
     # 新增：控制每個 (sample, mA) 的偵錯輸出次數
     debug_printed = {}
 
@@ -755,18 +848,6 @@ def main():
                             histos['mvaVal_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa}
-                
-                if args.mva:
-                    var_map_mva = {}
-                    for ALP_mass in target_masses:
-                        var_map_mva['mvaVal_'+ALP_mass] = MVA_value[ALP_mass]
-                        var_map_mva['mvaVal_larger_'+ALP_mass] = MVA_value[ALP_mass]
-                        for r in ['1sigma', '1P5sigma', '2sigma', '3sigma']:
-                            var_map_mva['mvaVal_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
-                            var_map_mva['mvaVal_larger_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
-                    var_map.update(var_map_mva)
-
                 histos['pho1Pt'][sample].Fill( ntup.ALP_lead_photon_pt, weight )
                 histos['pho1eta'][sample].Fill( ntup.ALP_lead_photon_eta, weight )
                 histos['pho1phi'][sample].Fill( ntup.ALP_lead_photon_phi, weight )
@@ -807,17 +888,14 @@ def main():
                 histos['var_MhMZ'][sample].Fill( ntup.var_MhMZ, weight )
                 histos['ALP_calculatedPhotonIso'][sample].Fill( ntup.ALP_calculatedPhotonIso, weight )
 
-                param_val = {}
                 if sample in analyzer_cfg.sig_names:
-                    param_val['param'] = (ntup.ALP_m - mass_list[sample])/ntup.H_m
+                    param_val = (ntup.ALP_m - mass_list[sample])/ntup.H_m
                 else:
                     # mass_random = random.choice(search_mA_list)
-                    mass_random = random.choice(list(mass_list.values()))
-                    param_val['param'] = (ntup.ALP_m - mass_random)/ntup.H_m
-                
-                var_map.update(param_val)
+                    mass_random = random.choice(mass_values)
+                    param_val = (ntup.ALP_m - mass_random)/ntup.H_m
 
-                histos['param'][sample].Fill( param_val['param'], weight )
+                histos['param'][sample].Fill( param_val, weight )
 
                 if args.sideband_reweight_unc and not args.skip_systematics:
                     sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
@@ -829,6 +907,14 @@ def main():
                     )
 
                 if not args.skip_systematics:
+                    var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa, 'param':param_val}
+                    if args.mva:
+                        for ALP_mass in target_masses:
+                            var_map['mvaVal_'+ALP_mass] = MVA_value[ALP_mass]
+                            var_map['mvaVal_larger_'+ALP_mass] = MVA_value[ALP_mass]
+                            for r in ['1sigma', '1P5sigma', '2sigma', '3sigma']:
+                                var_map['mvaVal_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
+                                var_map['mvaVal_larger_'+r+'_'+ALP_mass] = MVA_value[ALP_mass]
                     for sys_name in analyzer_cfg.sys_names:
                         if sample != "Data":
                             if sys_name in sideband_rwgt_sys_weights:
