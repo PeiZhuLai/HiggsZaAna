@@ -95,6 +95,31 @@ def add_cms_preliminary_matplotlib(fig):
 
     fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
     fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    fig.text(
+        0.96,
+        0.955,
+        r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
+        fontsize=16,
+        ha="right",
+        va="top",
+    )
+    fig._cms_preliminary_added = True
+
+def add_cms_preliminary_corr_sig_bkg(fig):
+    if getattr(fig, "_cms_preliminary_added", False):
+        return
+    if fig.subplotpars.top > 0.88:
+        fig.subplots_adjust(top=0.88)
+    fig.text(0.11, 0.965, "CMS", fontsize=48, fontweight="bold", ha="left", va="top")
+    fig.text(0.165, 0.965, "Preliminary", fontsize=42, fontstyle="italic", ha="left", va="top")
+    fig.text(
+        0.96,
+        0.965,
+        r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
+        fontsize=42,
+        ha="right",
+        va="top",
+    )
     fig._cms_preliminary_added = True
 
 def add_cms_preliminary_plotly(fig):
@@ -106,6 +131,17 @@ def add_cms_preliminary_plotly(fig):
         text="<b>CMS</b> <i>Preliminary</i>",
         showarrow=False,
         xanchor="left",
+        yanchor="top",
+        font=dict(size=18, color="black"),
+    )
+    fig.add_annotation(
+        x=1.0,
+        y=1.08,
+        xref="paper",
+        yref="paper",
+        text="172.13 fb<sup>-1</sup> (13.6 TeV)",
+        showarrow=False,
+        xanchor="right",
         yanchor="top",
         font=dict(size=18, color="black"),
     )
@@ -128,7 +164,15 @@ def add_cms_preliminary_root(canvas):
     prelim.SetTextFont(52)
     prelim.SetTextSize(0.04)
     prelim_label = prelim.DrawLatex(0.30, 0.94, "Preliminary")
-    canvas._cms_preliminary_labels = (cms, prelim, cms_label, prelim_label)
+
+    lumi = rt.TLatex()
+    lumi.SetNDC()
+    lumi.SetTextColor(rt.kBlack)
+    lumi.SetTextFont(42)
+    lumi.SetTextSize(0.04)
+    lumi.SetTextAlign(31)
+    lumi_label = lumi.DrawLatex(0.95, 0.94, "172.13 fb^{-1} (13.6 TeV)")
+    canvas._cms_preliminary_labels = (cms, prelim, lumi, cms_label, prelim_label, lumi_label)
     canvas.Update()
 
 def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300, close: bool = True):
@@ -657,7 +701,8 @@ cbar2 = ax2.collections[0].colorbar
 if cbar2 is not None:
     cbar2.ax.tick_params(labelsize=36)
 
-f.subplots_adjust(left=0.11, right=1.01, top=0.95, bottom=0.13)
+f.subplots_adjust(left=0.11, right=1.01, top=0.88, bottom=0.13)
+add_cms_preliminary_corr_sig_bkg(f)
 savefig_and_show("corr_Sig_Bkg.pdf")
 
 

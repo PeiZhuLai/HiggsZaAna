@@ -16,6 +16,14 @@ def add_cms_preliminary_matplotlib(fig):
         return
     fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
     fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    fig.text(
+        0.96,
+        0.955,
+        r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
+        fontsize=16,
+        ha="right",
+        va="top",
+    )
     fig._cms_preliminary_added = True
 
 
