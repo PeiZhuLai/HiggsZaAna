@@ -10,6 +10,7 @@ LOG_DIR="${OUTPUT_DIR}/logs_split"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
+RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
 CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
 
 sample_tags=(
@@ -140,30 +141,34 @@ draw_plot_output() {
     echo "[DONE] $(date '+%F %T')" >> "$log_file"
 }
 
-merge_pids=()
-merge_labels=()
+if [[ "$RUN_MERGE_PLOTS" == "1" ]]; then
+    merge_pids=()
+    merge_labels=()
 
-for final_tag in nominal sideband_rwgt; do
-    for region_key in SR CR mva; do
-        echo "[submit hadd] tag=${final_tag} region=${region_key}"
-        merge_plot_output "$region_key" "$final_tag" &
-        merge_pids+=("$!")
-        merge_labels+=("${final_tag}/${region_key}")
+    for final_tag in nominal sideband_rwgt; do
+        for region_key in SR CR mva; do
+            echo "[submit hadd] tag=${final_tag} region=${region_key}"
+            merge_plot_output "$region_key" "$final_tag" &
+            merge_pids+=("$!")
+            merge_labels+=("${final_tag}/${region_key}")
+        done
     done
-done
 
-merge_status=0
-for i in "${!merge_pids[@]}"; do
-    if wait "${merge_pids[$i]}"; then
-        echo "[done hadd] ${merge_labels[$i]}"
-    else
-        echo "[ERROR] hadd failed: ${merge_labels[$i]}" >&2
-        merge_status=1
+    merge_status=0
+    for i in "${!merge_pids[@]}"; do
+        if wait "${merge_pids[$i]}"; then
+            echo "[done hadd] ${merge_labels[$i]}"
+        else
+            echo "[ERROR] hadd failed: ${merge_labels[$i]}" >&2
+            merge_status=1
+        fi
+    done
+
+    if [[ "$merge_status" != "0" ]]; then
+        exit "$merge_status"
     fi
-done
-
-if [[ "$merge_status" != "0" ]]; then
-    exit "$merge_status"
+else
+    echo "[Info] RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS; skip hadd merge"
 fi
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then

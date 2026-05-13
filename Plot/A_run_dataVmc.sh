@@ -25,6 +25,8 @@ sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/
 export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 
 MAX_PLOT_JOBS="${MAX_PLOT_JOBS:-6}"
+RUN_PREPARE_DATAVMC="${RUN_PREPARE_DATAVMC:-1}"
+RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 MAX_EVENTS="${MAX_EVENTS:-}"
@@ -99,70 +101,74 @@ run_plot_task() {
     echo "[DONE] $(date '+%F %T')" >> "$log_file"
 }
 
-activePids=()
-activeLabels=()
-plot_failed=0
+if [[ "$RUN_PREPARE_DATAVMC" == "1" ]]; then
+    activePids=()
+    activeLabels=()
+    plot_failed=0
 
-reap_finished_jobs() {
-    local running_pids
-    running_pids=" $(jobs -pr | tr '\n' ' ') "
-    local kept_pids=()
-    local kept_labels=()
-    local idx pid label
+    reap_finished_jobs() {
+        local running_pids
+        running_pids=" $(jobs -pr | tr '\n' ' ') "
+        local kept_pids=()
+        local kept_labels=()
+        local idx pid label
 
-    for idx in "${!activePids[@]}"; do
-        pid="${activePids[$idx]}"
-        label="${activeLabels[$idx]}"
-        if [[ "$running_pids" == *" ${pid} "* ]]; then
-            kept_pids+=("$pid")
-            kept_labels+=("$label")
-        else
-            if ! wait "$pid"; then
-                echo "[ERROR] Plot job failed: $label. Check logs in: $logDir" >&2
-                plot_failed=1
+        for idx in "${!activePids[@]}"; do
+            pid="${activePids[$idx]}"
+            label="${activeLabels[$idx]}"
+            if [[ "$running_pids" == *" ${pid} "* ]]; then
+                kept_pids+=("$pid")
+                kept_labels+=("$label")
+            else
+                if ! wait "$pid"; then
+                    echo "[ERROR] Plot job failed: $label. Check logs in: $logDir" >&2
+                    plot_failed=1
+                fi
             fi
-        fi
-    done
+        done
 
-    activePids=("${kept_pids[@]}")
-    activeLabels=("${kept_labels[@]}")
-}
+        activePids=("${kept_pids[@]}")
+        activeLabels=("${kept_labels[@]}")
+    }
 
-wait_for_plot_slot() {
-    while true; do
-        reap_finished_jobs
-        if [[ "${#activePids[@]}" -lt "$MAX_PLOT_JOBS" ]]; then
-            return 0
-        fi
-        sleep 10
-    done
-}
+    wait_for_plot_slot() {
+        while true; do
+            reap_finished_jobs
+            if [[ "${#activePids[@]}" -lt "$MAX_PLOT_JOBS" ]]; then
+                return 0
+            fi
+            sleep 10
+        done
+    }
 
-launch_plot_task() {
-    wait_for_plot_slot
-    run_plot_task "$@" &
-    activePids+=("$!")
-    activeLabels+=("tag=$2 region=$1 samples=$4")
-}
+    launch_plot_task() {
+        wait_for_plot_slot
+        run_plot_task "$@" &
+        activePids+=("$!")
+        activeLabels+=("tag=$2 region=$1 samples=$4")
+    }
 
-for finalTag in nominal sideband_rwgt; do
-    for regionKey in SR CR mva; do
-        for i in "${!sampleGroups[@]}"; do
-            launch_plot_task "$regionKey" "$finalTag" "${sampleTags[$i]}" "${sampleGroups[$i]}"
+    for finalTag in nominal sideband_rwgt; do
+        for regionKey in SR CR mva; do
+            for i in "${!sampleGroups[@]}"; do
+                launch_plot_task "$regionKey" "$finalTag" "${sampleTags[$i]}" "${sampleGroups[$i]}"
+            done
         done
     done
-done
 
-while [[ "${#activePids[@]}" -gt 0 ]]; do
-    reap_finished_jobs
-    if [[ "${#activePids[@]}" -gt 0 ]]; then
-        sleep 10
+    while [[ "${#activePids[@]}" -gt 0 ]]; do
+        reap_finished_jobs
+        if [[ "${#activePids[@]}" -gt 0 ]]; then
+            sleep 10
+        fi
+    done
+
+    if [[ "$plot_failed" -ne 0 ]]; then
+        echo "[ERROR] At least one plot job failed. Check logs in: $logDir" >&2
+        exit 1
     fi
-done
-
-if [[ "$plot_failed" -ne 0 ]]; then
-    echo "[ERROR] At least one plot job failed. Check logs in: $logDir" >&2
-    exit 1
+else
+    echo "[Info] RUN_PREPARE_DATAVMC=$RUN_PREPARE_DATAVMC; skip 1_prepare_dataVmc.py"
 fi
 
 merge_plot_output() {
@@ -186,11 +192,15 @@ merge_plot_output() {
     hadd -f "$target" "${inputs[@]}"
 }
 
-for finalTag in nominal sideband_rwgt; do
-    for regionKey in SR CR mva; do
-        merge_plot_output "$regionKey" "$finalTag"
+if [[ "$RUN_MERGE_PLOTS" == "1" ]]; then
+    for finalTag in nominal sideband_rwgt; do
+        for regionKey in SR CR mva; do
+            merge_plot_output "$regionKey" "$finalTag"
+        done
     done
-done
+else
+    echo "[Info] RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS; skip hadd merge"
+fi
 
 draw_plot_output() {
     local region_key="$1"
