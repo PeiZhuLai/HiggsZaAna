@@ -140,11 +140,31 @@ draw_plot_output() {
     echo "[DONE] $(date '+%F %T')" >> "$log_file"
 }
 
+merge_pids=()
+merge_labels=()
+
 for final_tag in nominal sideband_rwgt; do
     for region_key in SR CR mva; do
-        merge_plot_output "$region_key" "$final_tag"
+        echo "[submit hadd] tag=${final_tag} region=${region_key}"
+        merge_plot_output "$region_key" "$final_tag" &
+        merge_pids+=("$!")
+        merge_labels+=("${final_tag}/${region_key}")
     done
 done
+
+merge_status=0
+for i in "${!merge_pids[@]}"; do
+    if wait "${merge_pids[$i]}"; then
+        echo "[done hadd] ${merge_labels[$i]}"
+    else
+        echo "[ERROR] hadd failed: ${merge_labels[$i]}" >&2
+        merge_status=1
+    fi
+done
+
+if [[ "$merge_status" != "0" ]]; then
+    exit "$merge_status"
+fi
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
     for final_tag in nominal sideband_rwgt; do
