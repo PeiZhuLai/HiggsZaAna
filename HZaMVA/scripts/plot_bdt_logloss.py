@@ -14,8 +14,8 @@ MODEL_FILE = Path("./model_Za_BDT_run3.pkl")
 def add_cms_preliminary_matplotlib(fig):
     if getattr(fig, "_cms_preliminary_added", False):
         return
-    fig.text(0.17, 0.965, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
-    fig.text(0.255, 0.965, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
+    fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
     fig._cms_preliminary_added = True
 
 
@@ -80,7 +80,7 @@ def plot_loss_vs_n_estimators(model, pdf_name="loss_vs_nEstimators.pdf"):
     ax.xaxis.set_minor_locator(AutoMinorLocator(5))
     ax.yaxis.set_minor_locator(AutoMinorLocator(5))
     ax.tick_params(which='minor', direction='in', top=True, right=True, length=5)
-    fig.subplots_adjust(left=0.17, right=0.96, top=0.91, bottom=0.17)
+    fig.subplots_adjust(left=0.17, right=0.96, top=0.86, bottom=0.17)
     ax.set_xlabel('nEstimators', fontsize=20, labelpad=12)
     ax.set_ylabel('Log Loss', fontsize=20, labelpad=12)
     ax.legend(loc="upper right", fontsize=17, frameon=False)

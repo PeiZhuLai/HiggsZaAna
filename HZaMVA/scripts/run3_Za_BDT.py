@@ -87,8 +87,14 @@ def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
 def add_cms_preliminary_matplotlib(fig):
     if getattr(fig, "_cms_preliminary_added", False):
         return
-    fig.text(0.17, 0.965, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
-    fig.text(0.255, 0.965, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+
+    # Many plots below use top=0.94-0.97, leaving no room for a figure-level
+    # CMS label.  Reserve a consistent top band before saving.
+    if fig.subplotpars.top > 0.86:
+        fig.subplots_adjust(top=0.86)
+
+    fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
+    fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
     fig._cms_preliminary_added = True
 
 def add_cms_preliminary_plotly(fig):
