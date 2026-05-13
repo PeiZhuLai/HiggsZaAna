@@ -84,6 +84,12 @@ def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
     lineno = frame.f_back.f_lineno
     return f"{prefix}_L{lineno}.{ext}"
 
+def cms_lumi_positions(fig, cms_fontsize):
+    left = max(fig.subplotpars.left, 0.02)
+    right = min(fig.subplotpars.right, 0.98)
+    prelim_offset = 2.7 * cms_fontsize / 72.0 / fig.get_figwidth()
+    return left, min(left + prelim_offset, right - 0.20), right
+
 def add_cms_preliminary_matplotlib(fig):
     if getattr(fig, "_cms_preliminary_added", False):
         return
@@ -93,10 +99,11 @@ def add_cms_preliminary_matplotlib(fig):
     if fig.subplotpars.top > 0.90:
         fig.subplots_adjust(top=0.90)
 
-    fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
-    fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    cms_x, prelim_x, lumi_x = cms_lumi_positions(fig, 18)
+    fig.text(cms_x, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
+    fig.text(prelim_x, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
     fig.text(
-        0.96,
+        lumi_x,
         0.955,
         r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
         fontsize=16,
@@ -110,10 +117,11 @@ def add_cms_preliminary_corr_sig_bkg(fig):
         return
     if fig.subplotpars.top > 0.88:
         fig.subplots_adjust(top=0.88)
-    fig.text(0.11, 0.965, "CMS", fontsize=48, fontweight="bold", ha="left", va="top")
-    fig.text(0.165, 0.965, "Preliminary", fontsize=42, fontstyle="italic", ha="left", va="top")
+    cms_x, prelim_x, lumi_x = cms_lumi_positions(fig, 48)
+    fig.text(cms_x, 0.965, "CMS", fontsize=48, fontweight="bold", ha="left", va="top")
+    fig.text(prelim_x, 0.965, "Preliminary", fontsize=42, fontstyle="italic", ha="left", va="top")
     fig.text(
-        0.96,
+        lumi_x,
         0.965,
         r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
         fontsize=42,
@@ -151,19 +159,22 @@ def add_cms_preliminary_plotly(fig):
 
 def add_cms_preliminary_root(canvas):
     canvas.cd()
+    left = max(canvas.GetLeftMargin(), 0.02)
+    right = min(1.0 - canvas.GetRightMargin(), 0.98)
+
     cms = rt.TLatex()
     cms.SetNDC()
     cms.SetTextColor(rt.kBlack)
     cms.SetTextFont(61)
     cms.SetTextSize(0.045)
-    cms_label = cms.DrawLatex(0.18, 0.94, "CMS")
+    cms_label = cms.DrawLatex(left, 0.94, "CMS")
 
     prelim = rt.TLatex()
     prelim.SetNDC()
     prelim.SetTextColor(rt.kBlack)
     prelim.SetTextFont(52)
     prelim.SetTextSize(0.04)
-    prelim_label = prelim.DrawLatex(0.30, 0.94, "Preliminary")
+    prelim_label = prelim.DrawLatex(min(left + 0.12, right - 0.20), 0.94, "Preliminary")
 
     lumi = rt.TLatex()
     lumi.SetNDC()
@@ -171,7 +182,7 @@ def add_cms_preliminary_root(canvas):
     lumi.SetTextFont(42)
     lumi.SetTextSize(0.04)
     lumi.SetTextAlign(31)
-    lumi_label = lumi.DrawLatex(0.95, 0.94, "172.13 fb^{-1} (13.6 TeV)")
+    lumi_label = lumi.DrawLatex(right, 0.94, "172.13 fb^{-1} (13.6 TeV)")
     canvas._cms_preliminary_labels = (cms, prelim, lumi, cms_label, prelim_label, lumi_label)
     canvas.Update()
 

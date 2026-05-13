@@ -11,13 +11,21 @@ PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3
 MODEL_FILE = Path("./model_Za_BDT_run3.pkl")
 
 
+def cms_lumi_positions(fig, cms_fontsize):
+    left = max(fig.subplotpars.left, 0.02)
+    right = min(fig.subplotpars.right, 0.98)
+    prelim_offset = 2.7 * cms_fontsize / 72.0 / fig.get_figwidth()
+    return left, min(left + prelim_offset, right - 0.20), right
+
+
 def add_cms_preliminary_matplotlib(fig):
     if getattr(fig, "_cms_preliminary_added", False):
         return
-    fig.text(0.17, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
-    fig.text(0.255, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    cms_x, prelim_x, lumi_x = cms_lumi_positions(fig, 18)
+    fig.text(cms_x, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
+    fig.text(prelim_x, 0.955, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
     fig.text(
-        0.96,
+        lumi_x,
         0.955,
         r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
         fontsize=16,
