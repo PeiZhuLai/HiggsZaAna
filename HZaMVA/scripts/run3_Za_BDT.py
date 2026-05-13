@@ -762,8 +762,18 @@ def objective(trial):
 
 # Optimize hyperparameters for XGBoost
 study_name = "Za-study"
-storage_name = "sqlite:///{}.db".format(study_name)
-xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name, storage=storage_name, load_if_exists=True)
+storage_name = os.environ.get("ZA_OPTUNA_STORAGE")
+if storage_name:
+    print("Using Optuna storage:", storage_name)
+    xgb_study = optuna.create_study(
+        directions=['maximize', 'minimize'],
+        study_name=study_name,
+        storage=storage_name,
+        load_if_exists=True,
+    )
+else:
+    print("Using in-memory Optuna study. Set ZA_OPTUNA_STORAGE to persist trials.")
+    xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name)
 # n=5, timeout=300 is enough
 # xgb_study.optimize(objective, n_trials=5, timeout=300)
 # nTrain
