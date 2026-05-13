@@ -121,10 +121,28 @@ def add_cms_preliminary_corr_sig_bkg(fig):
     fig.text(cms_x, 0.965, "CMS", fontsize=48, fontweight="bold", ha="left", va="top")
     fig.text(prelim_x, 0.965, "Preliminary", fontsize=42, fontstyle="italic", ha="left", va="top")
     fig.text(
-        lumi_x,
+        lumi_x - 0.02,
         0.965,
         r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
         fontsize=42,
+        ha="right",
+        va="top",
+    )
+    fig._cms_preliminary_added = True
+
+def add_cms_preliminary_corr_single(fig):
+    if getattr(fig, "_cms_preliminary_added", False):
+        return
+    if fig.subplotpars.top > 0.88:
+        fig.subplots_adjust(top=0.88)
+    cms_x, prelim_x, lumi_x = cms_lumi_positions(fig, 36)
+    fig.text(cms_x, 0.965, "CMS", fontsize=36, fontweight="bold", ha="left", va="top")
+    fig.text(prelim_x, 0.965, "Preliminary", fontsize=32, fontstyle="italic", ha="left", va="top")
+    fig.text(
+        lumi_x,
+        0.965,
+        r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
+        fontsize=32,
         ha="right",
         va="top",
     )
@@ -258,6 +276,7 @@ def plot_loss_vs_n_estimators(model, pdf_name: str = "loss_vs_nEstimators.pdf"):
             ax.scatter(
                 [best_idx + 1],
                 [losses[best_idx]],
+                color=color,
                 s=45,
                 zorder=3,
             )
@@ -673,6 +692,7 @@ def draw_corr_heatmap(df, title, pdf_name):
     if cbar is not None:
         cbar.ax.tick_params(labelsize=29)
     fig.subplots_adjust(left=0.16, right=1.03, top=0.95, bottom=0.11)
+    add_cms_preliminary_corr_single(fig)
     savefig_and_show(pdf_name)
 
 draw_corr_heatmap(df_sig_all, "Signal", "corr_Sig.pdf")
