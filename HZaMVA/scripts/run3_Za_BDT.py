@@ -111,6 +111,69 @@ def save_optuna_fig_pdf(fig, pdf_name: str, *, show: bool = False):
     if show:
         fig.show()
 
+def plot_loss_vs_epoch(model, pdf_name: str = "loss_vs_epoch.pdf", title: str = "Loss vs. Epoch"):
+    """
+    Plot the XGBoost logloss saved during fit(eval_set=...).
+    """
+    try:
+        evals_result = model.evals_result()
+    except Exception as exc:
+        print("Skipping loss-vs-epoch plot: no eval history found ({})".format(exc))
+        return
+
+    if not evals_result:
+        print("Skipping loss-vs-epoch plot: empty eval history.")
+        return
+
+    dataset_labels = {
+        "validation_0": "Train",
+        "validation_1": "Test",
+    }
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plotted = False
+    best_points = []
+    for dataset_name, metrics in evals_result.items():
+        if "logloss" not in metrics:
+            continue
+
+        losses = np.asarray(metrics["logloss"], dtype=float)
+        epochs = np.arange(1, len(losses) + 1)
+        label = dataset_labels.get(dataset_name, dataset_name)
+        ax.plot(epochs, losses, linewidth=2.2, label=label)
+        plotted = True
+
+        if len(losses) > 0 and np.any(np.isfinite(losses)):
+            best_idx = int(np.nanargmin(losses))
+            best_points.append((label, best_idx + 1, losses[best_idx]))
+            ax.scatter(
+                [best_idx + 1],
+                [losses[best_idx]],
+                s=45,
+                zorder=3,
+            )
+
+    if not plotted:
+        print("Skipping loss-vs-epoch plot: logloss was not recorded.")
+        plt.close(fig)
+        return
+
+    ax.set_title(title, fontsize=18, pad=12)
+    ax.set_xlabel("Epoch (boosting round)", fontsize=16, labelpad=10)
+    ax.set_ylabel("Log Loss", fontsize=16, labelpad=10)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+    ax.yaxis.set_minor_locator(AutoMinorLocator(5))
+    ax.tick_params(axis="both", which="major", labelsize=14, direction="in", top=True, right=True, length=9)
+    ax.tick_params(axis="both", which="minor", direction="in", top=True, right=True, length=4)
+    ax.legend(loc="best", fontsize=14, frameon=False)
+    fig.subplots_adjust(left=0.15, right=0.97, top=0.91, bottom=0.14)
+    savefig_and_show(pdf_name)
+
+    print("Saved loss-vs-epoch plot:", PLOTS_DIR / pdf_name)
+    for label, epoch, loss in best_points:
+        print("{} minimum logloss: epoch {}, logloss {:.6g}".format(label, epoch, loss))
+
 def convert(tree, branches, selection):
     feature = tree2array(tree,
                         #branches = wt_variables + variables + mass_variables,
@@ -1016,6 +1079,11 @@ model_best, selected_model_name, selected_xgb_params = fit_model_with_ks_target(
 print("Selected model candidate:", selected_model_name)
 print("Selected model params:", selected_xgb_params)
 print(model_best)
+plot_loss_vs_epoch(
+    model_best,
+    "loss_vs_epoch.pdf",
+    title="Loss vs. Epoch ({})".format(selected_model_name),
+)
 
 
 print("save model file ",model_file)

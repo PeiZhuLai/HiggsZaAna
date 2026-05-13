@@ -160,6 +160,7 @@ cmd=(
     -m
     --ln
     --histOnly
+    --skipSystematics
     --samples "$samples"
     --outputTag "$partial_tag"
 )

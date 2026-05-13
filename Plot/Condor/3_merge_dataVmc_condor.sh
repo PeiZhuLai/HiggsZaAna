@@ -10,6 +10,7 @@ LOG_DIR="${OUTPUT_DIR}/logs_split"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
+CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
 
 sample_tags=(
     data
@@ -49,6 +50,32 @@ region_suffix() {
     esac
 }
 
+root_has_keys() {
+    local path="$1"
+
+    if [[ "$CHECK_ROOT_KEYS" != "1" ]]; then
+        return 0
+    fi
+
+    "$PYTHON_BIN" - "$path" <<'PY' >/dev/null 2>&1
+import sys
+
+try:
+    import ROOT
+except Exception:
+    sys.exit(2)
+
+path = sys.argv[1]
+ROOT.gROOT.SetBatch(True)
+root_file = ROOT.TFile.Open(path, "READ")
+if not root_file or root_file.IsZombie():
+    sys.exit(1)
+
+keys = root_file.GetListOfKeys()
+sys.exit(0 if keys and keys.GetEntries() > 0 else 1)
+PY
+}
+
 merge_plot_output() {
     local region_key="$1"
     local final_tag="$2"
@@ -64,11 +91,19 @@ merge_plot_output() {
             echo "[ERROR] Missing partial ROOT file: $input" >&2
             return 1
         fi
+        if ! root_has_keys "$input"; then
+            echo "[ERROR] Partial ROOT file has no keys or is unreadable: $input" >&2
+            return 1
+        fi
         inputs+=("$input")
     done
 
     echo "[hadd] $target"
     hadd -f "$target" "${inputs[@]}"
+    if ! root_has_keys "$target"; then
+        echo "[ERROR] Merged ROOT file has no keys or is unreadable: $target" >&2
+        return 1
+    fi
 }
 
 draw_plot_output() {

@@ -50,6 +50,7 @@ parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', act
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
 parser.add_argument('--samples', dest='samples', default=None, help='comma-separated sample names to run; aliases: all, data, bkg, sig')
 parser.add_argument('--histOnly', dest='hist_only', action='store_true', default=False, help='write raw_plots/sys_dir only; skip stack and PDF drawing')
+parser.add_argument('--skipSystematics', dest='skip_systematics', action='store_true', default=False, help='write nominal histograms and copy them into sys_dir instead of filling per-event systematic variations')
 parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
@@ -464,6 +465,8 @@ def main():
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
     all_sig_names = list(analyzer_cfg.sig_names)
+    if args.skip_systematics:
+        print("[Systematics] --skipSystematics enabled: sys_dir will use nominal histogram clones.")
     if args.use_sideband_reweight and args.sideband_reweight_unc and SIDEBAND_REWEIGHTER is not None:
         for sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
             if sys_name not in analyzer_cfg.sys_names:
@@ -660,8 +663,9 @@ def main():
         for sample in analyzer_cfg.samp_names:
             histos_sys[var_name][sample] = {}
             for sys in analyzer_cfg.sys_names:
-                histos_sys[var_name][sample][sys] = copy.deepcopy(histos[var_name][sample])
-                histos_sys[var_name][sample][sys].SetNameTitle(var_name+'_'+sample+'_'+sys, var_name+'_'+sample+'_'+sys)
+                if not args.skip_systematics:
+                    histos_sys[var_name][sample][sys] = copy.deepcopy(histos[var_name][sample])
+                    histos_sys[var_name][sample][sys].SetNameTitle(var_name+'_'+sample+'_'+sys, var_name+'_'+sample+'_'+sys)
 
     ### loop over samples and events
     mass_list = {'M1':1.0, 'M2':2.0, 'M3':3.0, 'M4':4.0, 'M5':5.0, 'M6':6.0, 'M7':7.0, 'M8':8.0, 'M9':9.0, 'M10':10.0, 'M15':15.0, 'M20':20.0, 'M25':25.0, 'M30':30.0}
@@ -815,7 +819,7 @@ def main():
 
                 histos['param'][sample].Fill( param_val['param'], weight )
 
-                if args.sideband_reweight_unc:
+                if args.sideband_reweight_unc and not args.skip_systematics:
                     sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
                         ntup,
                         sample,
@@ -824,62 +828,63 @@ def main():
                         row_index=iEvt,
                     )
 
-                for sys_name in analyzer_cfg.sys_names:
-                    if sample != "Data": 
-                        if sys_name in sideband_rwgt_sys_weights:
-                            weight_sys = sideband_rwgt_sys_weights[sys_name]
-                        elif sys_name =='weight_hlt_sf_up':
-                            weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
-                        elif sys_name =='weight_hlt_sf_down':
-                            weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
-                        elif sys_name =='weight_pu_reweight_sf_up':
-                            weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
-                        elif sys_name =='weight_pu_reweight_sf_down':
-                            weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
-                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
-                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central                        
-                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
-                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
+                if not args.skip_systematics:
+                    for sys_name in analyzer_cfg.sys_names:
+                        if sample != "Data":
+                            if sys_name in sideband_rwgt_sys_weights:
+                                weight_sys = sideband_rwgt_sys_weights[sys_name]
+                            elif sys_name =='weight_hlt_sf_up':
+                                weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
+                            elif sys_name =='weight_hlt_sf_down':
+                                weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
+                            elif sys_name =='weight_pu_reweight_sf_up':
+                                weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
+                            elif sys_name =='weight_pu_reweight_sf_down':
+                                weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
+                            elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
+                                weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                            elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
+                                weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
+                            elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
+                                weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central
+                            elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
+                                weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
+                            elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
+                                weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
+                            elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
+                                weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
 
-                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
-                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
-                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
+                            elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
+                                weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                            elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
+                                weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
+                            elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
+                                weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
+                            elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
+                                weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
+                            elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
+                                weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
+                            elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
+                                weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
 
-                        elif sys_name =='weight_photon_id_sf_SelectedPhoton_up':
-                            weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_up / ntup.weight_photon_id_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_id_sf_SelectedPhoton_down':
-                            weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_down / ntup.weight_photon_id_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_up':
-                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_up / ntup.weight_photon_csev_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_down':
-                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_down / ntup.weight_photon_csev_sf_SelectedPhoton_central
+                            elif sys_name =='weight_photon_id_sf_SelectedPhoton_up':
+                                weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_up / ntup.weight_photon_id_sf_SelectedPhoton_central
+                            elif sys_name =='weight_photon_id_sf_SelectedPhoton_down':
+                                weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_down / ntup.weight_photon_id_sf_SelectedPhoton_central
+                            elif sys_name =='weight_photon_csev_sf_SelectedPhoton_up':
+                                weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_up / ntup.weight_photon_csev_sf_SelectedPhoton_central
+                            elif sys_name =='weight_photon_csev_sf_SelectedPhoton_down':
+                                weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_down / ntup.weight_photon_csev_sf_SelectedPhoton_central
+                            else:
+                                weight_sys = weight
+
+                            for var in var_names:
+                                if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
+                                    histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
                         else:
-                            weight_sys = weight
-
-                        for var in var_names:
-                            if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
-                                histos_sys[var][sample][sys_name].Fill(var_map[var], weight_sys)
-                    else:
-                        for var in var_names:
-                            if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
-                                histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
+                            for var in var_names:
+                                if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):
+                                    histos_sys[var][sample][sys_name].Fill(var_map[var], 1.)
                 
 
 
@@ -919,6 +924,9 @@ def main():
     for var_name in var_names:
         for sample in analyzer_cfg.samp_names:
             for sys in analyzer_cfg.sys_names:
+                if args.skip_systematics:
+                    histos_sys[var_name][sample][sys] = histos[var_name][sample].Clone(var_name+'_'+sample+'_'+sys)
+                    histos_sys[var_name][sample][sys].SetDirectory(0)
                 plot_cfg.SetHistStyles(histos_sys[var_name][sample][sys], sample)
                 histos_sys[var_name][sample][sys].Write()
 
