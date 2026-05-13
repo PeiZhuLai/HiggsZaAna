@@ -33,6 +33,17 @@ MAX_EVENTS="${MAX_EVENTS:-}"
 logDir="${outputDir}/logs_split"
 mkdir -p "$logDir" "$variablesDir"
 
+echo "[Config] RUN_PREPARE_DATAVMC=$RUN_PREPARE_DATAVMC"
+echo "[Config] RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS"
+echo "[Config] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS"
+echo "[Config] RUN_OPTIMIZATION=$RUN_OPTIMIZATION"
+echo "[Config] variablesDir=$variablesDir"
+echo "[Config] logDir=$logDir"
+
+if [[ "$RUN_DATAVMC_PLOTS" == "1" && "$RUN_MERGE_PLOTS" != "1" ]]; then
+    echo "[Info] RUN_DATAVMC_PLOTS=1 with RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS; redraw uses existing merged ROOT files in $variablesDir"
+fi
+
 sampleGroups=(
     "Data"
     "DYJetsToLL"
@@ -97,8 +108,13 @@ run_plot_task() {
         echo
     } > "$log_file"
 
-    "${cmd[@]}" >> "$log_file" 2>&1
-    echo "[DONE] $(date '+%F %T')" >> "$log_file"
+    if "${cmd[@]}" >> "$log_file" 2>&1; then
+        echo "[DONE] $(date '+%F %T')" >> "$log_file"
+    else
+        local status=$?
+        echo "[FAILED] $(date '+%F %T') exit=${status}" >> "$log_file"
+        return "$status"
+    fi
 }
 
 if [[ "$RUN_PREPARE_DATAVMC" == "1" ]]; then
@@ -225,8 +241,13 @@ draw_plot_output() {
         echo
     } > "$log_file"
 
-    "${cmd[@]}" >> "$log_file" 2>&1
-    echo "[DONE] $(date '+%F %T')" >> "$log_file"
+    if "${cmd[@]}" >> "$log_file" 2>&1; then
+        echo "[DONE] $(date '+%F %T')" >> "$log_file"
+    else
+        local status=$?
+        echo "[FAILED] $(date '+%F %T') exit=${status}" >> "$log_file"
+        return "$status"
+    fi
 }
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then

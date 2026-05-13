@@ -38,6 +38,16 @@ export PYTHONPATH="${PYTHONPATH:-}:${PLOT_DIR}/lib:${PROJECT_DIR}/HZaMVA/scripts
 
 cd "$PLOT_DIR"
 
+echo "[Config] RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS"
+echo "[Config] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS"
+echo "[Config] RUN_OPTIMIZATION=$RUN_OPTIMIZATION"
+echo "[Config] VARIABLES_DIR=$VARIABLES_DIR"
+echo "[Config] LOG_DIR=$LOG_DIR"
+
+if [[ "$RUN_DATAVMC_PLOTS" == "1" && "$RUN_MERGE_PLOTS" != "1" ]]; then
+    echo "[Info] RUN_DATAVMC_PLOTS=1 with RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS; redraw uses existing merged ROOT files in $VARIABLES_DIR"
+fi
+
 region_suffix() {
     local region_key="$1"
     case "$region_key" in
@@ -137,8 +147,13 @@ draw_plot_output() {
         echo
     } > "$log_file"
 
-    "${cmd[@]}" >> "$log_file" 2>&1
-    echo "[DONE] $(date '+%F %T')" >> "$log_file"
+    if "${cmd[@]}" >> "$log_file" 2>&1; then
+        echo "[DONE] $(date '+%F %T')" >> "$log_file"
+    else
+        local status=$?
+        echo "[FAILED] $(date '+%F %T') exit=${status}" >> "$log_file"
+        return "$status"
+    fi
 }
 
 if [[ "$RUN_MERGE_PLOTS" == "1" ]]; then

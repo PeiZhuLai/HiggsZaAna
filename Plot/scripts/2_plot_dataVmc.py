@@ -307,6 +307,7 @@ def _load_histo_maps(root_file, var_names, analyzer_cfg, plot_cfg):
 
     histos = {}
     histos_sys = {}
+    missing_sideband_sys = []
     for var_name in var_names:
         histos[var_name] = {}
         histos_sys[var_name] = {}
@@ -317,9 +318,25 @@ def _load_histo_maps(root_file, var_names, analyzer_cfg, plot_cfg):
 
             histos_sys[var_name][sample] = {}
             for sys_name in analyzer_cfg.sys_names:
-                hist_sys = _clone_hist(sys_dir, f"{var_name}_{sample}_{sys_name}")
+                hist_sys_name = f"{var_name}_{sample}_{sys_name}"
+                hist_sys_obj = sys_dir.Get(hist_sys_name)
+                if hist_sys_obj:
+                    hist_sys = hist_sys_obj.Clone(hist_sys_name)
+                    hist_sys.SetDirectory(0)
+                elif sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
+                    hist_sys = hist.Clone(hist_sys_name)
+                    hist_sys.SetDirectory(0)
+                    missing_sideband_sys.append(hist_sys_name)
+                else:
+                    hist_sys = _clone_hist(sys_dir, hist_sys_name)
                 plot_cfg.SetHistStyles(hist_sys, sample)
                 histos_sys[var_name][sample][sys_name] = hist_sys
+
+    if missing_sideband_sys:
+        print(
+            "[Warning] Missing {} sideband reweight uncertainty histograms; "
+            "using nominal shapes for those entries.".format(len(missing_sideband_sys))
+        )
 
     return histos, histos_sys
 
