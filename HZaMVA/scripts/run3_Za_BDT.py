@@ -111,23 +111,27 @@ def save_optuna_fig_pdf(fig, pdf_name: str, *, show: bool = False):
     if show:
         fig.show()
 
-def plot_loss_vs_epoch(model, pdf_name: str = "loss_vs_epoch.pdf", title: str = "Loss vs. Epoch"):
+def plot_loss_vs_n_estimators(model, pdf_name: str = "loss_vs_nEstimators.pdf"):
     """
     Plot the XGBoost logloss saved during fit(eval_set=...).
     """
     try:
         evals_result = model.evals_result()
     except Exception as exc:
-        print("Skipping loss-vs-epoch plot: no eval history found ({})".format(exc))
+        print("Skipping loss-vs-nEstimators plot: no eval history found ({})".format(exc))
         return
 
     if not evals_result:
-        print("Skipping loss-vs-epoch plot: empty eval history.")
+        print("Skipping loss-vs-nEstimators plot: empty eval history.")
         return
 
     dataset_labels = {
         "validation_0": "Train",
         "validation_1": "Test",
+    }
+    dataset_colors = {
+        "validation_0": "darkorange",
+        "validation_1": "darkgreen",
     }
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -138,9 +142,10 @@ def plot_loss_vs_epoch(model, pdf_name: str = "loss_vs_epoch.pdf", title: str = 
             continue
 
         losses = np.asarray(metrics["logloss"], dtype=float)
-        epochs = np.arange(1, len(losses) + 1)
+        n_estimators = np.arange(1, len(losses) + 1)
         label = dataset_labels.get(dataset_name, dataset_name)
-        ax.plot(epochs, losses, linewidth=2.2, label=label)
+        color = dataset_colors.get(dataset_name)
+        ax.plot(n_estimators, losses, color=color, lw=2, label=label)
         plotted = True
 
         if len(losses) > 0 and np.any(np.isfinite(losses)):
@@ -154,25 +159,25 @@ def plot_loss_vs_epoch(model, pdf_name: str = "loss_vs_epoch.pdf", title: str = 
             )
 
     if not plotted:
-        print("Skipping loss-vs-epoch plot: logloss was not recorded.")
+        print("Skipping loss-vs-nEstimators plot: logloss was not recorded.")
         plt.close(fig)
         return
 
-    ax.set_title(title, fontsize=18, pad=12)
-    ax.set_xlabel("Epoch (boosting round)", fontsize=16, labelpad=10)
-    ax.set_ylabel("Log Loss", fontsize=16, labelpad=10)
+    ax.tick_params(axis='x', labelsize=18, direction='in', top=True, right=True, length=11)
+    ax.tick_params(axis='y', labelsize=18, direction='in', top=True, right=True, length=11)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.xaxis.set_minor_locator(AutoMinorLocator(5))
     ax.yaxis.set_minor_locator(AutoMinorLocator(5))
-    ax.tick_params(axis="both", which="major", labelsize=14, direction="in", top=True, right=True, length=9)
-    ax.tick_params(axis="both", which="minor", direction="in", top=True, right=True, length=4)
-    ax.legend(loc="best", fontsize=14, frameon=False)
-    fig.subplots_adjust(left=0.15, right=0.97, top=0.91, bottom=0.14)
+    ax.tick_params(which='minor', direction='in', top=True, right=True, length=5)
+    fig.subplots_adjust(left=0.17, right=0.96, top=0.91, bottom=0.17)
+    ax.set_xlabel('nEstimators', fontsize=20, labelpad=12)
+    ax.set_ylabel('Log Loss', fontsize=20, labelpad=12)
+    ax.legend(loc="upper right", fontsize=17, frameon=False)
     savefig_and_show(pdf_name)
 
-    print("Saved loss-vs-epoch plot:", PLOTS_DIR / pdf_name)
-    for label, epoch, loss in best_points:
-        print("{} minimum logloss: epoch {}, logloss {:.6g}".format(label, epoch, loss))
+    print("Saved loss-vs-nEstimators plot:", PLOTS_DIR / pdf_name)
+    for label, n_estimator, loss in best_points:
+        print("{} minimum logloss: nEstimators {}, logloss {:.6g}".format(label, n_estimator, loss))
 
 def convert(tree, branches, selection):
     feature = tree2array(tree,
@@ -1089,10 +1094,9 @@ model_best, selected_model_name, selected_xgb_params = fit_model_with_ks_target(
 print("Selected model candidate:", selected_model_name)
 print("Selected model params:", selected_xgb_params)
 print(model_best)
-plot_loss_vs_epoch(
+plot_loss_vs_n_estimators(
     model_best,
-    "loss_vs_epoch.pdf",
-    title="Loss vs. Epoch ({})".format(selected_model_name),
+    "loss_vs_nEstimators.pdf",
 )
 
 
