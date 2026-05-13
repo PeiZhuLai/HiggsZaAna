@@ -96,8 +96,8 @@ def add_cms_preliminary_matplotlib(fig):
 
     # Many plots below use top=0.94-0.97, leaving no room for a figure-level
     # CMS label.  Reserve a consistent top band before saving.
-    if fig.subplotpars.top > 0.90:
-        fig.subplots_adjust(top=0.90)
+    if fig.subplotpars.top > 0.91:
+        fig.subplots_adjust(top=0.91)
 
     cms_x, prelim_x, lumi_x = cms_lumi_positions(fig, 18)
     fig.text(cms_x, 0.955, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
@@ -905,9 +905,9 @@ else:
     print("Using in-memory Optuna study. Set ZA_OPTUNA_STORAGE to persist trials.")
     xgb_study = optuna.create_study(directions=['maximize', 'minimize'], study_name=study_name)
 # n=5, timeout=300 is enough
-xgb_study.optimize(objective, n_trials=2, timeout=300)
+# xgb_study.optimize(objective, n_trials=2, timeout=300)
 # nTrain
-# xgb_study.optimize(objective, n_trials=20, timeout=5000)
+xgb_study.optimize(objective, n_trials=20, timeout=5000)
 
 # --- replace .show() with PDF export ---
 fig = optuna.visualization.plot_pareto_front(

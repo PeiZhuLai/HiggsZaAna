@@ -60,9 +60,9 @@ class Plot_Config:
         self.colors["M9"]  = TColor.GetColor("#FACC15")  # yellow, only if line is thick
         self.colors["M10"] = TColor.GetColor("#EF476F")  # pink-red
         self.colors["M15"] = TColor.GetColor("#991B1B")  # dark red
-        self.colors["M20"] = TColor.GetColor("#1B9AAA")  # violet-magenta
+        self.colors["M20"] = TColor.GetColor("#6FFFE9")  # violet-magenta
         self.colors["M25"] = TColor.GetColor("#5B21B6")  # indigo
-        self.colors["M30"] = TColor.GetColor("#06D6A0")  # mint
+        self.colors["M30"] = TColor.GetColor("#ff7f00")  # mint
         
         # self.colors["DYJetsToLL"]  =  kAzure + 7
         self.colors["DYJetsToLL"]  =  TColor.GetColor("#48BEFF") # blue

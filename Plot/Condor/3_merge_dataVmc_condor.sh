@@ -181,8 +181,8 @@ if [[ "$RUN_OPTIMIZATION" == "1" ]]; then
         "$PYTHON_BIN" "$SCRIPTS_DIR/ALP_Optimization.py" \
             -y run3 \
             -o "${OUTPUT_DIR}/optimize_run3UL_${final_tag}" \
-            --region 2 \
-            -p --sigVSscore -s --doOpt -c 2 \
+            --region 1 \
+            -p --sigVSscore -s --doOpt -c 1 \
             --inputTag "$final_tag"
     done
 else
