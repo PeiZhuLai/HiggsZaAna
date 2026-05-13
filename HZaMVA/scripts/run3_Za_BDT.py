@@ -84,6 +84,47 @@ def _auto_pdf_name(prefix: str = "plot", ext: str = "pdf") -> str:
     lineno = frame.f_back.f_lineno
     return f"{prefix}_L{lineno}.{ext}"
 
+def add_cms_preliminary_matplotlib(fig):
+    if getattr(fig, "_cms_preliminary_added", False):
+        return
+    fig.text(0.17, 0.965, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
+    fig.text(0.255, 0.965, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    fig._cms_preliminary_added = True
+
+def add_cms_preliminary_plotly(fig):
+    fig.add_annotation(
+        x=0.0,
+        y=1.08,
+        xref="paper",
+        yref="paper",
+        text="<b>CMS</b> <i>Preliminary</i>",
+        showarrow=False,
+        xanchor="left",
+        yanchor="top",
+        font=dict(size=18, color="black"),
+    )
+    current_margin = fig.layout.margin
+    top_margin = current_margin.t if current_margin and current_margin.t is not None else 60
+    fig.update_layout(margin=dict(t=max(top_margin, 90)))
+
+def add_cms_preliminary_root(canvas):
+    canvas.cd()
+    cms = rt.TLatex()
+    cms.SetNDC()
+    cms.SetTextColor(rt.kBlack)
+    cms.SetTextFont(61)
+    cms.SetTextSize(0.045)
+    cms_label = cms.DrawLatex(0.18, 0.94, "CMS")
+
+    prelim = rt.TLatex()
+    prelim.SetNDC()
+    prelim.SetTextColor(rt.kBlack)
+    prelim.SetTextFont(52)
+    prelim.SetTextSize(0.04)
+    prelim_label = prelim.DrawLatex(0.30, 0.94, "Preliminary")
+    canvas._cms_preliminary_labels = (cms, prelim, cms_label, prelim_label)
+    canvas.Update()
+
 def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300, close: bool = True):
     """
     Save current matplotlib figure to the configured plots_MVA/run3 directory as PDF.
@@ -93,6 +134,7 @@ def savefig_and_show(pdf_name: Optional[str] = None, *, dpi: int = 300, close: b
     out = PLOTS_DIR / pdf_name
     out.parent.mkdir(parents=True, exist_ok=True)
     fig = plt.gcf()
+    add_cms_preliminary_matplotlib(fig)
     fig.savefig(str(out), format="pdf", bbox_inches="tight", dpi=dpi)
     if close:
         plt.close(fig)
@@ -107,6 +149,7 @@ def save_optuna_fig_pdf(fig, pdf_name: str, *, show: bool = False):
     out = PLOTS_DIR / pdf_name
     if pio is None:
         raise RuntimeError("plotly is not available; cannot export optuna visualization to PDF.")
+    add_cms_preliminary_plotly(fig)
     fig.write_image(str(out), format="pdf")
     if show:
         fig.show()
@@ -1647,6 +1690,7 @@ hist_SR, hist_SR_smooth = GetHist(roohist_bkg_SR, 0.1)
 hist_CR, hist_CR_smooth = GetHist(roohist_data_SB)
 canv_SR = compare(hist_SR, hist_SR_smooth)
 canv_SR.Draw()
+add_cms_preliminary_root(canv_SR)
 canv_SR.SaveAs(str(PLOTS_DIR / "root_bkgSR_smoothing.pdf"))
 
 

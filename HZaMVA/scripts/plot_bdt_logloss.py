@@ -11,10 +11,19 @@ PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3
 MODEL_FILE = Path("./model_Za_BDT_run3.pkl")
 
 
+def add_cms_preliminary_matplotlib(fig):
+    if getattr(fig, "_cms_preliminary_added", False):
+        return
+    fig.text(0.17, 0.965, "CMS", fontsize=18, fontweight="bold", ha="left", va="top")
+    fig.text(0.255, 0.965, "Preliminary", fontsize=16, fontstyle="italic", ha="left", va="top")
+    fig._cms_preliminary_added = True
+
+
 def savefig_and_show(pdf_name, dpi=300):
     out = PLOTS_DIR / pdf_name
     out.parent.mkdir(parents=True, exist_ok=True)
     fig = plt.gcf()
+    add_cms_preliminary_matplotlib(fig)
     fig.savefig(str(out), format="pdf", bbox_inches="tight", dpi=dpi)
     plt.close(fig)
 
