@@ -831,7 +831,7 @@ else:
 # n=5, timeout=300 is enough
 # xgb_study.optimize(objective, n_trials=5, timeout=300)
 # nTrain
-xgb_study.optimize(objective, n_trials=20, timeout=5000)
+# xgb_study.optimize(objective, n_trials=20, timeout=5000)
 
 # --- replace .show() with PDF export ---
 fig = optuna.visualization.plot_pareto_front(
