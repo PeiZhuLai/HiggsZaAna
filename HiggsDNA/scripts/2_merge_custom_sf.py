@@ -125,6 +125,8 @@ def variable_kind(input_name: str) -> str:
         "ph_sc_abseta": "abseta",
         "el_sc_abseta": "abseta",
         "abseta": "abseta",
+        "event_nPV": "npv",
+        "nPV": "npv",
         "r9": "r9",
         "R9": "r9",
     }
@@ -138,6 +140,7 @@ def value_for_input(
     pt: Optional[float] = None,
     eta: Optional[float] = None,
     r9: Optional[float] = None,
+    npv: Optional[float] = None,
 ) -> float:
     kind = variable_kind(input_name)
     if kind == "pt":
@@ -156,6 +159,10 @@ def value_for_input(
         if r9 is None:
             raise ValueError(f"No r9 value available for input {input_name}")
         return r9
+    if kind == "npv":
+        if npv is None:
+            raise ValueError(f"No event_nPV value available for input {input_name}")
+        return npv
     raise ValueError(f"Unsupported correction input: {input_name}")
 
 
@@ -200,6 +207,7 @@ def evaluate_multibinning(
     pt: Optional[float] = None,
     eta: Optional[float] = None,
     r9: Optional[float] = None,
+    npv: Optional[float] = None,
 ) -> float:
     data = correction["data"]
     if data["nodetype"] != "multibinning":
@@ -207,7 +215,7 @@ def evaluate_multibinning(
 
     flat_index = 0
     for input_name, edges in zip(data["inputs"], data["edges"]):
-        value = value_for_input(input_name, pt, eta, r9)
+        value = value_for_input(input_name, pt, eta, r9, npv)
         index = bin_index(edges, value, data.get("flow"))
         flat_index = flat_index * (len(edges) - 1) + index
 
@@ -314,6 +322,7 @@ def make_r9_merged_correction(
                 pt=point_value(point, "pt"),
                 eta=point_value(point, "eta"),
                 r9=point_value(point, "r9"),
+                npv=point_value(point, "npv"),
             )
         )
 
@@ -385,7 +394,12 @@ def csev_output_axes(low_r9: dict, high_r9: dict) -> tuple[list[str], list[list[
         if kind == "r9":
             continue
 
-        output_name = "eta" if kind == "abseta" else kind
+        if kind == "abseta":
+            output_name = "eta"
+        elif kind == "npv":
+            output_name = "event_nPV"
+        else:
+            output_name = kind
         if output_name in input_names:
             continue
 

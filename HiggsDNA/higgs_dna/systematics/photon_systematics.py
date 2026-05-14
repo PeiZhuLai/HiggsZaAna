@@ -28,6 +28,27 @@ def _clib_eval(obj, args_by_name, override_order=None):
         raise ValueError(f"Missing inputs for correctionlib evaluate: {missing} (needed order={order})")
     return obj.evaluate(*[args_by_name[k] for k in order])
 
+def _clib_evalv(obj, args_by_name, override_order=None):
+    order = override_order if override_order is not None else _clib_inputs(obj)
+    missing = [k for k in order if k not in args_by_name]
+    if missing:
+        raise ValueError(f"Missing inputs for correctionlib evalv: {missing} (needed order={order})")
+    return obj.evalv(*[args_by_name[k] for k in order])
+
+def _event_npv(events):
+    if "event_nPV" in events.fields:
+        return events.event_nPV
+    if "PV_npvsGood" in events.fields:
+        return events.PV_npvsGood
+    if "PV_npvs" in events.fields:
+        return events.PV_npvs
+    if "PV" in events.fields and hasattr(events.PV, "fields"):
+        if "npvsGood" in events.PV.fields:
+            return events.PV.npvsGood
+        if "npvs" in events.PV.fields:
+            return events.PV.npvs
+    raise ValueError("CSEV SF requires event_nPV/PV_npvsGood/PV_npvs, but none was found")
+
 def _pick_2024_mc_scale_correction(evaluator):
     """
     For 2024 MC, avoid compound['Scale'] because it requires run/seedGain.
@@ -415,15 +436,21 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
         - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
     """
     
-    required_fields = [
-        (input_collection, "eta"), (input_collection, "pt"), (input_collection, "r9")
-    ]
+    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_SF_FILE[year][0]))
+    csev_inputs = _clib_inputs(evaluator["sf_pass"])
+
+    required_fields = []
+    if any(input_name in csev_inputs for input_name in ("eta", "abseta")):
+        required_fields.append((input_collection, "eta"))
+    if "pt" in csev_inputs:
+        required_fields.append((input_collection, "pt"))
+    if "r9" in csev_inputs:
+        required_fields.append((input_collection, "r9"))
     if year == "2023postBPix":
         required_fields.append((input_collection, "phi"))
 
     missing_fields = awkward_utils.missing_fields(events, required_fields)
 
-    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_SF_FILE[year][0]))
     evaluator_hole = None
     if year == "2023postBPix":
         evaluator_hole = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_SF_FILE_HOLE[year]))
@@ -451,6 +478,22 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
         0.0, # SFs only valid for R9 >= 0.0
         99999.0
     )
+    pho_event_npv = None
+    if any(input_name in csev_inputs for input_name in ("event_nPV", "nPV", "npv")):
+        pho_event_npv = numpy.repeat(
+            awkward.to_numpy(_event_npv(events)),
+            awkward.to_numpy(n_photons),
+        )
+
+    csev_args = {
+        "eta": pho_abs_eta,
+        "abseta": pho_abs_eta,
+        "pt": pho_pt,
+        "r9": pho_r9,
+        "event_nPV": pho_event_npv,
+        "nPV": pho_event_npv,
+        "npv": pho_event_npv,
+    }
 
     is_hole_region = None
     if year == "2023postBPix":
@@ -460,16 +503,16 @@ def photon_CSEV_sf(events, year, central_only, input_collection, working_point =
     # Calculate SF and syst
     variations = {}
 
-    sf = evaluator["sf_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+    sf = _clib_evalv(evaluator["sf_pass"], csev_args)
     if evaluator_hole is not None:
-        sf_hole = evaluator_hole["sf_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+        sf_hole = _clib_evalv(evaluator_hole["sf_pass"], csev_args)
         sf = numpy.where(is_hole_region, sf_hole, sf)
     variations["central"] = awkward.unflatten(sf, n_photons)
 
     if not central_only:
-        syst = evaluator["unc_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+        syst = _clib_evalv(evaluator["unc_pass"], csev_args)
         if evaluator_hole is not None:
-            syst_hole = evaluator_hole["unc_pass"].evalv(pho_abs_eta, pho_pt, pho_r9)
+            syst_hole = _clib_evalv(evaluator_hole["unc_pass"], csev_args)
             syst = numpy.where(is_hole_region, syst_hole, syst)
         variations["up"] = awkward.unflatten(sf + syst, n_photons)
         variations["down"] = awkward.unflatten(sf - syst, n_photons)
