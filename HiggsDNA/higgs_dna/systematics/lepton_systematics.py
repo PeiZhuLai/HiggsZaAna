@@ -22,7 +22,8 @@ MUON_ID_SF_FILE = {
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/muid_2022EE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_muid_2023_scalefactors.json",
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_muid_2023BPix_scalefactors.json",
-    "2024" : "higgs_dna/systematics/data/2024_UL/hza_muid_2024_scalefactors.json"
+    "2024" : "higgs_dna/systematics/data/2024_UL/hza_muid_2024_scalefactors.json",
+    "2025" : "higgs_dna/systematics/data/2025_UL/hza_muid_2025_scalefactors.json"
 }
 
 def muon_LooseID_sf(events, year, central_only, input_collection):
@@ -309,7 +310,7 @@ def muon_reco_sf(events, year, central_only, input_collection):
     n_muons = awkward.num(muons)
     muons_flattened = awkward.flatten(muons)
 
-    is_run2 = not (year.startswith("2022") or year.startswith("2023") or year.startswith("2024"))
+    is_run2 = not year.startswith(("2022", "2023", "2024", "2025"))
 
     if is_run2:
         with open(misc_utils.expand_path(MUON_RECO_SF_FILE[year][0])) as f:
@@ -424,7 +425,8 @@ ELECTRON_ID_SF_FILE = {
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/hzg_elid_2022EE_scalefactors.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/hzg_elid_2023_scalefactors.json",
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hzg_elid_2023BPix_scalefactors.json",
-    "2024" : "higgs_dna/systematics/data/2024_UL/hza_elid_2024_scalefactors.json"
+    "2024" : "higgs_dna/systematics/data/2024_UL/hza_elid_2024_scalefactors.json",
+    "2025" : "higgs_dna/systematics/data/2025_UL/hza_elid_2025_scalefactors.json"
 }
 
 ELECTRON_ID_SF_FILE_HOLE = {
@@ -598,7 +600,9 @@ ELECTRON_ISO_SF_FILE = {
     "2022preEE" : ["higgs_dna/systematics/data/2022preEE_UL/hzg_eliso0p1_2022_efficiencies.json", "higgs_dna/systematics/data/2022preEE_UL/hzg_eliso0p15_2022_efficiencies.json"],
     "2022postEE" : ["higgs_dna/systematics/data/2022postEE_UL/hzg_eliso0p1_2022EE_efficiencies.json", "higgs_dna/systematics/data/2022postEE_UL/hzg_eliso0p15_2022EE_efficiencies.json"],
     "2023preBPix" : ["higgs_dna/systematics/data/2023preBPix_UL/hzg_eliso0p1_2023_efficiencies.json", "higgs_dna/systematics/data/2023preBPix_UL/hzg_eliso0p15_2023_efficiencies.json"],
-    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hzg_eliso0p1_2023BPix_efficiencies.json", "higgs_dna/systematics/data/2023postBPix_UL/hzg_eliso0p15_2023BPix_efficiencies.json"]
+    "2023postBPix" : ["higgs_dna/systematics/data/2023postBPix_UL/hzg_eliso0p1_2023BPix_efficiencies.json", "higgs_dna/systematics/data/2023postBPix_UL/hzg_eliso0p15_2023BPix_efficiencies.json"],
+    "2024" : ["higgs_dna/systematics/data/2024_UL/hza_eliso0p1_2024_efficiencies.json", "higgs_dna/systematics/data/2024_UL/hza_eliso0p15_2024_efficiencies.json"],
+    "2025" : ["higgs_dna/systematics/data/2025_UL/hza_eliso0p1_2025_efficiencies.json", "higgs_dna/systematics/data/2025_UL/hza_eliso0p15_2025_efficiencies.json"]
 }
 
 ELECTRON_ISO_SF_FILE_HOLE = {

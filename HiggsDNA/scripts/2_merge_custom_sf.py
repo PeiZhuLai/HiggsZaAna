@@ -20,6 +20,7 @@ ERA_DIRS = {
     "2023preBPix": "2023preBPix_UL",
     "2023postBPix": "2023postBPix_UL",
     "2024": "2024_UL",
+    "2025": "2025_UL",
 }
 
 ERA_TAGS = {
@@ -28,16 +29,28 @@ ERA_TAGS = {
     "2023preBPix": "2023",
     "2023postBPix": "2023BPix",
     "2024": "2024",
+    "2025": "2025",
 }
 
+PHOTON_ERAS = ("2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024")
+ELECTRON_ERAS = ("2024", "2025")
 CORRECTION_NAMES = ("sf_pass", "unc_pass", "sf_fail", "unc_fail")
 EFFICIENCY_NAMES = ("effdata", "systdata", "effmc", "systmc")
 R9_SPLIT = 0.96
 R9_MAX = 99999.0
-ELECTRON_TRIGGER_SFS_2024 = (
+ELECTRON_TRIGGER_SFS = (
     "dielleg12trigger",
     "dielleg23trigger",
     "sielleg30trigger",
+)
+ELECTRON_ISO_SFS = (
+    ("elminiIso0p1", "eliso0p1"),
+    ("elminiIso0p15", "eliso0p15"),
+)
+MUON_ISO_ERAS = ("2024", "2025")
+MUON_ISO_EFFS = (
+    ("NUM_MuIso0p1_DEN_HToZa_SignalMuons_Trigger", "muiso0p1"),
+    ("NUM_MuIso0p15_DEN_HToZa_SignalMuons_Trigger", "muiso0p15"),
 )
 
 
@@ -72,6 +85,34 @@ def correction_by_name(correction_set: dict) -> dict[str, dict]:
     return {correction["name"]: correction for correction in correction_set["corrections"]}
 
 
+def efficiency_corrections_by_name(correction_set: dict) -> dict[str, dict]:
+    corrections = {}
+    for correction in correction_set["corrections"]:
+        data = correction["data"]
+        if data["nodetype"] != "category":
+            corrections[correction["name"]] = correction
+            continue
+
+        category_input = data["input"]
+        inputs = [
+            deepcopy(input_def)
+            for input_def in correction["inputs"]
+            if input_def["name"] != category_input
+        ]
+        for item in data["content"]:
+            key = item["key"]
+            if key not in EFFICIENCY_NAMES:
+                continue
+
+            extracted = deepcopy(correction)
+            extracted["name"] = key
+            extracted["inputs"] = inputs
+            extracted["data"] = deepcopy(item["value"])
+            corrections[key] = extracted
+
+    return corrections
+
+
 def variable_kind(input_name: str) -> str:
     aliases = {
         "pt": "pt",
@@ -83,6 +124,7 @@ def variable_kind(input_name: str) -> str:
         "ph_abseta": "abseta",
         "ph_sc_abseta": "abseta",
         "el_sc_abseta": "abseta",
+        "abseta": "abseta",
         "r9": "r9",
         "R9": "r9",
     }
@@ -363,8 +405,8 @@ def csev_output_axes(low_r9: dict, high_r9: dict) -> tuple[list[str], list[list[
 def merge_photon_csev(base_dir: Path, era: str, hole: bool = False) -> Optional[Path]:
     suffix = f"{era}Hole" if hole else era
     raw = raw_dir(base_dir, era)
-    low_path = raw / f"hza_resolve_phcsev_lr9_{suffix}_sf.json"
-    high_path = raw / f"hza_resolve_phcsev_hr9_{suffix}_sf.json"
+    low_path = raw / f"hza_resolve_phcsev_lr9_summary_{suffix}_sf.json"
+    high_path = raw / f"hza_resolve_phcsev_hr9_summary_{suffix}_sf.json"
 
     if not low_path.exists() or not high_path.exists():
         print(f"skip CSEV merge for {suffix}: missing {low_path.name} or {high_path.name}")
@@ -398,14 +440,13 @@ def is_ecal_gap(eta: float) -> bool:
     return 1.444 <= abs(eta) < 1.566
 
 
-def merge_electron_id_2024(base_dir: Path) -> Path:
-    era = "2024"
+def merge_electron_id(base_dir: Path, era: str) -> Path:
     raw = raw_dir(base_dir, era)
     sources = {
-        "gap": correction_by_name(load_json(raw / "hza_elid_gap_2024_sf.json")),
-        "nongap": correction_by_name(load_json(raw / "hza_elid_nongap_2024_sf.json")),
-        "highpt": correction_by_name(load_json(raw / "hza_elid_nongap_highpT_2024_sf.json")),
-        "lowpt": correction_by_name(load_json(raw / "hza_elid_nongap_lowpT_2024_sf.json")),
+        "gap": correction_by_name(load_json(raw / f"hza_elid_gap_{era}_sf.json")),
+        "nongap": correction_by_name(load_json(raw / f"hza_elid_nongap_{era}_sf.json")),
+        "highpt": correction_by_name(load_json(raw / f"hza_elid_nongap_highpT_{era}_sf.json")),
+        "lowpt": correction_by_name(load_json(raw / f"hza_elid_nongap_lowpT_{era}_sf.json")),
     }
 
     sample_name = CORRECTION_NAMES[0]
@@ -438,29 +479,33 @@ def merge_electron_id_2024(base_dir: Path) -> Path:
         for correction_name in CORRECTION_NAMES
     ]
 
-    output = era_out_dir(base_dir, era) / "hza_elid_2024_scalefactors.json"
+    output = era_out_dir(base_dir, era) / f"hza_elid_{era}_scalefactors.json"
     write_json(make_correction_set(corrections), output)
     return output
 
 
-def merge_electron_trigger_2024(base_dir: Path, trigger_sf: str) -> Path:
-    era = "2024"
+def merge_electron_gap_nongap_efficiency(
+    base_dir: Path,
+    era: str,
+    input_sf: str,
+    output_sf: str,
+) -> Path:
     raw = raw_dir(base_dir, era)
     sources = {
-        "gap": correction_by_name(load_json(raw / f"hza_{trigger_sf}_gap_2024_sf.json")),
-        "nongap": correction_by_name(load_json(raw / f"hza_{trigger_sf}_nongap_2024_sf.json")),
+        "gap": correction_by_name(load_json(raw / f"hza_{input_sf}_gap_{era}_sf.json")),
+        "nongap": correction_by_name(load_json(raw / f"hza_{input_sf}_nongap_{era}_sf.json")),
     }
 
     source_names = set(sources["gap"]) & set(sources["nongap"])
     if all(name in source_names for name in EFFICIENCY_NAMES):
         correction_names = EFFICIENCY_NAMES
-        output_name = f"hza_{trigger_sf}_2024_efficiencies.json"
+        output_name = f"hza_{output_sf}_{era}_efficiencies.json"
     elif all(name in source_names for name in CORRECTION_NAMES):
         correction_names = CORRECTION_NAMES
-        output_name = f"hza_{trigger_sf}_2024_scalefactors.json"
+        output_name = f"hza_{output_sf}_{era}_scalefactors.json"
     else:
         raise ValueError(
-            f"Unsupported electron trigger JSON schema for {trigger_sf}: "
+            f"Unsupported electron gap/nongap JSON schema for {input_sf}: "
             f"found {sorted(source_names)}"
         )
 
@@ -495,6 +540,56 @@ def merge_electron_trigger_2024(base_dir: Path, trigger_sf: str) -> Path:
     return output
 
 
+def merge_electron_trigger(base_dir: Path, era: str, trigger_sf: str) -> Path:
+    return merge_electron_gap_nongap_efficiency(base_dir, era, trigger_sf, trigger_sf)
+
+
+def merge_electron_iso(base_dir: Path, era: str, input_sf: str, output_sf: str) -> Path:
+    return merge_electron_gap_nongap_efficiency(base_dir, era, input_sf, output_sf)
+
+
+def merge_muon_efficiency(base_dir: Path, era: str, source_name: str, output_sf: str) -> Path:
+    era_dir = era_out_dir(base_dir, era)
+    sources = {}
+    for suffix in ("DATAeff", "MCeff"):
+        path = era_dir / f"{source_name}_abseta_pt_{suffix}.json"
+        sources.update(efficiency_corrections_by_name(load_json(path)))
+
+    missing = [name for name in EFFICIENCY_NAMES if name not in sources]
+    if missing:
+        raise ValueError(
+            f"Missing muon efficiency corrections for {source_name}: {missing}; "
+            f"found {sorted(sources)}"
+        )
+
+    target_pt_edges = merged_edges(
+        *(edges_for_kind(sources[correction_name], "pt") for correction_name in EFFICIENCY_NAMES)
+    )
+    target_eta_edges = merged_edges(
+        *(edges_for_kind(sources[correction_name], "abseta") for correction_name in EFFICIENCY_NAMES)
+    )
+
+    def selector(correction_name: str, pt: float, eta: float) -> dict:
+        return sources[correction_name]
+
+    corrections = [
+        make_merged_correction(
+            correction_name,
+            selector,
+            target_pt_edges,
+            target_eta_edges,
+            sources[correction_name],
+        )
+        for correction_name in EFFICIENCY_NAMES
+    ]
+
+    output = era_dir / f"hza_{output_sf}_{era}_efficiencies.json"
+    payload = make_correction_set(corrections)
+    payload["description"] = "Converted from HZA DATAeff/MCeff to HZG-style format"
+    write_json(payload, output)
+    return output
+
+
 def validate_with_correctionlib(paths: list[Path]) -> None:
     try:
         from correctionlib import schemav2
@@ -515,7 +610,7 @@ def main() -> None:
     base_dir = Path(args.higgsdna_dir)
 
     outputs = []
-    for era in ERA_DIRS:
+    for era in PHOTON_ERAS:
         outputs.append(merge_photon(base_dir, era))
         csev_output = merge_photon_csev(base_dir, era)
         if csev_output is not None:
@@ -526,9 +621,16 @@ def main() -> None:
             if csev_hole_output is not None:
                 outputs.append(csev_hole_output)
 
-    outputs.append(merge_electron_id_2024(base_dir))
-    for trigger_sf in ELECTRON_TRIGGER_SFS_2024:
-        outputs.append(merge_electron_trigger_2024(base_dir, trigger_sf))
+    for era in ELECTRON_ERAS:
+        outputs.append(merge_electron_id(base_dir, era))
+        for trigger_sf in ELECTRON_TRIGGER_SFS:
+            outputs.append(merge_electron_trigger(base_dir, era, trigger_sf))
+        for input_sf, output_sf in ELECTRON_ISO_SFS:
+            outputs.append(merge_electron_iso(base_dir, era, input_sf, output_sf))
+
+    for era in MUON_ISO_ERAS:
+        for source_name, output_sf in MUON_ISO_EFFS:
+            outputs.append(merge_muon_efficiency(base_dir, era, source_name, output_sf))
     validate_with_correctionlib(outputs)
 
 
