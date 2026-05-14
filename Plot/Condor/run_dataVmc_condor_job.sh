@@ -34,6 +34,7 @@ LOG_DIR="${OUTPUT_DIR}/logs_split"
 SIDEBAND_REWEIGHT_JSON="${SIDEBAND_REWEIGHT_JSON:-${PROJECT_DIR}/HZaMVA/reweights/sideband_run3_iterative.json}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 MAX_EVENTS="${MAX_EVENTS:-}"
+SKIP_SYSTEMATICS="${SKIP_SYSTEMATICS:-0}"
 SETUP_CONDA_ENV="${SETUP_CONDA_ENV:-auto}"
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-higgs-alp-ana}"
 ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
@@ -148,6 +149,7 @@ cd "$PLOT_DIR"
     echo "[ENV] ANACONDA_SETUP=${ANACONDA_SETUP}"
     echo "[ENV] LOCALIZE_CONDA_ENV=${LOCALIZE_CONDA_ENV}"
     echo "[ENV] CONDA_TARBALL=${CONDA_TARBALL}"
+    echo "[ENV] SKIP_SYSTEMATICS=${SKIP_SYSTEMATICS}"
 } > "$log_file"
 
 activate_conda_env_if_needed >> "$log_file" 2>&1
@@ -160,11 +162,19 @@ cmd=(
     -m
     --ln
     --histOnly
-    --skipSystematics
     --optimizeBranches
     --samples "$samples"
     --outputTag "$partial_tag"
 )
+
+case "$SKIP_SYSTEMATICS" in
+    1|true|TRUE|yes|YES) cmd+=(--skipSystematics) ;;
+    0|false|FALSE|no|NO) ;;
+    *)
+        echo "[ERROR] SKIP_SYSTEMATICS must be 0/1, true/false, or yes/no; got '$SKIP_SYSTEMATICS'" >&2
+        exit 2
+        ;;
+esac
 
 case "$region_key" in
     SR)  cmd+=(--region 1) ;;
