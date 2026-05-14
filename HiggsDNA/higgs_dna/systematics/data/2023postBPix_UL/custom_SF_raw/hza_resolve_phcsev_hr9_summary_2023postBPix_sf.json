@@ -1,0 +1,406 @@
+{
+  "schema_version": 2,
+  "description": "auto-generated photon CSEV scale factors with total uncertainty",
+  "corrections": [
+    {
+      "name": "sf_pass",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data/MC scale factor (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.99971,
+          1.065364682777808,
+          0.99969,
+          0.99956,
+          0.9650064954327391,
+          1.0289240851993446
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "total uncertainty (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.042253581752812235,
+          0.10170260574895944,
+          0.02280925337764416,
+          0.04781941194816644,
+          0.022714404223628075,
+          0.04725238322747999
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "sf_fail",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data/MC scale factor (fail)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.0,
+          0.28208508088675854,
+          0.0,
+          0.0,
+          2.527914247431886,
+          0.6866272189349106
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_fail",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "total uncertainty (fail)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.0,
+          0.29534350961030603,
+          0.0,
+          0.0,
+          2.6001733633285324,
+          0.34297712873906266
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_rel",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "relative total uncertainty (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.0422658388460776,
+          0.09546271562502179,
+          0.0228163264388402,
+          0.04784046175133703,
+          0.02353808428350757,
+          0.04592407147153647
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_nominal_rel",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "relative nominal statistical uncertainty (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.03356490846482972,
+          0.09363933556019066,
+          0.001414432850445439,
+          0.04784046175133703,
+          0.023376915205476533,
+          0.04486237103382686
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_bkg_rel",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "relative background uncertainty (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.02568653447061717,
+          0.009524856870787333,
+          0.02277244237835062,
+          0.0,
+          0.0006763004484262125,
+          0.007609368884887625
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_pileup_rel",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "event_nPV",
+          "type": "real",
+          "description": "event_nPV"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "relative pileup uncertainty (pass)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "event_nPV",
+          "pt"
+        ],
+        "edges": [
+          [
+            10.0,
+            25.0,
+            30.0,
+            100.0
+          ],
+          [
+            10.0,
+            20.0,
+            80.0
+          ]
+        ],
+        "content": [
+          0.0,
+          0.015939950186271163,
+          0.0,
+          0.0,
+          0.0026653076589625807,
+          0.006203669149765054
+        ],
+        "flow": "clamp"
+      }
+    }
+  ]
+}
