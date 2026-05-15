@@ -312,11 +312,14 @@ def make_r9_merged_correction(
     return correction
 
 
-def make_correction_set(corrections: list[dict]) -> dict:
-    return {
+def make_correction_set(corrections: list[dict], description: Optional[str] = None) -> dict:
+    payload = {
         "schema_version": 2,
         "corrections": corrections,
     }
+    if description is not None:
+        payload["description"] = description
+    return payload
 
 
 def raw_dir(base_dir: Path, era: str) -> Path:
@@ -532,7 +535,11 @@ def merge_electron_gap_nongap_efficiency(
     ]
 
     output = era_out_dir(base_dir, era) / output_name
-    write_json(make_correction_set(corrections), output)
+    description_kind = "efficiencies" if output_name.endswith("_efficiencies.json") else "scalefactors"
+    write_json(
+        make_correction_set(corrections, f"HZG custom {output_sf} {description_kind}"),
+        output,
+    )
     return output
 
 
@@ -560,6 +567,7 @@ def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
             "Run 1_collect_custom_sf.sh after producing the hzg_muiso* efficiency JSONs."
         )
     payload = load_json(source)
+    payload["description"] = f"HZG custom {output_sf} efficiencies"
     write_json(payload, output)
     return output
 
