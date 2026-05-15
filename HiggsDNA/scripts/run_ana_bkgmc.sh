@@ -22,7 +22,7 @@ merge_outputs="${MERGE_OUTPUTS:-1}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 reconfigure_jobs="${RECONFIGURE_JOBS:-0}" # 1 rewrite job configs/scripts/condor submit files
-condor_req_memory="${CONDOR_REQ_MEMORY:-20000}" # MB, passed to Condor RequestMemory
+condor_req_memory="${CONDOR_REQ_MEMORY:-9000}" # MB, passed to Condor RequestMemory
 condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-500}"
 condor_q_timeout="${CONDOR_Q_TIMEOUT:-60}"
 
