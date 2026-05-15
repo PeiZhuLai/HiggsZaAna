@@ -8,6 +8,7 @@ import os
 import math
 import json
 import sys
+import time
 from tqdm import tqdm
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -66,10 +67,78 @@ def _normalize_arrow_table(table):
     return table
 
 
+def _get_parquet_read_retry_attempts():
+    try:
+        return max(1, int(os.environ.get("HIGGSDNA_PARQUET_READ_RETRIES", "6")))
+    except ValueError:
+        return 6
+
+
+def _get_parquet_read_retry_delay():
+    try:
+        return max(0.0, float(os.environ.get("HIGGSDNA_PARQUET_READ_RETRY_DELAY", "10")))
+    except ValueError:
+        return 10.0
+
+
+def _with_parquet_io_retries(operation, path, description):
+    attempts = _get_parquet_read_retry_attempts()
+    delay = _get_parquet_read_retry_delay()
+    last_error = None
+
+    for attempt_idx in range(1, attempts + 1):
+        try:
+            return operation(attempt_idx)
+        except OSError as exc:
+            last_error = exc
+            if attempt_idx >= attempts:
+                break
+            logger.warning(
+                "[Parquet] Error while reading %s from '%s': %s. Retrying in %.1f seconds (%d/%d).",
+                description,
+                path,
+                exc,
+                delay,
+                attempt_idx,
+                attempts,
+            )
+            time.sleep(delay)
+
+    raise last_error
+
+
+def _open_parquet_file(path):
+    return _with_parquet_io_retries(
+        lambda attempt_idx: pq.ParquetFile(path),
+        path,
+        "parquet metadata",
+    )
+
+
+def _read_parquet_row_group(path, row_group_idx, parquet_file=None):
+    active_parquet_file = parquet_file
+
+    def read(attempt_idx):
+        nonlocal active_parquet_file
+        if attempt_idx > 1 or active_parquet_file is None:
+            active_parquet_file = pq.ParquetFile(path)
+        return _normalize_arrow_table(active_parquet_file.read_row_group(row_group_idx))
+
+    return _with_parquet_io_retries(
+        read,
+        path,
+        "row group %d" % row_group_idx,
+    )
+
+
+def _get_parquet_schema_arrow(path):
+    return _open_parquet_file(path).schema_arrow
+
+
 def _iter_parquet_row_groups(path):
-    parquet_file = pq.ParquetFile(path)
+    parquet_file = _open_parquet_file(path)
     for row_group_idx in range(parquet_file.num_row_groups):
-        yield _normalize_arrow_table(parquet_file.read_row_group(row_group_idx))
+        yield _read_parquet_row_group(path, row_group_idx, parquet_file)
 
 
 def _default_column_for_missing_field(field, length):
@@ -132,7 +201,7 @@ def _schema_conflict_details(paths, schemas):
 
 def _get_merged_output_schema(paths, is_data, task_name, syst_tag):
     schemas = [
-        _normalize_schema_for_merge(pq.ParquetFile(path).schema_arrow, is_data)
+        _normalize_schema_for_merge(_get_parquet_schema_arrow(path), is_data)
         for path in paths
     ]
     try:
@@ -158,7 +227,7 @@ def _get_merged_output_schema(paths, is_data, task_name, syst_tag):
 
 def _get_unified_parquet_schema(paths, task_name, syst_tag):
     schemas = [
-        _normalize_arrow_schema(pq.ParquetFile(path).schema_arrow)
+        _normalize_arrow_schema(_get_parquet_schema_arrow(path))
         for path in paths
     ]
     try:
@@ -204,7 +273,7 @@ def _constant_column(value, length, field_type):
 
 
 def _rewrite_parquet_with_constant_column(path, field, value, task_name, syst_tag):
-    parquet_file = pq.ParquetFile(path)
+    parquet_file = _open_parquet_file(path)
     schema = _normalize_arrow_schema(parquet_file.schema_arrow)
     if schema.get_field_index(field.name) >= 0:
         return False
@@ -217,7 +286,7 @@ def _rewrite_parquet_with_constant_column(path, field, value, task_name, syst_ta
     writer = None
     try:
         for row_group_idx in range(parquet_file.num_row_groups):
-            table = _normalize_arrow_table(parquet_file.read_row_group(row_group_idx))
+            table = _read_parquet_row_group(path, row_group_idx, parquet_file)
             table = _replace_or_add_column(
                 table,
                 field.name,

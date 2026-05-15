@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 from types import SimpleNamespace
 
 import awkward as ak
@@ -166,6 +167,47 @@ class TestTaskMergeSchema(unittest.TestCase):
 
             self.assertEqual(merged_schema.field("fixedGridRhoAll").type, pa.float32())
             self.assertEqual(merged_schema.field("event_nPV").type, pa.uint8())
+
+    def test_iter_parquet_row_groups_retries_transient_io_error(self):
+        with tempfile.TemporaryDirectory(prefix="task-merge-retry-") as tmpdir:
+            path = os.path.join(tmpdir, "job.parquet")
+            pq.write_table(
+                pa.table({"event": pa.array([1], type=pa.int64())}),
+                path,
+            )
+
+            real_parquet_file = pq.ParquetFile
+            failures_remaining = [1]
+
+            class FlakyParquetFile:
+                def __init__(self, file_path):
+                    self._real = real_parquet_file(file_path)
+                    self.num_row_groups = self._real.num_row_groups
+                    self.schema_arrow = self._real.schema_arrow
+
+                def read_row_group(self, row_group_idx):
+                    if failures_remaining[0] > 0:
+                        failures_remaining[0] -= 1
+                        raise OSError("[Errno 5] Input/output error")
+                    return self._real.read_row_group(row_group_idx)
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "HIGGSDNA_PARQUET_READ_RETRIES": "3",
+                    "HIGGSDNA_PARQUET_READ_RETRY_DELAY": "0",
+                },
+            ):
+                with mock.patch(
+                    "higgs_dna.job_management.task.pq.ParquetFile",
+                    side_effect=lambda file_path: FlakyParquetFile(file_path),
+                ):
+                    with mock.patch("higgs_dna.job_management.task.time.sleep") as sleep:
+                        tables = list(_iter_parquet_row_groups(path))
+
+            self.assertEqual(len(tables), 1)
+            self.assertEqual(tables[0].column("event").to_pylist(), [1])
+            sleep.assert_called_once_with(0.0)
 
     def test_jobs_manager_complete_only_depends_on_task_completion(self):
         manager = object.__new__(JobsManager)
