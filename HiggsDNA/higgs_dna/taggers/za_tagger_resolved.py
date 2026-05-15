@@ -1460,6 +1460,9 @@ class ZaTaggerRun3(Tagger):
         l2 = gen_hza.LeadGenChildChild2
         lep_lead = ak.where(l1.pt >= l2.pt, l1, l2)
         lep_sub  = ak.where(l1.pt >= l2.pt, l2, l1)
+        # PDG convention: e-/mu-/tau- have positive pdgId; anti-leptons have negative pdgId.
+        lep_minus = ak.where(l1.pdgId > 0, l1, l2)
+        lep_plus = ak.where(l1.pdgId > 0, l2, l1)
 
         awkward_utils.add_object_fields(
             events=zgammas,
@@ -1491,6 +1494,18 @@ class ZaTaggerRun3(Tagger):
             objects=lep_sub,
             n_objects=1
         )
+        awkward_utils.add_object_fields(
+            events=zgammas,
+            name="GenHzaZLepMinus",
+            objects=lep_minus,
+            n_objects=1
+        )
+        awkward_utils.add_object_fields(
+            events=zgammas,
+            name="GenHzaZLepPlus",
+            objects=lep_plus,
+            n_objects=1
+        )
 
         # Optional: store useful dR's (event-level scalars)
         awkward_utils.add_field(
@@ -1513,6 +1528,22 @@ class ZaTaggerRun3(Tagger):
             # NEW: robust 取 child（支援 direct 2-body 回傳；legacy 4-body 也仍可用）
             g1 = gen_agam.LeadGenChild
             g2 = gen_agam.SubleadGenChild
+
+            # Store an unordered-by-pt convention in addition to pT-ordered aliases.
+            # For a spin-0 a -> gamma gamma decay either photon is equivalent up to
+            # cos(theta_a) -> -cos(theta_a); abs(cos(theta_a)) is convention-safe.
+            awkward_utils.add_object_fields(
+                events=zgammas,
+                name="GenALPPhoton1",
+                objects=g1,
+                n_objects=1
+            )
+            awkward_utils.add_object_fields(
+                events=zgammas,
+                name="GenALPPhoton2",
+                objects=g2,
+                n_objects=1
+            )
 
             # 若 event 沒有 pair，g1/g2 會是 None；排序前先保護
             g1_pt = ak.fill_none(g1.pt, -1.0)
