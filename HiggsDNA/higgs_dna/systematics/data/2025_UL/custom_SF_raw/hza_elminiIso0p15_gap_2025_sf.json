@@ -1,215 +1,215 @@
 {
   "schema_version": 2,
-  "description": "auto-generated scale factors",
+  "description": "",
   "corrections": [
     {
-      "name": "sf_pass",
+      "name": "effdata",
       "version": 1,
       "inputs": [
-        {
-          "name": "eta",
-          "type": "real",
-          "description": "eta"
-        },
         {
           "name": "pt",
           "type": "real",
           "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
         }
       ],
       "output": {
         "name": "sf",
         "type": "real",
-        "description": "data/MC scale factor (pass)"
+        "description": "data eff"
       },
       "data": {
         "nodetype": "multibinning",
         "inputs": [
-          "eta",
-          "pt"
+          "pt",
+          "eta"
         ],
         "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
           [
             -1.566,
             -1.444,
             0.0,
             1.444,
             1.566
-          ],
-          [
-            7.0,
-            35.0,
-            500.0
           ]
         ],
         "content": [
-          1.0160921640858742,
-          1.0177149346463108,
-          0.9968746922949577,
-          0.9922015065903529,
-          0.9980462034371365,
-          0.9925552226104494,
-          0.9902540568393549,
-          1.0133047035165212
+          0.8431645761432165,
+          0.9519590854870629,
+          0.9538533178335274,
+          0.8184620275009145,
+          0.9441563375399569,
+          0.972329867013476,
+          0.9744702379183546,
+          0.9391016350997058
         ],
         "flow": "clamp"
       }
     },
     {
-      "name": "unc_pass",
+      "name": "systdata",
       "version": 1,
       "inputs": [
-        {
-          "name": "eta",
-          "type": "real",
-          "description": "eta"
-        },
         {
           "name": "pt",
           "type": "real",
           "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
         }
       ],
       "output": {
         "name": "sf",
         "type": "real",
-        "description": "uncertainty (pass)"
+        "description": "data unc"
       },
       "data": {
         "nodetype": "multibinning",
         "inputs": [
-          "eta",
-          "pt"
+          "pt",
+          "eta"
         ],
         "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
           [
             -1.566,
             -1.444,
             0.0,
             1.444,
             1.566
-          ],
-          [
-            7.0,
-            35.0,
-            500.0
           ]
         ],
         "content": [
-          0.0025281698014769523,
-          0.0015379555495422287,
-          0.0014786270079132152,
-          0.0014374999880652694,
-          0.0014782905096841579,
-          0.0014351077155264434,
-          0.00247447733565094,
-          0.0015361423235674787
+          0.001,
+          0.001,
+          0.001,
+          0.001,
+          0.001,
+          0.001,
+          0.001,
+          0.001
         ],
         "flow": "clamp"
       }
     },
     {
-      "name": "sf_fail",
+      "name": "effmc",
       "version": 1,
       "inputs": [
-        {
-          "name": "eta",
-          "type": "real",
-          "description": "eta"
-        },
         {
           "name": "pt",
           "type": "real",
           "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
         }
       ],
       "output": {
         "name": "sf",
         "type": "real",
-        "description": "data/MC scale factor (fail)"
+        "description": "MC eff"
       },
       "data": {
         "nodetype": "multibinning",
         "inputs": [
-          "eta",
-          "pt"
+          "pt",
+          "eta"
         ],
         "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
           [
             -1.566,
             -1.444,
             0.0,
             1.444,
             1.566
-          ],
-          [
-            7.0,
-            35.0,
-            500.0
           ]
         ],
         "content": [
-          0.9215374315219588,
-          0.7726211690628376,
-          1.0662390041279544,
-          1.3815844198750025,
-          1.0421704830631582,
-          1.401145708307717,
-          1.0464322147534315,
-          0.8316178954123894
+          0.829811119448764,
+          0.954943578009296,
+          0.9557206014597173,
+          0.8265172173222315,
+          0.9277218063701522,
+          0.9799721735505476,
+          0.9817793667494583,
+          0.926771218805849
         ],
         "flow": "clamp"
       }
     },
     {
-      "name": "unc_fail",
+      "name": "systmc",
       "version": 1,
       "inputs": [
-        {
-          "name": "eta",
-          "type": "real",
-          "description": "eta"
-        },
         {
           "name": "pt",
           "type": "real",
           "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
         }
       ],
       "output": {
         "name": "sf",
         "type": "real",
-        "description": "uncertainty (fail)"
+        "description": "MC unc"
       },
       "data": {
         "nodetype": "multibinning",
         "inputs": [
-          "eta",
-          "pt"
+          "pt",
+          "eta"
         ],
         "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
           [
             -1.566,
             -1.444,
             0.0,
             1.444,
             1.566
-          ],
-          [
-            7.0,
-            35.0,
-            500.0
           ]
         ],
         "content": [
-          0.011450532698656512,
-          0.017483866486129818,
-          0.03244381412404886,
-          0.08515718232662832,
-          0.03261879092267057,
-          0.09447517326898067,
-          0.012301275886783503,
-          0.017760923084581576
+          0.0018150262146677993,
+          0.001,
+          0.001,
+          0.0018016086430458025,
+          0.001,
+          0.001,
+          0.001,
+          0.001
         ],
         "flow": "clamp"
       }
