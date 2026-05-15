@@ -40,14 +40,6 @@ rsync_json() {
     rsync -av -- "$src" "$dst/"
 }
 
-rsync_jsons_from_dir() {
-    local src_dir="$1"
-    local dst="$2"
-
-    mkdir -p "$dst"
-    rsync -av --include="*.json" --exclude="*" -- "$src_dir/" "$dst/"
-}
-
 collect_egm_sf() {
     local era="$1"
     local sf_name="$2"
@@ -60,13 +52,6 @@ collect_muo_json() {
     local relpath="$2"
 
     rsync_json "$muoSFDir/Run${era}/$relpath" "$HiggsDNADir/$(era_dir "$era")"
-}
-
-collect_muo_jsons() {
-    local era="$1"
-    local relpath="$2"
-
-    rsync_jsons_from_dir "$muoSFDir/Run${era}/$relpath" "$HiggsDNADir/$(era_dir "$era")"
 }
 
 for era in "${all_eras[@]}"; do
@@ -141,11 +126,9 @@ for era in "${muon_trigger_eras[@]}"; do
     collect_muo_json "$era" "NUM_Mu24leg_DEN_HToZa_SignalMuons/hza_mutrig24_${era}_efficiencies.json"
 done
 
-muon_iso_dirs=(NUM_MuIso0p1_DEN_HToZa_SignalMuons_Trigger NUM_MuIso0p15_DEN_HToZa_SignalMuons_Trigger)
 for era in "${muon_iso_eras[@]}"; do
-    for iso_dir in "${muon_iso_dirs[@]}"; do
-        collect_muo_jsons "$era" "$iso_dir"
-    done
+    collect_muo_json "$era" "NUM_MuIso0p1_DEN_HToZa_SignalMuons_Trigger/hzg_muiso0p1_${era}_efficiencies.json"
+    collect_muo_json "$era" "NUM_MuIso0p15_DEN_HToZa_SignalMuons_Trigger/hzg_muiso0p15_${era}_efficiencies.json"
 done
 
 ###------------------------

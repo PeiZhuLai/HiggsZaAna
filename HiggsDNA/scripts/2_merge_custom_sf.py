@@ -48,10 +48,7 @@ ELECTRON_ISO_SFS = (
     ("elminiIso0p15", "eliso0p15"),
 )
 MUON_ISO_ERAS = ("2024", "2025")
-MUON_ISO_EFFS = (
-    ("NUM_MuIso0p1_DEN_HToZa_SignalMuons_Trigger", "muiso0p1"),
-    ("NUM_MuIso0p15_DEN_HToZa_SignalMuons_Trigger", "muiso0p15"),
-)
+MUON_ISO_EFFS = ("muiso0p1", "muiso0p15")
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,35 +79,18 @@ def write_json(payload: dict, path: Path) -> None:
 
 
 def correction_by_name(correction_set: dict) -> dict[str, dict]:
-    return {correction["name"]: correction for correction in correction_set["corrections"]}
+    return {correction["name"]: correction for correction in corrections_from_payload(correction_set)}
 
 
-def efficiency_corrections_by_name(correction_set: dict) -> dict[str, dict]:
-    corrections = {}
-    for correction in correction_set["corrections"]:
-        data = correction["data"]
-        if data["nodetype"] != "category":
-            corrections[correction["name"]] = correction
-            continue
-
-        category_input = data["input"]
-        inputs = [
-            deepcopy(input_def)
-            for input_def in correction["inputs"]
-            if input_def["name"] != category_input
-        ]
-        for item in data["content"]:
-            key = item["key"]
-            if key not in EFFICIENCY_NAMES:
-                continue
-
-            extracted = deepcopy(correction)
-            extracted["name"] = key
-            extracted["inputs"] = inputs
-            extracted["data"] = deepcopy(item["value"])
-            corrections[key] = extracted
-
-    return corrections
+def corrections_from_payload(payload: dict) -> list[dict]:
+    if "corrections" in payload:
+        return payload["corrections"]
+    if all(key in payload for key in ("name", "inputs", "output", "data")):
+        return [payload]
+    raise ValueError(
+        "Unsupported correctionlib JSON payload: expected a CorrectionSet with "
+        f"'corrections' or a single Correction object; found keys {sorted(payload)}"
+    )
 
 
 def variable_kind(input_name: str) -> str:
@@ -503,6 +483,7 @@ def merge_electron_gap_nongap_efficiency(
     era: str,
     input_sf: str,
     output_sf: str,
+    require_efficiency: bool = False,
 ) -> Path:
     raw = raw_dir(base_dir, era)
     sources = {
@@ -515,6 +496,13 @@ def merge_electron_gap_nongap_efficiency(
         correction_names = EFFICIENCY_NAMES
         output_name = f"hza_{output_sf}_{era}_efficiencies.json"
     elif all(name in source_names for name in CORRECTION_NAMES):
+        if require_efficiency:
+            raise ValueError(
+                f"Electron miniIso input {input_sf} for {era} contains scale-factor "
+                f"corrections {sorted(source_names)}, not efficiency corrections "
+                f"{list(EFFICIENCY_NAMES)}. Regenerate the raw gap/nongap JSONs as "
+                "efficiency JSONs before merging."
+            )
         correction_names = CORRECTION_NAMES
         output_name = f"hza_{output_sf}_{era}_scalefactors.json"
     else:
@@ -559,48 +547,22 @@ def merge_electron_trigger(base_dir: Path, era: str, trigger_sf: str) -> Path:
 
 
 def merge_electron_iso(base_dir: Path, era: str, input_sf: str, output_sf: str) -> Path:
-    return merge_electron_gap_nongap_efficiency(base_dir, era, input_sf, output_sf)
-
-
-def merge_muon_efficiency(base_dir: Path, era: str, source_name: str, output_sf: str) -> Path:
-    era_dir = era_out_dir(base_dir, era)
-    sources = {}
-    for suffix in ("DATAeff", "MCeff"):
-        path = era_dir / f"{source_name}_abseta_pt_{suffix}.json"
-        sources.update(efficiency_corrections_by_name(load_json(path)))
-
-    missing = [name for name in EFFICIENCY_NAMES if name not in sources]
-    if missing:
-        raise ValueError(
-            f"Missing muon efficiency corrections for {source_name}: {missing}; "
-            f"found {sorted(sources)}"
-        )
-
-    target_pt_edges = merged_edges(
-        *(edges_for_kind(sources[correction_name], "pt") for correction_name in EFFICIENCY_NAMES)
-    )
-    target_eta_edges = merged_edges(
-        *(edges_for_kind(sources[correction_name], "abseta") for correction_name in EFFICIENCY_NAMES)
+    return merge_electron_gap_nongap_efficiency(
+        base_dir,
+        era,
+        input_sf,
+        output_sf,
+        require_efficiency=True,
     )
 
-    def selector(correction_name: str, pt: float, eta: float) -> dict:
-        return sources[correction_name]
 
-    corrections = [
-        make_merged_correction(
-            correction_name,
-            selector,
-            target_pt_edges,
-            target_eta_edges,
-            sources[correction_name],
+def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
+    output = era_out_dir(base_dir, era) / f"hzg_{output_sf}_{era}_efficiencies.json"
+    if not output.exists():
+        raise FileNotFoundError(
+            f"Missing collected muon miniIso efficiency JSON: {output}. "
+            "Run 1_collect_custom_sf.sh after producing the hzg_muiso* efficiency JSONs."
         )
-        for correction_name in EFFICIENCY_NAMES
-    ]
-
-    output = era_dir / f"hza_{output_sf}_{era}_efficiencies.json"
-    payload = make_correction_set(corrections)
-    payload["description"] = "Converted from HZA DATAeff/MCeff to HZG-style format"
-    write_json(payload, output)
     return output
 
 
@@ -643,8 +605,8 @@ def main() -> None:
             outputs.append(merge_electron_iso(base_dir, era, input_sf, output_sf))
 
     for era in MUON_ISO_ERAS:
-        for source_name, output_sf in MUON_ISO_EFFS:
-            outputs.append(merge_muon_efficiency(base_dir, era, source_name, output_sf))
+        for output_sf in MUON_ISO_EFFS:
+            outputs.append(muon_iso_efficiency(base_dir, era, output_sf))
     validate_with_correctionlib(outputs)
 
 
