@@ -310,10 +310,32 @@ class CondorJob(Job):
 
     """
     REQUESTS = {
-            "REQ_MEMORY" : 8192, # request 8GB of memory
+            "REQ_MEMORY" : 20000, # request 20GB of memory
             "REQ_DISK" : 20000, # request ~20GB of disk
             "REQ_NCPUS" : 2 # just 2 CPU
     }
+
+    @classmethod
+    def get_requests(cls):
+        requests = dict(cls.REQUESTS)
+        env_map = {
+            "REQ_MEMORY": "HIGGSDNA_CONDOR_REQ_MEMORY",
+            "REQ_DISK": "HIGGSDNA_CONDOR_REQ_DISK",
+            "REQ_NCPUS": "HIGGSDNA_CONDOR_REQ_NCPUS",
+        }
+        for request_name, env_name in env_map.items():
+            value = os.environ.get(env_name)
+            if value is None:
+                continue
+            try:
+                requests[request_name] = int(value)
+            except ValueError:
+                logger.warning(
+                    "[CondorJob : get_requests] Ignoring invalid %s='%s'. Expected an integer.",
+                    env_name,
+                    value,
+                )
+        return requests
 
     def write_condor_files(self):
         """
@@ -421,7 +443,7 @@ class CondorJob(Job):
         replacement_map["BATCH_NAME"] = self.name
 
         # memory, disk, cpu
-        for k,v in self.REQUESTS.items():
+        for k,v in self.get_requests().items():
             replacement_map[k] = v
 
         self.update_file(

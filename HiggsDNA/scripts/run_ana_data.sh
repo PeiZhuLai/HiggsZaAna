@@ -19,6 +19,10 @@ retire_jobs="${RETIRE_JOBS:-1}" # 1 merged parquet files # 0 no merged until all
 merge_outputs="${MERGE_OUTPUTS:-1}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
+reconfigure_jobs="${RECONFIGURE_JOBS:-0}" # 1 rewrite job configs/scripts/condor submit files
+condor_req_memory="${CONDOR_REQ_MEMORY:-20000}" # MB, passed to Condor RequestMemory
+
+export HIGGSDNA_CONDOR_REQ_MEMORY="${condor_req_memory}"
 
 if [[ "${clean_analysis_state}" == "1" ]]; then
     rm -f "${outdir}/analysis_manager.pkl" "${outdir}/analysis_manager_temp.pkl"
@@ -48,6 +52,10 @@ if [[ "${short}" == "1" ]]; then
     cmd+=(--short)
 fi
 
+if [[ "${reconfigure_jobs}" == "1" ]]; then
+    cmd+=(--reconfigure_jobs)
+fi
+
 if [[ -n "${sample_list}" ]]; then
     cmd+=(--sample_list "${sample_list}")
 fi
@@ -63,6 +71,7 @@ fi
 cmd+=("$@")
 
 if [[ "${dry_run}" == "1" ]]; then
+    printf 'HIGGSDNA_CONDOR_REQ_MEMORY=%q\n' "${HIGGSDNA_CONDOR_REQ_MEMORY}"
     printf 'Command: '
     printf '%q ' "${cmd[@]}"
     printf '\n'

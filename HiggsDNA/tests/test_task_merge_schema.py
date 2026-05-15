@@ -11,6 +11,7 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 from higgs_dna.constants import CENTRAL_WEIGHT
+from higgs_dna.job_management.jobs import CondorJob
 from higgs_dna.job_management.managers import JobsManager
 from higgs_dna.job_management.task import (
     Task,
@@ -216,6 +217,13 @@ class TestTaskMergeSchema(unittest.TestCase):
             SimpleNamespace(complete=True, merged_output_files=True),
         ]
         self.assertTrue(JobsManager.complete(manager))
+
+    def test_condor_request_memory_can_be_overridden_from_environment(self):
+        with mock.patch.dict(os.environ, {"HIGGSDNA_CONDOR_REQ_MEMORY": "24000"}):
+            requests = CondorJob.get_requests()
+
+        self.assertEqual(requests["REQ_MEMORY"], 24000)
+        self.assertEqual(CondorJob.REQUESTS["REQ_MEMORY"], 20000)
 
     def test_task_merge_outputs_skips_existing_merged_files(self):
         with tempfile.TemporaryDirectory(prefix="task-merge-skip-") as tmpdir:
