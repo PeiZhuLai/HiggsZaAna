@@ -446,6 +446,7 @@ def draw_plot(
     log_y: bool,
 ) -> None:
     decorate_histograms(data, after, before)
+    log_x = plot.flavor in ("electron", "muon")
 
     canvas = ROOT.TCanvas(f"c_{era_label}_{weight.name}_{plot.name}", "", 800, 800)
     upper = ROOT.TPad("upper", "upper", 0.0, 0.30, 1.0, 1.0)
@@ -459,6 +460,9 @@ def draw_plot(
     lower.SetRightMargin(0.05)
     if log_y:
         upper.SetLogy()
+    if log_x:
+        upper.SetLogx()
+        lower.SetLogx()
 
     upper.Draw()
     lower.Draw()
@@ -543,6 +547,7 @@ def draw_trigger_path_plot(
     log_y: bool,
 ) -> None:
     decorate_histograms(data, after, before)
+    log_x = plot.flavor in ("electron", "muon")
 
     canvas = ROOT.TCanvas(f"c_{era_label}_{trigger.name}_{plot.name}", "", 800, 800)
     upper = ROOT.TPad("upper", "upper", 0.0, 0.30, 1.0, 1.0)
@@ -556,6 +561,9 @@ def draw_trigger_path_plot(
     lower.SetRightMargin(0.05)
     if log_y:
         upper.SetLogy()
+    if log_x:
+        upper.SetLogx()
+        lower.SetLogx()
 
     upper.Draw()
     lower.Draw()
@@ -751,7 +759,7 @@ def main() -> None:
                     )
                     continue
 
-                out_subdir = os.path.join(out_dir, era_label, "trigger_sf", "trigger_paths")
+                out_subdir = os.path.join(out_dir, era_label, "trigger_sf", "ratio_OR_single")
                 os.makedirs(out_subdir, exist_ok=True)
                 tag = f"{era_label}_{trigger.name}_{plot.name}"
 
