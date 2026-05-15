@@ -486,7 +486,6 @@ def merge_electron_gap_nongap_efficiency(
     era: str,
     input_sf: str,
     output_sf: str,
-    force_efficiency_output: bool = False,
 ) -> Path:
     raw = raw_dir(base_dir, era)
     sources = {
@@ -500,8 +499,7 @@ def merge_electron_gap_nongap_efficiency(
         output_name = f"hza_{output_sf}_{era}_efficiencies.json"
     elif all(name in source_names for name in CORRECTION_NAMES):
         correction_names = CORRECTION_NAMES
-        output_type = "efficiencies" if force_efficiency_output else "scalefactors"
-        output_name = f"hza_{output_sf}_{era}_{output_type}.json"
+        output_name = f"hza_{output_sf}_{era}_scalefactors.json"
     else:
         raise ValueError(
             f"Unsupported electron gap/nongap JSON schema for {input_sf}: "
@@ -548,13 +546,7 @@ def merge_electron_trigger(base_dir: Path, era: str, trigger_sf: str) -> Path:
 
 
 def merge_electron_iso(base_dir: Path, era: str, input_sf: str, output_sf: str) -> Path:
-    return merge_electron_gap_nongap_efficiency(
-        base_dir,
-        era,
-        input_sf,
-        output_sf,
-        force_efficiency_output=True,
-    )
+    return merge_electron_gap_nongap_efficiency(base_dir, era, input_sf, output_sf)
 
 
 def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
