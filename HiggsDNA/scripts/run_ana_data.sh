@@ -12,6 +12,7 @@ n_cores="${N_CORES:-10}"
 batch_system="${BATCH_SYSTEM:-condor}" # local # condor
 sample_list="${SAMPLE_LIST:-Data}"
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
+fpo="${FPO:-5}"
 clean_analysis_state="${CLEAN_ANALYSIS_STATE:-1}"
 unretire_jobs="${UNRETIRE_JOBS:-0}" # 1 re-run unfinished jobs # 0 no re-run
 retire_jobs="${RETIRE_JOBS:-1}" # 1 merged parquet files # 0 no merged until all jobs finished
@@ -53,6 +54,10 @@ fi
 
 if [[ -n "${years}" ]]; then
     cmd+=(--years "${years}")
+fi
+
+if [[ -n "${fpo}" ]]; then
+    cmd+=(--fpo "${fpo}")
 fi
 
 cmd+=("$@")
