@@ -483,7 +483,7 @@ def merge_electron_gap_nongap_efficiency(
     era: str,
     input_sf: str,
     output_sf: str,
-    require_efficiency: bool = False,
+    force_efficiency_output: bool = False,
 ) -> Path:
     raw = raw_dir(base_dir, era)
     sources = {
@@ -496,15 +496,9 @@ def merge_electron_gap_nongap_efficiency(
         correction_names = EFFICIENCY_NAMES
         output_name = f"hza_{output_sf}_{era}_efficiencies.json"
     elif all(name in source_names for name in CORRECTION_NAMES):
-        if require_efficiency:
-            raise ValueError(
-                f"Electron miniIso input {input_sf} for {era} contains scale-factor "
-                f"corrections {sorted(source_names)}, not efficiency corrections "
-                f"{list(EFFICIENCY_NAMES)}. Regenerate the raw gap/nongap JSONs as "
-                "efficiency JSONs before merging."
-            )
         correction_names = CORRECTION_NAMES
-        output_name = f"hza_{output_sf}_{era}_scalefactors.json"
+        output_type = "efficiencies" if force_efficiency_output else "scalefactors"
+        output_name = f"hza_{output_sf}_{era}_{output_type}.json"
     else:
         raise ValueError(
             f"Unsupported electron gap/nongap JSON schema for {input_sf}: "
@@ -552,17 +546,21 @@ def merge_electron_iso(base_dir: Path, era: str, input_sf: str, output_sf: str) 
         era,
         input_sf,
         output_sf,
-        require_efficiency=True,
+        force_efficiency_output=True,
     )
 
 
 def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
-    output = era_out_dir(base_dir, era) / f"hzg_{output_sf}_{era}_efficiencies.json"
-    if not output.exists():
+    era_dir = era_out_dir(base_dir, era)
+    source = era_dir / f"hzg_{output_sf}_{era}_efficiencies.json"
+    output = era_dir / f"hza_{output_sf}_{era}_efficiencies.json"
+    if not source.exists():
         raise FileNotFoundError(
-            f"Missing collected muon miniIso efficiency JSON: {output}. "
+            f"Missing collected muon miniIso efficiency JSON: {source}. "
             "Run 1_collect_custom_sf.sh after producing the hzg_muiso* efficiency JSONs."
         )
+    payload = load_json(source)
+    write_json(payload, output)
     return output
 
 
