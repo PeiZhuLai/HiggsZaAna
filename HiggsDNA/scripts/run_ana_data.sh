@@ -21,8 +21,12 @@ short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 reconfigure_jobs="${RECONFIGURE_JOBS:-0}" # 1 rewrite job configs/scripts/condor submit files
 condor_req_memory="${CONDOR_REQ_MEMORY:-20000}" # MB, passed to Condor RequestMemory
+parquet_read_retries="${HIGGSDNA_PARQUET_READ_RETRIES:-6}"
+parquet_read_retry_delay="${HIGGSDNA_PARQUET_READ_RETRY_DELAY:-10}"
 
 export HIGGSDNA_CONDOR_REQ_MEMORY="${condor_req_memory}"
+export HIGGSDNA_PARQUET_READ_RETRIES="${parquet_read_retries}"
+export HIGGSDNA_PARQUET_READ_RETRY_DELAY="${parquet_read_retry_delay}"
 
 if [[ "${clean_analysis_state}" == "1" ]]; then
     rm -f "${outdir}/analysis_manager.pkl" "${outdir}/analysis_manager_temp.pkl"
@@ -72,6 +76,8 @@ cmd+=("$@")
 
 if [[ "${dry_run}" == "1" ]]; then
     printf 'HIGGSDNA_CONDOR_REQ_MEMORY=%q\n' "${HIGGSDNA_CONDOR_REQ_MEMORY}"
+    printf 'HIGGSDNA_PARQUET_READ_RETRIES=%q\n' "${HIGGSDNA_PARQUET_READ_RETRIES}"
+    printf 'HIGGSDNA_PARQUET_READ_RETRY_DELAY=%q\n' "${HIGGSDNA_PARQUET_READ_RETRY_DELAY}"
     printf 'Command: '
     printf '%q ' "${cmd[@]}"
     printf '\n'
