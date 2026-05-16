@@ -29,15 +29,15 @@ ROOT.gStyle.SetOptStat(0)
 UPPER_AXIS_TITLE_SIZE = 0.065
 UPPER_AXIS_LABEL_SIZE = 0.060
 UPPER_X_TITLE_OFFSET = 1.0
-UPPER_Y_TITLE_OFFSET = 1.0
+UPPER_Y_TITLE_OFFSET = 1.45
 UPPER_TRIGGER_AXIS_TITLE_SIZE = 0.055
 UPPER_TRIGGER_AXIS_LABEL_SIZE = 0.055
-UPPER_TRIGGER_Y_TITLE_OFFSET = 1.15
+UPPER_TRIGGER_Y_TITLE_OFFSET = 1.35
 
 LOWER_AXIS_TITLE_SIZE = 0.14
 LOWER_AXIS_LABEL_SIZE = 0.14
-LOWER_X_TITLE_OFFSET = 1.1
-LOWER_Y_TITLE_OFFSET = 0.45
+LOWER_X_TITLE_OFFSET = 1.45
+LOWER_Y_TITLE_OFFSET = 0.6
 
 
 LUMI_MAP = {
@@ -480,7 +480,7 @@ def draw_plot(
     upper.SetLeftMargin(0.17)
     upper.SetRightMargin(0.05)
     lower.SetTopMargin(0.03)
-    lower.SetBottomMargin(0.35)
+    lower.SetBottomMargin(0.45)
     lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
     if log_y:
@@ -577,7 +577,7 @@ def draw_trigger_path_plot(
     upper.SetLeftMargin(0.17)
     upper.SetRightMargin(0.05)
     lower.SetTopMargin(0.03)
-    lower.SetBottomMargin(0.35)
+    lower.SetBottomMargin(0.45)
     lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
     if log_y:
