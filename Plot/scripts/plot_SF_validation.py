@@ -264,7 +264,7 @@ def draw_cms_labels(pad: ROOT.TVirtualPad, lumi: float) -> None:
 
     label.SetTextAlign(13)
     label.SetTextSize(0.060)
-    label.DrawLatex(0.13, 0.963, "#bf{CMS} #it{Preliminary}")
+    label.DrawLatex(0.17, 0.963, "#bf{CMS} #it{Preliminary}")
 
     label.SetTextAlign(31)
     label.SetTextSize(0.055)
@@ -427,11 +427,11 @@ def decorate_histograms(data: ROOT.TH1, after: ROOT.TH1, before: ROOT.TH1) -> No
     after.SetFillStyle(0)
     after.SetMarkerColor(ROOT.kRed + 1)
 
-    before.SetLineColor(ROOT.kAzure + 1)
+    before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
     before.SetLineWidth(3)
     before.SetLineStyle(2)
     before.SetFillStyle(0)
-    before.SetMarkerColor(ROOT.kAzure + 1)
+    before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
 
 
 def draw_plot(
@@ -452,11 +452,11 @@ def draw_plot(
     upper = ROOT.TPad("upper", "upper", 0.0, 0.30, 1.0, 1.0)
     lower = ROOT.TPad("lower", "lower", 0.0, 0.0, 1.0, 0.30)
     upper.SetBottomMargin(0.03)
-    upper.SetLeftMargin(0.13)
+    upper.SetLeftMargin(0.17)
     upper.SetRightMargin(0.05)
     lower.SetTopMargin(0.03)
     lower.SetBottomMargin(0.35)
-    lower.SetLeftMargin(0.13)
+    lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
     if log_y:
         upper.SetLogy()
@@ -523,8 +523,8 @@ def draw_plot(
     if ratio_before:
         ratio_before.SetMarkerStyle(24)
         ratio_before.SetMarkerSize(0.75)
-        ratio_before.SetMarkerColor(ROOT.kAzure + 1)
-        ratio_before.SetLineColor(ROOT.kAzure + 1)
+        ratio_before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
+        ratio_before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_before.SetLineWidth(3)
         ratio_before.Draw("E1 same")
 
@@ -553,11 +553,11 @@ def draw_trigger_path_plot(
     upper = ROOT.TPad("upper", "upper", 0.0, 0.30, 1.0, 1.0)
     lower = ROOT.TPad("lower", "lower", 0.0, 0.0, 1.0, 0.30)
     upper.SetBottomMargin(0.03)
-    upper.SetLeftMargin(0.13)
+    upper.SetLeftMargin(0.17)
     upper.SetRightMargin(0.05)
     lower.SetTopMargin(0.03)
     lower.SetBottomMargin(0.35)
-    lower.SetLeftMargin(0.13)
+    lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
     if log_y:
         upper.SetLogy()
@@ -624,8 +624,8 @@ def draw_trigger_path_plot(
     if ratio_before:
         ratio_before.SetMarkerStyle(24)
         ratio_before.SetMarkerSize(0.75)
-        ratio_before.SetMarkerColor(ROOT.kAzure + 1)
-        ratio_before.SetLineColor(ROOT.kAzure + 1)
+        ratio_before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
+        ratio_before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_before.SetLineWidth(3)
         ratio_before.Draw("E1 same")
 

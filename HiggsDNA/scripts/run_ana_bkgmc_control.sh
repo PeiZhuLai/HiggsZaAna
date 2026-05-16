@@ -5,7 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_dir}"
 
-outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_DNA_control_tmp/Bkg_MC_control}"
+outdir="${OUTDIR:-/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_control_tmp/Bkg_MC_control}"
 config="${CONFIG:-metadata/za_bkgmc_run3_control.json}"
 log_level="${LOG_LEVEL:-INFO}" # DEBUG # INFO
 n_cores="${N_CORES:-10}"
@@ -22,7 +22,7 @@ merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 reconfigure_jobs="${RECONFIGURE_JOBS:-0}" # 1 rewrite job configs/scripts/condor submit files
-condor_req_memory="${CONDOR_REQ_MEMORY:-9000}" # MB, passed to Condor RequestMemory
+condor_req_memory="${CONDOR_REQ_MEMORY:-20000}" # MB, passed to Condor RequestMemory
 parquet_read_retries="${HIGGSDNA_PARQUET_READ_RETRIES:-6}"
 parquet_read_retry_delay="${HIGGSDNA_PARQUET_READ_RETRY_DELAY:-10}"
 condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-500}"
