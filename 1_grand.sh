@@ -20,15 +20,30 @@ bash 3_save_model.sh
 # p2root for MVA Score
 cd /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile
 python3 1_make_joblist.py
+
 condor_submit 2_submit.sub
-python3 3_condor_resubmit.py 
+cluster_id=$(condor_submit -terse 2_submit.sub)
+condor_wait /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(cluster_id).log
+echo "All condor jobs finished"
+
+python3 3_condor_resubmit.py
+cluster_id=$(condor_submit -terse 3_condor_resubmit.sub)
+condor_wait /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(cluster_id).log
+echo "All condor jobs finished"
+
 bash 4_prepaare_2024DYJetsToLL.sh
 
 # Determine MVA Cut
 cd /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor
 
 bash 1_submit_dataVmc_condor.sh
+cluster_id=$(condor_submit -terse 1_submit_dataVmc_condor.sub)
+condor_wait /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(cluster_id).log
+
 bash 2_resubmit_dataVmc_condor.sh
+cluster_id=$(condor_submit -terse 2_resubmit_dataVmc_condor.sub)
+condor_wait /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(cluster_id).log
+
 bash 3_merge_dataVmc_condor.sh
 
 # Plot associated plots
