@@ -195,4 +195,9 @@ if [[ "$DRY_RUN" == "1" ]]; then
     exit 0
 fi
 
+if [[ "${NO_SUBMIT:-0}" == "1" ]]; then
+    echo "[Info] NO_SUBMIT=1; generated $resubmit_file and $resubmit_jobs_file only."
+    exit 0
+fi
+
 condor_submit "$resubmit_file"

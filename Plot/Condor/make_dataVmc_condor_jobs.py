@@ -188,7 +188,7 @@ environment = "{environment}"
 
 output = {log_dir}/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).out
 error  = {log_dir}/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).err
-log    = {log_dir}/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).log
+log    = {log_dir}/dataVmc.$(ClusterId).log
 
 queue region_key, final_tag, sample_tag, samples from {jobs_file}
 """

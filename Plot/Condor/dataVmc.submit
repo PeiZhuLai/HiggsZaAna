@@ -14,6 +14,6 @@ environment = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CON
 
 output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).out
 error  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).err
-log    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).log
+log    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/dataVmc.$(ClusterId).log
 
 queue region_key, final_tag, sample_tag, samples from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/dataVmc_jobs.txt
