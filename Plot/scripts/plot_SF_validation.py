@@ -26,6 +26,14 @@ ROOT.gStyle.SetOptTitle(0)
 ROOT.gStyle.SetOptStat(0)
 
 
+UPPER_AXIS_TITLE_SIZE = 0.065
+UPPER_AXIS_LABEL_SIZE = 0.060
+UPPER_X_TITLE_OFFSET = 1.0
+UPPER_Y_TITLE_OFFSET = 1.0
+UPPER_TRIGGER_AXIS_TITLE_SIZE = 0.055
+UPPER_TRIGGER_AXIS_LABEL_SIZE = 0.055
+UPPER_TRIGGER_Y_TITLE_OFFSET = 1.15
+
 LOWER_AXIS_TITLE_SIZE = 0.14
 LOWER_AXIS_LABEL_SIZE = 0.14
 LOWER_X_TITLE_OFFSET = 1.1
@@ -411,6 +419,23 @@ def style_lower_frame(frame: ROOT.TH1, x_title: str, y_title: str) -> None:
     frame.GetXaxis().SetLabelSize(LOWER_AXIS_LABEL_SIZE)
 
 
+def style_upper_histogram(
+    hist: ROOT.TH1,
+    y_title: str,
+    *,
+    title_size: float = UPPER_AXIS_TITLE_SIZE,
+    label_size: float = UPPER_AXIS_LABEL_SIZE,
+    y_title_offset: float = UPPER_Y_TITLE_OFFSET,
+) -> None:
+    hist.GetXaxis().SetLabelSize(0)
+    hist.GetXaxis().SetTitleSize(title_size)
+    hist.GetXaxis().SetTitleOffset(UPPER_X_TITLE_OFFSET)
+    hist.GetYaxis().SetTitle(y_title)
+    hist.GetYaxis().SetTitleSize(title_size)
+    hist.GetYaxis().SetLabelSize(label_size)
+    hist.GetYaxis().SetTitleOffset(y_title_offset)
+
+
 def decorate_histograms(data: ROOT.TH1, after: ROOT.TH1, before: ROOT.TH1) -> None:
     for hist in (data, after, before):
         hist.SetTitle("")
@@ -478,11 +503,7 @@ def draw_plot(
         after.SetMinimum(0.0)
         after.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
 
-    after.GetXaxis().SetLabelSize(0)
-    after.GetYaxis().SetTitleSize(0.065)
-    after.GetYaxis().SetLabelSize(0.060)
-    after.GetYaxis().SetTitle("Events")
-    after.GetYaxis().SetTitleOffset(1.0)
+    style_upper_histogram(after, "Events")
     after.Draw("hist")
     before.Draw("hist same")
     data.Draw("E1 same")
@@ -579,11 +600,13 @@ def draw_trigger_path_plot(
         after.SetMinimum(0.0)
         after.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
 
-    after.GetXaxis().SetLabelSize(0)
-    after.GetYaxis().SetTitle(trigger.ratio_title)
-    after.GetYaxis().SetTitleSize(0.055)
-    after.GetYaxis().SetLabelSize(0.055)
-    after.GetYaxis().SetTitleOffset(1.15)
+    style_upper_histogram(
+        after,
+        trigger.ratio_title,
+        title_size=UPPER_TRIGGER_AXIS_TITLE_SIZE,
+        label_size=UPPER_TRIGGER_AXIS_LABEL_SIZE,
+        y_title_offset=UPPER_TRIGGER_Y_TITLE_OFFSET,
+    )
     after.Draw("hist")
     before.Draw("hist same")
     data.Draw("E1 same")
