@@ -21,9 +21,16 @@ retire_jobs="${RETIRE_JOBS:-0}" # 1 merged parquet files # 0 no merged until all
 merge_outputs="${MERGE_OUTPUTS:-0}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
+reconfigure_jobs="${RECONFIGURE_JOBS:-0}" # 1 rewrite job configs/scripts/condor submit files
+condor_req_memory="${CONDOR_REQ_MEMORY:-9000}" # MB, passed to Condor RequestMemory
+parquet_read_retries="${HIGGSDNA_PARQUET_READ_RETRIES:-6}"
+parquet_read_retry_delay="${HIGGSDNA_PARQUET_READ_RETRY_DELAY:-10}"
 condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-500}"
 condor_q_timeout="${CONDOR_Q_TIMEOUT:-60}"
 
+export HIGGSDNA_CONDOR_REQ_MEMORY="${condor_req_memory}"
+export HIGGSDNA_PARQUET_READ_RETRIES="${parquet_read_retries}"
+export HIGGSDNA_PARQUET_READ_RETRY_DELAY="${parquet_read_retry_delay}"
 export HIGGSDNA_CONDOR_SUBMIT_CHUNK_SIZE="${condor_submit_chunk_size}"
 export HIGGSDNA_CONDOR_Q_TIMEOUT="${condor_q_timeout}"
 
@@ -55,6 +62,10 @@ if [[ "${short}" == "1" ]]; then
     cmd+=(--short)
 fi
 
+if [[ "${reconfigure_jobs}" == "1" ]]; then
+    cmd+=(--reconfigure_jobs)
+fi
+
 if [[ -n "${sample_list}" ]]; then
     cmd+=(--sample_list "${sample_list}")
 fi
@@ -70,6 +81,9 @@ fi
 cmd+=("$@")
 
 if [[ "${dry_run}" == "1" ]]; then
+    printf 'HIGGSDNA_CONDOR_REQ_MEMORY=%q\n' "${HIGGSDNA_CONDOR_REQ_MEMORY}"
+    printf 'HIGGSDNA_PARQUET_READ_RETRIES=%q\n' "${HIGGSDNA_PARQUET_READ_RETRIES}"
+    printf 'HIGGSDNA_PARQUET_READ_RETRY_DELAY=%q\n' "${HIGGSDNA_PARQUET_READ_RETRY_DELAY}"
     printf 'Command: '
     printf '%q ' "${cmd[@]}"
     printf '\n'
