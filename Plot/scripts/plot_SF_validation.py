@@ -236,6 +236,65 @@ TRIGGER_PATHS: Tuple[TriggerPathSpec, ...] = (
 )
 
 
+TRIGGER_RATIO_PLOT_NAMES = (
+    "sublead_muon_pt",
+    "lead_muon_pt",
+    "sublead_electron_pt",
+    "lead_electron_pt",
+)
+
+
+TRIGGER_RATIO_OUTPUT_NAMES = {
+    "sublead_muon_pt": "trigger_ratio_subleadMuonPt",
+    "lead_muon_pt": "trigger_ratio_leadMuonPt",
+    "sublead_electron_pt": "trigger_ratio_subleadElectronPt",
+    "lead_electron_pt": "trigger_ratio_leadElectronPt",
+}
+
+
+LUMI_WEIGHT_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("weight_lumi", ("weight_lumi",)),
+    ("lumi_weight", ("lumi_weight",)),
+    ("weight_central / weight_hlt_sf_central", ("weight_central", "weight_hlt_sf_central")),
+    ("weight / weight_hlt_sf_central", ("weight", "weight_hlt_sf_central")),
+    ("weight_central", ("weight_central",)),
+    ("weight", ("weight",)),
+)
+
+
+DIMUON_TRIGGER_WEIGHT_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("w_dimu_trig", ("w_dimu_trig",)),
+    ("weight_dimu_trig", ("weight_dimu_trig",)),
+    ("weight_dimuon_trig", ("weight_dimuon_trig",)),
+    ("weight_dimu_trig_central", ("weight_dimu_trig_central",)),
+    ("weight_dimuon_trig_central", ("weight_dimuon_trig_central",)),
+    ("weight_hlt_sf_central", ("weight_hlt_sf_central",)),
+)
+
+
+DIELECTRON_TRIGGER_WEIGHT_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("w_diel_trig", ("w_diel_trig",)),
+    ("weight_diel_trig", ("weight_diel_trig",)),
+    ("weight_dielectron_trig", ("weight_dielectron_trig",)),
+    ("weight_diel_trig_central", ("weight_diel_trig_central",)),
+    ("weight_dielectron_trig_central", ("weight_dielectron_trig_central",)),
+    ("weight_hlt_sf_central", ("weight_hlt_sf_central",)),
+)
+
+
+COMBINED_TRIGGER_WEIGHT_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("w_combmu_trig", ("w_combmu_trig",)),
+    ("weight_combmu_trig", ("weight_combmu_trig",)),
+    ("w_combined_mu_trig", ("w_combined_mu_trig",)),
+    ("weight_combined_mu_trig", ("weight_combined_mu_trig",)),
+    ("w_combele_trig", ("w_combele_trig",)),
+    ("weight_combele_trig", ("weight_combele_trig",)),
+    ("w_combined_ele_trig", ("w_combined_ele_trig",)),
+    ("weight_combined_ele_trig", ("weight_combined_ele_trig",)),
+    ("weight_hlt_sf_central", ("weight_hlt_sf_central",)),
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fast sideband SF validation plots")
     parser.add_argument("-y", "--Year", dest="year", default="run3")
@@ -276,7 +335,7 @@ def draw_cms_labels(pad: ROOT.TVirtualPad, lumi: float) -> None:
 
     label.SetTextAlign(31)
     label.SetTextSize(0.055)
-    label.DrawLatex(0.95, 0.92, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
+    label.DrawLatex(0.95, 0.963, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
 
 
 def add_file(chain: ROOT.TChain, path: str) -> bool:
@@ -329,6 +388,16 @@ def missing_branches(chain: ROOT.TChain, branches: Iterable[str]) -> List[str]:
     return [branch for branch in branches if not has_branch(chain, branch)]
 
 
+def first_available_expression(
+    chain: ROOT.TChain,
+    candidates: Sequence[Tuple[str, Tuple[str, ...]]],
+) -> Optional[Tuple[str, Tuple[str, ...]]]:
+    for expr, branches in candidates:
+        if not missing_branches(chain, branches):
+            return expr, branches
+    return None
+
+
 def resolve_mass_branch(chains: Dict[str, ROOT.TChain]) -> Optional[str]:
     for branch in ("H_m", "H_mass"):
         if all(has_branch(chain, branch) for chain in chains.values()):
@@ -340,6 +409,20 @@ def denominator_cut(branches: Sequence[str]) -> str:
     if not branches:
         return "1"
     return " && ".join(f"{branch} != 0" for branch in branches)
+
+
+def weight_guard_cut(expr: str, branches: Sequence[str]) -> str:
+    if "/" not in expr:
+        return "1"
+    guarded = [branch for branch in branches if branch not in ("weight", "weight_central")]
+    return denominator_cut(guarded)
+
+
+def multiply_weights(*weights: str) -> str:
+    active = [weight for weight in weights if weight and weight != "1"]
+    if not active:
+        return "1.0"
+    return " * ".join(f"({weight})" for weight in active)
 
 
 def draw_hist(
@@ -459,6 +542,52 @@ def decorate_histograms(data: ROOT.TH1, after: ROOT.TH1, before: ROOT.TH1) -> No
     before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
 
 
+def decorate_trigger_ratio_histograms(data: ROOT.TH1, nominal: ROOT.TH1, combined: ROOT.TH1) -> None:
+    for hist in (data, nominal, combined):
+        hist.SetTitle("")
+        hist.SetStats(False)
+        hist.SetFillStyle(0)
+
+    blue = ROOT.TColor.GetColor("#1F78B4")
+    orange = ROOT.TColor.GetColor("#E66101")
+
+    data.SetMarkerStyle(20)
+    data.SetMarkerSize(0.9)
+    data.SetLineColor(ROOT.kBlack)
+    data.SetLineWidth(2)
+    data.SetMarkerColor(ROOT.kBlack)
+
+    nominal.SetMarkerStyle(24)
+    nominal.SetMarkerSize(0.8)
+    nominal.SetLineColor(blue)
+    nominal.SetLineWidth(3)
+    nominal.SetMarkerColor(blue)
+
+    combined.SetMarkerStyle(25)
+    combined.SetMarkerSize(0.8)
+    combined.SetLineColor(orange)
+    combined.SetLineWidth(3)
+    combined.SetMarkerColor(orange)
+
+
+def trigger_ratio_x_title(plot: PlotSpec) -> str:
+    titles = {
+        "sublead_muon_pt": "Sublead Muon p_{T} [GeV]",
+        "lead_muon_pt": "Lead Muon p_{T} [GeV]",
+        "sublead_electron_pt": "Sublead Electron p_{T} [GeV]",
+        "lead_electron_pt": "Lead Electron p_{T} [GeV]",
+    }
+    return titles.get(plot.name, plot.title)
+
+
+def trigger_ratio_upper_range(plot: PlotSpec, ymax: float) -> Tuple[float, float]:
+    if plot.name == "lead_muon_pt":
+        return 0.75, max(1.40, ymax * 1.18)
+    if plot.name == "sublead_muon_pt":
+        return 0.75, max(2.05, ymax * 1.18)
+    return 0.75, max(1.75, ymax * 1.18)
+
+
 def draw_plot(
     data: ROOT.TH1,
     after: ROOT.TH1,
@@ -557,17 +686,15 @@ def draw_plot(
 
 def draw_trigger_path_plot(
     data: ROOT.TH1,
-    after: ROOT.TH1,
-    before: ROOT.TH1,
+    nominal: ROOT.TH1,
+    combined: ROOT.TH1,
     plot: PlotSpec,
     trigger: TriggerPathSpec,
-    weight: WeightSpec,
     era_label: str,
     lumi: float,
     out_path: str,
-    log_y: bool,
 ) -> None:
-    decorate_histograms(data, after, before)
+    decorate_trigger_ratio_histograms(data, nominal, combined)
     log_x = plot.flavor in ("electron", "muon")
 
     canvas = ROOT.TCanvas(f"c_{era_label}_{trigger.name}_{plot.name}", "", 800, 800)
@@ -580,8 +707,6 @@ def draw_trigger_path_plot(
     lower.SetBottomMargin(0.45)
     lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
-    if log_y:
-        upper.SetLogy()
     if log_x:
         upper.SetLogx()
         lower.SetLogx()
@@ -590,46 +715,41 @@ def draw_trigger_path_plot(
     lower.Draw()
 
     upper.cd()
-    ymax = max(data.GetMaximum(), after.GetMaximum(), before.GetMaximum())
-    if log_y:
-        positive = [h.GetMinimum(0.0) for h in (data, after, before) if h.GetMinimum(0.0) > 0]
-        ymin = min(positive) * 0.5 if positive else 0.01
-        after.SetMinimum(ymin)
-        after.SetMaximum(ymax * 20.0 if ymax > 0 else 1.0)
-    else:
-        after.SetMinimum(0.0)
-        after.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
+    ymax = max(data.GetMaximum(), nominal.GetMaximum(), combined.GetMaximum())
+    ymin, ymax = trigger_ratio_upper_range(plot, ymax)
+    nominal.SetMinimum(ymin)
+    nominal.SetMaximum(ymax)
 
     style_upper_histogram(
-        after,
-        trigger.ratio_title,
+        nominal,
+        "OR of triggers / Dimuon trigger",
         title_size=UPPER_TRIGGER_AXIS_TITLE_SIZE,
         label_size=UPPER_TRIGGER_AXIS_LABEL_SIZE,
         y_title_offset=UPPER_TRIGGER_Y_TITLE_OFFSET,
     )
-    after.Draw("hist")
-    before.Draw("hist same")
+    nominal.Draw("hist E1")
+    combined.Draw("hist E1 same")
     data.Draw("E1 same")
 
-    legend = ROOT.TLegend(0.52, 0.70, 0.90, 0.89)
+    legend = ROOT.TLegend(0.50, 0.68, 0.90, 0.88)
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
     legend.SetTextSize(0.04)
     legend.AddEntry(data, "Data", "lep")
-    legend.AddEntry(after, weight.after_label, "l")
-    legend.AddEntry(before, weight.before_label, "l")
+    legend.AddEntry(nominal, "MC (nominal)", "lp")
+    legend.AddEntry(combined, "MC (w_combmu_trig)", "lp")
     legend.Draw()
 
     draw_cms_labels(upper, lumi)
 
     lower.cd()
-    ratio_after = make_ratio(data, after, f"ratio_after_{era_label}_{trigger.name}_{plot.name}")
-    ratio_before = make_ratio(data, before, f"ratio_before_{era_label}_{trigger.name}_{plot.name}")
+    ratio_nominal = make_ratio(data, nominal, f"ratio_nominal_{era_label}_{trigger.name}_{plot.name}")
+    ratio_combined = make_ratio(data, combined, f"ratio_combined_{era_label}_{trigger.name}_{plot.name}")
     frame = ROOT.TH1D(f"frame_{era_label}_{trigger.name}_{plot.name}", "", plot.nbins, array("d", plot.bins))
     frame.SetTitle("")
     frame.SetStats(False)
     frame.SetDirectory(0)
-    style_lower_frame(frame, plot.title, "Data / MC")
+    style_lower_frame(frame, trigger_ratio_x_title(plot), "Data/MC")
     frame.Draw("axis")
 
     line = ROOT.TLine(plot.xmin, 1.0, plot.xmax, 1.0)
@@ -637,20 +757,20 @@ def draw_trigger_path_plot(
     line.SetLineStyle(2)
     line.Draw("same")
 
-    if ratio_after:
-        ratio_after.SetMarkerStyle(20)
-        ratio_after.SetMarkerSize(0.75)
-        ratio_after.SetMarkerColor(ROOT.kRed + 1)
-        ratio_after.SetLineColor(ROOT.kRed + 1)
-        ratio_after.SetLineWidth(3)
-        ratio_after.Draw("E1 same")
-    if ratio_before:
-        ratio_before.SetMarkerStyle(24)
-        ratio_before.SetMarkerSize(0.75)
-        ratio_before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
-        ratio_before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
-        ratio_before.SetLineWidth(3)
-        ratio_before.Draw("E1 same")
+    if ratio_nominal:
+        ratio_nominal.SetMarkerStyle(24)
+        ratio_nominal.SetMarkerSize(0.75)
+        ratio_nominal.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
+        ratio_nominal.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
+        ratio_nominal.SetLineWidth(3)
+        ratio_nominal.Draw("E1 same")
+    if ratio_combined:
+        ratio_combined.SetMarkerStyle(25)
+        ratio_combined.SetMarkerSize(0.75)
+        ratio_combined.SetMarkerColor(ROOT.TColor.GetColor("#E66101"))
+        ratio_combined.SetLineColor(ROOT.TColor.GetColor("#E66101"))
+        ratio_combined.SetLineWidth(3)
+        ratio_combined.Draw("E1 same")
 
     canvas.cd()
     canvas.SaveAs(out_path + ".pdf")
@@ -688,8 +808,6 @@ def main() -> None:
     print(f"[Config] input_dir={input_dir}")
     print(f"[Config] out_dir={out_dir}")
 
-    trigger_weight = next(weight for weight in WEIGHTS if weight.name == "trigger_sf")
-
     for era_label, eras in era_groups:
         print(f"\n[Era] {era_label}: {', '.join(eras)}")
         lumi = lumi_for_eras(eras)
@@ -702,6 +820,16 @@ def main() -> None:
             print(f"[Skip] {era_label}: no common H_m/H_mass branch in Data and MC")
             continue
         print(f"[Mass] using {mass_branch}")
+        lumi_weight = first_available_expression(chains["MC"], LUMI_WEIGHT_CANDIDATES)
+        combined_trigger_weight = first_available_expression(chains["MC"], COMBINED_TRIGGER_WEIGHT_CANDIDATES)
+        if lumi_weight:
+            print(f"[Weights] MC nominal numerator uses {lumi_weight[0]}")
+        else:
+            print(f"[Skip] {era_label}: no usable luminosity/nominal MC weight branch")
+        if combined_trigger_weight:
+            print(f"[Weights] MC combined numerator uses {combined_trigger_weight[0]}")
+        else:
+            print(f"[Skip] {era_label}: no usable combined trigger-weight branch")
 
         for weight in WEIGHTS:
             for plot in PLOTS:
@@ -762,6 +890,32 @@ def main() -> None:
             for plot in PLOTS:
                 if plot.flavor != trigger.flavor:
                     continue
+                if plot.name not in TRIGGER_RATIO_PLOT_NAMES:
+                    continue
+                if not lumi_weight or not combined_trigger_weight:
+                    continue
+
+                denominator_trigger_weight = first_available_expression(
+                    chains["MC"],
+                    DIMUON_TRIGGER_WEIGHT_CANDIDATES
+                    if trigger.flavor == "muon"
+                    else DIELECTRON_TRIGGER_WEIGHT_CANDIDATES,
+                )
+                if not denominator_trigger_weight:
+                    print(f"[Skip] {era_label}/{trigger.name}/{plot.name}: no denominator trigger-weight branch")
+                    continue
+
+                lumi_weight_expr, lumi_weight_branches = lumi_weight
+                combined_weight_expr, combined_weight_branches = combined_trigger_weight
+                denominator_trigger_expr, denominator_trigger_branches = denominator_trigger_weight
+                mc_nominal_numerator_weight = lumi_weight_expr
+                mc_combined_numerator_weight = multiply_weights(lumi_weight_expr, combined_weight_expr)
+                mc_denominator_weight = multiply_weights(lumi_weight_expr, denominator_trigger_expr)
+                mc_weight_guard = combine_selections(
+                    weight_guard_cut(lumi_weight_expr, lumi_weight_branches),
+                    weight_guard_cut(combined_weight_expr, combined_weight_branches),
+                    weight_guard_cut(denominator_trigger_expr, denominator_trigger_branches),
+                )
 
                 required_data = [
                     plot.expr,
@@ -771,7 +925,12 @@ def main() -> None:
                 ]
                 if plot.selection != "1":
                     required_data.extend(token.strip() for token in plot.selection.split("==")[:1])
-                required_mc = required_data + ["weight_central"] + list(trigger_weight.denominator_branches)
+                required_mc = (
+                    required_data
+                    + list(lumi_weight_branches)
+                    + list(combined_weight_branches)
+                    + list(denominator_trigger_branches)
+                )
 
                 missing_data = missing_branches(chains["Data"], required_data)
                 missing_mc = missing_branches(chains["MC"], required_mc)
@@ -782,7 +941,7 @@ def main() -> None:
                     )
                     continue
 
-                out_subdir = os.path.join(out_dir, era_label, "trigger_sf", "ratio_OR_single")
+                out_subdir = os.path.join(out_dir, era_label, "trigger_ratio_comparison")
                 os.makedirs(out_subdir, exist_ok=True)
                 tag = f"{era_label}_{trigger.name}_{plot.name}"
 
@@ -805,59 +964,64 @@ def main() -> None:
                     f"{trigger.denominator_branch} == 1",
                     data=True,
                 )
-                after_numerator = draw_hist(
+                mc_nominal_numerator = draw_hist(
                     chains["MC"],
-                    f"h_after_num_{tag}",
+                    f"h_mc_nominal_num_{tag}",
                     plot,
-                    trigger_weight.after_weight,
+                    mc_nominal_numerator_weight,
                     mass_branch,
-                    f"{trigger.numerator_branch} == 1",
+                    combine_selections(f"{trigger.numerator_branch} == 1", mc_weight_guard),
                 )
-                after_denominator = draw_hist(
+                mc_nominal_denominator = draw_hist(
                     chains["MC"],
-                    f"h_after_den_{tag}",
+                    f"h_mc_nominal_den_{tag}",
                     plot,
-                    trigger_weight.after_weight,
+                    mc_denominator_weight,
                     mass_branch,
-                    f"{trigger.denominator_branch} == 1",
+                    combine_selections(f"{trigger.denominator_branch} == 1", mc_weight_guard),
                 )
-                before_selection = denominator_cut(trigger_weight.denominator_branches)
-                before_numerator = draw_hist(
+                mc_combined_numerator = draw_hist(
                     chains["MC"],
-                    f"h_before_num_{tag}",
+                    f"h_mc_combined_num_{tag}",
                     plot,
-                    trigger_weight.before_weight,
+                    mc_combined_numerator_weight,
                     mass_branch,
-                    combine_selections(f"{trigger.numerator_branch} == 1", before_selection),
+                    combine_selections(f"{trigger.numerator_branch} == 1", mc_weight_guard),
                 )
-                before_denominator = draw_hist(
+                mc_combined_denominator = draw_hist(
                     chains["MC"],
-                    f"h_before_den_{tag}",
+                    f"h_mc_combined_den_{tag}",
                     plot,
-                    trigger_weight.before_weight,
+                    mc_denominator_weight,
                     mass_branch,
-                    combine_selections(f"{trigger.denominator_branch} == 1", before_selection),
+                    combine_selections(f"{trigger.denominator_branch} == 1", mc_weight_guard),
                 )
 
                 data_ratio = make_ratio(data_numerator, data_denominator, f"h_data_ratio_{tag}")
-                after_ratio = make_ratio(after_numerator, after_denominator, f"h_after_ratio_{tag}")
-                before_ratio = make_ratio(before_numerator, before_denominator, f"h_before_ratio_{tag}")
-                if not data_ratio or not after_ratio or not before_ratio:
+                mc_nominal_ratio = make_ratio(
+                    mc_nominal_numerator,
+                    mc_nominal_denominator,
+                    f"h_mc_nominal_ratio_{tag}",
+                )
+                mc_combined_ratio = make_ratio(
+                    mc_combined_numerator,
+                    mc_combined_denominator,
+                    f"h_mc_combined_ratio_{tag}",
+                )
+                if not data_ratio or not mc_nominal_ratio or not mc_combined_ratio:
                     print(f"[Skip] {tag}: empty denominator in Data or MC trigger-path ratio")
                     continue
 
-                out_path = os.path.join(out_subdir, f"{trigger.name}_{plot.name}")
+                out_path = os.path.join(out_subdir, TRIGGER_RATIO_OUTPUT_NAMES[plot.name])
                 draw_trigger_path_plot(
                     data_ratio,
-                    after_ratio,
-                    before_ratio,
+                    mc_nominal_ratio,
+                    mc_combined_ratio,
                     plot,
                     trigger,
-                    trigger_weight,
                     era_label,
                     lumi,
                     out_path,
-                    args.log_y,
                 )
 
     print("\nDone")
