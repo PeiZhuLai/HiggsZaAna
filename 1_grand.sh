@@ -3,6 +3,11 @@ set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 
+echo_step() {
+    echo
+    echo "==== $* ===="
+}
+
 has_queue_rows() {
     local joblist="$1"
     [[ -s "$joblist" ]] || return 1
@@ -31,17 +36,20 @@ submit_and_wait() {
 # conda activate higgs-alp-ana
 
 # p2root
+echo_step "HiggsZaAna: p2root"
 cd "${PROJECT_DIR}/Parquet2Rootfile"
 bash 1_run_P2Root.sh
 bash 2_prepare_rootfile.sh
 
 # Train MVA
+echo_step "HiggsZaAna: train MVA"
 cd "${PROJECT_DIR}/HZaMVA/scripts"
 python3 1_make_sideband_reweight.py
 bash 2_train.sh
 bash 3_save_model.sh
 
 # p2root for MVA Score
+echo_step "HiggsZaAna: p2root for MVA score"
 cd "${PROJECT_DIR}/Parquet2Rootfile/Condor"
 python3 1_make_joblist.py
 
@@ -61,6 +69,7 @@ fi
 bash 4_prepaare_2024DYJetsToLL.sh
 
 # Determine MVA Cut
+echo_step "HiggsZaAna: determine MVA cut"
 cd "${PROJECT_DIR}/Plot/Condor"
 
 NO_SUBMIT=1 bash 1_submit_dataVmc_condor.sh
@@ -80,9 +89,11 @@ fi
 bash 3_merge_dataVmc_condor.sh
 
 # Plot associated plots
+echo_step "HiggsZaAna: plot associated plots"
 cd "${PROJECT_DIR}/Plot"
 bash 1_runPlot.sh
 
+echo_step "Switch to flashggFinalFit environment"
 conda deactivate
 cd "${PROJECT_DIR}"
 
@@ -91,17 +102,19 @@ cd "${PROJECT_DIR}"
 ####--------------------------------------------
 
 baseDir=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit
-cd $baseDir
+cd "$baseDir"
 cmsenv
 
 ### ----------- MVA Cut 
-python3 $baseDir/MVAcut/run3_ReReco_Sys/scripts/apply_bdt_data.py &
-bash $baseDir/shellScripts/mva/run_apply_bdt_sig_6jobs.sh
+echo_step "flashggFinalFit: MVA cut"
+python3 "$baseDir/MVAcut/run3_ReReco_Sys/scripts/apply_bdt_data.py" &
+bash "$baseDir/shellScripts/mva/run_apply_bdt_sig_6jobs.sh"
 
 # wait
 # ### ----------- Tree2WS
-cd $baseDir/Trees2WS
-bash $baseDir/Trees2WS/run_tree2ws.sh
+echo_step "flashggFinalFit: Tree2WS"
+cd "$baseDir/Trees2WS"
+bash "$baseDir/Trees2WS/run_tree2ws.sh"
 
 ### ----------- Background 
 # cd $baseDir/shellScripts
@@ -109,59 +122,75 @@ bash $baseDir/Trees2WS/run_tree2ws.sh
 ### ----------- Background Condor
 # cd $baseDir/shellScripts
 # bash $baseDir/shellScripts/bkg/Condor/subjob_bkg.sh
-bash $baseDir/shellScripts/bkg/Condor/collect_bkg_results.sh
+echo_step "flashggFinalFit: background"
+bash "$baseDir/shellScripts/bkg/Condor/collect_bkg_results.sh"
 ### ----------- Background Condor run locally
 # cd $baseDir/shellScripts
 # bash bkg/Condor/subjob_bkg.sh
 # bash bkg/Condor/collect_bkg_results.sh
 
 ### ----------- Signal
-cd $baseDir/shellScripts
-bash $baseDir/shellScripts/sig_sys/1_runjob_sig_fTest.sh
-bash $baseDir/shellScripts/sig_sys/2_runjob_sig_calcPhotonSyst.sh
-bash $baseDir/shellScripts/sig_sys/3_runjob_sig_signalFit.sh
-bash $baseDir/shellScripts/sig_sys/4_runjob_sig_RunPlotter.sh
-bash $baseDir/shellScripts/sig_sys/5_runjob_sig_plotEffSigma.sh
+echo_step "flashggFinalFit: signal"
+cd "$baseDir/shellScripts"
+bash "$baseDir/shellScripts/sig_sys/1_runjob_sig_fTest.sh"
+bash "$baseDir/shellScripts/sig_sys/2_runjob_sig_calcPhotonSyst.sh"
+bash "$baseDir/shellScripts/sig_sys/3_runjob_sig_signalFit.sh"
+bash "$baseDir/shellScripts/sig_sys/4_runjob_sig_RunPlotter.sh"
+bash "$baseDir/shellScripts/sig_sys/5_runjob_sig_plotEffSigma.sh"
 
 ### ----------- Datacard
-cd $baseDir/Datacard
+echo_step "flashggFinalFit: datacard"
+cd "$baseDir/Datacard"
 sh 1_runjob_gen_datacard_makeYields.sh
 sh 2_runjob_gen_datacard_makeDatacard.sh
 sh 3_rysn_datacard.sh
 
 # ### ----------- Combine Limits
-cd $baseDir/Combine
+echo_step "flashggFinalFit: combine limits"
+cd "$baseDir/Combine"
 sh 1_makeLimits.sh
 sh 2_text2ws.sh
 
 # ### ----------- Plot Limts
-cd $baseDir/Plots
+echo_step "flashggFinalFit: plot limits"
+cd "$baseDir/Plots"
 sh 1_runLimitsPlot.sh
 
 ### ----------- Impact Plot
 # cd $baseDir/Combine
 # sh 3_expectedImpact.sh
 ### ----------- Impact Plot Condor (Generate ws for bias study)
-bash $baseDir/shellScripts/impact/Condor/subjob_expectedImpact.sh
+echo_step "flashggFinalFit: impact plot condor"
+bash "$baseDir/shellScripts/impact/Condor/subjob_expectedImpact.sh"
 
 ### ----------- Bias Study
 # cd $baseDir/Combine/Checks/Bias_nominal
 # sh 1_bias_study.sh
 ### ----------- Bias Study Condor (not working, need to check)
-bash $baseDir/shellScripts/bias/Condor/subjob_bias_study.sh
+echo_step "flashggFinalFit: bias study condor"
+bash "$baseDir/shellScripts/bias/Condor/subjob_bias_study.sh"
 
 ### ----------- Collect Bkg Fit Summary
-bash $baseDir/shellScripts/bkg/Condor/collect_bkg_results.sh
+echo_step "flashggFinalFit: collect background fit summary"
+bash "$baseDir/shellScripts/bkg/Condor/collect_bkg_results.sh"
 
-cd $baseDir/shellScripts
+cd "$baseDir/shellScripts"
 
 
 ####--------------------------------------------
 ####-------------- Update AN -------------------
 ####--------------------------------------------
 
+echo_step "Exit CMSSW environment"
+if command -v scram >/dev/null 2>&1; then
+    eval "$(scram unsetenv -sh)"
+else
+    echo "[Warning] scram not found; skip CMSSW environment cleanup"
+fi
+
 ANbashDir=/afs/cern.ch/work/p/pelai/HZa/AN/AN-25-172
-cd $ANbashDir
+echo_step "Update AN"
+cd "$ANbashDir"
 git pull
 
 bash sync_figures.sh
