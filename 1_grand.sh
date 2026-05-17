@@ -6,6 +6,8 @@ PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 RUN_HIGGSZA_P2ROOT="${RUN_HIGGSZA_P2ROOT:-0}"
 RUN_HIGGSZA_TRAIN_MVA="${RUN_HIGGSZA_TRAIN_MVA:-1}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE="${RUN_HIGGSZA_P2ROOT_MVA_SCORE:-1}"
+RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL="${RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL:-1}"
+RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT="${RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT:-1}"
 RUN_HIGGSZA_DETERMINE_MVA_CUT="${RUN_HIGGSZA_DETERMINE_MVA_CUT:-1}"
 RUN_HIGGSZA_PLOT="${RUN_HIGGSZA_PLOT:-1}"
 RUN_FLASHGG_ENV="${RUN_FLASHGG_ENV:-1}"
@@ -21,6 +23,8 @@ RUN_FLASHGG_BIAS="${RUN_FLASHGG_BIAS:-1}"
 RUN_FLASHGG_COLLECT_BKG="${RUN_FLASHGG_COLLECT_BKG:-1}"
 RUN_EXIT_CMSSW_ENV="${RUN_EXIT_CMSSW_ENV:-1}"
 RUN_UPDATE_AN="${RUN_UPDATE_AN:-1}"
+P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-3}"
+P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-0}"
 
 echo_step() {
     echo
@@ -49,6 +53,37 @@ submit_and_wait() {
     echo "[Condor] submitted cluster ${cluster_id}: ${submit_file}"
     condor_wait "$log_file"
     echo "[Condor] cluster ${cluster_id} finished"
+}
+
+p2root_resubmit_until_done() {
+    local attempt
+    local resubmit_args=(--no-submit)
+
+    if [[ "$P2ROOT_RESUBMIT_CHECK_ROOT" == "1" ]]; then
+        resubmit_args+=(--check-root)
+    fi
+
+    for ((attempt = 1; attempt <= P2ROOT_RESUBMIT_MAX_ATTEMPTS; attempt++)); do
+        echo_step "HiggsZaAna: p2root resubmit check ${attempt}/${P2ROOT_RESUBMIT_MAX_ATTEMPTS}"
+        python3 3_condor_resubmit.py "${resubmit_args[@]}"
+
+        if ! has_queue_rows joblist.tsv; then
+            echo "[Condor] no p2root resubmit jobs to submit"
+            return 0
+        fi
+
+        submit_and_wait "2_submit.sub" "${PROJECT_DIR}/Parquet2Rootfile/Condor/logs/%s.log"
+    done
+
+    echo_step "HiggsZaAna: final p2root resubmit check"
+    python3 3_condor_resubmit.py "${resubmit_args[@]}"
+    if has_queue_rows joblist.tsv; then
+        echo "[ERROR] p2root still has unfinished outputs after ${P2ROOT_RESUBMIT_MAX_ATTEMPTS} resubmit attempts." >&2
+        echo "[ERROR] Remaining jobs are listed in ${PROJECT_DIR}/Parquet2Rootfile/Condor/joblist.tsv" >&2
+        return 1
+    fi
+
+    echo "[Condor] no p2root resubmit jobs to submit"
 }
 
 # The story after HDNA parquets have been produced.
@@ -83,19 +118,24 @@ fi
 if [[ "$RUN_HIGGSZA_P2ROOT_MVA_SCORE" == "1" ]]; then
     echo_step "HiggsZaAna: p2root for MVA score"
     cd "${PROJECT_DIR}/Parquet2Rootfile/Condor"
-    python3 1_make_joblist.py
 
-    if has_queue_rows joblist.tsv; then
-        submit_and_wait "2_submit.sub" "${PROJECT_DIR}/Parquet2Rootfile/Condor/logs/%s.log"
+    if [[ "$RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL" == "1" ]]; then
+        echo_step "HiggsZaAna: p2root for MVA score initial submit"
+        python3 1_make_joblist.py
+
+        if has_queue_rows joblist.tsv; then
+            submit_and_wait "2_submit.sub" "${PROJECT_DIR}/Parquet2Rootfile/Condor/logs/%s.log"
+        else
+            echo "[Condor] no p2root jobs to submit"
+        fi
     else
-        echo "[Condor] no p2root jobs to submit"
+        echo_skip "HiggsZaAna: p2root for MVA score initial submit"
     fi
 
-    python3 3_condor_resubmit.py --no-submit
-    if has_queue_rows joblist.tsv; then
-        submit_and_wait "2_submit.sub" "${PROJECT_DIR}/Parquet2Rootfile/Condor/logs/%s.log"
+    if [[ "$RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT" == "1" ]]; then
+        p2root_resubmit_until_done
     else
-        echo "[Condor] no p2root resubmit jobs to submit"
+        echo_skip "HiggsZaAna: p2root for MVA score resubmit"
     fi
 
     bash 4_prepaare_2024DYJetsToLL.sh
