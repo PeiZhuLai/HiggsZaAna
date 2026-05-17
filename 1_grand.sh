@@ -188,9 +188,9 @@ else
     echo "[Warning] scram not found; skip CMSSW environment cleanup"
 fi
 
-ANbashDir=/afs/cern.ch/work/p/pelai/HZa/AN/AN-25-172
+ANbaseDir=/afs/cern.ch/work/p/pelai/HZa/AN/AN-25-172
 echo_step "Update AN"
-cd "$ANbashDir"
+cd "$ANbaseDir"
 git pull
 
 bash sync_figures.sh
@@ -199,3 +199,5 @@ bash compile.sh
 git add .
 git commit -m "AN and output"
 git push
+
+cd "$PROJECT_DIR"
