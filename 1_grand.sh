@@ -9,6 +9,8 @@ RUN_HIGGSZA_P2ROOT_MVA_SCORE="${RUN_HIGGSZA_P2ROOT_MVA_SCORE:-1}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL="${RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL:-0}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT="${RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT:-1}"
 RUN_HIGGSZA_DETERMINE_MVA_CUT="${RUN_HIGGSZA_DETERMINE_MVA_CUT:-1}"
+RUN_HIGGSZA_DETERMINE_MVA_CUT_INITIAL="${RUN_HIGGSZA_DETERMINE_MVA_CUT_INITIAL:-1}"
+RUN_HIGGSZA_DETERMINE_MVA_CUT_RESUBMIT="${RUN_HIGGSZA_DETERMINE_MVA_CUT_RESUBMIT:-1}"
 RUN_HIGGSZA_PLOT="${RUN_HIGGSZA_PLOT:-1}"
 RUN_FLASHGG_ENV="${RUN_FLASHGG_ENV:-1}"
 RUN_FLASHGG_MVA_CUT="${RUN_FLASHGG_MVA_CUT:-1}"
@@ -176,14 +178,23 @@ if [[ "$RUN_HIGGSZA_DETERMINE_MVA_CUT" == "1" ]]; then
     echo_step "HiggsZaAna: determine MVA cut"
     cd "${PROJECT_DIR}/Plot/Condor"
 
-    NO_SUBMIT=1 bash 1_submit_dataVmc_condor.sh
-    if has_queue_rows dataVmc_jobs.txt; then
-        submit_and_wait "dataVmc.submit" "${PROJECT_DIR}/Plot/Condor/logs/dataVmc.%s.log"
+    if [[ "$RUN_HIGGSZA_DETERMINE_MVA_CUT_INITIAL" == "1" ]]; then
+        echo_step "HiggsZaAna: determine MVA cut initial submit"
+        NO_SUBMIT=1 bash 1_submit_dataVmc_condor.sh
+        if has_queue_rows dataVmc_jobs.txt; then
+            submit_and_wait "dataVmc.submit" "${PROJECT_DIR}/Plot/Condor/logs/dataVmc.%s.log"
+        else
+            echo "[Condor] no dataVmc jobs to submit"
+        fi
     else
-        echo "[Condor] no dataVmc jobs to submit"
+        echo_skip "HiggsZaAna: determine MVA cut initial submit"
     fi
 
-    data_vmc_resubmit_until_done
+    if [[ "$RUN_HIGGSZA_DETERMINE_MVA_CUT_RESUBMIT" == "1" ]]; then
+        data_vmc_resubmit_until_done
+    else
+        echo_skip "HiggsZaAna: determine MVA cut resubmit"
+    fi
 
     bash 3_merge_dataVmc_condor.sh
 else
