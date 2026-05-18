@@ -25,6 +25,7 @@ RUN_EXIT_CMSSW_ENV="${RUN_EXIT_CMSSW_ENV:-1}"
 RUN_UPDATE_AN="${RUN_UPDATE_AN:-1}"
 P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-3}"
 P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-0}"
+DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-3}"
 
 echo_step() {
     echo
@@ -84,6 +85,33 @@ p2root_resubmit_until_done() {
     fi
 
     echo "[Condor] no p2root resubmit jobs to submit"
+}
+
+data_vmc_resubmit_until_done() {
+    local attempt
+
+    for ((attempt = 1; attempt <= DATA_VMC_RESUBMIT_MAX_ATTEMPTS; attempt++)); do
+        echo_step "HiggsZaAna: dataVmc resubmit check ${attempt}/${DATA_VMC_RESUBMIT_MAX_ATTEMPTS}"
+        NO_SUBMIT=1 bash 2_resubmit_dataVmc_condor.sh
+
+        if ! has_queue_rows dataVmc_resubmit_jobs.txt; then
+            echo "[Condor] no dataVmc resubmit jobs to submit"
+            return 0
+        fi
+
+        submit_and_wait "dataVmc_resubmit.submit" "${PROJECT_DIR}/Plot/Condor/logs/dataVmc.%s.log"
+    done
+
+    echo_step "HiggsZaAna: final dataVmc resubmit check"
+    NO_SUBMIT=1 bash 2_resubmit_dataVmc_condor.sh
+    if has_queue_rows dataVmc_resubmit_jobs.txt; then
+        echo "[ERROR] dataVmc still has unfinished outputs after ${DATA_VMC_RESUBMIT_MAX_ATTEMPTS} resubmit attempts." >&2
+        echo "[ERROR] Remaining jobs are listed in ${PROJECT_DIR}/Plot/Condor/dataVmc_resubmit_jobs.txt" >&2
+        echo "[ERROR] Missing outputs are listed in ${PROJECT_DIR}/Plot/Condor/dataVmc_missing_outputs.txt" >&2
+        return 1
+    fi
+
+    echo "[Condor] no dataVmc resubmit jobs to submit"
 }
 
 # The story after HDNA parquets have been produced.
@@ -155,12 +183,7 @@ if [[ "$RUN_HIGGSZA_DETERMINE_MVA_CUT" == "1" ]]; then
         echo "[Condor] no dataVmc jobs to submit"
     fi
 
-    NO_SUBMIT=1 bash 2_resubmit_dataVmc_condor.sh
-    if has_queue_rows dataVmc_resubmit_jobs.txt; then
-        submit_and_wait "dataVmc_resubmit.submit" "${PROJECT_DIR}/Plot/Condor/logs/dataVmc.%s.log"
-    else
-        echo "[Condor] no dataVmc resubmit jobs to submit"
-    fi
+    data_vmc_resubmit_until_done
 
     bash 3_merge_dataVmc_condor.sh
 else
