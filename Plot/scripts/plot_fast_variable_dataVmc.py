@@ -12,12 +12,14 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
-import ROOT
-
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PLOT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, os.path.join(PLOT_DIR, "lib"))
 sys.path.insert(0, "%s/lib" % os.getcwd())
+
+from root_compat import import_pyroot
+
+ROOT = import_pyroot()
 
 import Analyzer_Configs as AC
 import Plot_Configs as PC

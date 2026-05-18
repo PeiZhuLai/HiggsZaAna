@@ -154,7 +154,7 @@ cd "$PLOT_DIR"
 
 activate_conda_env_if_needed >> "$log_file" 2>&1
 localize_conda_env_if_needed >> "$log_file" 2>&1
-"$PYTHON_BIN" -c 'import numpy; import ROOT; import xgboost; print("[ENV] python imports OK")' >> "$log_file" 2>&1
+"$PYTHON_BIN" -c 'import numpy; import xgboost; from root_compat import import_pyroot; ROOT = import_pyroot(); ROOT.gROOT.SetBatch(True); print("[ENV] python imports OK")' >> "$log_file" 2>&1
 
 cmd=(
     "$PYTHON_BIN" "$SCRIPTS_DIR/1_prepare_dataVmc.py"
