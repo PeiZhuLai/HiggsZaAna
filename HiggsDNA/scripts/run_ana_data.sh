@@ -5,7 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_dir}"
 
-outdir="${OUTDIR:-/eos/home-p/pelai/HZa/parquet_DNA_tmp/Data}"
+outdir="${OUTDIR:-/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp/Data}"
 config="${CONFIG:-metadata/za_data_run3.json}"
 log_level="${LOG_LEVEL:-INFO}" # DEBUG # INFO
 n_cores="${N_CORES:-10}"
