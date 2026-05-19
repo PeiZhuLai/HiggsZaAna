@@ -12,6 +12,7 @@ RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
 CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
+CHECK_SYSTEMATICS="${CHECK_SYSTEMATICS:-1}"
 
 sample_tags=(
     data
@@ -41,6 +42,7 @@ cd "$PLOT_DIR"
 echo "[Config] RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS"
 echo "[Config] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS"
 echo "[Config] RUN_OPTIMIZATION=$RUN_OPTIMIZATION"
+echo "[Config] CHECK_SYSTEMATICS=$CHECK_SYSTEMATICS"
 echo "[Config] VARIABLES_DIR=$VARIABLES_DIR"
 echo "[Config] LOG_DIR=$LOG_DIR"
 
@@ -87,6 +89,89 @@ sys.exit(0 if keys and keys.GetEntries() > 0 else 1)
 PY
 }
 
+root_has_nontrivial_systematics() {
+    local path="$1"
+
+    if [[ "$CHECK_SYSTEMATICS" != "1" ]]; then
+        return 0
+    fi
+
+    "$PYTHON_BIN" - "$path" <<'PY'
+import sys
+
+try:
+    import ROOT
+except Exception:
+    sys.exit(2)
+
+path = sys.argv[1]
+samples = ("DYJetsToLL", "DYGto2LG")
+
+ROOT.gROOT.SetBatch(True)
+root_file = ROOT.TFile.Open(path, "READ")
+if not root_file or root_file.IsZombie():
+    sys.exit(1)
+
+raw_dir = root_file.Get("raw_plots")
+sys_dir = root_file.Get("sys_dir")
+if not raw_dir or not sys_dir:
+    print("[ERROR] Missing raw_plots or sys_dir in %s" % path)
+    sys.exit(1)
+
+checks = 0
+different = 0
+examples = []
+
+for key in sys_dir.GetListOfKeys():
+    sys_hist_name = key.GetName()
+    sample = None
+    marker = None
+    for candidate in samples:
+        candidate_marker = "_" + candidate + "_"
+        if candidate_marker in sys_hist_name:
+            sample = candidate
+            marker = candidate_marker
+            break
+    if sample is None:
+        continue
+
+    var_name, syst_name = sys_hist_name.rsplit(marker, 1)
+    if not (syst_name.endswith("_up") or syst_name.endswith("_down")):
+        continue
+
+    nominal = raw_dir.Get(var_name + "_" + sample)
+    shifted = sys_dir.Get(sys_hist_name)
+    if not nominal or not shifted:
+        continue
+
+    checks += 1
+    diff = 0.0
+    for i_bin in range(0, nominal.GetNbinsX() + 2):
+        diff += abs(float(shifted.GetBinContent(i_bin)) - float(nominal.GetBinContent(i_bin)))
+
+    scale = max(abs(float(nominal.Integral())), 1.0)
+    if diff > max(1e-9, 1e-8 * scale):
+        different += 1
+        if len(examples) < 3:
+            examples.append("%s diff=%.6g" % (sys_hist_name, diff))
+
+root_file.Close()
+
+if checks == 0:
+    print("[ERROR] No background systematic histograms found in %s" % path)
+    sys.exit(1)
+
+if different == 0:
+    print("[ERROR] All %d checked background systematic histograms match nominal in %s" % (checks, path))
+    print("[ERROR] This usually means the partial ROOT files were produced with --skipSystematics or from stale outputs.")
+    sys.exit(1)
+
+print("[OK] Systematics check: %d/%d background systematic histograms differ from nominal" % (different, checks))
+for example in examples:
+    print("[OK]   " + example)
+PY
+}
+
 merge_plot_output() {
     local region_key="$1"
     local final_tag="$2"
@@ -113,6 +198,11 @@ merge_plot_output() {
     hadd -f "$target" "${inputs[@]}"
     if ! root_has_keys "$target"; then
         echo "[ERROR] Merged ROOT file has no keys or is unreadable: $target" >&2
+        return 1
+    fi
+    if ! root_has_nontrivial_systematics "$target"; then
+        echo "[ERROR] Merged ROOT file has no non-trivial background systematics: $target" >&2
+        echo "[ERROR] Re-run Plot/Condor/1_submit_dataVmc_condor.sh without SKIP_SYSTEMATICS=1, then merge again." >&2
         return 1
     fi
 }
