@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
+HIGGSZA_EOS_DIR="${HIGGSZA_EOS_DIR:-/eos/home-p/pelai/HZa}"
 
+RUN_HIGGSZA_CLEAN_OUTPUTS="${RUN_HIGGSZA_CLEAN_OUTPUTS:-0}"
 RUN_HIGGSZA_P2ROOT="${RUN_HIGGSZA_P2ROOT:-0}"
 RUN_HIGGSZA_TRAIN_MVA="${RUN_HIGGSZA_TRAIN_MVA:-0}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE="${RUN_HIGGSZA_P2ROOT_MVA_SCORE:-0}"
@@ -28,15 +30,6 @@ RUN_UPDATE_AN="${RUN_UPDATE_AN:-1}"
 P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-5}"
 P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-0}"
 DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-5}"
-
-rm -fr /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal
-rm -fr /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal
-rm -fr /eos/home-p/pelai/HZa/root_MVAcut
-rm -fr /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs
-rm -fr /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/log_file
-rm -fr /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/variables_dataVmc/*_part_*.root
-
-
 
 echo_step() {
     echo
@@ -124,6 +117,18 @@ data_vmc_resubmit_until_done() {
 
     echo "[Condor] no dataVmc resubmit jobs to submit"
 }
+
+if [[ "$RUN_HIGGSZA_CLEAN_OUTPUTS" == "1" ]]; then
+    echo_step "HiggsZaAna: clean previous outputs"
+    rm -fr "${HIGGSZA_EOS_DIR}/root_P2Root/run3_bdt_inputs_nominal"
+    rm -fr "${HIGGSZA_EOS_DIR}/root_P2Root/run3_bdt_scored_nominal"
+    rm -fr "${HIGGSZA_EOS_DIR}/root_MVAcut"
+    rm -fr "${PROJECT_DIR}/Parquet2Rootfile/Condor/logs"
+    rm -fr "${PROJECT_DIR}/Plot/log_file"
+    rm -fr "${PROJECT_DIR}/Plot/plots/variables_dataVmc/"*_part_*.root
+else
+    echo_skip "HiggsZaAna: clean previous outputs"
+fi
 
 # The story after HDNA parquets have been produced.
 
