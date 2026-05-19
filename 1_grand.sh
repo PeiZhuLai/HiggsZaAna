@@ -25,9 +25,18 @@ RUN_FLASHGG_BIAS="${RUN_FLASHGG_BIAS:-1}"
 RUN_FLASHGG_COLLECT_BKG="${RUN_FLASHGG_COLLECT_BKG:-1}"
 RUN_EXIT_CMSSW_ENV="${RUN_EXIT_CMSSW_ENV:-1}"
 RUN_UPDATE_AN="${RUN_UPDATE_AN:-1}"
-P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-3}"
+P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-5}"
 P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-0}"
-DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-3}"
+DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-5}"
+
+rm -fr /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal
+rm -fr /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal
+rm -fr /eos/home-p/pelai/HZa/root_MVAcut
+rm -fr /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs
+rm -fr /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/log_file
+rm -fr /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/variables_dataVmc/*_part_*.root
+
+
 
 echo_step() {
     echo
