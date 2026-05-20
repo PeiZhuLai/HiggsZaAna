@@ -31,6 +31,8 @@ P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-5}"
 P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-0}"
 DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-5}"
 
+bash /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/3_merge_parquet.sh
+
 echo_step() {
     echo
     echo "==== $* ===="
