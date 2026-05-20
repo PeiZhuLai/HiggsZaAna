@@ -5,6 +5,7 @@ PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 HIGGSZA_EOS_DIR="${HIGGSZA_EOS_DIR:-/eos/home-p/pelai/HZa}"
 
 RUN_HIGGSZA_CLEAN_OUTPUTS="${RUN_HIGGSZA_CLEAN_OUTPUTS:-0}"
+RUN_HIGGSZA_MERGE_PARQUET="${RUN_HIGGSZA_MERGE_PARQUET:-0}"
 RUN_HIGGSZA_P2ROOT="${RUN_HIGGSZA_P2ROOT:-0}"
 RUN_HIGGSZA_TRAIN_MVA="${RUN_HIGGSZA_TRAIN_MVA:-0}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE="${RUN_HIGGSZA_P2ROOT_MVA_SCORE:-0}"
@@ -30,8 +31,6 @@ RUN_UPDATE_AN="${RUN_UPDATE_AN:-1}"
 P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-5}"
 P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-0}"
 DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-5}"
-
-bash /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/3_merge_parquet.sh
 
 echo_step() {
     echo
@@ -133,6 +132,13 @@ else
 fi
 
 # The story after HDNA parquets have been produced.
+
+if [[ "$RUN_HIGGSZA_MERGE_PARQUET" == "1" ]]; then
+    echo_step "HiggsZaAna: merge parquet"
+    bash "${PROJECT_DIR}/HiggsDNA/scripts/3_merge_parquet.sh"
+else
+    echo_skip "HiggsZaAna: merge parquet"
+fi
 
 # Environmnet setup
 # use-anaconda
