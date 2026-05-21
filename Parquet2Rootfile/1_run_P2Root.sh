@@ -15,7 +15,8 @@ trap print_runtime EXIT
 echo "==============STARTED=============="
 
 # Run3
-input="/eos/home-p/pelai/HZa/parquet_DNA/"
+# input="/eos/home-p/pelai/HZa/parquet_DNA/"
+input="/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA/"
 target="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/"
 
 # Gen Info
