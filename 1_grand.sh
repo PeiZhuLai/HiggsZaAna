@@ -161,8 +161,117 @@ submit_and_wait() {
     cluster_id="$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' <<< "$submit_output")"
     log_file="$(printf "$log_pattern" "$cluster_id")"
     echo "[Condor] submitted cluster ${cluster_id}: ${submit_file}"
-    condor_wait "$log_file"
+    wait_for_cluster_via_queue "$cluster_id" "$log_file"
     echo "[Condor] cluster ${cluster_id} finished"
+}
+
+wait_for_cluster_via_queue() {
+    local cluster_id="$1"
+    local log_file="$2"
+    # Poll the queue directly because condor_wait can fail on user-log parsing.
+    local poll_seconds="${CONDOR_Q_POLL_SECONDS:-30}"
+    local max_query_failures="${CONDOR_Q_MAX_FAILURES:-5}"
+    local max_missing_before_seen="${CONDOR_Q_MAX_MISSING_BEFORE_SEEN:-12}"
+    local query_failures=0
+    local missing_before_seen=0
+    local seen_cluster=0
+    local q_output q_status
+    local proc_id job_status hold_reason
+    local total idle running held removing completed suspended unknown
+    local first_hold_reason status_line
+
+    echo "[Condor] waiting for cluster ${cluster_id} via condor_q polling"
+    echo "[Condor] user log path: ${log_file}"
+
+    while true; do
+        set +e
+        q_output="$(
+            condor_q "$cluster_id" \
+                -format '%d\t' ProcId \
+                -format '%d\t' JobStatus \
+                -format '%s\n' 'ifThenElse(isUndefined(HoldReason),"",HoldReason)'
+        )"
+        q_status=$?
+        set -e
+
+        if [[ "$q_status" -ne 0 ]]; then
+            query_failures=$((query_failures + 1))
+            echo "[WARN] condor_q failed for cluster ${cluster_id} (${query_failures}/${max_query_failures}); retry in ${poll_seconds}s" >&2
+            if [[ -n "${q_output:-}" ]]; then
+                echo "$q_output" >&2
+            fi
+
+            if [[ "$query_failures" -ge "$max_query_failures" ]]; then
+                echo "[ERROR] condor_q kept failing while waiting for cluster ${cluster_id}." >&2
+                return 1
+            fi
+
+            sleep "$poll_seconds"
+            continue
+        fi
+
+        query_failures=0
+
+        if [[ -z "${q_output//[[:space:]]/}" ]]; then
+            if [[ "$seen_cluster" -eq 1 ]]; then
+                echo "[Condor] cluster ${cluster_id} no longer in condor_q"
+                return 0
+            fi
+
+            missing_before_seen=$((missing_before_seen + 1))
+            echo "[Condor] cluster ${cluster_id} not visible in condor_q yet (${missing_before_seen}/${max_missing_before_seen})"
+
+            if [[ "$missing_before_seen" -ge "$max_missing_before_seen" ]]; then
+                echo "[WARN] cluster ${cluster_id} never became visible in condor_q; assuming it already left the queue." >&2
+                return 0
+            fi
+
+            sleep 5
+            continue
+        fi
+
+        seen_cluster=1
+        missing_before_seen=0
+        total=0
+        idle=0
+        running=0
+        held=0
+        removing=0
+        completed=0
+        suspended=0
+        unknown=0
+        first_hold_reason=""
+
+        while IFS=$'\t' read -r proc_id job_status hold_reason; do
+            [[ -n "${proc_id:-}" ]] || continue
+            total=$((total + 1))
+
+            case "$job_status" in
+                1) idle=$((idle + 1)) ;;
+                2|6) running=$((running + 1)) ;;
+                3) removing=$((removing + 1)) ;;
+                4) completed=$((completed + 1)) ;;
+                5)
+                    held=$((held + 1))
+                    if [[ -z "$first_hold_reason" ]]; then
+                        first_hold_reason="proc ${proc_id}: ${hold_reason:-<no HoldReason>}"
+                    fi
+                    ;;
+                7) suspended=$((suspended + 1)) ;;
+                *) unknown=$((unknown + 1)) ;;
+            esac
+        done <<< "$q_output"
+
+        status_line="[Condor] cluster ${cluster_id}: total=${total} idle=${idle} running=${running} held=${held} removing=${removing} completed=${completed} suspended=${suspended} unknown=${unknown}"
+        echo "$status_line"
+
+        if [[ "$held" -gt 0 ]]; then
+            echo "[ERROR] cluster ${cluster_id} has held job(s): ${first_hold_reason}" >&2
+            return 1
+        fi
+
+        sleep "$poll_seconds"
+    done
 }
 
 p2root_resubmit_until_done() {
