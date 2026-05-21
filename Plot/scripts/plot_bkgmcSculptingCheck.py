@@ -26,6 +26,7 @@ import tdrstyle
 
 DEFAULT_MVA_CUT_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 DEFAULT_OUTPUT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/bkgmcScupltingCheck"
+DEFAULT_CONTROL_SAMPLE_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_control"
 DEFAULT_SIGEFF_ELE_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/sigEfficiencyVmA_ele_byYear_5years_quadratic_interp_ma_points.json"
 DEFAULT_SIGEFF_MU_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/sigEfficiencyVmA_muon_byYear_5years_quadratic_interp_ma_points.json"
 LOCAL_MVA_CUT_CANDIDATES = [
@@ -566,6 +567,7 @@ def _draw_mass_plot(
     signal_scale: float = SIGNAL_DRAW_SCALE,
     signal_source_histos: Optional[Dict[str, TH1F]] = None,
     signal_source_all_histos: Optional[Dict[int, Dict[str, TH1F]]] = None,
+    selection_label: Optional[str] = None,
 ) -> None:
     draw_histos: Dict[str, TH1F] = {}
     draw_tag = name_suffix if name_suffix else "_nominal"
@@ -680,6 +682,9 @@ def _draw_mass_plot(
     tag.SetTextFont(42)
     tag.SetTextSize(0.045)
     tag.DrawLatex(0.20, 0.84, f"After BDT Cut m_{{a}} = {mass} GeV")
+    if selection_label:
+        tag.SetTextSize(0.038)
+        tag.DrawLatex(0.20, 0.79, selection_label)
 
     CMS_lumi.cmsText = "CMS"
     CMS_lumi.extraText = "Preliminary"
@@ -818,6 +823,7 @@ def _draw_bkg_mass_shapes_by_bdt(
     plot_cfg: Plot_Config,
     output_dir: Path,
     logy: bool = False,
+    selection_label: Optional[str] = None,
 ) -> None:
     draw_histos = []
     ymax = 0.0
@@ -906,6 +912,9 @@ def _draw_bkg_mass_shapes_by_bdt(
     tag.SetTextFont(42)
     tag.SetTextSize(0.035)
     tag.DrawLatex(0.765, 0.86, f"m_{{a}} = {mass} GeV")
+    if selection_label:
+        tag.SetTextSize(0.030)
+        tag.DrawLatex(0.705, 0.81, selection_label)
 
     cms_label = ROOT.TLatex()
     cms_label.SetNDC()
@@ -1032,6 +1041,200 @@ def _fill_histograms(
                         hist.Fill(h_mass, weight)
 
 
+def _channel_mode_from_args(only_ele: bool, only_mu: bool) -> str:
+    if only_ele:
+        return "ele"
+    if only_mu:
+        return "mu"
+    return "inclusive"
+
+
+def _build_output_dir_map(base_output_dir: Path, skip_bdt_shape_plots: bool) -> Dict[str, Path]:
+    output_dirs = {
+        "signal_mixture": base_output_dir / "signalShapeMixture",
+        "bkg_only": base_output_dir / "bkgOnly",
+        "bkg_only_bin5": base_output_dir / "bkgOnly_bin5GeV",
+        "signal_nearest_bin5": base_output_dir / "signalNearest_bin5GeV",
+        "bdt_mass_shapes": base_output_dir / "bdtMassShapes",
+    }
+    output_dirs["signal_mixture"].mkdir(parents=True, exist_ok=True)
+    output_dirs["bkg_only"].mkdir(parents=True, exist_ok=True)
+    output_dirs["bkg_only_bin5"].mkdir(parents=True, exist_ok=True)
+    output_dirs["signal_nearest_bin5"].mkdir(parents=True, exist_ok=True)
+    if not skip_bdt_shape_plots:
+        output_dirs["bdt_mass_shapes"].mkdir(parents=True, exist_ok=True)
+    return output_dirs
+
+
+def _print_output_dir_map(label: str, base_output_dir: Path, output_dirs: Dict[str, Path], skip_bdt_shape_plots: bool) -> None:
+    print(f"[{label}] Plot directory: {base_output_dir}")
+    print(f"[{label}] Signal mixture directory: {output_dirs['signal_mixture']}")
+    print(f"[{label}] Bkg-only directory: {output_dirs['bkg_only']}")
+    print(f"[{label}] Bkg-only 5 GeV directory: {output_dirs['bkg_only_bin5']}")
+    print(f"[{label}] Signal nearest 5 GeV directory: {output_dirs['signal_nearest_bin5']}")
+    if not skip_bdt_shape_plots:
+        print(f"[{label}] BDT-binned bkg mass-shape directory: {output_dirs['bdt_mass_shapes']}")
+
+
+def _build_analyzer_cfg(year: str, plot_output_dir: Path, sample_loc_override: Optional[str] = None) -> Analyzer_Config:
+    analyzer_cfg = Analyzer_Config("inclusive", year, 0, True)
+    analyzer_cfg.mva = True
+    analyzer_cfg.plot_output_path = str(plot_output_dir)
+    if sample_loc_override:
+        analyzer_cfg.sample_loc = sample_loc_override
+    return analyzer_cfg
+
+
+def _run_plot_suite(
+    suite_label: str,
+    year: str,
+    sample_loc_override: Optional[str],
+    base_output_dir: Path,
+    mva_cuts: Dict[int, float],
+    blind: bool,
+    only_ele: bool,
+    only_mu: bool,
+    logy: bool,
+    skip_bdt_shape_plots: bool,
+    bdt_shape_bins: int,
+    selection_label: Optional[str] = None,
+) -> None:
+    output_dirs = _build_output_dir_map(base_output_dir, skip_bdt_shape_plots)
+    _print_output_dir_map(suite_label, base_output_dir, output_dirs, skip_bdt_shape_plots)
+
+    analyzer_cfg = _build_analyzer_cfg(year, base_output_dir, sample_loc_override=sample_loc_override)
+    plot_cfg = Plot_Config(analyzer_cfg, year)
+    print(f"[{suite_label}] Input sample directory: {analyzer_cfg.sample_loc}")
+
+    if selection_label and "control" in selection_label.lower():
+        print(f"[{suite_label}] Reusing nominal signal-efficiency JSON for interpolated signal overlays.")
+
+    ntuples = LoadNtuples(analyzer_cfg)
+    channel_mode = _channel_mode_from_args(only_ele=only_ele, only_mu=only_mu)
+
+    histos = _book_histograms(analyzer_cfg)
+    histos_bkg_only_bin5 = _book_histograms(
+        analyzer_cfg,
+        sample_names=analyzer_cfg.bkg_names + ["Data"],
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
+    )
+    histos_signal_nearest_bin5 = _book_histograms(
+        analyzer_cfg,
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
+    )
+    histos_signal_nearest_overlay_2gev = _book_histograms(
+        analyzer_cfg,
+        sample_names=analyzer_cfg.sig_names,
+        bin_edges=_build_uniform_bin_edges(
+            H_M_XMIN,
+            H_M_BIN_SIGNAL_OVERLAY_XMAX,
+            H_M_BIN_SIGNAL_OVERLAY_WIDTH,
+        ),
+    )
+
+    if skip_bdt_shape_plots:
+        bdt_shape_histos = None
+        bdt_shape_edges = None
+    else:
+        bdt_shape_histos, bdt_shape_edges = _book_bdt_shape_histograms(n_bdt_bins=bdt_shape_bins)
+
+    _fill_histograms(
+        ntuples=ntuples,
+        analyzer_cfg=analyzer_cfg,
+        mva_cuts=mva_cuts,
+        histos=histos,
+        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_overlay_2gev],
+        bdt_shape_histos=bdt_shape_histos,
+        bdt_shape_edges=bdt_shape_edges,
+        blind=blind,
+        only_ele=only_ele,
+        only_mu=only_mu,
+    )
+
+    for mass in TARGET_MASSES:
+        print(
+            f"[{suite_label}][mA={mass:02d}] yields: "
+            f"Data={histos[mass]['Data'].Integral():.3f}, "
+            f"DYJetsToLL={histos[mass]['DYJetsToLL'].Integral():.3f}, "
+            f"DYGto2LG={histos[mass]['DYGto2LG'].Integral():.3f}"
+        )
+        signal_sample = _signal_sample_name(mass)
+        if signal_sample:
+            print(
+                f"[{suite_label}][mA={mass:02d}] signal "
+                f"{signal_sample}={histos[mass][signal_sample].Integral():.3f}"
+            )
+
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos[mass],
+            all_histos=histos,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dirs["signal_mixture"],
+            logy=logy,
+            show_signal=True,
+            name_suffix="",
+            channel_mode=channel_mode,
+            signal_shape_mode="mixture",
+            signal_scale=SIGNAL_DRAW_SCALE,
+            selection_label=selection_label,
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos[mass],
+            all_histos=histos,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dirs["bkg_only"],
+            logy=logy,
+            show_signal=False,
+            name_suffix="_bkgOnly",
+            channel_mode=channel_mode,
+            selection_label=selection_label,
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos_bkg_only_bin5[mass],
+            all_histos=histos_bkg_only_bin5,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dirs["bkg_only_bin5"],
+            logy=logy,
+            show_signal=False,
+            name_suffix="_bkgOnly_bin5GeV",
+            channel_mode=channel_mode,
+            selection_label=selection_label,
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos_signal_nearest_bin5[mass],
+            all_histos=histos_signal_nearest_bin5,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dirs["signal_nearest_bin5"],
+            logy=logy,
+            show_signal=True,
+            name_suffix="_signalNearest_bin5GeV",
+            channel_mode=channel_mode,
+            signal_shape_mode="nearest",
+            signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
+            signal_source_histos=histos_signal_nearest_overlay_2gev[mass],
+            signal_source_all_histos=histos_signal_nearest_overlay_2gev,
+            selection_label=selection_label,
+        )
+        if bdt_shape_histos is not None and bdt_shape_edges is not None:
+            _draw_bkg_mass_shapes_by_bdt(
+                mass=mass,
+                histos=bdt_shape_histos[mass],
+                score_edges=bdt_shape_edges,
+                plot_cfg=plot_cfg,
+                output_dir=output_dirs["bdt_mass_shapes"],
+                logy=logy,
+                selection_label=selection_label,
+            )
+
+
 def main():
     start_time = time.time()
 
@@ -1039,6 +1242,17 @@ def main():
     parser.add_argument("-y", "--Year", dest="year", default="run3", help="Only run3 is supported.")
     parser.add_argument("--mva-cut-json", default=DEFAULT_MVA_CUT_JSON, help="Path to MVA cut JSON.")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Directory for output plots.")
+    parser.add_argument(
+        "--control-sample-dir",
+        default=DEFAULT_CONTROL_SAMPLE_DIR,
+        help="Control-sample ntuple directory. If found, an extra control-sample plot set is saved.",
+    )
+    parser.add_argument(
+        "--skip-control-sample-plots",
+        action="store_true",
+        default=False,
+        help="Do not save the extra control-sample plot set.",
+    )
     parser.add_argument("--unblind", dest="blind", action="store_false", default=True, help="Show data inside 115-135 GeV.")
     parser.add_argument("-ln", "--ln", dest="ln", action="store_true", default=False, help="Save logY plots.")
     parser.add_argument("--ele", dest="ele", action="store_true", default=False, help="Electron channel only.")
@@ -1069,150 +1283,43 @@ def main():
 
     mva_cut_path = _resolve_mva_cut_json(args.mva_cut_json)
     output_dir = _resolve_output_dir(args.output_dir)
-    output_dir_signal_mixture = output_dir / "signalShapeMixture"
-    output_dir_bkg_only = output_dir / "bkgOnly"
-    output_dir_bkg_only_bin5 = output_dir / "bkgOnly_bin5GeV"
-    output_dir_signal_nearest_bin5 = output_dir / "signalNearest_bin5GeV"
-    output_dir_bdt_mass_shapes = output_dir / "bdtMassShapes"
-    output_dir_signal_mixture.mkdir(parents=True, exist_ok=True)
-    output_dir_bkg_only.mkdir(parents=True, exist_ok=True)
-    output_dir_bkg_only_bin5.mkdir(parents=True, exist_ok=True)
-    output_dir_signal_nearest_bin5.mkdir(parents=True, exist_ok=True)
-    if not args.skip_bdt_shape_plots:
-        output_dir_bdt_mass_shapes.mkdir(parents=True, exist_ok=True)
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
-    print(f"[Output] Plot directory: {output_dir}")
-    print(f"[Output] Signal mixture directory: {output_dir_signal_mixture}")
-    print(f"[Output] Bkg-only directory: {output_dir_bkg_only}")
-    print(f"[Output] Bkg-only 5 GeV directory: {output_dir_bkg_only_bin5}")
-    print(f"[Output] Signal nearest 5 GeV directory: {output_dir_signal_nearest_bin5}")
-    if not args.skip_bdt_shape_plots:
-        print(f"[Output] BDT-binned bkg mass-shape directory: {output_dir_bdt_mass_shapes}")
-
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
-    analyzer_cfg = Analyzer_Config("inclusive", args.year, 0, True)
-    analyzer_cfg.mva = True
-    analyzer_cfg.plot_output_path = str(output_dir)
-    plot_cfg = Plot_Config(analyzer_cfg, args.year)
-    ntuples = LoadNtuples(analyzer_cfg)
-    if args.ele:
-        channel_mode = "ele"
-    elif args.mu:
-        channel_mode = "mu"
-    else:
-        channel_mode = "inclusive"
-
-    histos = _book_histograms(analyzer_cfg)
-    histos_bkg_only_bin5 = _book_histograms(
-        analyzer_cfg,
-        sample_names=analyzer_cfg.bkg_names + ["Data"],
-        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
-    )
-    histos_signal_nearest_bin5 = _book_histograms(
-        analyzer_cfg,
-        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
-    )
-    histos_signal_nearest_overlay_2gev = _book_histograms(
-        analyzer_cfg,
-        sample_names=analyzer_cfg.sig_names,
-        bin_edges=_build_uniform_bin_edges(
-            H_M_XMIN,
-            H_M_BIN_SIGNAL_OVERLAY_XMAX,
-            H_M_BIN_SIGNAL_OVERLAY_WIDTH,
-        ),
-    )
-    if args.skip_bdt_shape_plots:
-        bdt_shape_histos = None
-        bdt_shape_edges = None
-    else:
-        bdt_shape_histos, bdt_shape_edges = _book_bdt_shape_histograms(n_bdt_bins=args.bdt_shape_bins)
-    _fill_histograms(
-        ntuples=ntuples,
-        analyzer_cfg=analyzer_cfg,
+    _run_plot_suite(
+        suite_label="Nominal",
+        year=args.year,
+        sample_loc_override=None,
+        base_output_dir=output_dir,
         mva_cuts=mva_cuts,
-        histos=histos,
-        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_overlay_2gev],
-        bdt_shape_histos=bdt_shape_histos,
-        bdt_shape_edges=bdt_shape_edges,
         blind=args.blind,
         only_ele=args.ele,
         only_mu=args.mu,
+        logy=args.ln,
+        skip_bdt_shape_plots=args.skip_bdt_shape_plots,
+        bdt_shape_bins=args.bdt_shape_bins,
+        selection_label=None,
     )
 
-    for mass in TARGET_MASSES:
-        print(
-            f"[mA={mass:02d}] yields: "
-            f"Data={histos[mass]['Data'].Integral():.3f}, "
-            f"DYJetsToLL={histos[mass]['DYJetsToLL'].Integral():.3f}, "
-            f"DYGto2LG={histos[mass]['DYGto2LG'].Integral():.3f}"
-        )
-        signal_sample = _signal_sample_name(mass)
-        if signal_sample:
-            print(f"[mA={mass:02d}] signal {signal_sample}={histos[mass][signal_sample].Integral():.3f}")
-        _draw_mass_plot(
-            mass=mass,
-            histos=histos[mass],
-            all_histos=histos,
-            analyzer_cfg=analyzer_cfg,
-            plot_cfg=plot_cfg,
-            output_dir=output_dir_signal_mixture,
-            logy=args.ln,
-            show_signal=True,
-            name_suffix="",
-            channel_mode=channel_mode,
-            signal_shape_mode="mixture",
-            signal_scale=SIGNAL_DRAW_SCALE,
-        )
-        _draw_mass_plot(
-            mass=mass,
-            histos=histos[mass],
-            all_histos=histos,
-            analyzer_cfg=analyzer_cfg,
-            plot_cfg=plot_cfg,
-            output_dir=output_dir_bkg_only,
-            logy=args.ln,
-            show_signal=False,
-            name_suffix="_bkgOnly",
-            channel_mode=channel_mode,
-        )
-        _draw_mass_plot(
-            mass=mass,
-            histos=histos_bkg_only_bin5[mass],
-            all_histos=histos_bkg_only_bin5,
-            analyzer_cfg=analyzer_cfg,
-            plot_cfg=plot_cfg,
-            output_dir=output_dir_bkg_only_bin5,
-            logy=args.ln,
-            show_signal=False,
-            name_suffix="_bkgOnly_bin5GeV",
-            channel_mode=channel_mode,
-        )
-        _draw_mass_plot(
-            mass=mass,
-            histos=histos_signal_nearest_bin5[mass],
-            all_histos=histos_signal_nearest_bin5,
-            analyzer_cfg=analyzer_cfg,
-            plot_cfg=plot_cfg,
-            output_dir=output_dir_signal_nearest_bin5,
-            logy=args.ln,
-            show_signal=True,
-            name_suffix="_signalNearest_bin5GeV",
-            channel_mode=channel_mode,
-            signal_shape_mode="nearest",
-            signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
-            signal_source_histos=histos_signal_nearest_overlay_2gev[mass],
-            signal_source_all_histos=histos_signal_nearest_overlay_2gev,
-        )
-        if bdt_shape_histos is not None and bdt_shape_edges is not None:
-            _draw_bkg_mass_shapes_by_bdt(
-                mass=mass,
-                histos=bdt_shape_histos[mass],
-                score_edges=bdt_shape_edges,
-                plot_cfg=plot_cfg,
-                output_dir=output_dir_bdt_mass_shapes,
+    if not args.skip_control_sample_plots:
+        control_sample_dir = Path(args.control_sample_dir).expanduser()
+        if control_sample_dir.is_dir():
+            _run_plot_suite(
+                suite_label="Control",
+                year=args.year,
+                sample_loc_override=str(control_sample_dir),
+                base_output_dir=output_dir / "controlSample",
+                mva_cuts=mva_cuts,
+                blind=args.blind,
+                only_ele=args.ele,
+                only_mu=args.mu,
                 logy=args.ln,
+                skip_bdt_shape_plots=args.skip_bdt_shape_plots,
+                bdt_shape_bins=args.bdt_shape_bins,
+                selection_label="Control sample",
             )
+        else:
+            print(f"[Warning] Control sample directory not found. Skip extra control plots: {control_sample_dir}")
 
     elapsed = time.time() - start_time
     print(f"Total runtime: {_format_elapsed_hms(elapsed)}")
