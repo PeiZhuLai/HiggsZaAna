@@ -3,6 +3,10 @@ set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 HIGGSZA_EOS_DIR="${HIGGSZA_EOS_DIR:-/eos/home-p/pelai/HZa}"
+ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
+ANACONDA_CONDA_SH="${ANACONDA_CONDA_SH:-/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh}"
+MINICONDA_SETUP="${MINICONDA_SETUP:-}"
+MINICONDA_CONDA_SH="${MINICONDA_CONDA_SH:-}"
 
 RUN_HIGGSZA_CLEAN_OUTPUTS="${RUN_HIGGSZA_CLEAN_OUTPUTS:-1}"
 RUN_HIGGSZA_MERGE_PARQUET="${RUN_HIGGSZA_MERGE_PARQUET:-1}"
@@ -39,6 +43,106 @@ echo_step() {
 
 echo_skip() {
     echo_step "Skip: $*"
+}
+
+init_conda_shell() {
+    local candidate conda_hook
+    local candidates=("$@")
+
+    if declare -F conda >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if command -v conda >/dev/null 2>&1; then
+        set +u
+        if conda_hook="$(conda shell.bash hook 2>/dev/null)"; then
+            eval "$conda_hook"
+        fi
+        set -u
+        if declare -F conda >/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+
+    for candidate in "${candidates[@]}"; do
+        [[ -n "$candidate" ]] || continue
+        [[ -r "$candidate" ]] || continue
+
+        set +u
+        # shellcheck disable=SC1090
+        if ! source "$candidate"; then
+            set -u
+            continue
+        fi
+        set -u
+
+        if declare -F conda >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if command -v conda >/dev/null 2>&1; then
+            set +u
+            if conda_hook="$(conda shell.bash hook 2>/dev/null)"; then
+                eval "$conda_hook"
+            fi
+            set -u
+            if declare -F conda >/dev/null 2>&1; then
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+activate_conda_env() {
+    local env_name="$1"
+    shift
+
+    if [[ "${CONDA_DEFAULT_ENV:-}" == "$env_name" ]]; then
+        echo "[ENV] conda env already active: ${env_name}"
+        return 0
+    fi
+
+    if ! init_conda_shell "$@"; then
+        echo "[ERROR] Failed to initialize conda shell for env '${env_name}'." >&2
+        echo "[ERROR] Set ANACONDA_SETUP/MINICONDA_SETUP or *_CONDA_SH to a readable setup script." >&2
+        return 1
+    fi
+
+    set +u
+    conda activate "$env_name"
+    set -u
+
+    if [[ "${CONDA_DEFAULT_ENV:-}" != "$env_name" ]]; then
+        echo "[ERROR] Failed to activate conda env '${env_name}'." >&2
+        return 1
+    fi
+
+    echo "[ENV] active CONDA_DEFAULT_ENV=${CONDA_DEFAULT_ENV}"
+    echo "[ENV] active CONDA_PREFIX=${CONDA_PREFIX:-<unset>}"
+}
+
+deactivate_conda_env_if_active() {
+    if ! init_conda_shell \
+        "$ANACONDA_SETUP" \
+        "$ANACONDA_CONDA_SH" \
+        "$MINICONDA_SETUP" \
+        "$MINICONDA_CONDA_SH" \
+        "${CONDA_EXE:+${CONDA_EXE%/bin/conda}/etc/profile.d/conda.sh}" \
+        "${HOME}/anaconda3/etc/profile.d/conda.sh" \
+        "${HOME}/miniconda3/etc/profile.d/conda.sh" \
+        "/usr/etc/profile.d/conda.sh"; then
+        return 0
+    fi
+
+    if [[ -z "${CONDA_DEFAULT_ENV:-}" && -z "${CONDA_PREFIX:-}" ]]; then
+        return 0
+    fi
+
+    set +u
+    conda deactivate || true
+    set -u
 }
 
 has_queue_rows() {
@@ -135,13 +239,19 @@ fi
 
 if [[ "$RUN_HIGGSZA_MERGE_PARQUET" == "1" ]]; then
     echo_step "HiggsZaAna: merge parquet"
-    
-    use-miniconda
-    miniconda
-    conda activate hza_ana
-    
+
+    activate_conda_env "hza_ana" \
+        "$MINICONDA_SETUP" \
+        "$MINICONDA_CONDA_SH" \
+        "$ANACONDA_SETUP" \
+        "$ANACONDA_CONDA_SH" \
+        "${CONDA_EXE:+${CONDA_EXE%/bin/conda}/etc/profile.d/conda.sh}" \
+        "${HOME}/miniconda3/etc/profile.d/conda.sh" \
+        "${HOME}/anaconda3/etc/profile.d/conda.sh" \
+        "/usr/etc/profile.d/conda.sh"
+
     # It only works when running the 3_merge_parquet.sh on HiggsDNA directory, otherwise the relative paths in the script will be messed up. So we cd to HiggsDNA directory before running the script, and then cd back to project directory after the script is done.
-    cd /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA
+    cd "${PROJECT_DIR}/HiggsDNA"
     bash "scripts/3_merge_parquet.sh"
 else
     echo_skip "HiggsZaAna: merge parquet"
@@ -150,11 +260,17 @@ fi
 # p2root
 if [[ "$RUN_HIGGSZA_P2ROOT" == "1" ]]; then
     echo_step "HiggsZaAna: p2root"
-    
-    use-anaconda
-    anaconda
-    conda activate higgs-alp-ana
-    
+
+    activate_conda_env "higgs-alp-ana" \
+        "$ANACONDA_SETUP" \
+        "$ANACONDA_CONDA_SH" \
+        "$MINICONDA_SETUP" \
+        "$MINICONDA_CONDA_SH" \
+        "${CONDA_EXE:+${CONDA_EXE%/bin/conda}/etc/profile.d/conda.sh}" \
+        "${HOME}/anaconda3/etc/profile.d/conda.sh" \
+        "${HOME}/miniconda3/etc/profile.d/conda.sh" \
+        "/usr/etc/profile.d/conda.sh"
+
     cd "${PROJECT_DIR}/Parquet2Rootfile"
     bash 1_run_P2Root.sh
     bash 2_prepare_rootfile.sh
@@ -241,7 +357,7 @@ fi
 
 if [[ "$RUN_FLASHGG_ENV" == "1" ]]; then
     echo_step "Switch to flashggFinalFit environment"
-    conda deactivate
+    deactivate_conda_env_if_active
     cd "${PROJECT_DIR}"
 else
     echo_skip "Switch to flashggFinalFit environment"
