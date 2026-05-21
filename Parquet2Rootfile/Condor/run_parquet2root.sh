@@ -27,6 +27,18 @@ LOCALIZE_CONDA_ENV="${LOCALIZE_CONDA_ENV:-auto}"
 LOCAL_CONDA_DIR="${LOCAL_CONDA_DIR:-${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/higgs-alp-ana-conda}"
 CONDA_TARBALL="${CONDA_TARBALL:-${PROJECT_DIR}/Plot/Condor/env_cache/higgs-alp-ana.tar.gz}"
 
+sanitize_python_env_for_conda() {
+  if [[ -n "${PYTHONPATH:-}" ]]; then
+    echo "[ENV] Unset inherited PYTHONPATH before conda activation"
+    unset PYTHONPATH
+  fi
+
+  if [[ -n "${PYTHONHOME:-}" ]]; then
+    echo "[ENV] Unset inherited PYTHONHOME before conda activation"
+    unset PYTHONHOME
+  fi
+}
+
 activate_conda_env_if_needed() {
   local should_activate=0
 
@@ -56,6 +68,7 @@ activate_conda_env_if_needed() {
 
   echo "[ENV] Source anaconda setup: $ANACONDA_SETUP"
   set +u
+  sanitize_python_env_for_conda
   # shellcheck disable=SC1090
   source "$ANACONDA_SETUP"
   conda activate "$CONDA_ENV_NAME"

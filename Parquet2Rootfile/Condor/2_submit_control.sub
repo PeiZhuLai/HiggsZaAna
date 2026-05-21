@@ -22,7 +22,7 @@ request_disk    = 20000MB
 nice_user       = True
 
 # Reuse the conda tarball built by Plot/Condor; do not create a second env_cache here.
-environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
+environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=1 SETUP_CONDA_ENV=0 CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
 
 arguments       = $(ARG_IN) $(ARG_OUT) $(ARG_CORR) $(ARG_SPLIT)
 

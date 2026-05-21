@@ -9,6 +9,18 @@ ENV_CACHE_DIR="${ENV_CACHE_DIR:-${script_dir}/env_cache}"
 CONDA_TARBALL="${CONDA_TARBALL:-${ENV_CACHE_DIR}/${CONDA_ENV_NAME}.tar.gz}"
 FORCE_ENV_PACK="${FORCE_ENV_PACK:-0}"
 
+sanitize_python_env_for_conda() {
+    if [[ -n "${PYTHONPATH:-}" ]]; then
+        echo "[ENV] Unset inherited PYTHONPATH before conda activation"
+        unset PYTHONPATH
+    fi
+
+    if [[ -n "${PYTHONHOME:-}" ]]; then
+        echo "[ENV] Unset inherited PYTHONHOME before conda activation"
+        unset PYTHONHOME
+    fi
+}
+
 if [[ -s "$CONDA_TARBALL" && "$FORCE_ENV_PACK" != "1" ]]; then
     echo "[ENV] Reuse existing tarball: $CONDA_TARBALL"
     echo "[ENV] Set FORCE_ENV_PACK=1 to rebuild it."
@@ -23,6 +35,7 @@ fi
 mkdir -p "$ENV_CACHE_DIR"
 
 set +u
+sanitize_python_env_for_conda
 source "$ANACONDA_SETUP"
 conda activate "$CONDA_ENV_NAME"
 set -u
