@@ -3,9 +3,13 @@
 import os
 
 # ===== Base paths =====
-INPUT_BASE = "/eos/home-p/pelai/HZa/parquet_DNA_NFlow"
-DATA_INPUT_BASE = "/eos/home-p/pelai/HZa/parquet_DNA"
-OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_NFlow"
+INPUT_BASE = "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_control"
+OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_control"
+
+# Control parquet merges are stored in dedicated *_control folders.
+SIGNAL_INPUT_DIR = "Sig_MC_control"
+BKG_INPUT_DIR = "Bkg_MC_control"
+DATA_INPUT_DIR = "Data_control"
 
 # ===== Switches =====
 DO_SIGNAL_NOMINAL = True
@@ -95,13 +99,13 @@ def line(input_pq, output_root, corr, split_flag):
     return f"{input_pq}\t{output_root}\t{corr}\t{split_flag}\n"
 
 
-os.makedirs("logs_NFlow", exist_ok=True)
+os.makedirs("logs_control", exist_ok=True)
 
-with open("joblist_NFlow.tsv", "w") as f:
+with open("joblist_control.tsv", "w") as f:
     # ---------- SIGNAL: nominal ----------
     if DO_SIGNAL_NOMINAL:
         for y, s in iter_year_sample(SIGNAL_BY_YEAR):
-            inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BASE, SIGNAL_INPUT_DIR, f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
@@ -113,7 +117,7 @@ with open("joblist_NFlow.tsv", "w") as f:
             for ud in updown:
                 for syst in systs:
                     corr = f"{syst}_{ud}"
-                    inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    inp = os.path.join(INPUT_BASE, SIGNAL_INPUT_DIR, f"{s}_{y}", f"merged_{corr}.parquet")
                     out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
                     os.makedirs(out_dir, exist_ok=True)
                     out = os.path.join(out_dir, f"{y}.root")
@@ -122,14 +126,14 @@ with open("joblist_NFlow.tsv", "w") as f:
     # ---------- BACKGROUND: nominal ----------
     if DO_BKG_NOMINAL:
         for y, s in iter_year_sample(DYG_BY_YEAR):
-            inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BASE, BKG_INPUT_DIR, f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
             f.write(line(inp, out, "nominal", 0))
 
         for y, s in iter_year_sample(DYJET_BY_YEAR):
-            inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BASE, BKG_INPUT_DIR, f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
@@ -141,7 +145,7 @@ with open("joblist_NFlow.tsv", "w") as f:
             for ud in updown:
                 for syst in systs:
                     corr = f"{syst}_{ud}"
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    inp = os.path.join(INPUT_BASE, BKG_INPUT_DIR, f"{s}_{y}", f"merged_{corr}.parquet")
                     out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
                     os.makedirs(out_dir, exist_ok=True)
                     out = os.path.join(out_dir, f"{y}.root")
@@ -151,7 +155,7 @@ with open("joblist_NFlow.tsv", "w") as f:
             for ud in updown:
                 for syst in systs:
                     corr = f"{syst}_{ud}"
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    inp = os.path.join(INPUT_BASE, BKG_INPUT_DIR, f"{s}_{y}", f"merged_{corr}.parquet")
                     out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
                     os.makedirs(out_dir, exist_ok=True)
                     out = os.path.join(out_dir, f"{y}.root")
@@ -160,10 +164,10 @@ with open("joblist_NFlow.tsv", "w") as f:
     # ---------- DATA ----------
     if DO_DATA_NOMINAL:
         for y, s in iter_year_sample(DATA_BY_YEAR):
-            inp = os.path.join(DATA_INPUT_BASE, "Data", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BASE, DATA_INPUT_DIR, f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
             f.write(line(inp, out, "nominal", 0))
 
-print("Wrote joblist_NFlow.tsv with tasks.")
+print("Wrote joblist_control.tsv with tasks.")

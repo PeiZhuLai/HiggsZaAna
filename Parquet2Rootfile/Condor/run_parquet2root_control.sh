@@ -1,6 +1,6 @@
 #!/bin/bash
-# Wrapper for running Parque2Root_BDT_NFlow.py on LXBATCH/HTCondor.
-# Usage: run_parquet2root_NFlow.sh <INPUT> <OUTPUT> <CORR> <SPLIT_FLAG>
+# Wrapper for running Parque2Root_BDT_control.py on LXBATCH/HTCondor.
+# Usage: run_parquet2root_control.sh <INPUT> <OUTPUT> <CORR> <SPLIT_FLAG>
 
 set -euo pipefail
 
