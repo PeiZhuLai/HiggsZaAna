@@ -155,6 +155,52 @@ def _add_file_if_exists(chain, path):
         print(f"[Plot_Helper][MISS] {path}")
         return False
 
+def _format_run3_source_filters(sample, filters):
+    if not filters:
+        return "all"
+    if sample == "DYGto2LG":
+        return ", ".join(f"{subsample}:{year}" for subsample, year in filters)
+    return ", ".join(str(item) for item in filters)
+
+def _run3_sources_for_sample(sample, ana_cfg):
+    filters = getattr(ana_cfg, "run3_source_filters", {}).get(sample)
+
+    if sample in getattr(ana_cfg, "sig_names", []):
+        all_sources = [(f"mA_{sample}", year) for year in getattr(ana_cfg, "years_sig", ["2022preEE"])]
+        if filters:
+            allowed_years = set(filters)
+            return [(directory, year) for directory, year in all_sources if year in allowed_years]
+        return all_sources
+
+    if sample == "DYJetsToLL":
+        all_sources = [("DYJetsToLL", year) for year in getattr(ana_cfg, "years_dyll", [])]
+        if filters:
+            allowed_years = set(filters)
+            return [(directory, year) for directory, year in all_sources if year in allowed_years]
+        return all_sources
+
+    if sample == "DYGto2LG":
+        all_sources = []
+        for subsample in getattr(ana_cfg, "bkg_2022", []):
+            for year in getattr(ana_cfg, "years_22", []):
+                all_sources.append((subsample, year))
+        for subsample in getattr(ana_cfg, "bkg_2023", []):
+            for year in getattr(ana_cfg, "years_23", []):
+                all_sources.append((subsample, year))
+        if filters:
+            allowed_sources = set(tuple(item) for item in filters)
+            return [source for source in all_sources if source in allowed_sources]
+        return all_sources
+
+    if sample == "Data":
+        all_sources = [("Data", year) for year in getattr(ana_cfg, "years_dyll", [])]
+        if filters:
+            allowed_years = set(filters)
+            return [(directory, year) for directory, year in all_sources if year in allowed_years]
+        return all_sources
+
+    return []
+
 def _run3_build_chain(sample, ana_cfg):
     """
     Build a TChain for run3 according to updated rules:
@@ -167,38 +213,17 @@ def _run3_build_chain(sample, ana_cfg):
     ch = TChain(tree_name, f"chain_{sample}")
     base = ana_cfg.sample_loc
     added = 0
+    filters = getattr(ana_cfg, "run3_source_filters", {}).get(sample)
 
     if sample in ana_cfg.sig_names:
-        # signal: base/mA_<signalMass>/<year>.root (沿用你目前的信號資料夾結構)
-        # 若你的 signal 其實是 base/<signalSample>/<year>.root，請在這裡把 "mA_" 拿掉即可
-        for y in getattr(ana_cfg, "years_sig", ["2022preEE"]):
-            path = os.path.join(base, f"mA_{sample}", f"{y}.root")
+        for directory, year in _run3_sources_for_sample(sample, ana_cfg):
+            path = os.path.join(base, directory, f"{year}.root")
             if _add_file_if_exists(ch, path):
                 added += 1
 
-    elif sample == "DYJetsToLL":
-        for y in getattr(ana_cfg, "years_dyll", []):
-            path = os.path.join(base, "DYJetsToLL", f"{y}.root")
-            if _add_file_if_exists(ch, path):
-                added += 1
-
-    elif sample == "DYGto2LG":
-        # 2022 sub-samples
-        for subs in getattr(ana_cfg, "bkg_2022", []):
-            for y in getattr(ana_cfg, "years_22", []):
-                path = os.path.join(base, subs, f"{y}.root")
-                if _add_file_if_exists(ch, path):
-                    added += 1
-        # 2023 sub-samples
-        for subs in getattr(ana_cfg, "bkg_2023", []):
-            for y in getattr(ana_cfg, "years_23", []):
-                path = os.path.join(base, subs, f"{y}.root")
-                if _add_file_if_exists(ch, path):
-                    added += 1
-
-    elif sample == "Data":
-        for y in getattr(ana_cfg, "years_dyll", []):
-            path = os.path.join(base, "Data", f"{y}.root")
+    elif sample in ("DYJetsToLL", "DYGto2LG", "Data"):
+        for directory, year in _run3_sources_for_sample(sample, ana_cfg):
+            path = os.path.join(base, directory, f"{year}.root")
             if _add_file_if_exists(ch, path):
                 added += 1
 
@@ -211,6 +236,8 @@ def _run3_build_chain(sample, ana_cfg):
     if added == 0:
         print(f"[Plot_Helper][WARN] sample={sample} has no files added (chain empty).")
     else:
+        if filters:
+            print(f"[Plot_Helper] sample={sample} source filters: {_format_run3_source_filters(sample, filters)}")
         print(f"[Plot_Helper] sample={sample} added files: {added}")
     return ch
 

@@ -48,7 +48,7 @@ parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', def
 parser.add_argument('--sidebandReweightUnc', dest='sideband_reweight_unc', action='store_true', default=False, help='add sideband reweight uncertainty to the MC error band')
 parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', help=argparse.SUPPRESS)
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
-parser.add_argument('--samples', dest='samples', default=None, help='comma-separated sample names to run; aliases: all, data, bkg, sig')
+parser.add_argument('--samples', dest='samples', default=None, help="comma-separated sample names to run; aliases: all, data, bkg, sig; source filters are supported as sample@year or DYGto2LG@subsample:year")
 parser.add_argument('--histOnly', dest='hist_only', action='store_true', default=False, help='write raw_plots/sys_dir only; skip stack and PDF drawing')
 parser.add_argument('--skipSystematics', dest='skip_systematics', action='store_true', default=False, help='write nominal histograms and copy them into sys_dir instead of filling per-event systematic variations')
 parser.add_argument('--optimizeBranches', dest='optimize_branches', action='store_true', default=False, help='disable unused TTree branches before the event loop')
@@ -58,28 +58,119 @@ parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default
 parser.add_argument('--mvaDebugN', dest='mva_debug_n', type=int, default=15, help='max debug prints per (sample,mA)')
 args = parser.parse_args()
 
+def _append_unique(items, value):
+    if value not in items:
+        items.append(value)
+
+def _parse_source_selectors(sample, source_spec, analyzer_cfg):
+    selectors = []
+    raw_tokens = str(source_spec).replace("+", ",").split(",")
+
+    if sample in analyzer_cfg.sig_names:
+        allowed_years = set(getattr(analyzer_cfg, "years_sig", []))
+        for token in raw_tokens:
+            year = token.strip()
+            if not year:
+                continue
+            if year not in allowed_years:
+                raise ValueError(
+                    "Unknown source year '%s' for sample '%s'. Allowed years are: %s"
+                    % (year, sample, ", ".join(sorted(allowed_years)))
+                )
+            _append_unique(selectors, year)
+        return selectors
+
+    if sample in ("Data", "DYJetsToLL"):
+        allowed_years = set(getattr(analyzer_cfg, "years_dyll", []))
+        for token in raw_tokens:
+            year = token.strip()
+            if not year:
+                continue
+            if year not in allowed_years:
+                raise ValueError(
+                    "Unknown source year '%s' for sample '%s'. Allowed years are: %s"
+                    % (year, sample, ", ".join(sorted(allowed_years)))
+                )
+            _append_unique(selectors, year)
+        return selectors
+
+    if sample == "DYGto2LG":
+        allowed_sources = set()
+        for subsample in getattr(analyzer_cfg, "bkg_2022", []):
+            for year in getattr(analyzer_cfg, "years_22", []):
+                allowed_sources.add((subsample, year))
+        for subsample in getattr(analyzer_cfg, "bkg_2023", []):
+            for year in getattr(analyzer_cfg, "years_23", []):
+                allowed_sources.add((subsample, year))
+
+        for token in raw_tokens:
+            selector = token.strip()
+            if not selector:
+                continue
+            if ":" not in selector:
+                raise ValueError(
+                    "DYGto2LG source selector must be '<subsample>:<year>', got '%s'"
+                    % selector
+                )
+            subsample, year = [part.strip() for part in selector.split(":", 1)]
+            source = (subsample, year)
+            if source not in allowed_sources:
+                allowed_text = ", ".join(
+                    "%s:%s" % (allowed_subsample, allowed_year)
+                    for allowed_subsample, allowed_year in sorted(allowed_sources)
+                )
+                raise ValueError(
+                    "Unknown source '%s:%s' for sample '%s'. Allowed sources are: %s"
+                    % (subsample, year, sample, allowed_text)
+                )
+            _append_unique(selectors, source)
+        return selectors
+
+    raise ValueError("Sample source selectors are not supported for sample '%s'" % sample)
+
+def _format_source_selectors(source_selectors):
+    parts = []
+    for item in source_selectors:
+        if isinstance(item, tuple):
+            parts.append("%s:%s" % item)
+        else:
+            parts.append(str(item))
+    return ", ".join(parts)
+
 def _parse_sample_filter(sample_filter, analyzer_cfg):
     if sample_filter is None:
-        return None
+        return None, {}
 
     allowed = list(analyzer_cfg.samp_names)
     selected = []
+    source_filters = {}
     for token in str(sample_filter).replace(";", ",").split(","):
         token = token.strip()
         if not token:
             continue
 
-        token_lower = token.lower()
+        sample_token, has_source_filter, source_spec = token.partition("@")
+        sample_token = sample_token.strip()
+        source_spec = source_spec.strip() if has_source_filter else None
+        token_lower = sample_token.lower()
         if token_lower in ("all", "*"):
-            return None
+            if source_spec:
+                raise ValueError("Sample aliases like '%s' cannot use a source filter." % sample_token)
+            return None, {}
         if token_lower in ("data",):
+            if source_spec:
+                raise ValueError("Sample aliases like '%s' cannot use a source filter." % sample_token)
             expanded = ["Data"]
         elif token_lower in ("bkg", "bkgs", "background", "backgrounds"):
+            if source_spec:
+                raise ValueError("Sample aliases like '%s' cannot use a source filter." % sample_token)
             expanded = list(analyzer_cfg.bkg_names)
         elif token_lower in ("sig", "sigs", "signal", "signals"):
+            if source_spec:
+                raise ValueError("Sample aliases like '%s' cannot use a source filter." % sample_token)
             expanded = list(analyzer_cfg.sig_names)
         else:
-            expanded = [token]
+            expanded = [sample_token]
 
         for sample in expanded:
             if sample not in allowed:
@@ -89,8 +180,14 @@ def _parse_sample_filter(sample_filter, analyzer_cfg):
                 )
             if sample not in selected:
                 selected.append(sample)
+            if source_spec:
+                sample_sources = source_filters.setdefault(sample, [])
+                for source in _parse_source_selectors(sample, source_spec, analyzer_cfg):
+                    _append_unique(sample_sources, source)
+            else:
+                source_filters.pop(sample, None)
 
-    return selected if selected else None
+    return (selected if selected else None), source_filters
 
 SIDEBAND_REWEIGHTER = None
 SIDEBAND_REWEIGHT_UNC_SYS_NAMES = ("sideband_rwgt_reweight_up", "sideband_rwgt_reweight_down")
@@ -196,6 +293,65 @@ def get_event_weight(ntup, sample, analyzer_cfg, row_index=None):
         return weight * SIDEBAND_REWEIGHTER.weight_for_object(ntup, row_index=row_index)
 
     return weight
+
+SYSTEMATIC_WEIGHT_WARNINGS = set()
+
+def _systematic_central_branch(sys_name):
+    if sys_name.endswith("_up"):
+        return sys_name[:-3] + "_central"
+    if sys_name.endswith("_down"):
+        return sys_name[:-5] + "_central"
+    return None
+
+def _collect_systematic_branch_names(sys_names):
+    names = []
+    for sys_name in sys_names:
+        if sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
+            continue
+        _append_unique(names, sys_name)
+        central_branch = _systematic_central_branch(sys_name)
+        if central_branch:
+            _append_unique(names, central_branch)
+    return names
+
+def _warn_systematic_fallback(sample, sys_name, message):
+    key = (sample, sys_name, message)
+    if key in SYSTEMATIC_WEIGHT_WARNINGS:
+        return
+    SYSTEMATIC_WEIGHT_WARNINGS.add(key)
+    print("[Systematics][WARN] sample=%s sys=%s: %s" % (sample, sys_name, message))
+
+def _safe_systematic_weight(ntup, sample, sys_name, nominal_weight):
+    central_branch = _systematic_central_branch(sys_name)
+    if central_branch is None:
+        return nominal_weight
+
+    try:
+        varied = float(getattr(ntup, sys_name))
+    except Exception:
+        _warn_systematic_fallback(sample, sys_name, "missing varied branch; use nominal weight")
+        return nominal_weight
+
+    try:
+        central = float(getattr(ntup, central_branch))
+    except Exception:
+        _warn_systematic_fallback(sample, sys_name, "missing central branch; use nominal weight")
+        return nominal_weight
+
+    if not np.isfinite(varied):
+        _warn_systematic_fallback(sample, sys_name, "varied branch is not finite; use nominal weight")
+        return nominal_weight
+
+    if not np.isfinite(central) or abs(central) < 1e-12:
+        _warn_systematic_fallback(sample, sys_name, "central branch is zero/non-finite; use nominal weight")
+        return nominal_weight
+
+    ratio = varied / central
+    if not np.isfinite(ratio):
+        _warn_systematic_fallback(sample, sys_name, "varied/central ratio is not finite; use nominal weight")
+        return nominal_weight
+
+    return nominal_weight * ratio
 
 
 gROOT.SetBatch(True)
@@ -457,23 +613,8 @@ def _validate_and_publish_output(out_file, tmp_output_path, final_output_path):
         shutil.move(tmp_output_path, final_output_path)
     print("[Output] Published ROOT file: %s (%d top-level keys)" % (final_output_path, n_keys))
 
-def _systematic_branch_names():
-    suffix_groups = (
-        "weight_hlt_sf",
-        "weight_pu_reweight_sf",
-        "weight_electron_wplid_sf_SelectedElectron",
-        "weight_electron_reco_sf_SelectedElectron",
-        "weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron",
-        "weight_muon_looseid_sf_SelectedMuon",
-        "weight_muon_reco_sf_SelectedMuon",
-        "weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon",
-        "weight_photon_id_sf_SelectedPhoton",
-        "weight_photon_csev_sf_SelectedPhoton",
-    )
-    names = []
-    for base in suffix_groups:
-        names.extend((base + "_central", base + "_up", base + "_down"))
-    return names
+def _systematic_branch_names(sys_names):
+    return _collect_systematic_branch_names(sys_names)
 
 def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
     if not chain:
@@ -534,7 +675,7 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
             "pho2PIso_noCorr",
         ))
     if not args.skip_systematics and is_background_sample(sample, analyzer_cfg):
-        needed.update(_systematic_branch_names())
+        needed.update(_systematic_branch_names(analyzer_cfg.sys_names))
 
     branch_list = chain.GetListOfBranches()
     chain.SetBranchStatus("*", 0)
@@ -605,9 +746,10 @@ def main():
         # 修正大小寫，與其他地方一致使用 'Data'
         analyzer_cfg.samp_names = analyzer_cfg.bkg_names + analyzer_cfg.sig_names + ['Data']
 
+    sample_source_filters = {}
     if args.samples:
         try:
-            selected_samples = _parse_sample_filter(args.samples, analyzer_cfg)
+            selected_samples, sample_source_filters = _parse_sample_filter(args.samples, analyzer_cfg)
         except ValueError as exc:
             print("[Samples][ERROR]", exc)
             sys.exit(1)
@@ -622,7 +764,14 @@ def main():
                 print("[Samples][ERROR] No samples selected after applying --samples=%s" % args.samples)
                 sys.exit(1)
             print("[Samples] Running selected samples:", analyzer_cfg.samp_names)
+            for sample in analyzer_cfg.samp_names:
+                if sample in sample_source_filters:
+                    print(
+                        "[Samples] sample=%s source filters: %s"
+                        % (sample, _format_source_selectors(sample_source_filters[sample]))
+                    )
 
+    analyzer_cfg.run3_source_filters = sample_source_filters
 
     analyzer_cfg.Print_Config()
 
@@ -921,50 +1070,8 @@ def main():
                     for sys_name in analyzer_cfg.sys_names:
                         if sys_name in sideband_rwgt_sys_weights:
                             weight_sys = sideband_rwgt_sys_weights[sys_name]
-                        elif sys_name =='weight_hlt_sf_up':
-                            weight_sys = weight * ntup.weight_hlt_sf_up / ntup.weight_hlt_sf_central
-                        elif sys_name =='weight_hlt_sf_down':
-                            weight_sys = weight * ntup.weight_hlt_sf_down / ntup.weight_hlt_sf_central
-                        elif sys_name =='weight_pu_reweight_sf_up':
-                            weight_sys = weight * ntup.weight_pu_reweight_sf_up / ntup.weight_pu_reweight_sf_central
-                        elif sys_name =='weight_pu_reweight_sf_down':
-                            weight_sys = weight * ntup.weight_pu_reweight_sf_down / ntup.weight_pu_reweight_sf_central
-                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_up':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_up / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_wplid_sf_SelectedElectron_down':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_SelectedElectron_down / ntup.weight_electron_wplid_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_up':
-                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_up / ntup.weight_electron_reco_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_reco_sf_SelectedElectron_down':
-                            weight_sys = weight * ntup.weight_electron_reco_sf_SelectedElectron_down / ntup.weight_electron_reco_sf_SelectedElectron_central
-                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_up / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-                        elif sys_name =='weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down':
-                            weight_sys = weight * ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_down / ntup.weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central
-
-                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_up':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_up / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_looseid_sf_SelectedMuon_down':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_SelectedMuon_down / ntup.weight_muon_looseid_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_up':
-                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_up / ntup.weight_muon_reco_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_reco_sf_SelectedMuon_down':
-                            weight_sys = weight * ntup.weight_muon_reco_sf_SelectedMuon_down / ntup.weight_muon_reco_sf_SelectedMuon_central
-                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_up / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-                        elif sys_name =='weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down':
-                            weight_sys = weight * ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_down / ntup.weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central
-
-                        elif sys_name =='weight_photon_id_sf_SelectedPhoton_up':
-                            weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_up / ntup.weight_photon_id_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_id_sf_SelectedPhoton_down':
-                            weight_sys = weight * ntup.weight_photon_id_sf_SelectedPhoton_down / ntup.weight_photon_id_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_up':
-                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_up / ntup.weight_photon_csev_sf_SelectedPhoton_central
-                        elif sys_name =='weight_photon_csev_sf_SelectedPhoton_down':
-                            weight_sys = weight * ntup.weight_photon_csev_sf_SelectedPhoton_down / ntup.weight_photon_csev_sf_SelectedPhoton_central
                         else:
-                            weight_sys = weight
+                            weight_sys = _safe_systematic_weight(ntup, sample, sys_name, weight)
 
                         for var in var_names:
                             if _should_fill_var_for_event(var, ntup.H_m, sigma_low, sigma_hig, target_masses):

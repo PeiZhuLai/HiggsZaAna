@@ -13,6 +13,7 @@ jobs_file="${script_dir}/dataVmc_jobs.txt"
 resubmit_file="${script_dir}/dataVmc_resubmit.submit"
 resubmit_jobs_file="${script_dir}/dataVmc_resubmit_jobs.txt"
 missing_list="${script_dir}/dataVmc_missing_outputs.txt"
+jobs_generator="${script_dir}/make_dataVmc_condor_jobs.py"
 
 DRY_RUN="${DRY_RUN:-0}"
 REMAKE_JOBS="${REMAKE_JOBS:-0}"
@@ -86,7 +87,18 @@ PY
     return 0
 }
 
-if [[ "$REMAKE_JOBS" == "1" || ! -s "$submit_file" || ! -s "$jobs_file" ]]; then
+jobs_stale=0
+if [[ -s "$jobs_file" && "$jobs_file" -ot "$jobs_generator" ]]; then
+    jobs_stale=1
+fi
+if [[ -s "$submit_file" && "$submit_file" -ot "$jobs_generator" ]]; then
+    jobs_stale=1
+fi
+
+if [[ "$REMAKE_JOBS" == "1" || "$jobs_stale" == "1" || ! -s "$submit_file" || ! -s "$jobs_file" ]]; then
+    if [[ "$jobs_stale" == "1" && "$REMAKE_JOBS" != "1" ]]; then
+        echo "[Info] Existing submit/jobs are older than $jobs_generator; regenerating."
+    fi
     echo "[Info] Regenerating $submit_file and $jobs_file"
     if [[ "${SKIP_ENV_PACK:-0}" != "1" ]]; then
         "$script_dir/pack_conda_env_for_condor.sh"

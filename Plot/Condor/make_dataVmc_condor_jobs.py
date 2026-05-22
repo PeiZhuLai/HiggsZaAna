@@ -12,24 +12,33 @@ from pathlib import Path
 DEFAULT_PROJECT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna"
 REGIONS = ("SR", "CR", "mva")
 FINAL_TAGS = ("nominal", "sideband_rwgt")
-SAMPLES = (
-    ("data", "Data"),
-    ("dyll", "DYJetsToLL"),
-    ("dyg", "DYGto2LG"),
-    ("sig_m1", "M1"),
-    ("sig_m2", "M2"),
-    ("sig_m3", "M3"),
-    ("sig_m4", "M4"),
-    ("sig_m5", "M5"),
-    ("sig_m6", "M6"),
-    ("sig_m7", "M7"),
-    ("sig_m8", "M8"),
-    ("sig_m9", "M9"),
-    ("sig_m10", "M10"),
-    ("sig_m15", "M15"),
-    ("sig_m20", "M20"),
-    ("sig_m25", "M25"),
-    ("sig_m30", "M30"),
+DYLL_YEARS = (
+    "2022preEE",
+    "2022postEE",
+    "2023preBPix",
+    "2023postBPix",
+    "2024",
+)
+DYG_SPLITS = (
+    ("DYGto2LG_10to50", ("2022preEE", "2022postEE")),
+    ("DYGto2LG_50to100", ("2022preEE", "2022postEE")),
+    ("DYGto2LG_10to100", ("2023preBPix", "2023postBPix", "2024")),
+)
+SIGNAL_MASSES = (
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9",
+    "M10",
+    "M15",
+    "M20",
+    "M25",
+    "M30",
 )
 
 
@@ -48,7 +57,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Generate one-CPU HTCondor jobs for Plot/scripts/1_prepare_dataVmc.py. "
-            "Each Data/DY/signal mass sample is submitted as a separate job."
+            "Data and signal samples stay one job each, while DY backgrounds are "
+            "split by year or (subsample, year)."
         )
     )
     parser.add_argument(
@@ -126,12 +136,29 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def build_sample_specs() -> list[tuple[str, str]]:
+    sample_specs: list[tuple[str, str]] = [("data", "Data")]
+
+    for year in DYLL_YEARS:
+        sample_specs.append((f"dyll_{year}", f"DYJetsToLL@{year}"))
+
+    for subsample, years in DYG_SPLITS:
+        short_tag = subsample.replace("DYGto2LG_", "")
+        for year in years:
+            sample_specs.append((f"dyg_{short_tag}_{year}", f"DYGto2LG@{subsample}:{year}"))
+
+    for mass in SIGNAL_MASSES:
+        sample_specs.append((f"sig_{mass.lower()}", mass))
+
+    return sample_specs
+
+
 def build_jobs() -> list[CondorJob]:
     return [
         CondorJob(region_key=region_key, final_tag=final_tag, sample_tag=sample_tag, samples=samples)
         for final_tag in FINAL_TAGS
         for region_key in REGIONS
-        for sample_tag, samples in SAMPLES
+        for sample_tag, samples in build_sample_specs()
     ]
 
 

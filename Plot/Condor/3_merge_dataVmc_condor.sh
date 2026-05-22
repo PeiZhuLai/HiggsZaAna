@@ -7,32 +7,13 @@ SCRIPTS_DIR="${PLOT_DIR}/scripts"
 OUTPUT_DIR="${PLOT_DIR}/plots"
 VARIABLES_DIR="${OUTPUT_DIR}/variables_dataVmc"
 LOG_DIR="${OUTPUT_DIR}/logs_split"
+JOBS_FILE="${PROJECT_DIR}/Plot/Condor/dataVmc_jobs.txt"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
 CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
 CHECK_SYSTEMATICS="${CHECK_SYSTEMATICS:-1}"
-
-sample_tags=(
-    data
-    dyll
-    dyg
-    sig_m1
-    sig_m2
-    sig_m3
-    sig_m4
-    sig_m5
-    sig_m6
-    sig_m7
-    sig_m8
-    sig_m9
-    sig_m10
-    sig_m15
-    sig_m20
-    sig_m25
-    sig_m30
-)
 
 mkdir -p "$LOG_DIR" "$VARIABLES_DIR"
 export PYTHONPATH="${PYTHONPATH:-}:${PLOT_DIR}/lib:${PROJECT_DIR}/HZaMVA/scripts"
@@ -45,6 +26,7 @@ echo "[Config] RUN_OPTIMIZATION=$RUN_OPTIMIZATION"
 echo "[Config] CHECK_SYSTEMATICS=$CHECK_SYSTEMATICS"
 echo "[Config] VARIABLES_DIR=$VARIABLES_DIR"
 echo "[Config] LOG_DIR=$LOG_DIR"
+echo "[Config] JOBS_FILE=$JOBS_FILE"
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" && "$RUN_MERGE_PLOTS" != "1" ]]; then
     echo "[Info] RUN_DATAVMC_PLOTS=1 with RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS; redraw uses existing merged ROOT files in $VARIABLES_DIR"
@@ -172,14 +154,39 @@ for example in examples:
 PY
 }
 
+collect_sample_tags() {
+    local region_key="$1"
+    local final_tag="$2"
+
+    if [[ ! -s "$JOBS_FILE" ]]; then
+        echo "[ERROR] Missing jobs file: $JOBS_FILE" >&2
+        return 1
+    fi
+
+    awk -v region_key="$region_key" -v final_tag="$final_tag" '
+        $1 == region_key && $2 == final_tag { print $3 }
+    ' "$JOBS_FILE"
+}
+
 merge_plot_output() {
     local region_key="$1"
     local final_tag="$2"
     local suffix target input sample_tag
     local inputs=()
+    local sample_tags=()
 
     suffix="$(region_suffix "$region_key")"
     target="${VARIABLES_DIR}/ALP_plot_run3_${suffix}_${final_tag}.root"
+
+    while IFS= read -r sample_tag; do
+        [[ -n "$sample_tag" ]] || continue
+        sample_tags+=("$sample_tag")
+    done < <(collect_sample_tags "$region_key" "$final_tag")
+
+    if [[ "${#sample_tags[@]}" -eq 0 ]]; then
+        echo "[ERROR] No sample tags found in $JOBS_FILE for tag=${final_tag} region=${region_key}" >&2
+        return 1
+    fi
 
     for sample_tag in "${sample_tags[@]}"; do
         input="${VARIABLES_DIR}/ALP_plot_run3_${suffix}_${final_tag}_part_${sample_tag}.root"
