@@ -638,10 +638,10 @@ def draw_plot(
         positive = [h.GetMinimum(0.0) for h in (data, after, before) if h.GetMinimum(0.0) > 0]
         ymin = min(positive) * 0.5 if positive else 0.01
         after.SetMinimum(ymin)
-        after.SetMaximum(ymax * 20.0)
+        after.SetMaximum(ymax * 1.5 if ymax > 0 else 1.0)
     else:
         after.SetMinimum(0.0)
-        after.SetMaximum(ymax * 1.45 if ymax > 0 else 1.0)
+        after.SetMaximum(ymax * 1.5 if ymax > 0 else 1.0)
 
     style_upper_histogram(after, "Events")
     after.Draw("hist")
