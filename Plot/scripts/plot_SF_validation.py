@@ -41,6 +41,11 @@ LOWER_AXIS_LABEL_SIZE = 0.14
 LOWER_X_TITLE_OFFSET = 1.45
 LOWER_Y_TITLE_OFFSET = 0.6
 
+DATA_MARKER_SIZE = 1.15
+DATA_LINE_WIDTH = 4
+MC_LINE_WIDTH = 4
+RATIO_MARKER_SIZE = 0.95
+
 
 LUMI_MAP = {
     "2022preEE": 7.9804,
@@ -158,8 +163,8 @@ WEIGHTS: Tuple[WeightSpec, ...] = (
         "trigger_sf",
         "weight_central",
         "weight_central / weight_hlt_sf_central",
-        "Weighted After Trigger SFs",
-        "Weighted Before Trigger SFs",
+        "MC (Wi Trigger SFs)",
+        "MC (Wo Trigger SFs)",
         ("weight_hlt_sf_central",),
         ("electron", "muon"),
     ),
@@ -171,8 +176,8 @@ WEIGHTS: Tuple[WeightSpec, ...] = (
             "(weight_electron_wplid_sf_SelectedElectron_central * "
             "weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central)"
         ),
-        "Weighted Electron SFs",
-        "Weighted Before Electron SFs",
+        "MC (Wi Electron ID SFs)",
+        "MC (Wo Electron ID SFs)",
         (
             "weight_electron_wplid_sf_SelectedElectron_central",
             "weight_electron_wplid_sf_nomatch_SelectedGenNoRecoElectron_central",
@@ -187,8 +192,8 @@ WEIGHTS: Tuple[WeightSpec, ...] = (
             "(weight_muon_looseid_sf_SelectedMuon_central * "
             "weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central)"
         ),
-        "Weighted Muon SFs",
-        "Weighted Before Muon SFs",
+        "MC (Wi Muon ID SFs)",
+        "MC (Wo Muon ID SFs)",
         (
             "weight_muon_looseid_sf_SelectedMuon_central",
             "weight_muon_looseid_sf_nomatch_SelectedGenNoRecoMuon_central",
@@ -199,8 +204,8 @@ WEIGHTS: Tuple[WeightSpec, ...] = (
         "photon_id_sf",
         "weight_central",
         "weight_central / weight_photon_id_sf_SelectedPhoton_central",
-        "Weighted Photon ID SFs",
-        "Weighted Before Photon ID SFs",
+        "MC (Wi Photon ID SFs)",
+        "MC (Wo Photon ID SFs)",
         ("weight_photon_id_sf_SelectedPhoton_central",),
         ("photon",),
     ),
@@ -208,8 +213,8 @@ WEIGHTS: Tuple[WeightSpec, ...] = (
         "photon_csev_sf",
         "weight_central",
         "weight_central / weight_photon_csev_sf_SelectedPhoton_central",
-        "Weighted Photon CSEV SFs",
-        "Weighted Before Photon CSEV SFs",
+        "MC (Wi Photon CSEV SFs)",
+        "MC (Wo Photon CSEV SFs)",
         ("weight_photon_csev_sf_SelectedPhoton_central",),
         ("photon",),
     ),
@@ -319,6 +324,8 @@ def set_style() -> None:
     ROOT.gStyle.SetPadColor(ROOT.kWhite)
     ROOT.gStyle.SetFrameFillColor(ROOT.kWhite)
     ROOT.gStyle.SetLegendBorderSize(0)
+    ROOT.gStyle.SetErrorX(0)
+    ROOT.gStyle.SetEndErrorSize(0)
 
 
 def lumi_for_eras(eras: Sequence[str]) -> float:
@@ -337,7 +344,7 @@ def draw_cms_labels(pad: ROOT.TVirtualPad, lumi: float) -> None:
 
     label.SetTextAlign(31)
     label.SetTextSize(0.055)
-    label.DrawLatex(0.95, 0.963, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
+    label.DrawLatex(0.95, 0.94, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
 
 
 def add_file(chain: ROOT.TChain, path: str) -> bool:
@@ -527,18 +534,18 @@ def decorate_histograms(data: ROOT.TH1, after: ROOT.TH1, before: ROOT.TH1) -> No
         hist.SetStats(False)
 
     data.SetMarkerStyle(20)
-    data.SetMarkerSize(0.9)
+    data.SetMarkerSize(DATA_MARKER_SIZE)
     data.SetLineColor(ROOT.kBlack)
-    data.SetLineWidth(3)
+    data.SetLineWidth(DATA_LINE_WIDTH)
     data.SetMarkerColor(ROOT.kBlack)
 
     after.SetLineColor(ROOT.kRed + 1)
-    after.SetLineWidth(3)
+    after.SetLineWidth(MC_LINE_WIDTH)
     after.SetFillStyle(0)
     after.SetMarkerColor(ROOT.kRed + 1)
 
     before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
-    before.SetLineWidth(3)
+    before.SetLineWidth(MC_LINE_WIDTH)
     before.SetLineStyle(2)
     before.SetFillStyle(0)
     before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
@@ -554,21 +561,21 @@ def decorate_trigger_ratio_histograms(data: ROOT.TH1, nominal: ROOT.TH1, combine
     orange = ROOT.TColor.GetColor("#E66101")
 
     data.SetMarkerStyle(20)
-    data.SetMarkerSize(0.9)
+    data.SetMarkerSize(DATA_MARKER_SIZE)
     data.SetLineColor(ROOT.kBlack)
-    data.SetLineWidth(2)
+    data.SetLineWidth(DATA_LINE_WIDTH)
     data.SetMarkerColor(ROOT.kBlack)
 
     nominal.SetMarkerStyle(24)
-    nominal.SetMarkerSize(0.8)
+    nominal.SetMarkerSize(RATIO_MARKER_SIZE)
     nominal.SetLineColor(blue)
-    nominal.SetLineWidth(3)
+    nominal.SetLineWidth(MC_LINE_WIDTH)
     nominal.SetMarkerColor(blue)
 
     combined.SetMarkerStyle(25)
-    combined.SetMarkerSize(0.8)
+    combined.SetMarkerSize(RATIO_MARKER_SIZE)
     combined.SetLineColor(orange)
-    combined.SetLineWidth(3)
+    combined.SetLineWidth(MC_LINE_WIDTH)
     combined.SetMarkerColor(orange)
 
 
@@ -667,17 +674,17 @@ def draw_plot(
 
     if ratio_after:
         ratio_after.SetMarkerStyle(20)
-        ratio_after.SetMarkerSize(0.75)
+        ratio_after.SetMarkerSize(RATIO_MARKER_SIZE)
         ratio_after.SetMarkerColor(ROOT.kRed + 1)
         ratio_after.SetLineColor(ROOT.kRed + 1)
-        ratio_after.SetLineWidth(3)
+        ratio_after.SetLineWidth(MC_LINE_WIDTH)
         ratio_after.Draw("E1 same")
     if ratio_before:
         ratio_before.SetMarkerStyle(24)
-        ratio_before.SetMarkerSize(0.75)
+        ratio_before.SetMarkerSize(RATIO_MARKER_SIZE)
         ratio_before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
-        ratio_before.SetLineWidth(3)
+        ratio_before.SetLineWidth(MC_LINE_WIDTH)
         ratio_before.Draw("E1 same")
 
     canvas.cd()
@@ -761,17 +768,17 @@ def draw_trigger_path_plot(
 
     if ratio_nominal:
         ratio_nominal.SetMarkerStyle(24)
-        ratio_nominal.SetMarkerSize(0.75)
+        ratio_nominal.SetMarkerSize(RATIO_MARKER_SIZE)
         ratio_nominal.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_nominal.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
-        ratio_nominal.SetLineWidth(3)
+        ratio_nominal.SetLineWidth(MC_LINE_WIDTH)
         ratio_nominal.Draw("E1 same")
     if ratio_combined:
         ratio_combined.SetMarkerStyle(25)
-        ratio_combined.SetMarkerSize(0.75)
+        ratio_combined.SetMarkerSize(RATIO_MARKER_SIZE)
         ratio_combined.SetMarkerColor(ROOT.TColor.GetColor("#E66101"))
         ratio_combined.SetLineColor(ROOT.TColor.GetColor("#E66101"))
-        ratio_combined.SetLineWidth(3)
+        ratio_combined.SetLineWidth(MC_LINE_WIDTH)
         ratio_combined.Draw("E1 same")
 
     canvas.cd()
