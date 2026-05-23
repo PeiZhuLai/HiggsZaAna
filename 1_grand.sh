@@ -151,6 +151,114 @@ has_queue_rows() {
     awk 'NF && $1 !~ /^#/ { found=1; exit } END { exit(found ? 0 : 1) }' "$joblist"
 }
 
+condor_log_cluster_status() {
+    local cluster_id="$1"
+    local log_file="$2"
+
+    [[ -s "$log_file" ]] || return 1
+
+    awk -v cluster_id="$cluster_id" '
+        match($0, /^(000|001|005|009|012) \(([0-9]+)\.([0-9]+)\.000\)/, m) {
+            if (m[2] != cluster_id) {
+                next
+            }
+
+            code = m[1]
+            proc = m[3]
+            seen[proc] = 1
+
+            if (code == "000") {
+                status[proc] = "idle"
+            } else if (code == "001") {
+                status[proc] = "running"
+            } else if (code == "005") {
+                status[proc] = "completed"
+            } else if (code == "009") {
+                status[proc] = "aborted"
+            } else if (code == "012") {
+                status[proc] = "held"
+            }
+        }
+        END {
+            total = idle = running = completed = aborted = held = unknown = 0
+
+            for (proc in seen) {
+                total += 1
+                if (status[proc] == "idle") {
+                    idle += 1
+                } else if (status[proc] == "running") {
+                    running += 1
+                } else if (status[proc] == "completed") {
+                    completed += 1
+                } else if (status[proc] == "aborted") {
+                    aborted += 1
+                } else if (status[proc] == "held") {
+                    held += 1
+                } else {
+                    unknown += 1
+                }
+            }
+
+            if (total == 0) {
+                exit 1
+            }
+
+            printf "%d\t%d\t%d\t%d\t%d\t%d\t%d\n", total, idle, running, completed, aborted, held, unknown
+        }
+    ' "$log_file"
+}
+
+wait_for_cluster_via_log() {
+    local cluster_id="$1"
+    local log_file="$2"
+    local poll_seconds="${CONDOR_Q_POLL_SECONDS:-30}"
+    local max_missing_before_seen="${CONDOR_LOG_MAX_MISSING_BEFORE_SEEN:-24}"
+    local seen_cluster=0
+    local missing_before_seen=0
+    local status_line total idle running completed aborted held unknown
+
+    echo "[Condor] fallback to user log polling for cluster ${cluster_id}"
+    echo "[Condor] user log path: ${log_file}"
+
+    while true; do
+        if ! status_line="$(condor_log_cluster_status "$cluster_id" "$log_file" 2>/dev/null)"; then
+            if [[ "$seen_cluster" -eq 1 ]]; then
+                echo "[Condor][log] cluster ${cluster_id} has no newer parseable events; assuming it already reached a terminal state"
+                return 0
+            fi
+
+            missing_before_seen=$((missing_before_seen + 1))
+            echo "[Condor][log] cluster ${cluster_id} not visible in user log yet (${missing_before_seen}/${max_missing_before_seen})"
+
+            if [[ "$missing_before_seen" -ge "$max_missing_before_seen" ]]; then
+                echo "[WARN] cluster ${cluster_id} never became visible in user log; assuming it already left the queue." >&2
+                return 0
+            fi
+
+            sleep 5
+            continue
+        fi
+
+        IFS=$'\t' read -r total idle running completed aborted held unknown <<< "$status_line"
+        seen_cluster=1
+        missing_before_seen=0
+
+        echo "[Condor][log] cluster ${cluster_id}: total=${total} idle=${idle} running=${running} completed=${completed} aborted=${aborted} held=${held} unknown=${unknown}"
+
+        if [[ "$held" -gt 0 ]]; then
+            echo "[ERROR] cluster ${cluster_id} has held job(s) according to user log ${log_file}." >&2
+            return 1
+        fi
+
+        if [[ "$idle" -eq 0 && "$running" -eq 0 ]]; then
+            echo "[Condor][log] cluster ${cluster_id} reached terminal state via user log"
+            return 0
+        fi
+
+        sleep "$poll_seconds"
+    done
+}
+
 submit_and_wait() {
     local submit_file="$1"
     local log_pattern="$2"
@@ -202,8 +310,9 @@ wait_for_cluster_via_queue() {
             fi
 
             if [[ "$query_failures" -ge "$max_query_failures" ]]; then
-                echo "[ERROR] condor_q kept failing while waiting for cluster ${cluster_id}." >&2
-                return 1
+                echo "[WARN] condor_q kept failing while waiting for cluster ${cluster_id}; falling back to user log polling." >&2
+                wait_for_cluster_via_log "$cluster_id" "$log_file"
+                return $?
             fi
 
             sleep "$poll_seconds"

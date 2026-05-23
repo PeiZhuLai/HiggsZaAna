@@ -8,12 +8,15 @@ OUTPUT_DIR="${PLOT_DIR}/plots"
 VARIABLES_DIR="${OUTPUT_DIR}/variables_dataVmc"
 LOG_DIR="${OUTPUT_DIR}/logs_split"
 JOBS_FILE="${PROJECT_DIR}/Plot/Condor/dataVmc_jobs.txt"
+SUBMIT_FILE="${PROJECT_DIR}/Plot/Condor/dataVmc.submit"
+JOBS_GENERATOR="${PROJECT_DIR}/Plot/Condor/make_dataVmc_condor_jobs.py"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
 CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
 CHECK_SYSTEMATICS="${CHECK_SYSTEMATICS:-1}"
+REMAKE_JOBS="${REMAKE_JOBS:-0}"
 
 mkdir -p "$LOG_DIR" "$VARIABLES_DIR"
 export PYTHONPATH="${PYTHONPATH:-}:${PLOT_DIR}/lib:${PROJECT_DIR}/HZaMVA/scripts"
@@ -30,6 +33,26 @@ echo "[Config] JOBS_FILE=$JOBS_FILE"
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" && "$RUN_MERGE_PLOTS" != "1" ]]; then
     echo "[Info] RUN_DATAVMC_PLOTS=1 with RUN_MERGE_PLOTS=$RUN_MERGE_PLOTS; redraw uses existing merged ROOT files in $VARIABLES_DIR"
+fi
+
+jobs_stale=0
+if [[ -s "$JOBS_FILE" && "$JOBS_FILE" -ot "$JOBS_GENERATOR" ]]; then
+    jobs_stale=1
+fi
+if [[ -s "$SUBMIT_FILE" && "$SUBMIT_FILE" -ot "$JOBS_GENERATOR" ]]; then
+    jobs_stale=1
+fi
+
+if [[ "$REMAKE_JOBS" == "1" || "$jobs_stale" == "1" || ! -s "$JOBS_FILE" || ! -s "$SUBMIT_FILE" ]]; then
+    if [[ "$jobs_stale" == "1" && "$REMAKE_JOBS" != "1" ]]; then
+        echo "[Info] Existing submit/jobs are older than $JOBS_GENERATOR; regenerating."
+    fi
+    make_jobs_args=()
+    if [[ -n "${DATA_VMC_MAKE_JOBS_ARGS:-}" ]]; then
+        # shellcheck disable=SC2206
+        make_jobs_args=(${DATA_VMC_MAKE_JOBS_ARGS})
+    fi
+    "$PYTHON_BIN" "$JOBS_GENERATOR" --condor-dir "${PROJECT_DIR}/Plot/Condor" "${make_jobs_args[@]}"
 fi
 
 region_suffix() {

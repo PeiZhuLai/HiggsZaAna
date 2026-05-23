@@ -21,7 +21,9 @@ CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 RESUBMIT_REQUEST_MEMORY="${RESUBMIT_REQUEST_MEMORY:-}"
 RESUBMIT_REQUEST_DISK="${RESUBMIT_REQUEST_DISK:-}"
-RESUBMIT_JOB_FLAVOUR="${RESUBMIT_JOB_FLAVOUR:-}"
+# Resubmits are usually the heaviest tail of the job distribution; default to a
+# longer wall-time budget unless the caller overrides it explicitly.
+RESUBMIT_JOB_FLAVOUR="${RESUBMIT_JOB_FLAVOUR:-tomorrow}"
 
 region_suffix() {
     local region_key="$1"

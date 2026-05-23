@@ -5,12 +5,20 @@ timer_start=$(date +%s)
 finish() {
     local status=$?
     local timer_end elapsed hours minutes seconds
+    local runtime_line
     timer_end=$(date +%s)
     elapsed=$((timer_end - timer_start))
     hours=$((elapsed / 3600))
     minutes=$(((elapsed % 3600) / 60))
     seconds=$((elapsed % 60))
-    printf "[RUNTIME] %02d:%02d:%02d\n" "$hours" "$minutes" "$seconds"
+    runtime_line=$(printf "[RUNTIME] %02d:%02d:%02d" "$hours" "$minutes" "$seconds")
+    if [[ -n "${log_file:-}" ]]; then
+        echo "$runtime_line" >> "$log_file"
+        if [[ "$status" -ne 0 ]]; then
+            echo "[FAILED] $(date '+%F %T') exit=${status}" >> "$log_file"
+        fi
+    fi
+    echo "$runtime_line"
     exit "$status"
 }
 trap finish EXIT
@@ -131,6 +139,7 @@ localize_conda_env_if_needed() {
 
 mkdir -p "$LOG_DIR" "$VARIABLES_DIR"
 export PYTHONPATH="${PYTHONPATH:-}:${PLOT_DIR}/lib:${PROJECT_DIR}/HZaMVA/scripts"
+export PYTHONUNBUFFERED=1
 
 partial_tag="${final_tag}_part_${sample_tag}"
 log_file="${LOG_DIR}/${final_tag}_${region_key}_${sample_tag}.log"
@@ -154,10 +163,10 @@ cd "$PLOT_DIR"
 
 activate_conda_env_if_needed >> "$log_file" 2>&1
 localize_conda_env_if_needed >> "$log_file" 2>&1
-"$PYTHON_BIN" -c 'import numpy; import xgboost; from root_compat import import_pyroot; ROOT = import_pyroot(); ROOT.gROOT.SetBatch(True); print("[ENV] python imports OK")' >> "$log_file" 2>&1
+"$PYTHON_BIN" -u -c 'import numpy; import xgboost; from root_compat import import_pyroot; ROOT = import_pyroot(); ROOT.gROOT.SetBatch(True); print("[ENV] python imports OK")' >> "$log_file" 2>&1
 
 cmd=(
-    "$PYTHON_BIN" "$SCRIPTS_DIR/1_prepare_dataVmc.py"
+    "$PYTHON_BIN" -u "$SCRIPTS_DIR/1_prepare_dataVmc.py"
     -y run3
     -m
     --ln
