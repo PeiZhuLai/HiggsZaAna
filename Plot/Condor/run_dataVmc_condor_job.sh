@@ -196,7 +196,7 @@ case "$region_key" in
 esac
 
 if [[ "$final_tag" == "sideband_rwgt" ]]; then
-    cmd+=(--useSidebandReweight --sidebandReweightJson "$SIDEBAND_REWEIGHT_JSON")
+    cmd+=(--useSidebandReweight --sidebandReweightJson "$SIDEBAND_REWEIGHT_JSON" --noSidebandReweightUnc)
 fi
 
 if [[ -n "$MAX_EVENTS" ]]; then

@@ -191,6 +191,17 @@ collect_sample_tags() {
     ' "$JOBS_FILE"
 }
 
+collect_final_tags() {
+    if [[ ! -s "$JOBS_FILE" ]]; then
+        echo "[ERROR] Missing jobs file: $JOBS_FILE" >&2
+        return 1
+    fi
+
+    awk '
+        NF >= 2 && $1 !~ /^#/ && !seen[$2]++ { print $2 }
+    ' "$JOBS_FILE"
+}
+
 merge_plot_output() {
     local region_key="$1"
     local final_tag="$2"
@@ -276,11 +287,18 @@ draw_plot_output() {
     fi
 }
 
+mapfile -t final_tags < <(collect_final_tags)
+if [[ "${#final_tags[@]}" -eq 0 ]]; then
+    echo "[ERROR] No final tags found in $JOBS_FILE" >&2
+    exit 1
+fi
+echo "[Config] final tags from jobs: ${final_tags[*]}"
+
 if [[ "$RUN_MERGE_PLOTS" == "1" ]]; then
     merge_pids=()
     merge_labels=()
 
-    for final_tag in nominal sideband_rwgt; do
+    for final_tag in "${final_tags[@]}"; do
         for region_key in SR CR mva; do
             echo "[submit hadd] tag=${final_tag} region=${region_key}"
             merge_plot_output "$region_key" "$final_tag" &
@@ -307,7 +325,7 @@ else
 fi
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
-    for final_tag in nominal sideband_rwgt; do
+    for final_tag in "${final_tags[@]}"; do
         for region_key in SR CR mva; do
             draw_plot_output "$region_key" "$final_tag"
         done
@@ -317,7 +335,7 @@ else
 fi
 
 if [[ "$RUN_OPTIMIZATION" == "1" ]]; then
-    for final_tag in nominal sideband_rwgt; do
+    for final_tag in "${final_tags[@]}"; do
         "$PYTHON_BIN" "$SCRIPTS_DIR/ALP_Optimization.py" \
             -y run3 \
             -o "${OUTPUT_DIR}/optimize_run3UL_${final_tag}" \

@@ -703,6 +703,13 @@ def main():
             if sys_name not in analyzer_cfg.sys_names:
                 analyzer_cfg.sys_names.append(sys_name)
         print("[SidebandReweight] Add uncertainty pair to MC error band:", SIDEBAND_REWEIGHT_UNC_SYS_NAMES)
+    elif args.use_sideband_reweight:
+        analyzer_cfg.sys_names = [
+            sys_name
+            for sys_name in analyzer_cfg.sys_names
+            if sys_name not in SIDEBAND_REWEIGHT_UNC_SYS_NAMES
+        ]
+        print("[SidebandReweight] Apply sideband reweighting; sideband reweight uncertainty pair is not added.")
     if args.output_tag:
         output_tag = os.path.basename(str(args.output_tag).strip().strip('/'))
         if output_tag:

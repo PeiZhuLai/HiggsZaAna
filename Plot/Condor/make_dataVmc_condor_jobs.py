@@ -11,7 +11,8 @@ from pathlib import Path
 
 DEFAULT_PROJECT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna"
 REGIONS = ("SR", "CR", "mva")
-FINAL_TAGS = ("nominal", "sideband_rwgt")
+KNOWN_FINAL_TAGS = ("nominal", "sideband_rwgt")
+DEFAULT_FINAL_TAGS = ("sideband_rwgt",)
 DYLL_YEARS = (
     "2022preEE",
     "2022postEE",
@@ -102,6 +103,16 @@ def parse_args() -> argparse.Namespace:
         help="optional MAX_EVENTS value passed to each job",
     )
     parser.add_argument(
+        "--final-tags",
+        default=",".join(DEFAULT_FINAL_TAGS),
+        help=(
+            "comma-separated output tags to run. Default is sideband_rwgt "
+            "(sideband reweighting with ordinary systematics, but without "
+            "sideband reweight uncertainty). Use 'all' or 'nominal,sideband_rwgt' "
+            "to also run the unweighted nominal jobs."
+        ),
+    )
+    parser.add_argument(
         "--localize-conda-env",
         default="auto",
         choices=("auto", "1", "0"),
@@ -136,6 +147,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def parse_final_tags(raw_final_tags: str) -> tuple[str, ...]:
+    tags: list[str] = []
+    for token in str(raw_final_tags).replace(";", ",").split(","):
+        tag = token.strip()
+        if not tag:
+            continue
+        if tag.lower() in ("all", "*"):
+            tags = list(KNOWN_FINAL_TAGS)
+            break
+        if tag not in KNOWN_FINAL_TAGS:
+            allowed = ", ".join(KNOWN_FINAL_TAGS)
+            raise ValueError(f"Unknown final tag '{tag}'. Allowed tags are: {allowed}, all")
+        if tag not in tags:
+            tags.append(tag)
+
+    if not tags:
+        raise ValueError("--final-tags selected no tags")
+    return tuple(tags)
+
+
 def build_sample_specs() -> list[tuple[str, str]]:
     sample_specs: list[tuple[str, str]] = [("data", "Data")]
 
@@ -153,10 +184,10 @@ def build_sample_specs() -> list[tuple[str, str]]:
     return sample_specs
 
 
-def build_jobs() -> list[CondorJob]:
+def build_jobs(final_tags: tuple[str, ...]) -> list[CondorJob]:
     return [
         CondorJob(region_key=region_key, final_tag=final_tag, sample_tag=sample_tag, samples=samples)
-        for final_tag in FINAL_TAGS
+        for final_tag in final_tags
         for region_key in REGIONS
         for sample_tag, samples in build_sample_specs()
     ]
@@ -224,6 +255,12 @@ queue region_key, final_tag, sample_tag, samples from {jobs_file}
 
 def main() -> int:
     args = parse_args()
+    try:
+        final_tags = parse_final_tags(args.final_tags)
+    except ValueError as exc:
+        print(f"[ERROR] {exc}")
+        return 2
+
     project_dir = Path(args.project_dir).resolve()
     condor_dir = Path(args.condor_dir).resolve() if args.condor_dir else project_dir / "Plot" / "Condor"
     jobs_file = condor_dir / args.jobs_name
@@ -237,7 +274,7 @@ def main() -> int:
     condor_dir.mkdir(parents=True, exist_ok=True)
     (condor_dir / "logs").mkdir(parents=True, exist_ok=True)
 
-    jobs = build_jobs()
+    jobs = build_jobs(final_tags)
     write_jobs_file(jobs_file, jobs)
     write_submit_file(
         submit_file,
@@ -255,6 +292,7 @@ def main() -> int:
         conda_tarball=str(conda_tarball),
     )
 
+    print(f"Final tags: {', '.join(final_tags)}")
     print(f"Wrote {len(jobs)} jobs to {jobs_file}")
     print(f"Wrote submit file to {submit_file}")
     print("Submit with:")
