@@ -46,8 +46,8 @@ DATA_LINE_WIDTH = 4
 MC_LINE_WIDTH = 4
 RATIO_MARKER_SIZE = 0.95
 LOWER_RATIO_MARKER_SIZE = 1.30
-Y_AXIS_EXPONENT_X_OFFSET = -0.06
-Y_AXIS_EXPONENT_Y_OFFSET = 0.0
+Y_AXIS_EXPONENT_X_OFFSET = -0.08
+Y_AXIS_EXPONENT_Y_OFFSET = 0.04
 LUMI_LABEL_X = 0.95
 LUMI_LABEL_Y = 0.915
 
@@ -346,7 +346,7 @@ def draw_cms_labels(pad: ROOT.TVirtualPad, lumi: float) -> None:
 
     label.SetTextAlign(13)
     label.SetTextSize(0.060)
-    label.DrawLatex(0.17, 0.963, "#bf{CMS} #it{Preliminary}")
+    label.DrawLatex(0.17, 0.96, "#bf{CMS} #it{Preliminary}")
 
     label.SetTextAlign(31)
     label.SetTextSize(0.055)
@@ -619,7 +619,7 @@ def draw_plot(
     upper.SetBottomMargin(0.03)
     upper.SetLeftMargin(0.17)
     upper.SetRightMargin(0.05)
-    lower.SetTopMargin(0.03)
+    lower.SetTopMargin(0.04)
     lower.SetBottomMargin(0.45)
     lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
@@ -648,7 +648,7 @@ def draw_plot(
     before.Draw("hist same")
     data.Draw("E1 same")
 
-    legend = ROOT.TLegend(0.47, 0.64, 0.83, 0.85)
+    legend = ROOT.TLegend(0.47, 0.67, 0.83, 0.88)
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
     legend.SetTextSize(0.045)
@@ -714,7 +714,7 @@ def draw_trigger_path_plot(
     upper.SetBottomMargin(0.03)
     upper.SetLeftMargin(0.17)
     upper.SetRightMargin(0.05)
-    lower.SetTopMargin(0.03)
+    lower.SetTopMargin(0.04)
     lower.SetBottomMargin(0.45)
     lower.SetLeftMargin(0.17)
     lower.SetRightMargin(0.05)
