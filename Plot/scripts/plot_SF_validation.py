@@ -324,7 +324,7 @@ def set_style() -> None:
     ROOT.gStyle.SetPadColor(ROOT.kWhite)
     ROOT.gStyle.SetFrameFillColor(ROOT.kWhite)
     ROOT.gStyle.SetLegendBorderSize(0)
-    ROOT.gStyle.SetErrorX(0)
+    ROOT.gStyle.SetErrorX(0.5)
     ROOT.gStyle.SetEndErrorSize(0)
 
 
