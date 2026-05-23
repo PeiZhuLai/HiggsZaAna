@@ -674,13 +674,6 @@ def draw_plot(
     line.SetLineStyle(2)
     line.Draw("same")
 
-    if ratio_after:
-        ratio_after.SetMarkerStyle(20)
-        ratio_after.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
-        ratio_after.SetMarkerColor(ROOT.kRed + 1)
-        ratio_after.SetLineColor(ROOT.kRed + 1)
-        ratio_after.SetLineWidth(MC_LINE_WIDTH)
-        ratio_after.Draw("E1 same")
     if ratio_before:
         ratio_before.SetMarkerStyle(21)
         ratio_before.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
@@ -688,6 +681,13 @@ def draw_plot(
         ratio_before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_before.SetLineWidth(MC_LINE_WIDTH)
         ratio_before.Draw("E1 same")
+    if ratio_after:
+        ratio_after.SetMarkerStyle(20)
+        ratio_after.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
+        ratio_after.SetMarkerColor(ROOT.kRed + 1)
+        ratio_after.SetLineColor(ROOT.kRed + 1)
+        ratio_after.SetLineWidth(MC_LINE_WIDTH)
+        ratio_after.Draw("E1 same")
 
     canvas.cd()
     canvas.SaveAs(out_path + ".pdf")
