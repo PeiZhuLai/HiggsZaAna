@@ -361,14 +361,7 @@ def add_file(chain: ROOT.TChain, path: str) -> bool:
     return False
 
 
-def dyg_subsamples_for_era(cfg: AC.Analyzer_Config, era: str) -> Sequence[str]:
-    if era.startswith("2022"):
-        return cfg.bkg_2022
-    return cfg.bkg_2023
-
-
 def build_chains(
-    cfg: AC.Analyzer_Config,
     base: str,
     eras: Sequence[str],
 ) -> Dict[str, ROOT.TChain]:
@@ -384,10 +377,6 @@ def build_chains(
 
         if add_file(chains["MC"], os.path.join(base, "DYJetsToLL", f"{era}.root")):
             added["MC"] += 1
-
-        for subsample in dyg_subsamples_for_era(cfg, era):
-            if add_file(chains["MC"], os.path.join(base, subsample, f"{era}.root")):
-                added["MC"] += 1
 
     for sample, nfiles in added.items():
         print(f"[Files] {sample}: added {nfiles} files, entries={chains[sample].GetEntries()}")
@@ -486,6 +475,13 @@ def scale_to_unit(hist: ROOT.TH1) -> None:
     integral = hist.Integral()
     if integral > 0:
         hist.Scale(1.0 / integral)
+
+
+def scale_to_data(data: ROOT.TH1, mc: ROOT.TH1) -> None:
+    data_integral = data.Integral()
+    mc_integral = mc.Integral()
+    if data_integral > 0 and mc_integral > 0:
+        mc.Scale(data_integral / mc_integral)
 
 
 def make_ratio(data: ROOT.TH1, mc: ROOT.TH1, name: str) -> Optional[ROOT.TH1]:
@@ -826,7 +822,7 @@ def main() -> None:
     for era_label, eras in era_groups:
         print(f"\n[Era] {era_label}: {', '.join(eras)}")
         lumi = lumi_for_eras(eras)
-        chains = build_chains(cfg, input_dir, eras)
+        chains = build_chains(input_dir, eras)
         if chains["Data"].GetEntries() <= 0 or chains["MC"].GetEntries() <= 0:
             print(f"[Skip] {era_label}: empty Data or MC chain")
             continue
@@ -893,6 +889,9 @@ def main() -> None:
                     mass_branch,
                     denominator_cut(weight.denominator_branches),
                 )
+
+                scale_to_data(data_hist, after_hist)
+                scale_to_data(data_hist, before_hist)
 
                 if args.normalize:
                     for hist in (data_hist, after_hist, before_hist):
