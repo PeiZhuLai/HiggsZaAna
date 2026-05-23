@@ -52,6 +52,7 @@ parser.add_argument('--samples', dest='samples', default=None, help="comma-separ
 parser.add_argument('--histOnly', dest='hist_only', action='store_true', default=False, help='write raw_plots/sys_dir only; skip stack and PDF drawing')
 parser.add_argument('--skipSystematics', dest='skip_systematics', action='store_true', default=False, help='write nominal histograms and copy them into sys_dir instead of filling per-event systematic variations')
 parser.add_argument('--optimizeBranches', dest='optimize_branches', action='store_true', default=False, help='disable unused TTree branches before the event loop')
+parser.add_argument('--backend', dest='backend', choices=('auto', 'fast', 'loop'), default=os.environ.get('DATA_VMC_BACKEND', 'auto'), help='histogram backend: auto uses the fast RDataFrame backend for supported --histOnly jobs, loop uses the original Python event loop')
 parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
@@ -690,6 +691,18 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
 
 def main():
     start_time = time.time()  # NEW
+
+    if args.backend in ('auto', 'fast'):
+        from data_vmc_fast import FastBackendUnsupported, run_fast_prepare
+
+        try:
+            run_fast_prepare(args, _parse_sample_filter, _format_source_selectors)
+            return
+        except FastBackendUnsupported as exc:
+            if args.backend == 'fast':
+                print("[FastBackend][ERROR] %s" % exc)
+                sys.exit(2)
+            print("[FastBackend] %s; falling back to the original event loop." % exc)
 
     analyzer_cfg = AC.Analyzer_Config('inclusive', args.year, args.region, args.mva)
 

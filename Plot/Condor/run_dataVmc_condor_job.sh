@@ -43,6 +43,7 @@ SIDEBAND_REWEIGHT_JSON="${SIDEBAND_REWEIGHT_JSON:-${PROJECT_DIR}/HZaMVA/reweight
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 MAX_EVENTS="${MAX_EVENTS:-}"
 SKIP_SYSTEMATICS="${SKIP_SYSTEMATICS:-0}"
+DATA_VMC_BACKEND="${DATA_VMC_BACKEND:-auto}"
 SETUP_CONDA_ENV="${SETUP_CONDA_ENV:-auto}"
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-higgs-alp-ana}"
 ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
@@ -159,6 +160,7 @@ cd "$PLOT_DIR"
     echo "[ENV] LOCALIZE_CONDA_ENV=${LOCALIZE_CONDA_ENV}"
     echo "[ENV] CONDA_TARBALL=${CONDA_TARBALL}"
     echo "[ENV] SKIP_SYSTEMATICS=${SKIP_SYSTEMATICS}"
+    echo "[ENV] DATA_VMC_BACKEND=${DATA_VMC_BACKEND}"
 } > "$log_file"
 
 activate_conda_env_if_needed >> "$log_file" 2>&1
@@ -171,6 +173,7 @@ cmd=(
     -m
     --ln
     --histOnly
+    --backend "$DATA_VMC_BACKEND"
     --optimizeBranches
     --samples "$samples"
     --outputTag "$partial_tag"
