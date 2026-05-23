@@ -45,6 +45,11 @@ DATA_MARKER_SIZE = 1.15
 DATA_LINE_WIDTH = 4
 MC_LINE_WIDTH = 4
 RATIO_MARKER_SIZE = 0.95
+LOWER_RATIO_MARKER_SIZE = 1.15
+Y_AXIS_EXPONENT_X_OFFSET = -0.06
+Y_AXIS_EXPONENT_Y_OFFSET = 0.0
+LUMI_LABEL_X = 0.95
+LUMI_LABEL_Y = 0.915
 
 
 LUMI_MAP = {
@@ -326,6 +331,7 @@ def set_style() -> None:
     ROOT.gStyle.SetLegendBorderSize(0)
     ROOT.gStyle.SetErrorX(0.5)
     ROOT.gStyle.SetEndErrorSize(0)
+    ROOT.TGaxis.SetExponentOffset(Y_AXIS_EXPONENT_X_OFFSET, Y_AXIS_EXPONENT_Y_OFFSET, "y")
 
 
 def lumi_for_eras(eras: Sequence[str]) -> float:
@@ -344,7 +350,7 @@ def draw_cms_labels(pad: ROOT.TVirtualPad, lumi: float) -> None:
 
     label.SetTextAlign(31)
     label.SetTextSize(0.055)
-    label.DrawLatex(0.95, 0.94, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
+    label.DrawLatex(LUMI_LABEL_X, LUMI_LABEL_Y, f"{lumi:.2f} fb^{{-1}} (13.6 TeV)")
 
 
 def add_file(chain: ROOT.TChain, path: str) -> bool:
@@ -674,14 +680,14 @@ def draw_plot(
 
     if ratio_after:
         ratio_after.SetMarkerStyle(20)
-        ratio_after.SetMarkerSize(RATIO_MARKER_SIZE)
+        ratio_after.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
         ratio_after.SetMarkerColor(ROOT.kRed + 1)
         ratio_after.SetLineColor(ROOT.kRed + 1)
         ratio_after.SetLineWidth(MC_LINE_WIDTH)
         ratio_after.Draw("E1 same")
     if ratio_before:
-        ratio_before.SetMarkerStyle(24)
-        ratio_before.SetMarkerSize(RATIO_MARKER_SIZE)
+        ratio_before.SetMarkerStyle(21)
+        ratio_before.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
         ratio_before.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_before.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_before.SetLineWidth(MC_LINE_WIDTH)
@@ -767,15 +773,15 @@ def draw_trigger_path_plot(
     line.Draw("same")
 
     if ratio_nominal:
-        ratio_nominal.SetMarkerStyle(24)
-        ratio_nominal.SetMarkerSize(RATIO_MARKER_SIZE)
+        ratio_nominal.SetMarkerStyle(20)
+        ratio_nominal.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
         ratio_nominal.SetMarkerColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_nominal.SetLineColor(ROOT.TColor.GetColor("#1F78B4"))
         ratio_nominal.SetLineWidth(MC_LINE_WIDTH)
         ratio_nominal.Draw("E1 same")
     if ratio_combined:
-        ratio_combined.SetMarkerStyle(25)
-        ratio_combined.SetMarkerSize(RATIO_MARKER_SIZE)
+        ratio_combined.SetMarkerStyle(21)
+        ratio_combined.SetMarkerSize(LOWER_RATIO_MARKER_SIZE)
         ratio_combined.SetMarkerColor(ROOT.TColor.GetColor("#E66101"))
         ratio_combined.SetLineColor(ROOT.TColor.GetColor("#E66101"))
         ratio_combined.SetLineWidth(MC_LINE_WIDTH)
