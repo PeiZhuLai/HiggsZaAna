@@ -497,11 +497,12 @@ mass_list = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 15., 20., 25., 30.]
 years = ['run3']
 bkg_tree_name = "inclusive"
 sig_tree_name = "train"
-BKG_TRAIN_MASS_LOW = 95
-BKG_TRAIN_MASS_HIGH = 180
-bkg_data_selection = "H_m>{} && H_m<{}".format(BKG_TRAIN_MASS_LOW, BKG_TRAIN_MASS_HIGH)
-sig_selection = "H_m>115 && H_m<135"
+TRAIN_MASS_LOW = 95
+TRAIN_MASS_HIGH = 180
+bkg_data_selection = "H_m>{} && H_m<{}".format(TRAIN_MASS_LOW, TRAIN_MASS_HIGH)
+sig_selection = "H_m>{} && H_m<{}".format(TRAIN_MASS_LOW, TRAIN_MASS_HIGH)
 print("Background training mass range:", bkg_data_selection)
+print("Signal training mass range:", sig_selection)
 
 def bdt_matrix_columns():
     return variables + mass_variables + wt_variables + ["mass", "param"]
@@ -774,15 +775,53 @@ y = np.concatenate((sig_label_a, bkg_label_DY))
 z = np.concatenate((sig_proc_a, bkg_proc_DY))
 
 seed = 123
-test_size = 0.5
-x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(
-    x,
-    y,
-    z,
-    test_size=test_size,
+signal_train_fraction_in_tree = 0.20 / 0.50
+signal_test_fraction_in_tree = 0.30 / 0.50
+background_train_fraction = 0.60
+background_test_fraction = 0.40
+
+signal_indices = np.arange(len(signal_a))
+background_indices = np.arange(len(background_DY))
+
+sig_train_idx, sig_test_idx = train_test_split(
+    signal_indices,
+    test_size=signal_test_fraction_in_tree,
     random_state=seed,
-    stratify=y,
 )
+bkg_train_idx, bkg_test_idx = train_test_split(
+    background_indices,
+    test_size=background_test_fraction,
+    random_state=seed,
+)
+
+x_train = np.concatenate((signal_a[sig_train_idx], background_DY[bkg_train_idx]))
+y_train = np.concatenate((sig_label_a[sig_train_idx], bkg_label_DY[bkg_train_idx]))
+z_train = np.concatenate((sig_proc_a[sig_train_idx], bkg_proc_DY[bkg_train_idx]))
+
+x_test = np.concatenate((signal_a[sig_test_idx], background_DY[bkg_test_idx]))
+y_test = np.concatenate((sig_label_a[sig_test_idx], bkg_label_DY[bkg_test_idx]))
+z_test = np.concatenate((sig_proc_a[sig_test_idx], bkg_proc_DY[bkg_test_idx]))
+
+rng = np.random.RandomState(seed)
+train_perm = rng.permutation(len(x_train))
+test_perm = rng.permutation(len(x_test))
+x_train = x_train[train_perm]
+y_train = y_train[train_perm]
+z_train = z_train[train_perm]
+x_test = x_test[test_perm]
+y_test = y_test[test_perm]
+z_test = z_test[test_perm]
+
+print("Signal split from train tree: train {:.1f}% / test {:.1f}% (effective 20% / 30% if train tree is 50% of inclusive signal)".format(
+    100.0 * signal_train_fraction_in_tree,
+    100.0 * signal_test_fraction_in_tree,
+))
+print("Background split from inclusive sample: train {:.1f}% / test {:.1f}%".format(
+    100.0 * background_train_fraction,
+    100.0 * background_test_fraction,
+))
+print("Signal entries in train/test:", len(sig_train_idx), len(sig_test_idx))
+print("Background entries in train/test:", len(bkg_train_idx), len(bkg_test_idx))
 
 x_train_reduced = x_train[:,var_indices]
 x_train_w = x_train[:,wt_var_indices].flatten()
