@@ -61,10 +61,10 @@ fi
 
 # 0: Full Region, 1: Signal Region, 2: Contral Region
 # ## ALP Optimization 2 categories
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
+python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
 
 # ## ALP Optimization 1 category
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 1 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
+python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
 
 # ## Update cutflow
 python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/4_collect_cutflow.py

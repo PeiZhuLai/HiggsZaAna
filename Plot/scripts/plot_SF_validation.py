@@ -648,7 +648,7 @@ def draw_plot(
     before.Draw("hist same")
     data.Draw("E1 same")
 
-    legend = ROOT.TLegend(0.47, 0.67, 0.83, 0.88)
+    legend = ROOT.TLegend(0.20, 0.67, 0.56, 0.88)
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
     legend.SetTextSize(0.045)
@@ -742,7 +742,7 @@ def draw_trigger_path_plot(
     combined.Draw("hist E1 same")
     data.Draw("E1 same")
 
-    legend = ROOT.TLegend(0.50, 0.68, 0.90, 0.88)
+    legend = ROOT.TLegend(0.20, 0.68, 0.56, 0.88)
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
     legend.SetTextSize(0.04)

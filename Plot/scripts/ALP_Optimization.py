@@ -354,7 +354,7 @@ def compare(hist, hist_smooth, ma):
 
     latex.SetTextAlign(31)
     # latex.DrawLatex(0.73, 0.87, f"m_{{a}} = {ma.lstrip('M')} GeV")
-    latex.DrawLatex(1. - rightMargin, 1. - topMargin + 0.01, ("170.84 fb^{-1} (13.6 TeV)"))
+    latex.DrawLatex(1. - rightMargin, 1. - topMargin + 0.01, ("172.13 fb^{-1} (13.6 TeV)"))
     
     # latex.DrawLatex(0.85, 0.88, r"m_{a} = %s GeV" % (ma.lstrip("M")))
 
@@ -876,7 +876,7 @@ def main():
 
                 # latex_cut.DrawLatex(0.76,0.97,("138 fb^{-1} (13 TeV)"))
                 latex_cut.SetTextAlign(31)
-                latex_cut.DrawLatex(1. - rightMargin, 1. - topMargin + 0.01,("170.84 fb^{-1} (13.6 TeV)"))
+                latex_cut.DrawLatex(1. - rightMargin, 1. - topMargin + 0.01,("172.13 fb^{-1} (13.6 TeV)"))
                 
                 canv_sigVSscore.SaveAs(options.outDir+ '/sigVScore_' + sig + '.pdf')
                 # canv_sigVSscore.SaveAs(options.outDir+ '/sigVSscore_' + sig + '.png')
