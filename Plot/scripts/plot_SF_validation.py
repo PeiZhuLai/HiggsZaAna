@@ -610,6 +610,12 @@ def trigger_ratio_upper_range(plot: PlotSpec, ymax: float) -> Tuple[float, float
     return 0.75, max(1.75, ymax * 1.18)
 
 
+def trigger_ratio_legend_bounds(plot: PlotSpec) -> Tuple[float, float, float, float]:
+    if plot.name in {"sublead_muon_pt", "sublead_electron_pt"}:
+        return 0.54, 0.68, 0.90, 0.88
+    return 0.20, 0.68, 0.56, 0.88
+
+
 def draw_plot(
     data: ROOT.TH1,
     after: ROOT.TH1,
@@ -761,7 +767,7 @@ def draw_trigger_path_plot(
     combined.Draw("hist E1 same")
     data.Draw("E1 same")
 
-    legend = ROOT.TLegend(0.20, 0.68, 0.56, 0.88)
+    legend = ROOT.TLegend(*trigger_ratio_legend_bounds(plot))
     legend.SetFillStyle(0)
     legend.SetBorderSize(0)
     legend.SetTextSize(0.04)
