@@ -471,6 +471,17 @@ def add_overflow(hist: ROOT.TH1) -> None:
     hist.SetBinError(nbins + 1, 0.0)
 
 
+def hist_peak(hist: ROOT.TH1, include_errors: bool = False) -> float:
+    peak = 0.0
+    for ibin in range(1, hist.GetNbinsX() + 1):
+        value = hist.GetBinContent(ibin)
+        if include_errors:
+            value += hist.GetBinError(ibin)
+        if value > peak:
+            peak = value
+    return peak
+
+
 def scale_to_unit(hist: ROOT.TH1) -> None:
     integral = hist.Integral()
     if integral > 0:
@@ -633,7 +644,11 @@ def draw_plot(
     lower.Draw()
 
     upper.cd()
-    ymax = max(data.GetMaximum(), after.GetMaximum(), before.GetMaximum())
+    ymax = max(
+        hist_peak(data, include_errors=True),
+        hist_peak(after),
+        hist_peak(before),
+    )
     if log_y:
         positive = [h.GetMinimum(0.0) for h in (data, after, before) if h.GetMinimum(0.0) > 0]
         ymin = min(positive) * 0.5 if positive else 0.01
@@ -726,7 +741,11 @@ def draw_trigger_path_plot(
     lower.Draw()
 
     upper.cd()
-    ymax = max(data.GetMaximum(), nominal.GetMaximum(), combined.GetMaximum())
+    ymax = max(
+        hist_peak(data, include_errors=True),
+        hist_peak(nominal, include_errors=True),
+        hist_peak(combined, include_errors=True),
+    )
     ymin, ymax = trigger_ratio_upper_range(plot, ymax)
     nominal.SetMinimum(ymin)
     nominal.SetMaximum(ymax)
