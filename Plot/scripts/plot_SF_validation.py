@@ -772,8 +772,8 @@ def draw_trigger_path_plot(
     legend.SetBorderSize(0)
     legend.SetTextSize(0.04)
     legend.AddEntry(data, "Data", "lep")
-    legend.AddEntry(nominal, "MC (nominal)", "lp")
-    legend.AddEntry(combined, "MC (w_combmu_trig)", "lp")
+    legend.AddEntry(nominal, "MC (Wo Trigger SFs)", "lp")
+    legend.AddEntry(combined, "MC (Wi Trigger SFs)", "lp")
     legend.Draw()
 
     draw_cms_labels(upper, lumi)
