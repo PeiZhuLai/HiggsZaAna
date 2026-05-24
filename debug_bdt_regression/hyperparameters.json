@@ -1,0 +1,481 @@
+{
+  "application_feature_order": [
+    "pho1Pt",
+    "pho1R9",
+    "pho1IetaIeta55",
+    "pho1PIso_noCorr",
+    "pho2Pt",
+    "pho2R9",
+    "pho2IetaIeta55",
+    "pho2PIso_noCorr",
+    "ALP_calculatedPhotonIso",
+    "var_dR_Za",
+    "var_dR_g1g2",
+    "var_dR_g1Z",
+    "var_PtaOverMh",
+    "H_pt",
+    "param"
+  ],
+  "application_scan_masses": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30
+  ],
+  "current_model_pickle": {
+    "best_iteration": 699,
+    "best_score": 0.13367451742438063,
+    "colsample_bytree": 0.699999988,
+    "eval_metric": "logloss",
+    "exists": true,
+    "gamma": 2,
+    "learning_rate": 0.0399999991,
+    "max_depth": 2,
+    "min_child_weight": 60,
+    "num_feature": 15,
+    "num_trees": 700,
+    "objective": "binary:logistic",
+    "path": "/Users/laipeizhu/Documents/2026 HEP/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_run3.pkl",
+    "reg_alpha": 1,
+    "reg_lambda": 30,
+    "scale_pos_weight": 1,
+    "subsample": 0.699999988
+  },
+  "feature_order_match": true,
+  "feature_order_mismatches": [],
+  "legacy_model_pickle": {
+    "best_iteration": 699,
+    "best_score": 0.12962762791870672,
+    "colsample_bytree": 1,
+    "eval_metric": "logloss",
+    "exists": true,
+    "gamma": 0.257119179,
+    "learning_rate": 0.069853574,
+    "max_depth": 3,
+    "min_child_weight": 35,
+    "num_feature": 15,
+    "num_trees": 700,
+    "objective": "binary:logistic",
+    "path": "/Users/laipeizhu/Documents/2026 HEP/HZa/HiggsZaAna/HZaMVA/keep/model_Za_BDT_run3.pkl",
+    "reg_alpha": 3.36629653,
+    "reg_lambda": 5.62203979,
+    "scale_pos_weight": 2.2622757,
+    "subsample": 1
+  },
+  "new_script": {
+    "background_param_masses": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      15.0,
+      20.0,
+      25.0,
+      30.0
+    ],
+    "bkg_name": [
+      "All_Bkg"
+    ],
+    "bkg_selection": "H_m>95 && H_m<180",
+    "bkg_tree_name": "inclusive",
+    "convert_selection": null,
+    "convert_selection_mode": "forwarded_selection_argument",
+    "data_name": [
+      "Data"
+    ],
+    "file_path": "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal",
+    "has_regularized_candidate_selection": true,
+    "ks_pvalue_target": 0.05,
+    "mass_list": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      15.0,
+      20.0,
+      25.0,
+      30.0
+    ],
+    "mass_variables": [
+      "ALP_m",
+      "H_m"
+    ],
+    "name": "current_run3",
+    "objective_search_space": {
+      "colsample_bytree": {
+        "args": [
+          "colsample_bytree",
+          0.6,
+          1.0
+        ],
+        "method": "suggest_float"
+      },
+      "gamma": {
+        "args": [
+          "gamma",
+          0.01,
+          2.0
+        ],
+        "keywords": {
+          "log": true
+        },
+        "method": "suggest_float"
+      },
+      "learning_rate": {
+        "args": [
+          "learning_rate",
+          0.02,
+          0.15
+        ],
+        "keywords": {
+          "log": true
+        },
+        "method": "suggest_float"
+      },
+      "max_depth": {
+        "args": [
+          "max_depth",
+          3,
+          5
+        ],
+        "method": "suggest_int"
+      },
+      "min_child_weight": {
+        "args": [
+          "min_child_weight",
+          5,
+          80
+        ],
+        "keywords": {
+          "log": true
+        },
+        "method": "suggest_int"
+      },
+      "n_estimators": {
+        "args": [
+          "n_estimators",
+          300,
+          1500
+        ],
+        "keywords": {
+          "step": 100
+        },
+        "method": "suggest_int"
+      },
+      "reg_alpha": {
+        "args": [
+          "reg_alpha",
+          0.0001,
+          1.0
+        ],
+        "keywords": {
+          "log": true
+        },
+        "method": "suggest_float"
+      },
+      "reg_lambda": {
+        "args": [
+          "reg_lambda",
+          1.0,
+          30.0
+        ],
+        "keywords": {
+          "log": true
+        },
+        "method": "suggest_float"
+      },
+      "subsample": {
+        "args": [
+          "subsample",
+          0.6,
+          1.0
+        ],
+        "method": "suggest_float"
+      }
+    },
+    "path": "/Users/laipeizhu/Documents/2026 HEP/HZa/HiggsZaAna/HZaMVA/scripts/run3_Za_BDT.py",
+    "search_masses": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      15.0,
+      20.0,
+      25.0,
+      30.0
+    ],
+    "sig_name": [
+      "All_Sig"
+    ],
+    "sig_selection": "H_m>115 && H_m<135",
+    "sig_tree_name": "train",
+    "split_random_state": 123,
+    "split_stratify": true,
+    "split_test_size": 0.5,
+    "tree_name": null,
+    "variables": [
+      "pho1Pt",
+      "pho1R9",
+      "pho1IetaIeta55",
+      "pho1PIso_noCorr",
+      "pho2Pt",
+      "pho2R9",
+      "pho2IetaIeta55",
+      "pho2PIso_noCorr",
+      "ALP_calculatedPhotonIso",
+      "var_dR_Za",
+      "var_dR_g1g2",
+      "var_dR_g1Z",
+      "var_PtaOverMh",
+      "H_pt"
+    ],
+    "wt_variables": [
+      "factor"
+    ],
+    "years": [
+      "run3"
+    ]
+  },
+  "old_script": {
+    "background_param_masses": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      15.0,
+      20.0,
+      25.0,
+      30.0
+    ],
+    "bkg_name": [
+      "DYJets"
+    ],
+    "bkg_selection": null,
+    "bkg_tree_name": null,
+    "convert_selection": "passChaHadIso && passNeuHadIso && passdR_gl && passHOverE && H_m>110 && H_m<180",
+    "convert_selection_mode": "hardcoded_tree2array_selection",
+    "data_name": [
+      "data"
+    ],
+    "file_path": "/afs/cern.ch/work/p/pelai/HZa/ALP/Analysis_code/train_MVA/skimmed_ntuples",
+    "has_regularized_candidate_selection": false,
+    "ks_pvalue_target": null,
+    "mass_list": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      15.0,
+      20.0,
+      25.0,
+      30.0
+    ],
+    "mass_variables": [
+      "ALP_m",
+      "H_m"
+    ],
+    "name": "old_run2",
+    "objective_search_space": {
+      "gamma": {
+        "args": [
+          "gamma",
+          0.001,
+          0.5
+        ],
+        "method": "suggest_float"
+      },
+      "learning_rate": {
+        "args": [
+          "learning_rate",
+          0.01,
+          0.5
+        ],
+        "method": "suggest_float"
+      },
+      "max_depth": {
+        "args": [
+          "max_depth",
+          3,
+          6
+        ],
+        "method": "suggest_int"
+      },
+      "min_child_weight": {
+        "args": [
+          "min_child_weight",
+          1,
+          100
+        ],
+        "method": "suggest_int"
+      },
+      "n_estimators": {
+        "args": [
+          "n_estimators",
+          50,
+          1000
+        ],
+        "keywords": {
+          "step": 50
+        },
+        "method": "suggest_int"
+      },
+      "reg_alpha": {
+        "args": [
+          "reg_alpha",
+          0.001,
+          5
+        ],
+        "method": "suggest_float"
+      },
+      "reg_lambda": {
+        "args": [
+          "reg_lambda",
+          0.001,
+          10
+        ],
+        "method": "suggest_float"
+      }
+    },
+    "path": "/Users/laipeizhu/Documents/2026 HEP/HZa/HiggsZaAna/HZaMVA/scripts/run2_Za_BDT.py",
+    "search_masses": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      15.0,
+      20.0,
+      25.0,
+      30.0
+    ],
+    "sig_name": [
+      "sig"
+    ],
+    "sig_selection": null,
+    "sig_tree_name": null,
+    "split_random_state": 123,
+    "split_stratify": false,
+    "split_test_size": 0.5,
+    "tree_name": "passedEvents",
+    "variables": [
+      "pho1Pt",
+      "pho1R9",
+      "pho1IetaIeta55",
+      "pho1PIso_noCorr",
+      "pho2Pt",
+      "pho2R9",
+      "pho2IetaIeta55",
+      "pho2PIso_noCorr",
+      "ALP_calculatedPhotonIso",
+      "var_dR_Za",
+      "var_dR_g1g2",
+      "var_dR_g1Z",
+      "var_PtaOverMh",
+      "H_pt"
+    ],
+    "wt_variables": [
+      "factor*pho1SFs*pho2SFs"
+    ],
+    "years": [
+      "run2"
+    ]
+  },
+  "prepare_script": {
+    "all_bkg_components": [
+      "DYJetsToLL",
+      "DYGto2LG"
+    ],
+    "dygto2lg_years": [
+      "2022preEE",
+      "2022postEE",
+      "2023preBPix",
+      "2023postBPix",
+      "2024"
+    ],
+    "dyjets_years": [],
+    "signal_mass_list": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "M6",
+      "M7",
+      "M8",
+      "M9",
+      "M10",
+      "M15",
+      "M20",
+      "M25",
+      "M30"
+    ],
+    "signal_years": [
+      "2022preEE",
+      "2022postEE",
+      "2023preBPix",
+      "2023postBPix",
+      "2024"
+    ]
+  }
+}
