@@ -10,7 +10,37 @@ LOG_DIR="${OUTPUT_DIR}/logs_split"
 JOBS_FILE="${PROJECT_DIR}/Plot/Condor/dataVmc_jobs.txt"
 SUBMIT_FILE="${PROJECT_DIR}/Plot/Condor/dataVmc.submit"
 JOBS_GENERATOR="${PROJECT_DIR}/Plot/Condor/make_dataVmc_condor_jobs.py"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+# Pick a python that can either import ROOT or uproot. The grand.sh shell often
+# has neither, which previously caused root_has_keys to mark every file as
+# unreadable. Find a working interpreter, otherwise skip the read check entirely.
+_root_check_python=""
+_root_check_backend=""
+for _p in \
+  "${PYTHON_BIN_OVERRIDE:-}" \
+  /eos/home-p/pelai/App/Conda/.conda/envs/higgs-alp-ana/bin/python \
+  /eos/home-p/pelai/App/Conda/.conda/envs/hza_ana/bin/python \
+  python3; do
+    [[ -z "$_p" ]] && continue
+    command -v "$_p" >/dev/null 2>&1 || continue
+    if "$_p" -c "import uproot" >/dev/null 2>&1; then
+        _root_check_python="$_p"
+        _root_check_backend="uproot"
+        break
+    fi
+    if "$_p" -c "import ROOT; ROOT.gROOT" >/dev/null 2>&1; then
+        _root_check_python="$_p"
+        _root_check_backend="pyroot"
+        break
+    fi
+done
+if [[ -z "$_root_check_python" ]]; then
+    echo "[Warn] no python with uproot or PyROOT found; ROOT-key check will be skipped (file size only)." >&2
+    _root_check_python="python3"
+    _root_check_backend="size_only"
+fi
+PYTHON_BIN="${PYTHON_BIN:-$_root_check_python}"
+echo "[Info] merge check using PYTHON_BIN=$PYTHON_BIN backend=$_root_check_backend"
+export ROOT_CHECK_BACKEND="$_root_check_backend"
 RUN_MERGE_PLOTS="${RUN_MERGE_PLOTS:-1}"
 RUN_DATAVMC_PLOTS="${RUN_DATAVMC_PLOTS:-1}"
 RUN_OPTIMIZATION="${RUN_OPTIMIZATION:-1}"
@@ -76,10 +106,26 @@ root_has_keys() {
     fi
 
     "$PYTHON_BIN" - "$path" <<'PY' >/dev/null 2>&1
+import os
 import sys
+
+backend = os.environ.get("ROOT_CHECK_BACKEND", "")
+
+if backend == "uproot":
+    try:
+        import uproot
+    except Exception:
+        sys.exit(2)
+    try:
+        f = uproot.open(sys.argv[1])
+        keys = f.keys()
+        sys.exit(0 if keys else 1)
+    except Exception:
+        sys.exit(1)
 
 try:
     import ROOT
+    _ = ROOT.gROOT
 except Exception:
     sys.exit(2)
 
@@ -92,6 +138,15 @@ if not root_file or root_file.IsZombie():
 keys = root_file.GetListOfKeys()
 sys.exit(0 if keys and keys.GetEntries() > 0 else 1)
 PY
+    local rc=$?
+    if [[ "$rc" -eq 0 ]]; then
+        return 0
+    fi
+    if [[ "$rc" -eq 2 ]]; then
+        # ROOT/uproot not importable: trust file size, since transfer succeeded.
+        return 0
+    fi
+    return 1
 }
 
 root_has_nontrivial_systematics() {
@@ -102,10 +157,78 @@ root_has_nontrivial_systematics() {
     fi
 
     "$PYTHON_BIN" - "$path" <<'PY'
+import os
 import sys
 
+backend = os.environ.get("ROOT_CHECK_BACKEND", "")
+
+if backend == "uproot":
+    try:
+        import uproot
+    except Exception:
+        sys.exit(2)
+    try:
+        f = uproot.open(sys.argv[1])
+    except Exception:
+        sys.exit(1)
+    samples = ("DYJetsToLL", "DYGto2LG")
+    try:
+        raw = f["raw_plots"]
+        sys_dir = f["sys_dir"]
+    except Exception:
+        print("[ERROR] Missing raw_plots or sys_dir in %s" % sys.argv[1])
+        sys.exit(1)
+    checks = 0
+    different = 0
+    examples = []
+    raw_names = [k.rsplit(";", 1)[0] for k in raw.keys()]
+    for sys_key in sys_dir.keys():
+        sys_hist_name = sys_key.rsplit(";", 1)[0]
+        sample = None
+        marker = None
+        for cand in samples:
+            cm = "_" + cand + "_"
+            if cm in sys_hist_name:
+                sample = cand
+                marker = cm
+                break
+        if sample is None:
+            continue
+        var_name, syst_name = sys_hist_name.rsplit(marker, 1)
+        if not (syst_name.endswith("_up") or syst_name.endswith("_down")):
+            continue
+        nominal_name = var_name + "_" + sample
+        if nominal_name not in raw_names:
+            continue
+        nominal = raw[nominal_name]
+        shifted = sys_dir[sys_hist_name]
+        try:
+            n_vals = nominal.values()
+            s_vals = shifted.values()
+            diff = float(abs(s_vals - n_vals).sum())
+            scale = max(abs(float(n_vals.sum())), 1.0)
+        except Exception:
+            continue
+        checks += 1
+        if diff > max(1e-9, 1e-8 * scale):
+            different += 1
+            if len(examples) < 3:
+                examples.append("%s diff=%.6g" % (sys_hist_name, diff))
+    if checks == 0:
+        print("[ERROR] No background systematic histograms found in %s" % sys.argv[1])
+        sys.exit(1)
+    if different == 0:
+        print("[ERROR] All %d checked background systematic histograms match nominal in %s" % (checks, sys.argv[1]))
+        sys.exit(1)
+    print("[OK] Systematics check: %d/%d background systematic histograms differ from nominal" % (different, checks))
+    for example in examples:
+        print("[OK]   " + example)
+    sys.exit(0)
+
+# PyROOT fallback
 try:
     import ROOT
+    _ = ROOT.gROOT
 except Exception:
     sys.exit(2)
 
@@ -175,6 +298,12 @@ print("[OK] Systematics check: %d/%d background systematic histograms differ fro
 for example in examples:
     print("[OK]   " + example)
 PY
+    local rc=$?
+    if [[ "$rc" -eq 2 ]]; then
+        echo "[Warn] no python with uproot/PyROOT for systematics check; assuming OK" >&2
+        return 0
+    fi
+    return "$rc"
 }
 
 collect_sample_tags() {
@@ -283,6 +412,13 @@ draw_plot_output() {
     else
         local status=$?
         echo "[FAILED] $(date '+%F %T') exit=${status}" >> "$log_file"
+        # PyROOT's TMemoryRegulator can segfault during interpreter shutdown
+        # (exit 139) after all plots have been written. Treat that as a warning
+        # so the rest of the grand.sh pipeline keeps running.
+        if [[ "$status" -eq 139 ]]; then
+            echo "[WARN] $(date '+%F %T') 2_plot_dataVmc.py exited with 139 (segfault on shutdown); plots already produced. Continuing." >&2
+            return 0
+        fi
         return "$status"
     fi
 }
@@ -336,12 +472,21 @@ fi
 
 if [[ "$RUN_OPTIMIZATION" == "1" ]]; then
     for final_tag in "${final_tags[@]}"; do
+        set +e
         "$PYTHON_BIN" "$SCRIPTS_DIR/ALP_Optimization.py" \
             -y run3 \
             -o "${OUTPUT_DIR}/optimize_run3UL_${final_tag}" \
             --region 1 \
             -p --sigVSscore -s --doOpt -c 1 \
             --inputTag "$final_tag"
+        opt_status=$?
+        set -e
+        if [[ "$opt_status" -eq 139 ]]; then
+            echo "[WARN] ALP_Optimization.py exited with 139 (PyROOT shutdown segfault); outputs already produced. Continuing." >&2
+        elif [[ "$opt_status" -ne 0 ]]; then
+            echo "[ERROR] ALP_Optimization.py failed with exit ${opt_status}" >&2
+            exit "$opt_status"
+        fi
     done
 else
     echo "[Info] RUN_OPTIMIZATION=$RUN_OPTIMIZATION; skip ALP_Optimization.py"

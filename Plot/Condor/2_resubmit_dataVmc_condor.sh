@@ -18,7 +18,38 @@ jobs_generator="${script_dir}/make_dataVmc_condor_jobs.py"
 DRY_RUN="${DRY_RUN:-0}"
 REMAKE_JOBS="${REMAKE_JOBS:-0}"
 CHECK_ROOT_KEYS="${CHECK_ROOT_KEYS:-1}"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+# Pick a python that can either import ROOT or uproot. The grand.sh shell often
+# has neither, which previously caused output_problem() to mark every file as
+# unreadable. Find a working interpreter, otherwise skip the read check entirely.
+_root_check_python=""
+_root_check_backend=""
+for _p in \
+  "${PYTHON_BIN_OVERRIDE:-}" \
+  /eos/home-p/pelai/App/Conda/.conda/envs/higgs-alp-ana/bin/python \
+  /eos/home-p/pelai/App/Conda/.conda/envs/hza_ana/bin/python \
+  python3; do
+    [[ -z "$_p" ]] && continue
+    command -v "$_p" >/dev/null 2>&1 || continue
+    if "$_p" -c "import uproot" >/dev/null 2>&1; then
+        _root_check_python="$_p"
+        _root_check_backend="uproot"
+        break
+    fi
+    if "$_p" -c "import ROOT; ROOT.gROOT" >/dev/null 2>&1; then
+        _root_check_python="$_p"
+        _root_check_backend="pyroot"
+        break
+    fi
+done
+if [[ -z "$_root_check_python" ]]; then
+    echo "[Warn] no python with uproot or PyROOT found; ROOT-key check will be skipped (file size only)." >&2
+    CHECK_ROOT_KEYS=0
+    _root_check_python="python3"
+    _root_check_backend="size_only"
+fi
+PYTHON_BIN="${PYTHON_BIN:-$_root_check_python}"
+echo "[Info] resubmit check using PYTHON_BIN=$PYTHON_BIN backend=$_root_check_backend CHECK_ROOT_KEYS=$CHECK_ROOT_KEYS"
+export ROOT_CHECK_BACKEND="$_root_check_backend"
 RESUBMIT_REQUEST_MEMORY="${RESUBMIT_REQUEST_MEMORY:-}"
 RESUBMIT_REQUEST_DISK="${RESUBMIT_REQUEST_DISK:-}"
 # Resubmits are usually the heaviest tail of the job distribution; default to a
@@ -65,11 +96,28 @@ output_problem() {
         return 1
     fi
 
-    if "$PYTHON_BIN" - "$path" <<'PY' >/dev/null 2>&1; then
+    "$PYTHON_BIN" - "$path" <<'PY' >/dev/null 2>&1
+import os
 import sys
 
+backend = os.environ.get("ROOT_CHECK_BACKEND", "")
+
+if backend == "uproot":
+    try:
+        import uproot
+    except Exception:
+        sys.exit(2)
+    try:
+        f = uproot.open(sys.argv[1])
+        keys = f.keys()
+        sys.exit(0 if keys else 1)
+    except Exception:
+        sys.exit(1)
+
+# Fall back to PyROOT (CMSSW / hza_ana etc.)
 try:
     import ROOT
+    _ = ROOT.gROOT  # accessing ROOT.gROOT only works for real PyROOT
 except Exception:
     sys.exit(2)
 
@@ -82,6 +130,13 @@ if not root_file or root_file.IsZombie():
 keys = root_file.GetListOfKeys()
 sys.exit(0 if keys and keys.GetEntries() > 0 else 1)
 PY
+    local rc=$?
+    if [[ "$rc" -eq 0 ]]; then
+        # File OK.
+        return 1
+    fi
+    if [[ "$rc" -eq 2 ]]; then
+        # ROOT not importable — cannot reliably check; trust file size.
         return 1
     fi
 

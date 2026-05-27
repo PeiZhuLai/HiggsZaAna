@@ -1,0 +1,2 @@
+ALL_PACKAGES += RecoEgamma/EgammaMLPhotonProducers
+subdirs_src_RecoEgamma_EgammaMLPhotonProducers := src_RecoEgamma_EgammaMLPhotonProducers_src src_RecoEgamma_EgammaMLPhotonProducers_test

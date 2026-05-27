@@ -1,0 +1,1824 @@
+LuminosityBlocks Content
+Collection	Description
+betaStar	LHC beta star
+crossingAngle	LHC crossing angle
+energy	LHC beam energy
+luminosityBlock	luminosityBlock/i
+run	run/i
+LuminosityBlocks detail
+betaStar [back to top]
+Object property	Type	Description
+betaStar	Double_t	LHC beta star
+crossingAngle [back to top]
+Object property	Type	Description
+crossingAngle	Double_t	LHC crossing angle
+energy [back to top]
+Object property	Type	Description
+energy	Double_t	LHC beam energy
+luminosityBlock [back to top]
+Object property	Type	Description
+luminosityBlock	UInt_t	luminosityBlock/i
+run [back to top]
+Object property	Type	Description
+run	UInt_t	run/i
+Events Content
+Collection	Description
+BeamSpot	BeamSpot type (Unknown = -1, Fake = 0, LHC = 1, Tracker = 2)
+CaloMET	phi
+ChsMET	raw chs PF MET phi
+CorrT1METJet	Additional low-pt ak4 Puppi jets for Type-1 MET re-correction
+DeepMETResolutionTune	DeepmET ResolutionTune phi
+DeepMETResponseTune	DeepMET ResponseTune phi
+Electron	slimmedElectrons after basic selection (pt > 5 )
+FatJet	slimmedJetsAK8, i.e. ak8 fat jets for boosted analysis
+Flag	Trigger/flag bit (process: RECO)
+FsrPhoton	Final state radiation photons emitted by muons or electrons
+HLT	Trigger/flag bit (process: HLT)
+HLTriggerFinalPath	Trigger/flag bit (process: HLT)
+HLTriggerFirstPath	Trigger/flag bit (process: HLT)
+IsoTrack	isolated tracks after basic selection (((pt>5 && (abs(pdgId) == 11 || abs(pdgId) == 13)) || pt > 10) && (abs(pdgId) < 15 || abs(eta) < 2.5) && ((abs(dxy) < 0.2 && abs(dz) < 0.1) || pt>15) && ((pfIsolationDR03().chargedHadronIso < 5 && pt < 25) || pfIsolationDR03().chargedHadronIso/pt < 0.2)) and lepton veto
+Jet	slimmedJetsPuppi, i.e. ak4 PFJets Puppi with JECs applied, after basic selection (pt > 15)
+L1	Trigger/flag bit (process: NANO)
+L1EG	hardware iso
+L1EtSum	BX of the L1 candidate
+L1Jet	BX of the L1 candidate
+L1Mu	hardware charge
+L1Reco	Trigger/flag bit (process: RECO)
+L1Tau	hardware iso
+LowPtElectron	slimmedLowPtElectrons after basic selection (pt > 1. && electronID('ID') > -0.25)
+MET	Delta (METx_mod-METx) Unclustered Energy Up
+Muon	slimmedMuons after basic selection (pt > 15 || (pt > 3 && (passed('CutBasedIdLoose') || passed('SoftCutBasedId') || passed('SoftMvaId') || passed('CutBasedIdGlobalHighPt') || passed('CutBasedIdTrkHighPt'))))
+OtherPV	Z position of other primary vertices, excluding the main PV
+PPSLocalTrack	ppsLocalTrack variables
+PV	total number of reconstructed primary vertices
+Photon	slimmedPhotons after basic selection (pt > 5 )
+Proton	0 = sector45, 1 = sector56
+PuppiMET	phi
+RawMET	phi
+RawPuppiMET	phi
+Rho	rho from all PF Candidates, no foreground removal (for isolation of prompt photons)
+SV	secondary vertices from IVF algorithm
+SoftActivityJet	jets clustered from charged candidates compatible with primary vertex (charge()!=0 && pvAssociationQuality()>=5 && vertexRef().key()==0)
+SoftActivityJetHT	scalar sum of soft activity jet pt, pt>1
+SoftActivityJetHT10	scalar sum of soft activity jet pt , pt >10
+SoftActivityJetHT2	scalar sum of soft activity jet pt, pt >2
+SoftActivityJetHT5	scalar sum of soft activity jet pt, pt>5
+SoftActivityJetNjets10	number of soft activity jet pt, pt >2
+SoftActivityJetNjets2	number of soft activity jet pt, pt >10
+SoftActivityJetNjets5	number of soft activity jet pt, pt >5
+SubJet	slimmedJetsAK8, i.e. ak8 fat jets for boosted analysis
+Tau	slimmedTaus after basic selection (pt > 18 && ((tauID('decayModeFindingNewDMs') > 0.5 && (tauID('byLooseCombinedIsolationDeltaBetaCorr3Hits') || (tauID('chargedIsoPtSumdR03')+max(0.,tauID('neutralIsoPtSumdR03')-0.072*tauID('puCorrPtSum'))<2.5) || tauID('byVVVLooseDeepTau2017v2p1VSjet') || tauID('byVVVLooseDeepTau2018v2p5VSjet'))) || (?isTauIDAvailable('byPNetVSjetraw')?tauID('byPNetVSjetraw'):-1) > 0.05))
+TkMET	raw track MET phi
+TrigObj	charge of associated L1 seed
+boostedTau	slimmedBoostedTaus after basic selection (pt > 40 && tauID('decayModeFindingNewDMs') && (tauID('byVVLooseIsolationMVArun2DBoldDMwLT') || tauID('byVVLooseIsolationMVArun2DBnewDMwLT')))
+bunchCrossing	bunchCrossing/i
+event	event/l
+luminosityBlock	luminosityBlock/i
+run	run/i
+Events detail
+BeamSpot [back to top]
+Object property	Type	Description
+BeamSpot_sigmaZ	Float_t	Width of BeamSpot in z (cm)
+BeamSpot_sigmaZError	Float_t	Error on width of BeamSpot in z (cm)
+BeamSpot_type	Char_t	BeamSpot type (Unknown = -1, Fake = 0, LHC = 1, Tracker = 2)
+BeamSpot_z	Float_t	BeamSpot center, z coordinate (cm)
+BeamSpot_zError	Float_t	Error on BeamSpot center, z coordinate (cm)
+CaloMET [back to top]
+Object property	Type	Description
+CaloMET_phi	Float_t	phi
+CaloMET_pt	Float_t	pt
+CaloMET_sumEt	Float_t	scalar sum of Et
+ChsMET [back to top]
+Object property	Type	Description
+ChsMET_phi	Float_t	raw chs PF MET phi
+ChsMET_pt	Float_t	raw chs PF MET pt
+ChsMET_sumEt	Float_t	raw chs PF scalar sum of Et
+CorrT1METJet [back to top]
+Object property	Type	Description
+CorrT1METJet_area	Float_t	jet catchment area, for JECs
+CorrT1METJet_eta	Float_t	eta
+CorrT1METJet_muonSubtrFactor	Float_t	1-(muon-subtracted raw pt)/(raw pt)
+CorrT1METJet_phi	Float_t	phi
+CorrT1METJet_rawPt	Float_t	pt()*jecFactor('Uncorrected')
+nCorrT1METJet	Int_t	Additional low-pt ak4 Puppi jets for Type-1 MET re-correction
+DeepMETResolutionTune [back to top]
+Object property	Type	Description
+DeepMETResolutionTune_phi	Float_t	DeepmET ResolutionTune phi
+DeepMETResolutionTune_pt	Float_t	DeepMET ResolutionTune pt
+DeepMETResponseTune [back to top]
+Object property	Type	Description
+DeepMETResponseTune_phi	Float_t	DeepMET ResponseTune phi
+DeepMETResponseTune_pt	Float_t	DeepMET ResponseTune pt
+Electron [back to top]
+Object property	Type	Description
+Electron_charge	Int_t	electric charge
+Electron_convVeto	Bool_t	pass conversion veto
+Electron_cutBased	UChar_t	cut-based ID RunIII Winter22 (0:fail, 1:veto, 2:loose, 3:medium, 4:tight)
+Electron_cutBased_Fall17V2	UChar_t	cut-based ID Fall17V2 (0:fail, 1:veto, 2:loose, 3:medium, 4:tight)
+Electron_cutBased_HEEP	Bool_t	cut-based HEEP ID
+Electron_deltaEtaSC	Float_t	delta eta (SC,ele) with sign
+Electron_dr03EcalRecHitSumEt	Float_t	Non-PF Ecal isolation within a delta R cone of 0.3 with electron pt > 35 GeV
+Electron_dr03HcalDepth1TowerSumEt	Float_t	Non-PF Hcal isolation within a delta R cone of 0.3 with electron pt > 35 GeV
+Electron_dr03TkSumPt	Float_t	Non-PF track isolation within a delta R cone of 0.3 with electron pt > 35 GeV
+Electron_dr03TkSumPtHEEP	Float_t	Non-PF track isolation within a delta R cone of 0.3 with electron pt > 35 GeV used in HEEP ID
+Electron_dxy	Float_t	dxy (with sign) wrt first PV, in cm
+Electron_dxyErr	Float_t	dxy uncertainty, in cm
+Electron_dz	Float_t	dz (with sign) wrt first PV, in cm
+Electron_dzErr	Float_t	dz uncertainty, in cm
+Electron_eInvMinusPInv	Float_t	1/E_SC - 1/p_trk
+Electron_energyErr	Float_t	energy error of the cluster-track combination
+Electron_eta	Float_t	eta
+Electron_fsrPhotonIdx	Short_t(index to Fsrphoton)	Index of the lowest-dR/ET2 among associated FSR photons
+Electron_hoe	Float_t	H over E
+Electron_ip3d	Float_t	3D impact parameter wrt first PV, in cm
+Electron_isPFcand	Bool_t	electron is PF candidate
+Electron_jetIdx	Short_t(index to Jet)	index of the associated jet (-1 if none)
+Electron_jetNDauCharged	UChar_t	number of charged daughters of the closest jet
+Electron_jetPtRelv2	Float_t	Relative momentum of the lepton with respect to the closest jet after subtracting the lepton
+Electron_jetRelIso	Float_t	Relative isolation in matched jet (1/ptRatio-1, pfRelIso04_all if no matched jet)
+Electron_jetRelIso_Fall17V2	Float_t	Relative isolation in matched jet (1/ptRatio-1, pfRelIso04_all if no matched jet)
+Electron_lostHits	UChar_t	number of missing inner hits
+Electron_mass	Float_t	mass
+Electron_miniPFRelIso_all	Float_t	mini PF relative isolation, total (with scaled rho*EA PU Winter22V1 corrections)
+Electron_miniPFRelIso_all_Fall17V2	Float_t	mini PF relative isolation, total (with scaled rho*EA PU Fall17V2 corrections)
+Electron_miniPFRelIso_chg	Float_t	mini PF relative isolation, charged component
+Electron_miniPFRelIso_chg_Fall17V2	Float_t	mini PF relative isolation, charged component
+Electron_mvaHZZIso	Float_t	HZZ MVA Iso ID score
+Electron_mvaIso	Float_t	MVA Iso ID score, Winter22V1
+Electron_mvaIso_Fall17V2	Float_t	MVA Iso ID score, Fall17V2
+Electron_mvaIso_Fall17V2_WP80	Bool_t	MVA Iso ID WP80, Fall17V2
+Electron_mvaIso_Fall17V2_WP90	Bool_t	MVA Iso ID WP90, Fall17V2
+Electron_mvaIso_Fall17V2_WPL	Bool_t	MVA Iso ID loose WP, Fall17V2
+Electron_mvaIso_WP80	Bool_t	MVA Iso ID WP80, Winter22V1
+Electron_mvaIso_WP90	Bool_t	MVA Iso ID WP90, Winter22V1
+Electron_mvaNoIso	Float_t	MVA noIso ID score, Winter22V1
+Electron_mvaNoIso_Fall17V2	Float_t	MVA noIso ID score, Fall17V2
+Electron_mvaNoIso_Fall17V2_WP80	Bool_t	MVA noIso ID WP80, Fall17V2
+Electron_mvaNoIso_Fall17V2_WP90	Bool_t	MVA noIso ID WP90, Fall17V2
+Electron_mvaNoIso_Fall17V2_WPL	Bool_t	MVA noIso ID loose WP, Fall17V2
+Electron_mvaNoIso_WP80	Bool_t	MVA noIso ID WP80, Winter22V1
+Electron_mvaNoIso_WP90	Bool_t	MVA noIso ID WP90, Winter22V1
+Electron_mvaTTH	Float_t	TTH MVA lepton ID score
+Electron_pdgId	Int_t	PDG code assigned by the event reconstruction (not by MC truth)
+Electron_pfRelIso03_all	Float_t	PF relative isolation dR=0.3, total (with rho*EA PU Winter22V1 corrections)
+Electron_pfRelIso03_all_Fall17V2	Float_t	PF relative isolation dR=0.3 with 94 EffArea, total (with rho*EA PU corrections)
+Electron_pfRelIso03_chg	Float_t	PF relative isolation dR=0.3, charged component
+Electron_pfRelIso03_chg_Fall17V2	Float_t	PF relative isolation dR=0.3 with 94 EffArea, charged component
+Electron_phi	Float_t	phi
+Electron_photonIdx	Short_t(index to Photon)	index of the first associated photon (-1 if none)
+Electron_pt	Float_t	pt
+Electron_r9	Float_t	R9 of the supercluster, calculated with full 5x5 region
+Electron_scEtOverPt	Float_t	(supercluster transverse energy)/pt-1
+Electron_seedGain	UChar_t	Gain of the seed crystal
+Electron_seediEtaOriX	Char_t	iEta or iX of seed crystal. iEta is barrel-only, iX is endcap-only. iEta runs from -85 to +85, with no crystal at iEta=0. iX runs from 1 to 100.
+Electron_seediPhiOriY	Int_t	iPhi or iY of seed crystal. iPhi is barrel-only, iY is endcap-only. iPhi runs from 1 to 360. iY runs from 1 to 100.
+Electron_sieie	Float_t	sigma_IetaIeta of the supercluster, calculated with full 5x5 region
+Electron_sip3d	Float_t	3D impact parameter significance wrt first PV, in cm
+Electron_svIdx	Short_t(index to Sv)	index of matching secondary vertex
+Electron_tightCharge	UChar_t	Tight charge criteria (0:none, 1:isGsfScPixChargeConsistent, 2:isGsfCtfScPixChargeConsistent)
+Electron_vidNestedWPBitmap	Int_t	VID compressed bitmap (MinPtCut,GsfEleSCEtaMultiRangeCut,GsfEleEBEECut,GsfEleEBEECut,GsfEleEBEECut,GsfEleHadronicOverEMEnergyScaledCut,GsfEleEBEECut,GsfEleRelPFIsoScaledCut,GsfEleConversionVetoCut,GsfEleMissingHitsCut), 3 bits per cut
+Electron_vidNestedWPBitmapHEEP	Int_t	VID compressed bitmap (MinPtCut,GsfEleSCEtaMultiRangeCut,GsfEleEBEECut,GsfEleEBEECut,GsfEleFull5x5SigmaIEtaIEtaWithSatCut,GsfEleFull5x5E2x5OverE5x5WithSatCut,GsfEleHadronicOverEMLinearCut,GsfEleTrkPtIsoCut,GsfEleEmHadD1IsoRhoCut,GsfEleDxyCut,GsfEleMissingHitsCut,GsfEleEcalDrivenCut), 1 bits per cut
+Electron_vidNestedWPBitmap_Fall17V2	Int_t	VID compressed bitmap (MinPtCut,GsfEleSCEtaMultiRangeCut,GsfEleEBEECut,GsfEleEBEECut,GsfEleEBEECut,GsfEleHadronicOverEMEnergyScaledCut,GsfEleEBEECut,GsfEleRelPFIsoScaledCut,GsfEleConversionVetoCut,GsfEleMissingHitsCut), 3 bits per cut
+nElectron	Int_t	slimmedElectrons after basic selection (pt > 5 )
+FatJet [back to top]
+Object property	Type	Description
+FatJet_area	Float_t	jet catchment area, for JECs
+FatJet_btagDDBvLV2	Float_t	DeepDoubleX V2(mass-decorrelated) discriminator for H(Z)->bb vs QCD
+FatJet_btagDDCvBV2	Float_t	DeepDoubleX V2 (mass-decorrelated) discriminator for H(Z)->cc vs H(Z)->bb
+FatJet_btagDDCvLV2	Float_t	DeepDoubleX V2 (mass-decorrelated) discriminator for H(Z)->cc vs QCD
+FatJet_btagDeepB	Float_t	DeepCSV b+bb tag discriminator
+FatJet_btagHbb	Float_t	Higgs to BB tagger discriminator
+FatJet_electronIdx3SJ	Short_t(index to Electron)	index of electron matched to jet
+FatJet_eta	Float_t	eta
+FatJet_jetId	UChar_t	Jet ID flags bit1 is loose (always false in 2017 since it does not exist), bit2 is tight, bit3 is tightLepVeto
+FatJet_lsf3	Float_t	Lepton Subjet Fraction (3 subjets)
+FatJet_mass	Float_t	mass
+FatJet_msoftdrop	Float_t	Corrected soft drop mass with PUPPI
+FatJet_muonIdx3SJ	Short_t(index to Muon)	index of muon matched to jet
+FatJet_n2b1	Float_t	N2 with beta=1 (for jets with raw pT>250 GeV)
+FatJet_n3b1	Float_t	N3 with beta=1 (for jets with raw pT>250 GeV)
+FatJet_nConstituents	UChar_t	Number of particles in the jet
+FatJet_particleNetWithMass_H4qvsQCD	Float_t	ParticleNet tagger (w/ mass) H(->VV->qqqq) vs QCD discriminator
+FatJet_particleNetWithMass_HbbvsQCD	Float_t	ParticleNet tagger (w/mass) H(->bb) vs QCD discriminator
+FatJet_particleNetWithMass_HccvsQCD	Float_t	ParticleNet tagger (w/mass) H(->cc) vs QCD discriminator
+FatJet_particleNetWithMass_QCD	Float_t	ParticleNet tagger (w/ mass) QCD(bb,cc,b,c,others) sum
+FatJet_particleNetWithMass_TvsQCD	Float_t	ParticleNet tagger (w/ mass) top vs QCD discriminator
+FatJet_particleNetWithMass_WvsQCD	Float_t	ParticleNet tagger (w/ mass) W vs QCD discriminator
+FatJet_particleNetWithMass_ZvsQCD	Float_t	ParticleNet tagger (w/ mass) Z vs QCD discriminator
+FatJet_particleNet_QCD	Float_t	ParticleNet tagger QCD(0+1+2HF) sum
+FatJet_particleNet_QCD0HF	Float_t	ParticleNet tagger QCD 0 HF (b/c) score
+FatJet_particleNet_QCD1HF	Float_t	ParticleNet tagger QCD 1 HF (b/c) score
+FatJet_particleNet_QCD2HF	Float_t	ParticleNet tagger QCD 2 HF (b/c) score
+FatJet_particleNet_XbbVsQCD	Float_t	ParticleNet X->bb vs. QCD score: Xbb/(Xbb+QCD)
+FatJet_particleNet_XccVsQCD	Float_t	ParticleNet X->cc vs. QCD score: Xcc/(Xcc+QCD)
+FatJet_particleNet_XggVsQCD	Float_t	ParticleNet X->gg vs. QCD score: Xgg/(Xgg+QCD)
+FatJet_particleNet_XqqVsQCD	Float_t	ParticleNet X->qq (uds) vs. QCD score: Xqq/(Xqq+QCD)
+FatJet_particleNet_XteVsQCD	Float_t	ParticleNet X->e tau_h vs. QCD score: Xte/(Xte+QCD)
+FatJet_particleNet_XtmVsQCD	Float_t	ParticleNet X->mu tau_h vs. QCD score: Xtm/(Xtm+QCD)
+FatJet_particleNet_XttVsQCD	Float_t	ParticleNet X->tau_h tau_h vs. QCD score: Xtt/(Xtt+QCD)
+FatJet_particleNet_massCorr	Float_t	ParticleNet mass regression, relative correction to JEC-corrected jet mass (no softdrop)
+FatJet_phi	Float_t	phi
+FatJet_pt	Float_t	pt
+FatJet_rawFactor	Float_t	1 - Factor to get back to raw pT
+FatJet_subJetIdx1	Short_t(index to Subjet)	index of first subjet
+FatJet_subJetIdx2	Short_t(index to Subjet)	index of second subjet
+FatJet_tau1	Float_t	Nsubjettiness (1 axis)
+FatJet_tau2	Float_t	Nsubjettiness (2 axis)
+FatJet_tau3	Float_t	Nsubjettiness (3 axis)
+FatJet_tau4	Float_t	Nsubjettiness (4 axis)
+nFatJet	Int_t	slimmedJetsAK8, i.e. ak8 fat jets for boosted analysis
+Flag [back to top]
+Object property	Type	Description
+Flag_BadChargedCandidateFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_BadChargedCandidateSummer16Filter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_BadPFMuonDzFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_BadPFMuonFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_BadPFMuonSummer16Filter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_CSCTightHalo2015Filter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_CSCTightHaloFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_CSCTightHaloTrkMuUnvetoFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_EcalDeadCellBoundaryEnergyFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_EcalDeadCellTriggerPrimitiveFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_HBHENoiseFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_HBHENoiseIsoFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_HcalStripHaloFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_METFilters	Bool_t	Trigger/flag bit (process: RECO)
+Flag_chargedHadronTrackResolutionFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_ecalBadCalibFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_ecalLaserCorrFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_eeBadScFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_globalSuperTightHalo2016Filter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_globalTightHalo2016Filter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_goodVertices	Bool_t	Trigger/flag bit (process: RECO)
+Flag_hcalLaserEventFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_hfNoisyHitsFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_muonBadTrackFilter	Bool_t	Trigger/flag bit (process: RECO)
+Flag_trkPOGFilters	Bool_t	Trigger/flag bit (process: RECO)
+Flag_trkPOG_logErrorTooManyClusters	Bool_t	Trigger/flag bit (process: RECO)
+Flag_trkPOG_manystripclus53X	Bool_t	Trigger/flag bit (process: RECO)
+Flag_trkPOG_toomanystripclus53X	Bool_t	Trigger/flag bit (process: RECO)
+FsrPhoton [back to top]
+Object property	Type	Description
+FsrPhoton_dROverEt2	Float_t	deltaR to associated muon divided by photon et2
+FsrPhoton_electronIdx	Short_t(index to Electron)	index of associated electron
+FsrPhoton_eta	Float_t	eta
+FsrPhoton_muonIdx	Short_t(index to Muon)	index of associated muon
+FsrPhoton_phi	Float_t	phi
+FsrPhoton_pt	Float_t	pt
+FsrPhoton_relIso03	Float_t	relative isolation in a 0.3 cone without CHS
+nFsrPhoton	Int_t	Final state radiation photons emitted by muons or electrons
+HLT [back to top]
+Object property	Type	Description
+HLT_AK8DiPFJet250_250_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8DiPFJet250_250_MassSD50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8DiPFJet260_260_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8DiPFJet260_260_MassSD50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8DiPFJet270_270_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8DiPFJet280_280_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8DiPFJet290_290_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet140	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet200	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet220_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet220_SoftDropMass40_PNetBB0p35_DoubleAK4PFJet60_30_PNet2BTagMean0p50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet220_SoftDropMass40_PNetBB0p35_DoubleAK4PFJet60_30_PNet2BTagMean0p53	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet220_SoftDropMass40_PNetBB0p35_DoubleAK4PFJet60_30_PNet2BTagMean0p55	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet220_SoftDropMass40_PNetBB0p35_DoubleAK4PFJet60_30_PNet2BTagMean0p60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet230_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet230_SoftDropMass40_PFAK8ParticleNetTauTau0p30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet250_SoftDropMass40_PFAK8ParticleNetBB0p35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet250_SoftDropMass40_PFAK8ParticleNetTauTau0p30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet260	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet275_SoftDropMass40_PFAK8ParticleNetBB0p35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet275_SoftDropMass40_PFAK8ParticleNetTauTau0p30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet320	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet400	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet400_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet420_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet425_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet450_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet450_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet470_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet500	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet500_MassSD30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet550	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJet80	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd140	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd200	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd25	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd260	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd320	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd400	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd500	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_AK8PFJetFwd80	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK4DiJet110_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK4DiJet170_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK4DiJet20_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK4DiJet40_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK4DiJet70_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK4Jet300_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK8DiJet170_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK8Jet170_DoubleMu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_BTagMu_AK8Jet300_Mu5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CDC_L2cosmic_10_er1p0	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CDC_L2cosmic_5p5_er1p0	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloJet500_NoJetID	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloJet550_NoJetID	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloMET350_NotCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloMET60_DTCluster50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloMET60_DTClusterNoMB1S50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloMET90_NotCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CaloMHT90	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CascadeMu100	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CscCluster_Loose	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CscCluster_Medium	Bool_t	Trigger/flag bit (process: HLT)
+HLT_CscCluster_Tight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiEle27_WPTightCaloOnly_L1DoubleEG	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiJet110_35_Mjj650_PFMET110	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiJet110_35_Mjj650_PFMET120	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiJet110_35_Mjj650_PFMET130	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiMu4_Ele9_CaloIdL_TrackIdL_DZ_Mass3p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiMu9_Ele9_CaloIdL_TrackIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiMu9_Ele9_CaloIdL_TrackIdL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve100_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve140	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve160_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve200	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve220_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve260	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve260_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve300_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve320	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve400	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve500	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve60_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve80	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPFJetAve80_HFJEC	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10Time1ns	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10Time1p2ns	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10Time1p4ns	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10Time1p6ns	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10Time1p8ns	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10Time2ns	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10_CaloIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10sminlt0p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiPhoton10sminlt0p12	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DiSC30_18_EIso_AND_HE_Mass70	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi3p5_Muon2	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi_L1_4R_0er1p5R	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi_L1_NoOS	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi_NoVertexing	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi_NoVertexing_L1_4R_0er1p5R	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Jpsi_NoVertexing_NoOS	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_LowMass	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_LowMass_L1_0er1p5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_LowMass_L1_0er1p5R	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_LowMass_L1_4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_LowMass_L1_4R	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_LowMass_L1_TM530	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Upsilon_L1_4p5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Upsilon_L1_4p5er2p0	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Upsilon_L1_4p5er2p0M	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Upsilon_Muon_NoL1Mass	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon0_Upsilon_NoVertexing	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon10_Upsilon_y1p4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon12_Upsilon_y1p4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon14_Phi_Barrel_Seagulls	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon14_PsiPrime	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon14_PsiPrime_noCorrL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon18_PsiPrime	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon18_PsiPrime_noCorrL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon24_Phi_noCorrL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon24_Upsilon_noCorrL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon25_Jpsi	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Dimuon25_Jpsi_noCorrL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton20_14_eta1p5_R9IdL_AND_HET_AND_IsoTCaloIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton20_14_eta1p5_R9IdL_AND_HE_AND_IsoTCaloIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton22_14_eta1p5_R9IdL_AND_HET_AND_IsoTCaloIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton22_14_eta1p5_R9IdL_AND_HE_AND_IsoTCaloIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton24_14_eta1p5_R9IdL_AND_HET_AND_IsoTCaloIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton24_16_eta1p5_R9IdL_AND_HET_AND_IsoTCaloIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_Mass55	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle10_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle10_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle10_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle24_eta2p1_WPTight_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle25_CaloIdL_MW	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle27_CaloIdL_MW	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle33_CaloIdL_MW	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle4_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle4_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle4_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle4p5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle4p5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle4p5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle5p5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle5p5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle5p5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle6_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle6_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle6_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle6p5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle6p5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle6p5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle7_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle7_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle7_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle7p5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle7p5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle7p5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8_CaloIdM_TrackIdM_Mass8_DZ_PFHT350	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8_CaloIdM_TrackIdM_Mass8_PFHT350	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8p5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8p5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle8p5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle9_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle9_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle9_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle9p5_eta1p22_mMax6	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle9p5_eta1p22_mMax6_dz0p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleEle9p5_eta1p22_mMax6_trkHits10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleIsoMu20_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu10NoVtx_2Cha_CosmicSeed_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu10NoVtx_2Cha_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu12NoVtx_2Cha_CosmicSeed_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu12NoVtx_2Cha_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu14NoVtx_2Cha_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu23NoVtx_2Cha	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu23NoVtx_2Cha_CosmicSeed	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu25NoVtx_2Cha	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu25NoVtx_2Cha_CosmicSeed	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu25NoVtx_2Cha_CosmicSeed_Eta2p4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu25NoVtx_2Cha_Eta2p4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu30NoVtx_2Cha_CosmicSeed_Eta2p4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu30NoVtx_2Cha_Eta2p4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu_L3Mu16NoVtx_VetoL3Mu0DxyMax0p1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL2Mu_L3Mu18NoVtx_VetoL3Mu0DxyMax0p1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL3Mu16_10NoVtx_DxyMin0p01cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL3Mu18_10NoVtx_DxyMin0p01cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL3Mu20_10NoVtx_DxyMin0p01cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleL3dTksMu16_10NoVtx_DxyMin0p01cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMediumChargedIsoDisplacedPFTauHPS32_Trk1_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMediumDeepTauPFTauHPS30_L2NN_eta2p1_OneProng_M5to80	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMediumDeepTauPFTauHPS30_L2NN_eta2p1_PFJet60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMediumDeepTauPFTauHPS30_L2NN_eta2p1_PFJet75	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMediumDeepTauPFTauHPS35_L2NN_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu2_Jpsi_DoubleTrk1_Phi1p05	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_DCA_PFMET50_PFMHT60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_DZ_PFMET50_PFMHT60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_DZ_PFMET70_PFMHT70	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_DZ_PFMET90_PFMHT90	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_DoubleEle7p5_CaloIdL_TrackIdL_Upsilon	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_TkMu_DsTau3Mu	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_Trk_Tau3mu	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu3_Trk_Tau3mu_NoL1Mass	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu43NoFiltersNoVtx	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu48NoFiltersNoVtx	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_3_Bs	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_3_Displaced_Photon4_BsToMMG	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_3_Jpsi	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_3_LowMass	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_3_Photon4_BsToMMG	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_JpsiTrkTrk_Displaced	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_JpsiTrk_Bc	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_Jpsi_Displaced	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_Jpsi_NoVertexing	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_LowMass_Displaced	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_Mass3p8_DZ_PFHT350	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu4_MuMuTrk_Displaced	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoubleMu5_Upsilon_DoubleEle3_CaloIdL_TrackIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets100_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets116MaxDeta1p6_DoublePFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets128MaxDeta1p6_DoublePFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets200_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets350_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets40_Mass500_MediumDeepTauPFTauHPS45_L2NN_MediumDeepTauPFTauHPS20_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePFJets40_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePhoton33_CaloIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePhoton70	Bool_t	Trigger/flag bit (process: HLT)
+HLT_DoublePhoton85	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ECALHT800	Bool_t	Trigger/flag bit (process: HLT)
+HLT_EcalCalibration	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele115_CaloIdVT_GsfTrkIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele12_CaloIdL_TrackIdL_IsoVL_PFJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele135_CaloIdVT_GsfTrkIdT	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele15_IsoVVVL_PFHT450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele15_IsoVVVL_PFHT450_PFMET50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele15_IsoVVVL_PFHT600	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele16_Ele12_Ele8_CaloIdL_TrackIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele17_CaloIdM_TrackIdM_PFJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele23_CaloIdL_TrackIdL_IsoVL_PFJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele23_CaloIdM_TrackIdM_PFJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele24_eta2p1_WPTight_Gsf_LooseDeepTauPFTauHPS30_eta2p1_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele28_HighEta_SC20_Mass55	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele28_eta2p1_WPTight_Gsf_HT150	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele30_WPTight_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele30_eta2p1_WPTight_Gsf_CentralPFJet35_EleCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele32_WPTight_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele32_WPTight_Gsf_L1DoubleEG	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele35_WPTight_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele36_WPTight_noEoP_missHitL_trkChi2L_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele38_WPTight_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele40_WPTight_Gsf	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele50_CaloIdVT_GsfTrkIdT_AK8PFJet220_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele50_CaloIdVT_GsfTrkIdT_AK8PFJet220_SoftDropMass40_PFAK8ParticleNetBB0p35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele50_CaloIdVT_GsfTrkIdT_AK8PFJet230_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele50_CaloIdVT_GsfTrkIdT_AK8PFJet230_SoftDropMass40_PFAK8ParticleNetBB0p35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele50_CaloIdVT_GsfTrkIdT_PFJet165	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele50_IsoVVVL_PFHT450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele8_CaloIdL_TrackIdL_IsoVL_PFJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Ele8_CaloIdM_TrackIdM_PFJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_EphemeralPhysics	Bool_t	Trigger/flag bit (process: HLT)
+HLT_EphemeralZeroBias	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ExpressMuons	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT170_L1SingleLLPJet_DisplacedDijet40_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DelayedJet40_DoubleDelay0p5nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DelayedJet40_DoubleDelay1nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DelayedJet40_SingleDelay1nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DelayedJet40_SingleDelay2nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DisplacedDijet35_Inclusive1PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DisplacedDijet40_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DisplacedDijet40_Inclusive1PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT200_L1SingleLLPJet_DisplacedDijet60_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT240_L1SingleLLPJet_DisplacedDijet40_Inclusive1PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT270_L1SingleLLPJet_DisplacedDijet40_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT280_L1SingleLLPJet_DisplacedDijet40_Inclusive1PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT300_Beamspot	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT320_L1SingleLLPJet_DisplacedDijet60_Inclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT400_DisplacedDijet40_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT420_L1SingleLLPJet_DisplacedDijet60_Inclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT425	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_DoubleDelay0p5nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_DoubleDelay0p5nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_DoubleDelay1nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_SingleDelay0p5nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_SingleDelay0p5nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_SingleDelay1nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_SingleDelay1nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_SingleDelay1p5nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DelayedJet40_SingleDelay2nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DisplacedDijet40_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DisplacedDijet40_Inclusive1PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT430_DisplacedDijet60_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT500_DisplacedDijet40_DisplacedTrack	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT550_DisplacedDijet60_Inclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HT650_DisplacedDijet60_Inclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HcalCalibration	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HcalIsolatedbunch	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HcalNZS	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HcalPhiSym	Bool_t	Trigger/flag bit (process: HLT)
+HLT_HighPtTkMu100	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu20	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu20_eta2p1_LooseDeepTauPFTauHPS27_eta2p1_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_TwoProngs35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_LooseDeepTauPFTauHPS180_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_LooseDeepTauPFTauHPS30_eta2p1_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_MediumDeepTauPFTauHPS20_eta2p1_SingleL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_MediumDeepTauPFTauHPS30_L2NN_eta2p1_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_MediumDeepTauPFTauHPS30_L2NN_eta2p1_PFJet60_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_MediumDeepTauPFTauHPS30_L2NN_eta2p1_PFJet75_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_MediumDeepTauPFTauHPS35_L2NN_eta2p1_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu24_eta2p1_MediumDeepTauPFTauHPS45_L2NN_eta2p1_CrossL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu27	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu27_MediumDeepTauPFTauHPS20_eta2p1_SingleL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu50_AK8PFJet220_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu50_AK8PFJet220_SoftDropMass40_PFAK8ParticleNetBB0p35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu50_AK8PFJet230_SoftDropMass40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoMu50_AK8PFJet230_SoftDropMass40_PFAK8ParticleNetBB0p35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoTrackHB	Bool_t	Trigger/flag bit (process: HLT)
+HLT_IsoTrackHE	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1CSCShower_DTCluster50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1CSCShower_DTCluster75	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1ETMHadSeeds	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1MET_DTCluster50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1MET_DTClusterNoMB1S50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Mu6HT240	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1SingleLLPJet	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1SingleMuCosmics	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Tau_DelayedJet40_DoubleDelay0p5nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Tau_DelayedJet40_DoubleDelay0p75nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Tau_DelayedJet40_DoubleDelay1nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Tau_DelayedJet40_DoubleDelay1p25nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Tau_DelayedJet40_SingleDelay2p5nsTrackless	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1Tau_DelayedJet40_SingleDelay3p5nsInclusive	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L1_CDC_SingleMu_3_er1p2_TOP120_DPHI2p618_3p142	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu10NoVtx_2Cha	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu10NoVtx_2Cha_CosmicSeed	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu10NoVtx_2Cha_CosmicSeed_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu10NoVtx_2Cha_VetoL3Mu0DxyMax1cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu10_NoVertex_NoBPTX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu10_NoVertex_NoBPTX3BX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu23NoVtx_2Cha	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu23NoVtx_2Cha_CosmicSeed	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu40_NoVertex_3Sta_NoBPTX3BX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L2Mu45_NoVertex_3Sta_NoBPTX3BX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L3Mu10NoVtx	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L3Mu10NoVtx_DxyMin0p01cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_L3dTksMu10_NoVtx_DxyMin0p01cm	Bool_t	Trigger/flag bit (process: HLT)
+HLT_LooseDeepTauPFTauHPS180_L2NN_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_MET105_IsoTrk50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_MET120_IsoTrk50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu0_L1DoubleMu	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu10_TrkIsoVVL_DiPFJet40_DEta3p5_MJJ750_HTT350_PFMETNoMu60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_DoublePFJets100_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_DoublePFJets200_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_DoublePFJets350_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_DoublePFJets40MaxDeta1p6_DoublePFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_DoublePFJets40_PFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_DoublePFJets54MaxDeta1p6_DoublePFBTagDeepJet_p71	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12eta2p3	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu12eta2p3_PFJet40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu15_IsoVVVL_PFHT450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu15_IsoVVVL_PFHT450_PFMET50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu15_IsoVVVL_PFHT600	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17_Photon30_IsoCaloId	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17_TrkIsoVVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu18_Mu9_SameSign	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu19	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu19_TrkIsoVVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu19_TrkIsoVVL_Mu9_TrkIsoVVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu19_TrkIsoVVL_Mu9_TrkIsoVVL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu19_TrkIsoVVL_Mu9_TrkIsoVVL_DZ_Mass3p8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu19_TrkIsoVVL_Mu9_TrkIsoVVL_DZ_Mass8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu20	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu20NoFiltersNoVtxDisplaced_Photon20_CaloCustomId	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu25_TkMu0_Phi	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu27	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu27_Ele37_CaloIdL_MW	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu30_TkMu0_Psi	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu30_TkMu0_Upsilon	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu37_Ele27_CaloIdL_MW	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu37_TkMu27	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu38NoFiltersNoVtxDisplaced_Photon38_CaloIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3_L1SingleMu5orSingleMu7	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3_PFJet40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3er1p5_PFJet100er2p5_PFMET100_PFMHT100_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3er1p5_PFJet100er2p5_PFMET80_PFMHT80_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3er1p5_PFJet100er2p5_PFMET90_PFMHT90_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3er1p5_PFJet100er2p5_PFMETNoMu100_PFMHTNoMu100_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3er1p5_PFJet100er2p5_PFMETNoMu80_PFMHTNoMu80_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu3er1p5_PFJet100er2p5_PFMETNoMu90_PFMHTNoMu90_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu43NoFiltersNoVtxDisplaced_Photon43_CaloIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu43NoFiltersNoVtx_Photon43_CaloIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu48NoFiltersNoVtx_Photon48_CaloIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu4_L1DoubleMu	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu4_TrkIsoVVL_DiPFJet90_40_DEta3p5_MJJ750_HTT300_PFMETNoMu60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu50_IsoVVVL_PFHT450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu50_L1SingleMuShower	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu55	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet30_Inclusive1PtrkShortSig5_DisplacedLoose	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet35_Inclusive0PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet35_Inclusive1PtrkShortSig5_DisplacedLoose	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet40_Inclusive0PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet40_Inclusive1PtrkShortSig5_DisplacedLoose	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet45_Inclusive0PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu6HT240_DisplacedDijet50_Inclusive0PtrkShortSig5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu7p5_L2Mu2_Jpsi	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu7p5_L2Mu2_Upsilon	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_DiEle12_CaloIdL_TrackIdL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_DiEle12_CaloIdL_TrackIdL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_Ele8_CaloIdM_TrackIdM_Mass8_PFHT350	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_Ele8_CaloIdM_TrackIdM_Mass8_PFHT350_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_DiPFJet40_DEta3p5_MJJ750_HTT300_PFMETNoMu60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_CaloDiJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_DoubleAK4PFJet60_30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_DoubleAK4PFJet60_30_PNet2BTagMean0p50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_PFDiJet30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_PFDiJet30_PFBTagParticleNet_2BTagSum0p65	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_PFDiJet30_PFBtagDeepJet_1p5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_QuadPFJet70_50_40_30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_QuadPFJet70_50_40_30_PFBTagParticleNet_2BTagSum0p65	Bool_t	Trigger/flag bit (process: HLT)
+HLT_OnlineMonitorGroup	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT1050	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT180	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT250	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT330PT30_QuadPFJet_75_60_45_40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT330PT30_QuadPFJet_75_60_45_40_TriplePFBTagDeepJet_4p5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT340_QuadPFJet70_50_40_40_PNet2BTagMean0p70	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT350	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT370	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT400_FivePFJet_100_100_60_30_30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT400_FivePFJet_100_100_60_30_30_DoublePFBTagDeepJet_4p5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT400_FivePFJet_120_120_60_30_30_DoublePFBTagDeepJet_4p5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT400_SixPFJet32	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT400_SixPFJet32_DoublePFBTagDeepJet_2p94	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT430	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT450_SixPFJet36	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT450_SixPFJet36_PFBTagDeepJet_1p59	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT500_PFMET100_PFMHT100_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT500_PFMET110_PFMHT110_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT510	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT590	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT680	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT700_PFMET85_PFMHT85_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT780	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT800_PFMET75_PFMHT75_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFHT890	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet110	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet140	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet200	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet260	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet320	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet400	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet40_GPUvsCPU	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet500	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet550	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJet80	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd140	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd200	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd260	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd320	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd400	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd450	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd500	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFJetFwd80	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET105_IsoTrk50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET120_PFMHT120_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET120_PFMHT120_IDTight_PFHT60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET130_PFMHT130_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET140_PFMHT140_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET200_BeamHaloCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET200_NotCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET250_NotCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMET300_NotCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu110_PFMHTNoMu110_IDTight_FilterHF	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu120_PFMHTNoMu120_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu120_PFMHTNoMu120_IDTight_FilterHF	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu120_PFMHTNoMu120_IDTight_PFHT60	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu130_PFMHTNoMu130_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu130_PFMHTNoMu130_IDTight_FilterHF	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu140_PFMHTNoMu140_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETNoMu140_PFMHTNoMu140_IDTight_FilterHF	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETTypeOne140_PFMHT140_IDTight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PFMETTypeOne200_BeamHaloCleaned	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PPSMaxTracksPerArm1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PPSMaxTracksPerRP4	Bool_t	Trigger/flag bit (process: HLT)
+HLT_PPSRandom	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon100EBHE10	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon110EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon120	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon120_R9Id90_HE10_IsoM	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon130EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon150	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon150EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon165_R9Id90_HE10_IsoM	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon175	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon175EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon200	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon200EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon20_HoverELoose	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon300_NoHE	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon30EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon30_HoverELoose	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon32_OneProng32_M50To105	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon33	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon35_TwoProngs35	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon50	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon50EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon50_R9Id90_HE10_IsoM	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT380	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT400	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon75	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon75EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon75_R9Id90_HE10_IsoM	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon90	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon90EB_TightID_TightIso	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Photon90_R9Id90_HE10_IsoM	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Physics	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet100_88_70_30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet100_88_70_30_PNet1CvsAll0p5_VBF3Tight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet103_88_75_15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet103_88_75_15_DoublePFBTagDeepJet_1p3_7p7_VBF1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet103_88_75_15_PFBTagDeepJet_1p3_VBF2	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet105_88_75_30_PNet1CvsAll0p5_VBF3Tight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet105_88_76_15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet105_88_76_15_DoublePFBTagDeepJet_1p3_7p7_VBF1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet105_88_76_15_PFBTagDeepJet_1p3_VBF2	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet111_90_80_15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet111_90_80_15_DoublePFBTagDeepJet_1p3_7p7_VBF1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet111_90_80_15_PFBTagDeepJet_1p3_VBF2	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet111_90_80_30_PNet1CvsAll0p6_VBF3Tight	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet70_50_40_30	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet70_50_40_35_PNet2BTagMean0p65	Bool_t	Trigger/flag bit (process: HLT)
+HLT_QuadPFJet70_50_45_35_PNet2BTagMean0p65	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Random	Bool_t	Trigger/flag bit (process: HLT)
+HLT_SingleEle8	Bool_t	Trigger/flag bit (process: HLT)
+HLT_SingleEle8_SingleEGL1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_SingleJet30_Mu12_SinglePFJet40	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Tau3Mu_Mu7_Mu1_TkMu1_IsoTau15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Tau3Mu_Mu7_Mu1_TkMu1_IsoTau15_Charge1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Tau3Mu_Mu7_Mu1_TkMu1_Tau15	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Tau3Mu_Mu7_Mu1_TkMu1_Tau15_Charge1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_Trimuon5_3p5_2_Upsilon_Muon	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TrimuonOpen_5_3p5_2_Upsilon_Muon	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleJet110_35_35_Mjj650_PFMET110	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleJet110_35_35_Mjj650_PFMET120	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleJet110_35_35_Mjj650_PFMET130	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleMu_10_5_5_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleMu_12_10_5	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleMu_5_3_3_Mass3p8_DCA	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TripleMu_5_3_3_Mass3p8_DZ	Bool_t	Trigger/flag bit (process: HLT)
+HLT_TrkMu12_DoubleTrkMu5NoFiltersNoVtx	Bool_t	Trigger/flag bit (process: HLT)
+HLT_UncorrectedJetE30_NoBPTX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_UncorrectedJetE30_NoBPTX3BX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_UncorrectedJetE60_NoBPTX3BX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_UncorrectedJetE70_NoBPTX3BX	Bool_t	Trigger/flag bit (process: HLT)
+HLT_VBF_DoubleMediumDeepTauPFTauHPS20_eta2p1	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_Alignment	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_Beamspot	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_FirstBXAfterTrain	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_FirstCollisionAfterAbortGap	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_FirstCollisionInTrain	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_IsolatedBunches	Bool_t	Trigger/flag bit (process: HLT)
+HLT_ZeroBias_LastCollisionInTrain	Bool_t	Trigger/flag bit (process: HLT)
+HLTriggerFinalPath [back to top]
+Object property	Type	Description
+HLTriggerFinalPath	Bool_t	Trigger/flag bit (process: HLT)
+HLTriggerFirstPath [back to top]
+Object property	Type	Description
+HLTriggerFirstPath	Bool_t	Trigger/flag bit (process: HLT)
+IsoTrack [back to top]
+Object property	Type	Description
+IsoTrack_charge	Short_t	electric charge
+IsoTrack_dxy	Float_t	dxy (with sign) wrt first PV, in cm
+IsoTrack_dz	Float_t	dz (with sign) wrt first PV, in cm
+IsoTrack_eta	Float_t	eta
+IsoTrack_fromPV	Short_t	isolated track comes from PV
+IsoTrack_isFromLostTrack	Bool_t	if isolated track comes from a lost track
+IsoTrack_isHighPurityTrack	Bool_t	track is high purity
+IsoTrack_isPFcand	Bool_t	if isolated track is a PF candidate
+IsoTrack_miniPFRelIso_all	Float_t	mini PF relative isolation, total (with scaled rho*EA PU corrections)
+IsoTrack_miniPFRelIso_chg	Float_t	mini PF relative isolation, charged component
+IsoTrack_pdgId	Int_t	PDG id of PF cand
+IsoTrack_pfRelIso03_all	Float_t	PF relative isolation dR=0.3, total (deltaBeta corrections)
+IsoTrack_pfRelIso03_chg	Float_t	PF relative isolation dR=0.3, charged component
+IsoTrack_phi	Float_t	phi
+IsoTrack_pt	Float_t	pt
+nIsoTrack	Int_t	isolated tracks after basic selection (((pt>5 && (abs(pdgId) == 11 || abs(pdgId) == 13)) || pt > 10) && (abs(pdgId) < 15 || abs(eta) < 2.5) && ((abs(dxy) < 0.2 && abs(dz) < 0.1) || pt>15) && ((pfIsolationDR03().chargedHadronIso < 5 && pt < 25) || pfIsolationDR03().chargedHadronIso/pt < 0.2)) and lepton veto
+Jet [back to top]
+Object property	Type	Description
+Jet_PNetRegPtRawCorr	Float_t	ParticleNet universal flavor-aware visible pT regression (no neutrinos), correction relative to raw jet pT
+Jet_PNetRegPtRawCorrNeutrino	Float_t	ParticleNet universal flavor-aware pT regression neutrino correction, relative to visible. To apply full regression, multiply raw jet pT by both PNetRegPtRawCorr and PNetRegPtRawCorrNeutrino.
+Jet_PNetRegPtRawRes	Float_t	ParticleNet universal flavor-aware jet pT resolution estimator, (q84 - q16)/2
+Jet_area	Float_t	jet catchment area, for JECs
+Jet_btagDeepFlavB	Float_t	DeepJet b+bb+lepb tag discriminator
+Jet_btagDeepFlavCvB	Float_t	DeepJet c vs b+bb+lepb discriminator
+Jet_btagDeepFlavCvL	Float_t	DeepJet c vs uds+g discriminator
+Jet_btagDeepFlavQG	Float_t	DeepJet g vs uds discriminator
+Jet_btagPNetB	Float_t	ParticleNet b vs. udscg
+Jet_btagPNetCvB	Float_t	ParticleNet c vs. b
+Jet_btagPNetCvL	Float_t	ParticleNet c vs. udsg
+Jet_btagPNetQvG	Float_t	ParticleNet q (udsbc) vs. g
+Jet_btagPNetTauVJet	Float_t	ParticleNet tau vs. jet
+Jet_btagRobustParTAK4B	Float_t	RobustParTAK4 b+bb+lepb tag discriminator
+Jet_btagRobustParTAK4CvB	Float_t	RobustParTAK4 c vs b+bb+lepb discriminator
+Jet_btagRobustParTAK4CvL	Float_t	RobustParTAK4 c vs uds+g discriminator
+Jet_btagRobustParTAK4QG	Float_t	RobustParTAK4 g vs uds discriminator
+Jet_chEmEF	Float_t	charged Electromagnetic Energy Fraction
+Jet_chHEF	Float_t	charged Hadron Energy Fraction
+Jet_electronIdx1	Short_t(index to Electron)	index of first matching electron
+Jet_electronIdx2	Short_t(index to Electron)	index of second matching electron
+Jet_eta	Float_t	eta
+Jet_hfadjacentEtaStripsSize	Int_t	eta size of the strips next to the central tower strip in HF (noise discriminating variable)
+Jet_hfcentralEtaStripSize	Int_t	eta size of the central tower strip in HF (noise discriminating variable)
+Jet_hfsigmaEtaEta	Float_t	sigmaEtaEta for HF jets (noise discriminating variable)
+Jet_hfsigmaPhiPhi	Float_t	sigmaPhiPhi for HF jets (noise discriminating variable)
+Jet_jetId	UChar_t	Jet ID flag: bit2 is tight, bit3 is tightLepVeto
+Jet_mass	Float_t	mass
+Jet_muEF	Float_t	muon Energy Fraction
+Jet_muonIdx1	Short_t(index to Muon)	index of first matching muon
+Jet_muonIdx2	Short_t(index to Muon)	index of second matching muon
+Jet_muonSubtrFactor	Float_t	1-(muon-subtracted raw pt)/(raw pt)
+Jet_nConstituents	UChar_t	Number of particles in the jet
+Jet_nElectrons	UChar_t	number of electrons in the jet
+Jet_nMuons	UChar_t	number of muons in the jet
+Jet_nSVs	UChar_t	number of secondary vertices in the jet
+Jet_neEmEF	Float_t	neutral Electromagnetic Energy Fraction
+Jet_neHEF	Float_t	neutral Hadron Energy Fraction
+Jet_phi	Float_t	phi
+Jet_pt	Float_t	pt
+Jet_rawFactor	Float_t	1 - Factor to get back to raw pT
+Jet_svIdx1	Short_t(index to Sv)	index of first matching secondary vertex
+Jet_svIdx2	Short_t(index to Sv)	index of second matching secondary vertex
+nJet	Int_t	slimmedJetsPuppi, i.e. ak4 PFJets Puppi with JECs applied, after basic selection (pt > 15)
+L1 [back to top]
+Object property	Type	Description
+L1_AlwaysTrue	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_AND_Ref1_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_AND_Ref3_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_AND_Ref4_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_BeamGas_B1_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_BeamGas_B2_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_BeamGas_Ref1_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_BeamGas_Ref2_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_NotOR_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_OR_Ref3_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_OR_Ref4_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BPTX_RefAND_VME	Bool_t	Trigger/flag bit (process: NANO)
+L1_BptxMinus	Bool_t	Trigger/flag bit (process: NANO)
+L1_BptxOR	Bool_t	Trigger/flag bit (process: NANO)
+L1_BptxPlus	Bool_t	Trigger/flag bit (process: NANO)
+L1_BptxXOR	Bool_t	Trigger/flag bit (process: NANO)
+L1_CDC_SingleMu_3_er1p2_TOP120_DPHI2p618_3p142	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG10_er1p2_dR_Max0p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG10p5_er1p2_dR_Max0p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG11_er1p2_dR_Max0p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG4_er1p2_dR_Max0p9	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG4p5_er1p2_dR_Max0p9	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG5_er1p2_dR_Max0p9	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG5p5_er1p2_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG6_er1p2_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG6p5_er1p2_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG7_er1p2_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG7p5_er1p2_dR_Max0p7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8_er1p2_dR_Max0p7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8er2p5_HTT260er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8er2p5_HTT280er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8er2p5_HTT300er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8er2p5_HTT320er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8er2p5_HTT340er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG8p5_er1p2_dR_Max0p7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG9_er1p2_dR_Max0p7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG9p5_er1p2_dR_Max0p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_15_10_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_20_10_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_22_10_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_25_12_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_25_14_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_27_14_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso16_LooseIso12_er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso18_LooseIso12_er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso20_10_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso20_LooseIso12_er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso22_10_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso22_12_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso22_LooseIso12_er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso25_12_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleEG_LooseIso25_LooseIso12_er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau26er2p1_Jet55_RmOvlp_dR0p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau26er2p1_Jet70_RmOvlp_dR0p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau28er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau28er2p1_Mass_Max80	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau28er2p1_Mass_Max90	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau30er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau30er2p1_Mass_Max80	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau30er2p1_Mass_Max90	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau32er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau32er2p1_Mass_Max80	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau32er2p1_Mass_Max90	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau34er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau35er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleIsoTau36er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet100er2p3_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet100er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet112er2p3_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet120er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet120er2p5_Mu3_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet150er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet16er2p5_Mu3_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet30er2p5_Mass_Min200_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet30er2p5_Mass_Min225_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet30er2p5_Mass_Min250_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet30er2p5_Mass_Min300_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet30er2p5_Mass_Min330_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet30er2p5_Mass_Min360_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet35_Mass_Min450_IsoTau45_RmOvlp	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet35_Mass_Min450_IsoTau45er2p1_RmOvlp_dR0p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet35er2p5_Mu3_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet40_Mass_Min450_IsoEG10er2p1_RmOvlp_dR0p2	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet40er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet45_Mass_Min450_IsoTau45er2p1_RmOvlp_dR0p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet60er2p5_Mu3_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet80er2p5_Mu3_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_100_30_DoubleJet30_Mass_Min620	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_110_35_DoubleJet35_Mass_Min620	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_115_40_DoubleJet40_Mass_Min620	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_115_40_DoubleJet40_Mass_Min620_Jet60TT28	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_120_45_DoubleJet45_Mass_Min620	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_120_45_DoubleJet45_Mass_Min620_Jet60TT28	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_60_30_DoubleJet30_Mass_Min500_DoubleJetCentral50	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_65_30_DoubleJet30_Mass_Min400_ETMHF65	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_80_30_DoubleJet30_Mass_Min500_Mu3OQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_80_30_Mass_Min420_DoubleMu0_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_80_30_Mass_Min420_IsoTau40_RmOvlp	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_80_30_Mass_Min420_Mu8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_90_30_DoubleJet30_Mass_Min620	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleJet_90_30_Mass_Min550	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleLLPJet40	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleLooseIsoEG22er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleLooseIsoEG24er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Mass_Min1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_OQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_SQ_OS	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Upt15_Upt7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Upt15_Upt7_BMTF_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Upt5_Upt5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Upt5_Upt5_BMTF_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Upt6_IP_Min1_Upt4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_Upt6_IP_Min1_Upt4_BMTF_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0_dR_Max1p6_Jet90er2p5_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p4_OQ_OS_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p4_SQ_OS_dEta_Max1p2	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p5_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p5_SQ_OS	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p5_SQ_OS_dEta_Max1p2	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er1p5_SQ_dR_Max1p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er2p0_SQ_OS_dR_Max1p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er2p0_SQ_dEta_Max1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er2p0_SQ_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu0er2p0_SQ_dR_Max1p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu18er2p1_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_OS_er2p3_Mass_Max14_DoubleEG7p5_er2p1_Mass_Max20	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF30_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF30_Jet60er2p5_OR_DoubleJet40er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF40_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF40_Jet60er2p5_OR_DoubleJet40er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF50_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF50_Jet60er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF50_Jet60er2p5_OR_DoubleJet40er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_ETMHF60_Jet60er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_HTT220er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_HTT240er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_SQ_HTT260er	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3_dR_Max1p6_Jet90er2p5_dR_Max0p8	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu3er2p0_SQ_OS_dR_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4_SQ_EG9er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4_SQ_OS	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4_SQ_OS_dR_Max1p2	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4er2p0_SQ_OS_dR_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4p5_SQ_OS	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4p5_SQ_OS_dR_Max1p2	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4p5er2p0_SQ_OS	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4p5er2p0_SQ_OS_Mass_7to18	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu4p5er2p0_SQ_OS_Mass_Min7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu5_OS_er2p3_Mass_8to14_DoubleEG3er2p1_Mass_Max20	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu5_SQ_EG9er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu5_SQ_OS_dR_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu8_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu9_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu_12_5	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu_15_5_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu_15_7	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu_15_7_Mass_Min1	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleMu_15_7_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_DoubleTau70er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETM120	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETM150	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF100	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF100_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF110	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF110_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF110_HTT60er_NotSecondBunchInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF120	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF120_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF120_NotSecondBunchInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF130	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF130_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF140	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF150	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF70	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF70_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF80	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF80_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF80_SingleJet55er2p5_dPhi_Min2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF80_SingleJet55er2p5_dPhi_Min2p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF90	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF90_HTT60er	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF90_SingleJet60er2p5_dPhi_Min2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF90_SingleJet60er2p5_dPhi_Min2p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF90_SingleJet80er2p5_dPhi_Min2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETMHF90_SingleJet80er2p5_dPhi_Min2p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETT1200	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETT1600	Bool_t	Trigger/flag bit (process: NANO)
+L1_ETT2000	Bool_t	Trigger/flag bit (process: NANO)
+L1_FirstBunchAfterTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_FirstBunchBeforeTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_FirstBunchInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_FirstCollisionInOrbit	Bool_t	Trigger/flag bit (process: NANO)
+L1_FirstCollisionInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_HCAL_LaserMon_Trig	Bool_t	Trigger/flag bit (process: NANO)
+L1_HCAL_LaserMon_Veto	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT120_SingleLLPJet40	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT120er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT160_SingleLLPJet50	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT160er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT200_SingleLLPJet60	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT200er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT240_SingleLLPJet70	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT255er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT280er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT280er_QuadJet_70_55_40_35_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT320er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT320er_QuadJet_70_55_40_40_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT320er_QuadJet_80_60_er2p1_45_40_er2p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT320er_QuadJet_80_60_er2p1_50_45_er2p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT360er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT400er	Bool_t	Trigger/flag bit (process: NANO)
+L1_HTT450er	Bool_t	Trigger/flag bit (process: NANO)
+L1_IsoEG32er2p5_Mt40	Bool_t	Trigger/flag bit (process: NANO)
+L1_IsoTau52er2p1_QuadJet36er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_IsolatedBunch	Bool_t	Trigger/flag bit (process: NANO)
+L1_LastBunchInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_LastCollisionInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG22er2p1_IsoTau26er2p1_dR_Min0p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG22er2p1_Tau70er2p1_dR_Min0p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG24er2p1_HTT100er	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG24er2p1_IsoTau27er2p1_dR_Min0p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG26er2p1_HTT100er	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG26er2p1_Jet34er2p5_dR_Min0p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG28er2p1_HTT100er	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG28er2p1_Jet34er2p5_dR_Min0p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG30er2p1_HTT100er	Bool_t	Trigger/flag bit (process: NANO)
+L1_LooseIsoEG30er2p1_Jet34er2p5_dR_Min0p3	Bool_t	Trigger/flag bit (process: NANO)
+L1_MinimumBiasHF0	Bool_t	Trigger/flag bit (process: NANO)
+L1_MinimumBiasHF0_AND_BptxAND	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu10er2p3_Jet32er2p3_dR_Max0p4_DoubleJet32er2p3_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu12er2p3_Jet40er2p1_dR_Max0p4_DoubleJet40er2p1_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu12er2p3_Jet40er2p3_dR_Max0p4_DoubleJet40er2p3_dEta_Max1p6	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu18er2p1_Tau24er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu18er2p1_Tau26er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu18er2p1_Tau26er2p1_Jet55	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu18er2p1_Tau26er2p1_Jet70	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu20_EG10er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_IsoTau28er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_IsoTau30er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_IsoTau32er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_IsoTau34er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_IsoTau36er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_IsoTau40er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu22er2p1_Tau70er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3_Jet120er2p5_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3_Jet16er2p5_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3_Jet30er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3_Jet60er2p5_dR_Max0p4	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3er1p5_Jet100er2p5_ETMHF30	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3er1p5_Jet100er2p5_ETMHF40	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu3er1p5_Jet100er2p5_ETMHF50	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu5_EG23er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu5_LooseIsoEG20er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu6_DoubleEG10er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu6_DoubleEG12er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu6_DoubleEG15er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu6_DoubleEG17er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu6_HTT240er	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu6_HTT250er	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu7_EG20er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu7_EG23er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu7_LooseIsoEG20er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_Mu7_LooseIsoEG23er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_NotBptxOR	Bool_t	Trigger/flag bit (process: NANO)
+L1_QuadJet60er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_QuadJet_95_75_65_20_DoubleJet_75_65_er2p5_Jet20_FWD3p0	Bool_t	Trigger/flag bit (process: NANO)
+L1_QuadMu0	Bool_t	Trigger/flag bit (process: NANO)
+L1_QuadMu0_OQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_QuadMu0_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_SecondBunchInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_SecondLastBunchInTrain	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG10er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG15er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG26er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG28_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG28er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG28er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG28er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG34er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG36er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG38er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG40er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG42er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG45er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG50	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG60	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleEG8er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG24er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG24er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG26er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG26er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG26er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG28_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG28er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG28er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG28er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG30er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG30er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG32er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG32er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoEG34er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleIsoTau32er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet10erHE	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet120	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet120_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet120_FWD3p0	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet120er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet12erHE	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet140er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet140er2p5_ETMHF70	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet140er2p5_ETMHF80	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet140er2p5_ETMHF90	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet160er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet180	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet180er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet200	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet20er2p5_NotBptxOR	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet20er2p5_NotBptxOR_3BX	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet35	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet35_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet35_FWD3p0	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet35er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet43er2p5_NotBptxOR_3BX	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet46er2p5_NotBptxOR_3BX	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet60	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet60_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet8erHE	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet90	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleJet90_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG26er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG26er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG28_FWD2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG28er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG28er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG28er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG30er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleLooseIsoEG30er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_BMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_DQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_OMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_Upt10	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_Upt10_BMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_Upt10_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu0_Upt10_OMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu10er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu12_DQ_BMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu12_DQ_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu12_DQ_OMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu12er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu14er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu15_DQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu16er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu18	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu18er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu20	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu22	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu22_BMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu22_DQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu22_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu22_OMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu22_OQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu25	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu3	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu6er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu7	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu7_DQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu7er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu8er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMu9er1p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuCosmics	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuCosmics_BMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuCosmics_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuCosmics_OMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen_BMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen_EMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen_NotBptxOR	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen_OMTF	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen_er1p1_NotBptxOR_3BX	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuOpen_er1p4_NotBptxOR_3BX	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuShower_Nominal	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleMuShower_Tight	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleTau120er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleTau130er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_SingleTau70er2p1	Bool_t	Trigger/flag bit (process: NANO)
+L1_TOTEM_1	Bool_t	Trigger/flag bit (process: NANO)
+L1_TOTEM_2	Bool_t	Trigger/flag bit (process: NANO)
+L1_TOTEM_3	Bool_t	Trigger/flag bit (process: NANO)
+L1_TOTEM_4	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleEG16er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleEG_16_12_8_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleEG_16_15_8_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleEG_18_17_8_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleEG_18_18_12_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleJet_100_80_70_DoubleJet_80_70_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleJet_105_85_75_DoubleJet_85_75_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleJet_95_75_65_DoubleJet_75_65_er2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu0	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu0_OQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu0_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu3	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu3_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_3SQ_2p5SQ_0	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_3SQ_2p5SQ_0_Mass_Max12	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_3SQ_2p5SQ_0_OS_Mass_Max12	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_4SQ_2p5SQ_0_OS_Mass_Max12	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5SQ_3SQ_0OQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5SQ_3SQ_0OQ_DoubleMu_5_3_SQ_OS_Mass_Max9	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5SQ_3SQ_0_DoubleMu_5_3_SQ_OS_Mass_Max9	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_3_3	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_3_3_SQ	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_3p5_2p5	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_3p5_2p5_DoubleMu_5_2p5_OS_Mass_5to17	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_3p5_2p5_OQ_DoubleMu_5_2p5_OQ_OS_Mass_5to17	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_4_2p5_DoubleMu_5_2p5_OS_Mass_5to17	Bool_t	Trigger/flag bit (process: NANO)
+L1_TripleMu_5_5_3	Bool_t	Trigger/flag bit (process: NANO)
+L1_TwoMuShower_Loose	Bool_t	Trigger/flag bit (process: NANO)
+L1_UnpairedBunchBptxMinus	Bool_t	Trigger/flag bit (process: NANO)
+L1_UnpairedBunchBptxPlus	Bool_t	Trigger/flag bit (process: NANO)
+L1_UnprefireableEvent	Bool_t	Trigger/flag bit (process: NANO)
+L1_ZeroBias	Bool_t	Trigger/flag bit (process: NANO)
+L1_ZeroBias_copy	Bool_t	Trigger/flag bit (process: NANO)
+L1EG [back to top]
+Object property	Type	Description
+L1EG_bx	Short_t	BX of the L1 candidate
+L1EG_eta	Float_t	eta
+L1EG_hwIso	Short_t	hardware iso
+L1EG_phi	Float_t	phi
+L1EG_pt	Float_t	pt
+nL1EG	Int_t	
+L1EtSum [back to top]
+Object property	Type	Description
+L1EtSum_bx	Short_t	BX of the L1 candidate
+L1EtSum_etSumType	Int_t	et sum type
+L1EtSum_phi	Float_t	phi
+L1EtSum_pt	Float_t	pt
+nL1EtSum	Int_t	
+L1Jet [back to top]
+Object property	Type	Description
+L1Jet_bx	Short_t	BX of the L1 candidate
+L1Jet_eta	Float_t	eta
+L1Jet_phi	Float_t	phi
+L1Jet_pt	Float_t	pt
+nL1Jet	Int_t	
+L1Mu [back to top]
+Object property	Type	Description
+L1Mu_bx	Short_t	BX of the L1 candidate
+L1Mu_eta	Float_t	eta
+L1Mu_etaAtVtx	Float_t	eta estimated at the vertex
+L1Mu_hwCharge	Short_t	hardware charge
+L1Mu_hwDXY	Short_t	hardware impact parameter
+L1Mu_hwQual	Int_t	hardware qual
+L1Mu_phi	Float_t	phi
+L1Mu_phiAtVtx	Float_t	phi estimated at the vertex
+L1Mu_pt	Float_t	pt
+L1Mu_ptUnconstrained	Float_t	pt when not constrained to the beamspot
+nL1Mu	Int_t	
+L1Reco [back to top]
+Object property	Type	Description
+L1Reco_step	Bool_t	Trigger/flag bit (process: RECO)
+L1Tau [back to top]
+Object property	Type	Description
+L1Tau_bx	Short_t	BX of the L1 candidate
+L1Tau_eta	Float_t	eta
+L1Tau_hwIso	Short_t	hardware iso
+L1Tau_phi	Float_t	phi
+L1Tau_pt	Float_t	pt
+nL1Tau	Int_t	
+LowPtElectron [back to top]
+Object property	Type	Description
+LowPtElectron_ID	Float_t	ID, BDT (raw) score
+LowPtElectron_charge	Int_t	electric charge
+LowPtElectron_convVeto	Bool_t	pass conversion veto
+LowPtElectron_convVtxRadius	Float_t	conversion vertex radius (cm)
+LowPtElectron_convWP	UChar_t	conversion flag bit map: 1=Veto, 2=Loose, 3=Tight
+LowPtElectron_deltaEtaSC	Float_t	delta eta (SC,ele) with sign
+LowPtElectron_dxy	Float_t	dxy (with sign) wrt first PV, in cm
+LowPtElectron_dxyErr	Float_t	dxy uncertainty, in cm
+LowPtElectron_dz	Float_t	dz (with sign) wrt first PV, in cm
+LowPtElectron_dzErr	Float_t	dz uncertainty, in cm
+LowPtElectron_eInvMinusPInv	Float_t	1/E_SC - 1/p_trk
+LowPtElectron_electronIdx	Short_t(index to Electron)	index of the overlapping PF electron (-1 if none)
+LowPtElectron_energyErr	Float_t	energy error of the cluster-track combination
+LowPtElectron_eta	Float_t	eta
+LowPtElectron_hoe	Float_t	H over E
+LowPtElectron_lostHits	UChar_t	number of missing inner hits
+LowPtElectron_mass	Float_t	mass
+LowPtElectron_miniPFRelIso_all	Float_t	mini PF relative isolation, total (with scaled rho*EA PU corrections)
+LowPtElectron_miniPFRelIso_chg	Float_t	mini PF relative isolation, charged component
+LowPtElectron_pdgId	Int_t	PDG code assigned by the event reconstruction (not by MC truth)
+LowPtElectron_phi	Float_t	phi
+LowPtElectron_photonIdx	Short_t(index to Photon)	index of the first associated photon (-1 if none)
+LowPtElectron_pt	Float_t	pt
+LowPtElectron_ptbiased	Float_t	ElectronSeed, pT- and dxy- dependent BDT (raw) score
+LowPtElectron_r9	Float_t	R9 of the SC, calculated with full 5x5 region
+LowPtElectron_scEtOverPt	Float_t	(SC energy)/pt-1
+LowPtElectron_sieie	Float_t	sigma_IetaIeta of the SC, calculated with full 5x5 region
+LowPtElectron_unbiased	Float_t	ElectronSeed, pT- and dxy- agnostic BDT (raw) score
+nLowPtElectron	Int_t	slimmedLowPtElectrons after basic selection (pt > 1. && electronID('ID') > -0.25)
+MET [back to top]
+Object property	Type	Description
+MET_MetUnclustEnUpDeltaX	Float_t	Delta (METx_mod-METx) Unclustered Energy Up
+MET_MetUnclustEnUpDeltaY	Float_t	Delta (METy_mod-METy) Unclustered Energy Up
+MET_covXX	Float_t	xx element of met covariance matrix
+MET_covXY	Float_t	xy element of met covariance matrix
+MET_covYY	Float_t	yy element of met covariance matrix
+MET_phi	Float_t	phi
+MET_pt	Float_t	pt
+MET_significance	Float_t	MET significance
+MET_sumEt	Float_t	scalar sum of Et
+MET_sumPtUnclustered	Float_t	sumPt used for MET significance
+Muon [back to top]
+Object property	Type	Description
+Muon_charge	Int_t	electric charge
+Muon_dxy	Float_t	dxy (with sign) wrt first PV, in cm
+Muon_dxyErr	Float_t	dxy uncertainty, in cm
+Muon_dxybs	Float_t	dxy (with sign) wrt the beam spot, in cm
+Muon_dz	Float_t	dz (with sign) wrt first PV, in cm
+Muon_dzErr	Float_t	dz uncertainty, in cm
+Muon_eta	Float_t	eta
+Muon_fsrPhotonIdx	Short_t(index to Fsrphoton)	Index of the lowest-dR/ET2 among associated FSR photons
+Muon_highPtId	UChar_t	high-pT cut-based ID (1 = tracker high pT, 2 = global high pT, which includes tracker high pT)
+Muon_highPurity	Bool_t	inner track is high purity
+Muon_inTimeMuon	Bool_t	inTimeMuon ID
+Muon_ip3d	Float_t	3D impact parameter wrt first PV, in cm
+Muon_isGlobal	Bool_t	muon is global muon
+Muon_isPFcand	Bool_t	muon is PF candidate
+Muon_isStandalone	Bool_t	muon is a standalone muon
+Muon_isTracker	Bool_t	muon is tracker muon
+Muon_jetIdx	Short_t(index to Jet)	index of the associated jet (-1 if none)
+Muon_jetNDauCharged	UChar_t	number of charged daughters of the closest jet
+Muon_jetPtRelv2	Float_t	Relative momentum of the lepton with respect to the closest jet after subtracting the lepton
+Muon_jetRelIso	Float_t	Relative isolation in matched jet (1/ptRatio-1, pfRelIso04_all if no matched jet)
+Muon_looseId	Bool_t	muon is loose muon
+Muon_mass	Float_t	mass
+Muon_mediumId	Bool_t	cut-based ID, medium WP
+Muon_mediumPromptId	Bool_t	cut-based ID, medium prompt WP
+Muon_miniIsoId	UChar_t	MiniIso ID from miniAOD selector (1=MiniIsoLoose, 2=MiniIsoMedium, 3=MiniIsoTight, 4=MiniIsoVeryTight)
+Muon_miniPFRelIso_all	Float_t	mini PF relative isolation, total (with scaled rho*EA PU corrections)
+Muon_miniPFRelIso_chg	Float_t	mini PF relative isolation, charged component
+Muon_multiIsoId	UChar_t	MultiIsoId from miniAOD selector (1=MultiIsoLoose, 2=MultiIsoMedium)
+Muon_mvaLowPt	Float_t	Low pt muon ID score
+Muon_mvaMuID	Float_t	MVA-based ID score
+Muon_mvaMuID_WP	UChar_t	MVA-based ID selector WPs (1=MVAIDwpMedium,2=MVAIDwpTight)
+Muon_mvaTTH	Float_t	TTH MVA lepton ID score
+Muon_nStations	UChar_t	number of matched stations with default arbitration (segment & track)
+Muon_nTrackerLayers	UChar_t	number of layers in the tracker
+Muon_pdgId	Int_t	PDG code assigned by the event reconstruction (not by MC truth)
+Muon_pfIsoId	UChar_t	PFIso ID from miniAOD selector (1=PFIsoVeryLoose, 2=PFIsoLoose, 3=PFIsoMedium, 4=PFIsoTight, 5=PFIsoVeryTight, 6=PFIsoVeryVeryTight)
+Muon_pfRelIso03_all	Float_t	PF relative isolation dR=0.3, total (deltaBeta corrections)
+Muon_pfRelIso03_chg	Float_t	PF relative isolation dR=0.3, charged component
+Muon_pfRelIso04_all	Float_t	PF relative isolation dR=0.4, total (deltaBeta corrections)
+Muon_phi	Float_t	phi
+Muon_pt	Float_t	pt
+Muon_ptErr	Float_t	ptError of the muon track
+Muon_puppiIsoId	UChar_t	PuppiIsoId from miniAOD selector (1=Loose, 2=Medium, 3=Tight)
+Muon_segmentComp	Float_t	muon segment compatibility
+Muon_sip3d	Float_t	3D impact parameter significance wrt first PV
+Muon_softId	Bool_t	soft cut-based ID
+Muon_softMva	Float_t	soft MVA ID score
+Muon_softMvaId	Bool_t	soft MVA ID
+Muon_svIdx	Short_t(index to Sv)	index of matching secondary vertex
+Muon_tightCharge	UChar_t	Tight charge criterion using pterr/pt of muonBestTrack (0:fail, 2:pass)
+Muon_tightId	Bool_t	cut-based ID, tight WP
+Muon_tkIsoId	UChar_t	TkIso ID (1=TkIsoLoose, 2=TkIsoTight)
+Muon_tkRelIso	Float_t	Tracker-based relative isolation dR=0.3 for highPt, trkIso/tunePpt
+Muon_triggerIdLoose	Bool_t	TriggerIdLoose ID
+Muon_tunepRelPt	Float_t	TuneP relative pt, tunePpt/pt
+nMuon	Int_t	slimmedMuons after basic selection (pt > 15 || (pt > 3 && (passed('CutBasedIdLoose') || passed('SoftCutBasedId') || passed('SoftMvaId') || passed('CutBasedIdGlobalHighPt') || passed('CutBasedIdTrkHighPt'))))
+OtherPV [back to top]
+Object property	Type	Description
+OtherPV_score	Float_t	scores of other primary vertices, excluding the main PV
+OtherPV_z	Float_t	Z position of other primary vertices, excluding the main PV
+nOtherPV	Int_t	
+PPSLocalTrack [back to top]
+Object property	Type	Description
+PPSLocalTrack_decRPId	Int_t	local track detector dec id
+PPSLocalTrack_multiRPProtonIdx	Int_t(index to Multirpproton)	local track - proton correspondence
+PPSLocalTrack_rpType	Int_t	strip=3, pixel=4, diamond=5, timing=6
+PPSLocalTrack_singleRPProtonIdx	Int_t(index to Singlerpproton)	local track - proton correspondence
+PPSLocalTrack_time	Float_t	local track time
+PPSLocalTrack_timeUnc	Float_t	local track time uncertainty
+PPSLocalTrack_x	Float_t	local track x
+PPSLocalTrack_y	Float_t	local track y
+nPPSLocalTrack	Int_t	ppsLocalTrack variables
+PV [back to top]
+Object property	Type	Description
+PV_chi2	Float_t	main primary vertex reduced chi2
+PV_ndof	Float_t	main primary vertex number of degree of freedom
+PV_npvs	UChar_t	total number of reconstructed primary vertices
+PV_npvsGood	UChar_t	number of good reconstructed primary vertices. selection:!isFake && ndof > 4 && abs(z) <= 24 && position.Rho <= 2
+PV_score	Float_t	main primary vertex score, i.e. sum pt2 of clustered objects
+PV_x	Float_t	main primary vertex position x coordinate
+PV_y	Float_t	main primary vertex position y coordinate
+PV_z	Float_t	main primary vertex position z coordinate
+Photon [back to top]
+Object property	Type	Description
+Photon_cutBased	UChar_t	cut-based ID bitmap, RunIIIWinter22V1, (0:fail, 1:loose, 2:medium, 3:tight)
+Photon_cutBased_Fall17V2	UChar_t	cut-based ID bitmap, Fall17V2, (0:fail, 1:loose, 2:medium, 3:tight)
+Photon_electronIdx	Short_t(index to Electron)	index of the associated electron (-1 if none)
+Photon_electronVeto	Bool_t	pass electron veto
+Photon_energyErr	Float_t	energy error of the cluster from regression
+Photon_energyRaw	Float_t	raw energy of photon supercluster
+Photon_esEffSigmaRR	Float_t	preshower sigmaRR
+Photon_esEnergyOverRawE	Float_t	ratio of preshower energy to raw supercluster energy
+Photon_eta	Float_t	eta
+Photon_etaWidth	Float_t	Width of the photon supercluster in eta
+Photon_haloTaggerMVAVal	Float_t	Value of MVA based BDT based beam halo tagger in the Ecal endcap (valid for pT > 200 GeV)
+Photon_hoe	Float_t	H over E
+Photon_hoe_PUcorr	Float_t	PU corrected H/E (cone-based with quadraticEA*rho*rho + linearEA*rho Winter22V1 corrections)
+Photon_isScEtaEB	Bool_t	is supercluster eta within barrel acceptance
+Photon_isScEtaEE	Bool_t	is supercluster eta within endcap acceptance
+Photon_jetIdx	Short_t(index to Jet)	index of the associated jet (-1 if none)
+Photon_mvaID	Float_t	MVA ID score, Winter22V1
+Photon_mvaID_Fall17V2	Float_t	MVA ID score, Fall17V2
+Photon_mvaID_Fall17V2_WP80	Bool_t	MVA ID WP80, Fall17V2
+Photon_mvaID_Fall17V2_WP90	Bool_t	MVA ID WP90, Fall17V2
+Photon_mvaID_WP80	Bool_t	MVA ID WP80, Winter22V1
+Photon_mvaID_WP90	Bool_t	MVA ID WP90, Winter22V1
+Photon_pfChargedIsoPFPV	Float_t	PF absolute isolation dR=0.3, charged component (PF PV only)
+Photon_pfChargedIsoWorstVtx	Float_t	PF absolute isolation dR=0.3, charged component (Vertex with largest isolation)
+Photon_pfPhoIso03	Float_t	PF absolute isolation dR=0.3, photon component (uncorrected)
+Photon_pfRelIso03_all_Fall17V2	Float_t	PF relative isolation dR=0.3, total (with Fall17V2 rho*EA PU corrections)
+Photon_pfRelIso03_all_quadratic	Float_t	PF relative isolation dR=0.3, total (with quadraticEA*rho*rho + linearEA*rho Winter22V1 corrections)
+Photon_pfRelIso03_chg_Fall17V2	Float_t	PF relative isolation dR=0.3, charged component (with Fall17V2 rho*EA PU corrections)
+Photon_pfRelIso03_chg_quadratic	Float_t	PF relative isolation dR=0.3, charged hadron component (with quadraticEA*rho*rho + linearEA*rho Winter22V1 corrections)
+Photon_phi	Float_t	phi
+Photon_phiWidth	Float_t	Width of the photon supercluster in phi
+Photon_pixelSeed	Bool_t	has pixel seed
+Photon_pt	Float_t	pt
+Photon_r9	Float_t	R9 of the supercluster, calculated with full 5x5 region
+Photon_s4	Float_t	e2x2/e5x5 of the supercluster, calculated with full 5x5 region
+Photon_seedGain	UChar_t	Gain of the seed crystal
+Photon_seediEtaOriX	Char_t	iEta or iX of seed crystal. iEta is barrel-only, iX is endcap-only. iEta runs from -85 to +85, with no crystal at iEta=0. iX runs from 1 to 100.
+Photon_seediPhiOriY	Int_t	iPhi or iY of seed crystal. iPhi is barrel-only, iY is endcap-only. iPhi runs from 1 to 360. iY runs from 1 to 100.
+Photon_sieie	Float_t	sigma_IetaIeta of the supercluster, calculated with full 5x5 region
+Photon_sieip	Float_t	sigma_IetaIphi of the supercluster, calculated with full 5x5 region
+Photon_sipip	Float_t	sigmaIphiIphi of the supercluster
+Photon_trkSumPtHollowConeDR03	Float_t	Sum of track pT in a hollow cone of outer radius, inner radius
+Photon_vidNestedWPBitmap	Int_t	RunIIIWinter22V1 VID compressed bitmap (MinPtCut,PhoSCEtaMultiRangeCut,PhoFull5x5SigmaIEtaIEtaCut,PhoGenericQuadraticRhoPtScaledCut,PhoGenericQuadraticRhoPtScaledCut,PhoGenericQuadraticRhoPtScaledCut,PhoGenericQuadraticRhoPtScaledCut), 2 bits per cut
+Photon_vidNestedWPBitmap_Fall17V2	Int_t	Fall17V2 VID compressed bitmap (MinPtCut,PhoSCEtaMultiRangeCut,PhotonHcalOverEcalBcCut,PhoFull5x5SigmaIEtaIEtaCut,PhoGenericRhoPtScaledCut,PhoGenericRhoPtScaledCut,PhoGenericRhoPtScaledCut), 2 bits per cut
+Photon_x_calo	Float_t	photon supercluster position on calorimeter, x coordinate (cm)
+Photon_y_calo	Float_t	photon supercluster position on calorimeter, y coordinate (cm)
+Photon_z_calo	Float_t	photon supercluster position on calorimeter, z coordinate (cm)
+nPhoton	Int_t	slimmedPhotons after basic selection (pt > 5 )
+Proton [back to top]
+Object property	Type	Description
+Proton_multiRP_arm	UChar_t	0 = sector45, 1 = sector56
+Proton_multiRP_t	Float_t	Mandelstam variable t
+Proton_multiRP_thetaX	Float_t	theta x
+Proton_multiRP_thetaY	Float_t	theta y
+Proton_multiRP_time	Float_t	time
+Proton_multiRP_timeUnc	Float_t	time uncertainty
+Proton_multiRP_xi	Float_t	xi or dp/p
+Proton_singleRP_decRPId	Short_t	Detector ID
+Proton_singleRP_thetaY	Float_t	th y
+Proton_singleRP_xi	Float_t	xi or dp/p
+nProton_multiRP	Int_t	bon
+nProton_singleRP	Int_t	bon
+PuppiMET [back to top]
+Object property	Type	Description
+PuppiMET_phi	Float_t	phi
+PuppiMET_phiJERDown	Float_t	JER down phi
+PuppiMET_phiJERUp	Float_t	JER up phi
+PuppiMET_phiJESDown	Float_t	JES down phi
+PuppiMET_phiJESUp	Float_t	JES up phi
+PuppiMET_phiUnclusteredDown	Float_t	Unclustered down phi
+PuppiMET_phiUnclusteredUp	Float_t	Unclustered up phi
+PuppiMET_pt	Float_t	pt
+PuppiMET_ptJERDown	Float_t	JER down pt
+PuppiMET_ptJERUp	Float_t	JER up pt
+PuppiMET_ptJESDown	Float_t	JES down pt
+PuppiMET_ptJESUp	Float_t	JES up pt
+PuppiMET_ptUnclusteredDown	Float_t	Unclustered down pt
+PuppiMET_ptUnclusteredUp	Float_t	Unclustered up pt
+PuppiMET_sumEt	Float_t	scalar sum of Et
+RawMET [back to top]
+Object property	Type	Description
+RawMET_phi	Float_t	phi
+RawMET_pt	Float_t	pt
+RawMET_sumEt	Float_t	scalar sum of Et
+RawPuppiMET [back to top]
+Object property	Type	Description
+RawPuppiMET_phi	Float_t	phi
+RawPuppiMET_pt	Float_t	pt
+RawPuppiMET_sumEt	Float_t	scalar sum of Et
+Rho [back to top]
+Object property	Type	Description
+Rho_fixedGridRhoAll	Float_t	rho from all PF Candidates, no foreground removal (for isolation of prompt photons)
+Rho_fixedGridRhoFastjetAll	Float_t	rho from all PF Candidates, used e.g. for JECs
+Rho_fixedGridRhoFastjetCentral	Float_t	rho from all PF Candidates for central region, used e.g. for JECs
+Rho_fixedGridRhoFastjetCentralCalo	Float_t	rho from calo towers with |eta| < 2.5, used e.g. egamma PFCluster isolation
+Rho_fixedGridRhoFastjetCentralChargedPileUp	Float_t	rho from charged PF Candidates for central region, used e.g. for JECs
+Rho_fixedGridRhoFastjetCentralNeutral	Float_t	rho from neutral PF Candidates with |eta| < 2.5, used e.g. for rho corrections of some lepton isolations
+SV [back to top]
+Object property	Type	Description
+SV_charge	Short_t	sum of the charge of the SV tracks
+SV_chi2	Float_t	reduced chi2, i.e. chi/ndof
+SV_dlen	Float_t	decay length in cm
+SV_dlenSig	Float_t	decay length significance
+SV_dxy	Float_t	2D decay length in cm
+SV_dxySig	Float_t	2D decay length significance
+SV_eta	Float_t	eta
+SV_mass	Float_t	mass
+SV_ndof	Float_t	number of degrees of freedom
+SV_ntracks	UChar_t	number of tracks
+SV_pAngle	Float_t	pointing angle, i.e. acos(p_SV * (SV - PV))
+SV_phi	Float_t	phi
+SV_pt	Float_t	pt
+SV_x	Float_t	secondary vertex X position, in cm
+SV_y	Float_t	secondary vertex Y position, in cm
+SV_z	Float_t	secondary vertex Z position, in cm
+nSV	Int_t	secondary vertices from IVF algorithm
+SoftActivityJet [back to top]
+Object property	Type	Description
+SoftActivityJet_eta	Float_t	eta
+SoftActivityJet_phi	Float_t	phi
+SoftActivityJet_pt	Float_t	pt
+nSoftActivityJet	Int_t	jets clustered from charged candidates compatible with primary vertex (charge()!=0 && pvAssociationQuality()>=5 && vertexRef().key()==0)
+SoftActivityJetHT [back to top]
+Object property	Type	Description
+SoftActivityJetHT	Float_t	scalar sum of soft activity jet pt, pt>1
+SoftActivityJetHT10 [back to top]
+Object property	Type	Description
+SoftActivityJetHT10	Float_t	scalar sum of soft activity jet pt , pt >10
+SoftActivityJetHT2 [back to top]
+Object property	Type	Description
+SoftActivityJetHT2	Float_t	scalar sum of soft activity jet pt, pt >2
+SoftActivityJetHT5 [back to top]
+Object property	Type	Description
+SoftActivityJetHT5	Float_t	scalar sum of soft activity jet pt, pt>5
+SoftActivityJetNjets10 [back to top]
+Object property	Type	Description
+SoftActivityJetNjets10	Int_t	number of soft activity jet pt, pt >2
+SoftActivityJetNjets2 [back to top]
+Object property	Type	Description
+SoftActivityJetNjets2	Int_t	number of soft activity jet pt, pt >10
+SoftActivityJetNjets5 [back to top]
+Object property	Type	Description
+SoftActivityJetNjets5	Int_t	number of soft activity jet pt, pt >5
+SubJet [back to top]
+Object property	Type	Description
+SubJet_btagDeepB	Float_t	DeepCSV b+bb tag discriminator
+SubJet_eta	Float_t	eta
+SubJet_mass	Float_t	mass
+SubJet_n2b1	Float_t	N2 with beta=1
+SubJet_n3b1	Float_t	N3 with beta=1
+SubJet_phi	Float_t	phi
+SubJet_pt	Float_t	pt
+SubJet_rawFactor	Float_t	1 - Factor to get back to raw pT
+SubJet_tau1	Float_t	Nsubjettiness (1 axis)
+SubJet_tau2	Float_t	Nsubjettiness (2 axis)
+SubJet_tau3	Float_t	Nsubjettiness (3 axis)
+SubJet_tau4	Float_t	Nsubjettiness (4 axis)
+nSubJet	Int_t	slimmedJetsAK8, i.e. ak8 fat jets for boosted analysis
+Tau [back to top]
+Object property	Type	Description
+Tau_charge	Short_t	electric charge
+Tau_chargedIso	Float_t	charged isolation
+Tau_decayMode	UChar_t	decayMode()
+Tau_decayModePNet	Short_t	decay mode of the highest tau score of ParticleNet
+Tau_dxy	Float_t	d_{xy} of lead track with respect to PV, in cm (with sign)
+Tau_dz	Float_t	d_{z} of lead track with respect to PV, in cm (with sign)
+Tau_eleIdx	Short_t(index to Ele)	index of first matching electron
+Tau_eta	Float_t	eta
+Tau_idAntiEleDeadECal	Bool_t	Anti-electron dead-ECal discriminator
+Tau_idAntiMu	UChar_t	Anti-muon discriminator V3: : 1 = Loose, 2 = Tight
+Tau_idDecayModeNewDMs	Bool_t	(?isTauIDAvailable('decayModeFindingNewDMs')?tauID('decayModeFindingNewDMs'):-1) > 0
+Tau_idDecayModeOldDMs	Bool_t	(?isTauIDAvailable('decayModeFinding')?tauID('decayModeFinding'):-1) > 0
+Tau_idDeepTau2017v2p1VSe	UChar_t	byDeepTau2017v2p1VSe ID working points (deepTau2017v2p1): 1 = VVVLoose, 2 = VVLoose, 3 = VLoose, 4 = Loose, 5 = Medium, 6 = Tight, 7 = VTight, 8 = VVTight
+Tau_idDeepTau2017v2p1VSjet	UChar_t	byDeepTau2017v2p1VSjet ID working points (deepTau2017v2p1): 1 = VVVLoose, 2 = VVLoose, 3 = VLoose, 4 = Loose, 5 = Medium, 6 = Tight, 7 = VTight, 8 = VVTight
+Tau_idDeepTau2017v2p1VSmu	UChar_t	byDeepTau2017v2p1VSmu ID working points (deepTau2017v2p1): 1 = VLoose, 2 = Loose, 3 = Medium, 4 = Tight
+Tau_idDeepTau2018v2p5VSe	UChar_t	byDeepTau2018v2p5VSe ID working points (deepTau2018v2p5): 1 = VVVLoose, 2 = VVLoose, 3 = VLoose, 4 = Loose, 5 = Medium, 6 = Tight, 7 = VTight, 8 = VVTight
+Tau_idDeepTau2018v2p5VSjet	UChar_t	byDeepTau2018v2p5VSjet ID working points (deepTau2018v2p5): 1 = VVVLoose, 2 = VVLoose, 3 = VLoose, 4 = Loose, 5 = Medium, 6 = Tight, 7 = VTight, 8 = VVTight
+Tau_idDeepTau2018v2p5VSmu	UChar_t	byDeepTau2018v2p5VSmu ID working points (deepTau2018v2p5): 1 = VLoose, 2 = Loose, 3 = Medium, 4 = Tight
+Tau_jetIdx	Short_t(index to Jet)	index of the associated jet (-1 if none)
+Tau_leadTkDeltaEta	Float_t	eta of the leading track, minus tau eta
+Tau_leadTkDeltaPhi	Float_t	phi of the leading track, minus tau phi
+Tau_leadTkPtOverTauPt	Float_t	pt of the leading track divided by tau pt
+Tau_mass	Float_t	mass
+Tau_muIdx	Short_t(index to Mu)	index of first matching muon
+Tau_nSVs	UChar_t	number of secondary vertices in the tau
+Tau_neutralIso	Float_t	neutral (photon) isolation
+Tau_phi	Float_t	phi
+Tau_photonsOutsideSignalCone	Float_t	sum of photons outside signal cone
+Tau_probDM0PNet	Float_t	normalised probablity of decayMode 0, 1h+0pi0 (PNet 2023)
+Tau_probDM10PNet	Float_t	normalised probablity of decayMode 10, 3h+0pi0 (PNet 2023)
+Tau_probDM11PNet	Float_t	normalised probablity of decayMode 11, 3h+1pi0 (PNet 2023)
+Tau_probDM1PNet	Float_t	normalised probablity of decayMode 1, 1h+1pi0 (PNet 2023)
+Tau_probDM2PNet	Float_t	normalised probablity of decayMode 2, 1h+2pi0 (PNet 2023)
+Tau_pt	Float_t	pt
+Tau_ptCorrPNet	Float_t	pt correction (PNet 2023)
+Tau_puCorr	Float_t	pileup correction
+Tau_qConfPNet	Float_t	signed charge confidence (PNet 2023)
+Tau_rawDeepTau2017v2p1VSe	Float_t	byDeepTau2017v2p1VSe raw output discriminator (deepTau2017v2p1)
+Tau_rawDeepTau2017v2p1VSjet	Float_t	byDeepTau2017v2p1VSjet raw output discriminator (deepTau2017v2p1)
+Tau_rawDeepTau2017v2p1VSmu	Float_t	byDeepTau2017v2p1VSmu raw output discriminator (deepTau2017v2p1)
+Tau_rawDeepTau2018v2p5VSe	Float_t	byDeepTau2018v2p5VSe raw output discriminator (deepTau2018v2p5)
+Tau_rawDeepTau2018v2p5VSjet	Float_t	byDeepTau2018v2p5VSjet raw output discriminator (deepTau2018v2p5)
+Tau_rawDeepTau2018v2p5VSmu	Float_t	byDeepTau2018v2p5VSmu raw output discriminator (deepTau2018v2p5)
+Tau_rawIso	Float_t	combined isolation (deltaBeta corrections)
+Tau_rawIsodR03	Float_t	combined isolation (deltaBeta corrections, dR=0.3)
+Tau_rawPNetVSe	Float_t	raw output of ParticleNetVsE discriminator (PNet 2023)
+Tau_rawPNetVSjet	Float_t	raw output of ParticleNetVsJet discriminator (PNet 2023)
+Tau_rawPNetVSmu	Float_t	raw output of ParticleNetVsMu discriminator (PNet 2023)
+Tau_svIdx1	Short_t(index to Sv)	index of first matching secondary vertex
+Tau_svIdx2	Short_t(index to Sv)	index of second matching secondary vertex
+nTau	Int_t	slimmedTaus after basic selection (pt > 18 && ((tauID('decayModeFindingNewDMs') > 0.5 && (tauID('byLooseCombinedIsolationDeltaBetaCorr3Hits') || (tauID('chargedIsoPtSumdR03')+max(0.,tauID('neutralIsoPtSumdR03')-0.072*tauID('puCorrPtSum'))<2.5) || tauID('byVVVLooseDeepTau2017v2p1VSjet') || tauID('byVVVLooseDeepTau2018v2p5VSjet'))) || (?isTauIDAvailable('byPNetVSjetraw')?tauID('byPNetVSjetraw'):-1) > 0.05))
+TkMET [back to top]
+Object property	Type	Description
+TkMET_phi	Float_t	raw track MET phi
+TkMET_pt	Float_t	raw track MET pt
+TkMET_sumEt	Float_t	raw track scalar sum of Et
+TrigObj [back to top]
+Object property	Type	Description
+TrigObj_eta	Float_t	eta
+TrigObj_filterBits	Int_t	extra bits of associated information: 0 => HLT_AK8PFJetX_SoftDropMass40_PFAK8ParticleNetTauTau0p30 for BoostedTau; 0 => CaloIdL_TrackIdL_IsoVL, 1 => 1e (WPTight), 2 => 1e (WPLoose), 3 => OverlapFilter PFTau, 4 => 2e, 5 => 1e-1mu, 6 => 1e-1tau, 7 => 3e, 8 => 2e-1mu, 9 => 1e-2mu, 10 => 1e (32_L1DoubleEG_AND_L1SingleEGOr), 11 => 1e (CaloIdVT_GsfTrkIdT), 12 => 1e (PFJet), 13 => 1e (Photon175_OR_Photon200) for Electron; 0 => hltL1sTripleJetVBFIorHTTIorDoubleJetCIorSingleJet, 1 => hltL1sQuadJetC50IorQuadJetC60IorHTT280IorHTT300IorHTT320IorTripleJet846848VBFIorTripleJet887256VBFIorTripleJet927664VBF OR hltL1sQuadJetCIorTripleJetVBFIorHTT, 2 => hltL1sQuadJetC60IorHTT380IorHTT280QuadJetIorHTT300QuadJet OR hltL1sQuadJetC50to60IorHTT280to500IorHTT250to340QuadJet, 3 => hltCaloQuadJet30HT300 OR hltCaloQuadJet30HT320, 4 => hltPFCentralJetsLooseIDQuad30HT300 OR hltPFCentralJetsLooseIDQuad30HT330 for HT; 0 => hlt4PixelOnlyPFCentralJetTightIDPt20, 1 => hlt3PixelOnlyPFCentralJetTightIDPt30, 2 => hltPFJetFilterTwoC30, 3 => hlt4PFCentralJetTightIDPt30, 4 => hlt4PFCentralJetTightIDPt35, 5 => hltQuadCentralJet30, 6 => hlt2PixelOnlyPFCentralJetTightIDPt40, 7 => hltL1sTripleJet1008572VBFIorHTTIorDoubleJetCIorSingleJet OR hltL1sTripleJet1058576VBFIorHTTIorDoubleJetCIorSingleJet OR hltL1sTripleJetVBFIorHTTIorSingleJet, 8 => hlt3PFCentralJetTightIDPt40, 9 => hlt3PFCentralJetTightIDPt45, 10 => hltL1sQuadJetC60IorHTT380IorHTT280QuadJetIorHTT300QuadJet OR hltL1sQuadJetC50to60IorHTT280to500IorHTT250to340QuadJet, 11 => hltBTagCaloDeepCSVp17Double, 12 => hltPFCentralJetLooseIDQuad30, 13 => hlt1PFCentralJetLooseID75, 14 => hlt2PFCentralJetLooseID60, 15 => hlt3PFCentralJetLooseID45, 16 => hlt4PFCentralJetLooseID40, 17 => hltBTagPFDeepCSV4p5Triple, 18 => (Double tau + jet) hltHpsOverlapFilterDeepTauDoublePFTau*PFJet*, 19 => (VBF cross-cleaned from medium deeptau PFTau) *CrossCleaned*MediumDeepTauDitauWPPFTau*, 20 => (VBF cross-cleaned using dijet correlation checker) *CrossCleanedUsingDiJetCorrChecker*, 21 => (monitoring muon + tau + jet) hltHpsOverlapFilterDeepTauPFTau*PFJet*, 22 => hlt2PFCentralJetTightIDPt50, 23 => hlt1PixelOnlyPFCentralJetTightIDPt60, 24 => hlt1PFCentralJetTightIDPt70, 25 => hltBTagPFDeepJet1p5Single, 26 => hltBTagPFDeepJet4p5Triple, 27 => hltBTagCentralJetPt35PFParticleNet2BTagSum0p65 OR hltBTagCentralJetPt30PFParticleNet2BTagSum0p65 OR hltPFJetTwoC30PFBTagParticleNet2BTagSum0p65, 28 => hltBTagPFDeepCSV1p5Single for Jet; 0 => hltCaloQuadJet30HT300 OR hltCaloQuadJet30HT320, 1 => hltPFCentralJetsLooseIDQuad30HT300 OR hltPFCentralJetsLooseIDQuad30HT330 for MHT; 0 => TrkIsoVVL, 1 => Iso, 2 => OverlapFilter PFTau, 3 => 1mu, 4 => 2mu, 5 => 1mu-1e, 6 => 1mu-1tau, 7 => 3mu, 8 => 2mu-1e, 9 => 1mu-2e, 10 => 1mu (Mu50), 11 => 1mu (Mu100), 12 => 1mu-1photon for Muon; 0 => hltEG33L1EG26HEFilter, 1 => hltEG50HEFilter, 2 => hltEG75HEFilter, 3 => hltEG90HEFilter, 4 => hltEG120HEFilter, 5 => hltEG150HEFilter, 6 => hltEG150HEFilter, 7 => hltEG200HEFilter, 8 => hltHtEcal800, 9 => hltEG110EBTightIDTightIsoTrackIsoFilter, 10 => hltEG120EBTightIDTightIsoTrackIsoFilter, 11 => 1mu-1photon, 12 => hltEG30LR9Id85b90eHE12R9Id50b80eR9IdLastFilter, 13 => hltEG30LIso60CaloId15b35eHE12R9Id50b80eEcalIsoLastFilter, 14 => hltEG22Iso60CaloId15b35eHE12R9Id50b80eTrackIsoUnseededLastFilter, 15 => hltEG22R9Id85b90eHE12R9Id50b80eR9UnseededLastFilter, 16 => hltEG30Iso60CaloId15b35eR9Id50b90eHE12b10eR9Id50b80eEcalIsoFilter, 17 => hltEG18TrackIso60Iso60CaloId15b35eR9Id50b90eHE12b10eR9Id50b80eTrackIsoUnseededFilter for Photon; 0 => LooseChargedIso, 1 => MediumChargedIso, 2 => TightChargedIso, 3 => DeepTau, 4 => TightID OOSC photons, 5 => HPS, 6 => charged iso di-tau, 7 => deeptau di-tau, 8 => e-tau, 9 => mu-tau, 10 => single-tau/tau+MET, 11 => run 2 VBF+ditau, 12 => run 3 VBF+ditau, 13 => run 3 double PF jets + ditau, 14 => di-tau + PFJet, 15 => Displaced Tau, 16 => Monitoring, 17 => regional paths, 18 => L1 seeded paths, 19 => 1 prong tau paths for Tau;
+TrigObj_id	UShort_t	ID of the object: 1515 = BoostedTau, 11 = Electron(PixelMatched e/gamma), 6 = FatJet, 3 = HT, 1 = Jet, 2 = MET, 4 = MHT, 13 = Muon, 22 = Photon, 15 = Tau
+TrigObj_l1charge	Short_t	charge of associated L1 seed
+TrigObj_l1iso	Int_t	iso of associated L1 seed
+TrigObj_l1pt	Float_t	pt of associated L1 seed
+TrigObj_l1pt_2	Float_t	pt of associated secondary L1 seed
+TrigObj_l2pt	Float_t	pt of associated 'L2' seed (i.e. HLT before tracking/PF)
+TrigObj_phi	Float_t	phi
+TrigObj_pt	Float_t	pt
+nTrigObj	Int_t	
+boostedTau [back to top]
+Object property	Type	Description
+boostedTau_charge	Int_t	electric charge
+boostedTau_chargedIso	Float_t	charged isolation
+boostedTau_decayMode	Int_t	decayMode()
+boostedTau_eta	Float_t	eta
+boostedTau_idAntiEle2018	UChar_t	Anti-electron MVA discriminator V6 (2018): 1 = VLoose, 2 = Loose, 3 = Medium, 4 = Tight, 5 = VTight
+boostedTau_idAntiMu	UChar_t	Anti-muon discriminator V3: : 1 = Loose, 2 = Tight
+boostedTau_idMVAnewDM2017v2	UChar_t	IsolationMVArun2DBnewDMwLT ID working point (2017v2): 1 = VVLoose, 2 = VLoose, 3 = Loose, 4 = Medium, 5 = Tight, 6 = VTight, 7 = VVTight
+boostedTau_idMVAoldDM2017v2	UChar_t	IsolationMVArun2DBoldDMwLT ID working point (2017v2): 1 = VVLoose, 2 = VLoose, 3 = Loose, 4 = Medium, 5 = Tight, 6 = VTight, 7 = VVTight
+boostedTau_jetIdx	Short_t(index to Jet)	index of the associated jet (-1 if none)
+boostedTau_leadTkDeltaEta	Float_t	eta of the leading track, minus tau eta
+boostedTau_leadTkDeltaPhi	Float_t	phi of the leading track, minus tau phi
+boostedTau_leadTkPtOverTauPt	Float_t	pt of the leading track divided by tau pt
+boostedTau_mass	Float_t	mass
+boostedTau_neutralIso	Float_t	neutral (photon) isolation
+boostedTau_phi	Float_t	phi
+boostedTau_photonsOutsideSignalCone	Float_t	sum of photons outside signal cone
+boostedTau_pt	Float_t	pt
+boostedTau_puCorr	Float_t	pileup correction
+boostedTau_rawAntiEle2018	Float_t	Anti-electron MVA discriminator V6 raw output discriminator (2018)
+boostedTau_rawAntiEleCat2018	Short_t	Anti-electron MVA discriminator V6 category (2018)
+boostedTau_rawIso	Float_t	combined isolation (deltaBeta corrections)
+boostedTau_rawIsodR03	Float_t	combined isolation (deltaBeta corrections, dR=0.3)
+boostedTau_rawMVAnewDM2017v2	Float_t	byIsolationMVArun2DBnewDMwLT raw output discriminator (2017v2)
+boostedTau_rawMVAoldDM2017v2	Float_t	byIsolationMVArun2DBoldDMwLT raw output discriminator (2017v2)
+nboostedTau	Int_t	slimmedBoostedTaus after basic selection (pt > 40 && tauID('decayModeFindingNewDMs') && (tauID('byVVLooseIsolationMVArun2DBoldDMwLT') || tauID('byVVLooseIsolationMVArun2DBnewDMwLT')))
+bunchCrossing [back to top]
+Object property	Type	Description
+bunchCrossing	UInt_t	bunchCrossing/i
+event [back to top]
+Object property	Type	Description
+event	ULong64_t	event/l
+luminosityBlock [back to top]
+Object property	Type	Description
+luminosityBlock	UInt_t	luminosityBlock/i
+run [back to top]
+Object property	Type	Description
+run	UInt_t	run/i

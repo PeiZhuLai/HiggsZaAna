@@ -332,6 +332,11 @@ def _build_hist_specs(var_names: Iterable[str], target_masses: Sequence[str]) ->
             125.0,
         ),
         "param": HistSpec("rdf_param_value", "rdf_param_value", 25, -0.3, 0.6),
+        # Derived BDT features (data/MC comparisons)
+        "pho_pt_asym":        HistSpec("rdf_pho_pt_asym",        "rdf_pho_pt_asym",        40, -1.0, 1.0),
+        "pho_dR_over_ma":     HistSpec("rdf_pho_dR_over_ma",     "rdf_pho_dR_over_ma",     40,  0.0, 4.0),
+        "min_pho_pt_over_ma": HistSpec("rdf_min_pho_pt_over_ma", "rdf_min_pho_pt_over_ma", 60,  0.0, 60.0),
+        "ma_resid_norm":      HistSpec("rdf_ma_resid_norm",      "rdf_ma_resid_norm",      40, -1.0, 1.0),
     }
 
     specs = {var: base_specs[var] for var in var_names if var in base_specs}
@@ -439,6 +444,38 @@ def _prepare_dataframe(
         param_expr = f"(ALP_m - {_param_cycle_expr()}) / H_m"
     df = df.Define("rdf_param_value", param_expr)
     defined_cols.add("rdf_param_value")
+
+    # Derived BDT features for data/MC plots.
+    if sample in MASS_VALUES:
+        ma_hyp = MASS_VALUES[sample]
+        ma_hyp_expr = f"{ma_hyp:.8g}"
+        ma_hyp_safe_expr = f"{(ma_hyp if ma_hyp > 0.5 else 0.5):.8g}"
+    else:
+        # Use the same cycling mass hypothesis as for `param`.
+        ma_hyp_expr = _param_cycle_expr()
+        ma_hyp_safe_expr = f"std::max(({ma_hyp_expr}), 0.5)"
+    df = df.Define(
+        "rdf_pho_pt_asym",
+        "(ALP_lead_photon_pt - ALP_sublead_photon_pt) "
+        "/ (ALP_lead_photon_pt + ALP_sublead_photon_pt + 1e-6)",
+    )
+    df = df.Define("rdf_ma_safe", "(ALP_m > 0.5) ? ALP_m : 0.5")
+    df = df.Define("rdf_pho_dR_over_ma", "var_dR_g1g2 / rdf_ma_safe")
+    df = df.Define(
+        "rdf_min_pho_pt_over_ma",
+        "std::min((double)ALP_lead_photon_pt, (double)ALP_sublead_photon_pt) / rdf_ma_safe",
+    )
+    df = df.Define(
+        "rdf_ma_resid_norm",
+        f"(ALP_m - ({ma_hyp_expr})) / ({ma_hyp_safe_expr})",
+    )
+    defined_cols.update({
+        "rdf_pho_pt_asym",
+        "rdf_ma_safe",
+        "rdf_pho_dR_over_ma",
+        "rdf_min_pho_pt_over_ma",
+        "rdf_ma_resid_norm",
+    })
 
     mva_branches: Dict[str, Optional[str]] = {}
     for mass in target_masses:

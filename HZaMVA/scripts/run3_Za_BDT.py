@@ -32,6 +32,9 @@ except Exception:
 
 PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3")
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+# Names of features that are derived on the fly inside add_derived_features().
+# bdt_input_branches() must NOT request these from ROOT — they don't exist as branches.
+_DERIVED_FEATURE_SET = {"pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm"}
 SIDEBAND_REWEIGHTER = load_sideband_reweighter()
 if SIDEBAND_REWEIGHTER is not None:
     print("Loaded sideband reweight JSON:", SIDEBAND_REWEIGHTER.source_path)
@@ -40,7 +43,7 @@ else:
 
 
 def bdt_input_branches(base_branches):
-    branches = list(base_branches)
+    branches = [b for b in base_branches if b not in _DERIVED_FEATURE_SET]
     if SIDEBAND_REWEIGHTER is not None and "event" not in branches:
         branches.append("event")
     return branches
@@ -316,6 +319,7 @@ def convert_ntuple_dataframe(path, filename, treename, branches, selections="H_m
     tree = rootfile.Get(treename)
     np = convert(tree, branches, selections)
     dataframe = pd.DataFrame.from_records(np)
+    add_derived_features(dataframe)
     return dataframe, tree
 
 def weighted_ks_2samp(x1, w1, x2, w2):
@@ -484,8 +488,32 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
 # 15. (m_a - m_a, hype) / mH
 
 variables = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt"]
+# Derived features added to recover low-ma sensitivity.
+# These describe photon-merging / bremsstrahlung patterns that the original 14 vars
+# do not isolate; they are computed from existing branches so no re-ntuple is needed.
+derived_variables = ["pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm"]
+variables = variables + derived_variables
 mass_variables = ["ALP_m", "H_m"]
 wt_variables = ['factor']
+
+
+def add_derived_features(dataframe):
+    """Augment df in-place with the four derived BDT features."""
+    import numpy as _np
+    pt1 = dataframe["pho1Pt"].astype(float)
+    pt2 = dataframe["pho2Pt"].astype(float)
+    ma = dataframe["ALP_m"].astype(float)
+    dR = dataframe["var_dR_g1g2"].astype(float)
+    ma_safe = _np.where(ma > 0.5, ma, 0.5)
+    dataframe["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+    dataframe["pho_dR_over_ma"] = dR / ma_safe
+    dataframe["min_pho_pt_over_ma"] = _np.minimum(pt1, pt2) / ma_safe
+    if "mass" in dataframe.columns:
+        m_hyp = dataframe["mass"].astype(float)
+        m_hyp_safe = _np.where(m_hyp > 0.5, m_hyp, 0.5)
+        dataframe["ma_resid_norm"] = (ma - m_hyp) / m_hyp_safe
+    else:
+        dataframe["ma_resid_norm"] = 0.0
 
 file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
 bkg_name = ['All_Bkg']
@@ -521,6 +549,8 @@ for year in years:
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
+        # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm now.
+        add_derived_features(dfs[year][dataset])
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
@@ -531,7 +561,9 @@ for year in years:
             dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
-            # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs'] 
+            # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm with the real hypothesis.
+            add_derived_features(dfs[year][dataset][mass])
+            # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs']
 
 
 df_bkg_dy   = pd.concat([dfs[y]["All_Bkg"] for y in years])
@@ -563,7 +595,7 @@ n_data_SB = np.sum(data_SB.values[:,wt_var_indices])
 n_bkg_SB = np.sum(bkg_SB.values[:,wt_var_indices])
 print("weighted Sideband event: data", n_data_SB, "bkg:", n_bkg_SB)
 
-file_name = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt", "param", "ALP_m", "H_m"]
+file_name = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt", "pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm", "param", "ALP_m", "H_m"]
 
 xlabel = [
     r"$\gamma_{Leading}\ P_{T}$",
@@ -580,6 +612,10 @@ xlabel = [
     r"$\Delta R(\gamma_{Leading}, Z)$",
     r"$P_{t,a} / m_{H}$",
     r"$P_{T,H}$",
+    r"$(p_{T,1}-p_{T,2})/(p_{T,1}+p_{T,2})$",
+    r"$\Delta R(\gamma\gamma) / m_{a}$",
+    r"$\min(p_{T,\gamma}) / m_{a}$",
+    r"$(m_{a} - m_{a,\mathrm{hyp}}) / m_{a,\mathrm{hyp}}$",
     r"$(m_{a} - m_{a,\mathrm{hyp}}) / m_{H}$",
     r"$m_{a}$",
     r"$m_{H}$",
@@ -600,8 +636,12 @@ x_limits = {
     'var_dR_g1Z':(-0.6, 6),
     'var_PtaOverMh':(-0.1, 0.9),
     'H_pt':(-20, 300),
+    'pho_pt_asym': (-1.0, 1.0),
+    'pho_dR_over_ma': (0.0, 4.0),
+    'min_pho_pt_over_ma': (0.0, 60.0),
+    'ma_resid_norm': (-1.0, 1.0),
     'param':(-1, 1),
-    'ALP_m':(0, 55),    
+    'ALP_m':(0, 55),
     'H_m':(110, 180),
 }
 
@@ -620,14 +660,22 @@ bin_sizes = {
     'var_dR_g1Z': 0.2,
     'var_PtaOverMh': 0.02,
     'H_pt': 4,
+    'pho_pt_asym': 0.05,
+    'pho_dR_over_ma': 0.1,
+    'min_pho_pt_over_ma': 1.0,
+    'ma_resid_norm': 0.05,
     'param': 0.05,
-    'ALP_m': 1,    
+    'ALP_m': 1,
     'H_m': 0.5,
 }
 
 for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_name):
     plt.figure(figsize=(8, 6))
 
+    if hlf not in x_limits:
+        print(f"[plot] skipping {hlf}: no x_limits defined")
+        plt.close()
+        continue
     x_min, x_max = x_limits.get(hlf)
 
     data_range = x_max - x_min
@@ -660,7 +708,8 @@ for hlf, xlabel_hlf, fn in zip(variables+['param']+mass_variables, xlabel, file_
     
 
 corr_vars = variables + ["param", "H_m"]
-corr_labels = xlabel[:15] + [xlabel[16]]
+# xlabel layout: [variables...] + [param] + [ALP_m, H_m]; pick variables+param then H_m.
+corr_labels = xlabel[:len(variables)+1] + [xlabel[len(variables)+2]]
 
 
 def format_corr_axis(ax, labels, tick_size, show_ylabels=True):
@@ -1394,6 +1443,8 @@ for year in years:
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
+        # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm now.
+        add_derived_features(dfs[year][dataset])
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
@@ -1961,6 +2012,8 @@ for year in years:
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
+        # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm now.
+        add_derived_features(dfs[year][dataset])
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 

@@ -1,0 +1,84 @@
+{ decls }
+namespace std {  }
+namespace edm {  }
+namespace reco { class MLPhoton; }
+namespace edm { namespace refhelper { template <typename C, typename T> class FindUsingAdvance; } }
+namespace edm { template <typename C, typename T, typename F> class Ref; }
+namespace edm { template <typename T> class RefToBase; }
+namespace edm { template <typename C> class RefProd; }
+namespace edm { template <typename C, typename T, typename F> class RefVector; }
+namespace edm { template <typename T> class RefToBaseVector; }
+namespace reco { class Candidate; }
+namespace edm { template <typename T> class ClonePolicy; }
+namespace edm { template <typename T, typename P> class OwnVector; }
+namespace edm { template <typename CKey, typename CVal, typename index> class OneToOne; }
+namespace edm { template <typename Tag> class AssociationMap; }
+namespace edm { template <typename T> class Wrapper; }
+namespace edm { template <typename CKey, typename Val, typename index> class OneToValue; }
+namespace edm { template <typename T> class ValueMap; }
+namespace edm { namespace reftobase {  } }
+namespace edm { namespace reftobase { template <typename T> class BaseHolder; } }
+namespace edm { namespace reftobase { template <typename T, typename REF> class Holder; } }
+namespace edm { namespace reftobase { template <typename T> class IndirectHolder; } }
+namespace edm { namespace reftobase { template <typename REF> class RefHolder; } }
+namespace edm { namespace reftobase { template <typename T> class BaseVectorHolder; } }
+namespace edm { namespace reftobase { template <typename T, typename REFV> class VectorHolder; } }
+namespace edm { template <typename T> class Ptr; }
+namespace edm { template <typename T> class PtrVector; }
+namespace edm { namespace reftobase { template <typename REFV> class RefVectorHolder; } }
+namespace edm { template <typename T> class RefToBaseProd; }
+namespace reco {  }
+namespace edm { namespace helpers {  } }
+namespace edm { namespace helpers { template <typename K, typename V> class KeyVal; } }
+namespace edm { namespace helpers { template <typename K> class Key; } }
+
+[ libMLDataFormatsEgammaCandidates.so ]
+# List of selected classes
+class edm::AssociationMap<edm::OneToOne<std::vector<reco::MLPhoton>,edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> >,unsigned int> >
+class edm::AssociationMap<edm::OneToOne<vector<reco::MLPhoton>,edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> >,unsigned int> >
+class edm::AssociationMap<edm::OneToValue<std::vector<reco::MLPhoton>,float,unsigned int> >
+class edm::AssociationMap<edm::OneToValue<vector<reco::MLPhoton>,float,unsigned int> >
+class edm::Ptr<reco::MLPhoton>
+class edm::PtrVector<reco::MLPhoton>
+class edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> >
+class edm::Ref<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> >
+class edm::RefProd<std::vector<reco::MLPhoton> >
+class edm::RefProd<vector<reco::MLPhoton> >
+class edm::RefToBase<reco::MLPhoton>
+class edm::RefToBaseProd<reco::MLPhoton>
+class edm::RefToBaseVector<reco::MLPhoton>
+class edm::RefVector<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> >
+class edm::RefVector<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> >
+class edm::ValueMap<edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::ValueMap<edm::Ref<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::Wrapper<edm::AssociationMap<edm::OneToOne<std::vector<reco::MLPhoton>,edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> >,unsigned int> > >
+class edm::Wrapper<edm::AssociationMap<edm::OneToOne<vector<reco::MLPhoton>,edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> >,unsigned int> > >
+class edm::Wrapper<edm::AssociationMap<edm::OneToValue<std::vector<reco::MLPhoton>,float,unsigned int> > >
+class edm::Wrapper<edm::AssociationMap<edm::OneToValue<vector<reco::MLPhoton>,float,unsigned int> > >
+class edm::Wrapper<edm::RefToBaseVector<reco::MLPhoton> >
+class edm::Wrapper<edm::RefVector<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::Wrapper<edm::RefVector<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::Wrapper<edm::ValueMap<edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > > >
+class edm::Wrapper<edm::ValueMap<edm::Ref<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > > >
+class edm::Wrapper<std::vector<reco::MLPhoton> >
+class edm::Wrapper<vector<reco::MLPhoton> >
+class edm::helpers::Key<edm::RefProd<std::vector<reco::MLPhoton> > >
+class edm::helpers::Key<edm::RefProd<vector<reco::MLPhoton> > >
+class edm::helpers::KeyVal<edm::RefProd<std::vector<reco::MLPhoton> >,edm::RefProd<edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> > > >
+class edm::helpers::KeyVal<edm::RefProd<vector<reco::MLPhoton> >,edm::RefProd<edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> > > >
+class edm::reftobase::BaseHolder<reco::MLPhoton>
+class edm::reftobase::BaseVectorHolder<reco::MLPhoton>
+class edm::reftobase::Holder<reco::Candidate,edm::Ref<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::reftobase::Holder<reco::Candidate,reco::MLPhotonRef>
+class edm::reftobase::IndirectHolder<reco::MLPhoton>
+class edm::reftobase::RefHolder<edm::Ref<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::reftobase::RefHolder<reco::MLPhotonRef>
+class edm::reftobase::RefVectorHolder<edm::RefVector<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::reftobase::RefVectorHolder<reco::MLPhotonRefVector>
+class edm::reftobase::VectorHolder<reco::Candidate,edm::RefVector<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class edm::reftobase::VectorHolder<reco::Candidate,reco::MLPhotonRefVector>
+class reco::MLPhoton
+class vector<edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > >
+class vector<edm::Ref<vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<vector<reco::MLPhoton>,reco::MLPhoton> > >
+class vector<reco::MLPhoton>
+header MLDataFormats/EgammaCandidates/interface/MLPhoton.h

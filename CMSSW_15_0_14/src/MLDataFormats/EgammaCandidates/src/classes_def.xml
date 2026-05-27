@@ -1,0 +1,47 @@
+<lcgdict>
+
+  <class name="reco::MLPhoton" ClassVersion="0">
+   <version ClassVersion="-1" checksum="182824727"/>
+   <version ClassVersion="0" checksum="2791764607"/>
+  </class>
+
+  <class name="std::vector<reco::MLPhoton>"/>
+  <class name="edm::Wrapper<std::vector<reco::MLPhoton> >"/>
+  <class name="edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> >"/>
+  <class name="std::vector<edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > >"/>
+  <class name="edm::RefProd<std::vector<reco::MLPhoton> >"/>
+  <class name="edm::RefVector<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> >"/>
+  <class name="edm::Wrapper<edm::RefVector<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > >"/>
+  <class name="edm::reftobase::BaseHolder<reco::MLPhoton>"/>
+  <class name="edm::RefToBase<reco::MLPhoton>"/>
+  <class name="edm::reftobase::IndirectHolder<reco::MLPhoton>" />
+  <class name="edm::RefToBaseProd<reco::MLPhoton>" />
+  <class name="edm::RefToBaseVector<reco::MLPhoton>" />
+  <class name="edm::Wrapper<edm::RefToBaseVector<reco::MLPhoton> >" />
+  <class name="edm::reftobase::BaseVectorHolder<reco::MLPhoton>" />
+  <class name="edm::Wrapper<edm::ValueMap<edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > > >"/>
+  <class name="edm::ValueMap<edm::Ref<std::vector<reco::MLPhoton>,reco::MLPhoton,edm::refhelper::FindUsingAdvance<std::vector<reco::MLPhoton>,reco::MLPhoton> > >"/>
+
+
+  <class name="edm::AssociationMap<edm::OneToValue<std::vector<reco::MLPhoton>, float, unsigned int > >">
+      <field name="transientMap_" transient="true" />
+  </class>
+  <class name="edm::Wrapper<edm::AssociationMap<edm::OneToValue<std::vector<reco::MLPhoton>, float, unsigned int > > >" />
+  <class name="edm::helpers::Key<edm::RefProd<std::vector<reco::MLPhoton> > >" />
+
+
+  <class name="edm::reftobase::Holder<reco::Candidate, reco::MLPhotonRef>" />
+  <class name="edm::reftobase::RefHolder<reco::MLPhotonRef>" />
+  <class name="edm::reftobase::VectorHolder<reco::Candidate, reco::MLPhotonRefVector>" />
+  <class name="edm::reftobase::RefVectorHolder<reco::MLPhotonRefVector>" />
+
+  <class name="edm::AssociationMap<edm::OneToOne<std::vector<reco::MLPhoton>,edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> >,unsigned int> >">
+     <field name="transientMap_" transient="true" />
+  </class>
+  <class name="edm::helpers::KeyVal<edm::RefProd<std::vector<reco::MLPhoton> >,edm::RefProd<edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> > > >" />
+  <class name="edm::Wrapper<edm::AssociationMap<edm::OneToOne<std::vector<reco::MLPhoton>,edm::OwnVector<reco::Candidate,edm::ClonePolicy<reco::Candidate> >,unsigned int> > >" />
+
+  <class name="edm::Ptr<reco::MLPhoton>" />
+  <class name="edm::PtrVector<reco::MLPhoton>" />
+
+</lcgdict>

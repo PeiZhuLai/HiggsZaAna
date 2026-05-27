@@ -597,6 +597,10 @@ MVA_FEATURE_COLUMNS = [
     "var_dR_g1Z",
     "var_PtaOverMh",
     "H_pt",
+    "pho_pt_asym",
+    "pho_dR_over_ma",
+    "min_pho_pt_over_ma",
+    "ma_resid_norm",
     "param",
 ]
 
@@ -619,6 +623,14 @@ def compute_MVA_Score(x, wanted_ma):
     # param 定義
     param = (x.ALP_mass - wanted_ma) / denom
 
+    ma_safe = x.ALP_mass if (np.isfinite(x.ALP_mass) and x.ALP_mass > 0.5) else 0.5
+    pt1, pt2 = float(x.pho1Pt), float(x.pho2Pt)
+    pho_pt_asym = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+    pho_dR_over_ma = float(x.var_dR_g1g2) / ma_safe
+    min_pho_pt_over_ma = min(pt1, pt2) / ma_safe
+    wanted_ma_safe = wanted_ma if wanted_ma > 0.5 else 0.5
+    ma_resid_norm = (float(x.ALP_mass) - wanted_ma) / wanted_ma_safe
+
     # 特徵順序（v_1）
     MVA_list = [
         x.pho1Pt,
@@ -635,6 +647,10 @@ def compute_MVA_Score(x, wanted_ma):
         x.var_dR_g1Z,
         x.var_PtaOverMh,
         x.H_pt,
+        pho_pt_asym,
+        pho_dR_over_ma,
+        min_pho_pt_over_ma,
+        ma_resid_norm,
         param
     ]
 
@@ -663,15 +679,34 @@ def add_mva_scores(data, masses=range(1, 31)):
     h_mass = pd.to_numeric(data["H_mass"], errors="coerce").to_numpy(dtype=float)
     alp_mass = pd.to_numeric(data["ALP_mass"], errors="coerce").to_numpy(dtype=float)
     valid_base = np.isfinite(h_mass) & (h_mass != 0)
-    base_features = data[MVA_FEATURE_COLUMNS[:-1]].apply(pd.to_numeric, errors="coerce")
+
+    # Derived features that do not depend on the mass hypothesis can be computed once.
+    pt1 = pd.to_numeric(data["pho1Pt"], errors="coerce").to_numpy(dtype=float)
+    pt2 = pd.to_numeric(data["pho2Pt"], errors="coerce").to_numpy(dtype=float)
+    dR = pd.to_numeric(data["var_dR_g1g2"], errors="coerce").to_numpy(dtype=float)
+    ma_safe = np.where(np.isfinite(alp_mass) & (alp_mass > 0.5), alp_mass, 0.5)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        pho_pt_asym = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+        pho_dR_over_ma = dR / ma_safe
+        min_pho_pt_over_ma = np.minimum(pt1, pt2) / ma_safe
+
+    # Pre-compute the 14 base columns (no param, no derived) once
+    base_only_columns = [c for c in MVA_FEATURE_COLUMNS if c not in ("param", "pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm")]
+    base_features = data[base_only_columns].apply(pd.to_numeric, errors="coerce")
 
     score_columns = {}
     for ma in masses:
         scores = np.full(data.shape[0], np.nan, dtype=float)
         with np.errstate(divide="ignore", invalid="ignore"):
             param = (alp_mass - ma) / h_mass
+            ma_hyp_safe = ma if ma > 0.5 else 0.5
+            ma_resid_norm = (alp_mass - ma) / ma_hyp_safe
 
         features = base_features.copy()
+        features["pho_pt_asym"] = pho_pt_asym
+        features["pho_dR_over_ma"] = pho_dR_over_ma
+        features["min_pho_pt_over_ma"] = min_pho_pt_over_ma
+        features["ma_resid_norm"] = ma_resid_norm
         features["param"] = param
         matrix = features[MVA_FEATURE_COLUMNS].to_numpy(dtype=float)
         valid = valid_base & np.isfinite(matrix).all(axis=1)

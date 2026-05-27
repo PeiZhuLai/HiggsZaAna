@@ -1,0 +1,3 @@
+ALL_SUBSYSTEMS+=MLDataFormats
+subdirs_src_MLDataFormats = src_MLDataFormats_EgammaCandidates
+subdirs_src += src_MLDataFormats

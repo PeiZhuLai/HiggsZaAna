@@ -1,0 +1,539 @@
+{
+    "name": "za_preselection",
+    "function": {
+        "module_name": "higgs_dna.analysis",
+        "function_name": "run_analysis"
+    },
+    "tag_sequence": [
+        {
+            "module_name": "higgs_dna.taggers.za_tagger_merged",
+            "tagger": "ZaTaggerRun3",
+            "kwargs": {
+                "name": "za_tagger_merged",
+                "options": {
+                    "gen_info": {
+                        "calculate": false
+                    }
+                }
+            }
+        }
+    ],
+    "systematics": {
+        "weights": {
+            "pu_reweight_sf": {
+                "type": "event",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.pileup_systematics",
+                    "name": "pu_reweight_sf"
+                },
+                "modify_central_weight": true,
+                "requires_branches": [
+                    "Pileup_nTrueInt"
+                ]
+            },
+            "hlt_sf": {
+                "type": "event",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.HLT_systematics",
+                    "name": "HLT_sf"
+                },
+                "modify_central_weight": true
+            },
+            "electron_wplid_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.lepton_systematics",
+                    "name": "electron_WPL_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "Electron",
+                "target_collections": [
+                    "SelectedElectron"
+                ]
+            },
+            "electron_reco_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.lepton_systematics",
+                    "name": "electron_reco_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "Electron",
+                "target_collections": [
+                    "SelectedElectron"
+                ]
+            },
+            "electron_wplid_sf_nomatch": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.lepton_systematics",
+                    "name": "electron_WPL_sf_nomatch"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedGenNoRecoElectron",
+                "target_collections": [
+                    "SelectedGenNoRecoElectron"
+                ]
+            },
+            "muon_looseid_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.lepton_systematics",
+                    "name": "muon_LooseID_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "Muon",
+                "target_collections": [
+                    "SelectedMuon"
+                ]
+            },
+            "muon_looseid_sf_nomatch": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.lepton_systematics",
+                    "name": "muon_LooseID_sf_nomatch"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedGenNoRecoMuon",
+                "target_collections": [
+                    "SelectedGenNoRecoMuon"
+                ]
+            },
+            "muon_reco_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.lepton_systematics",
+                    "name": "muon_reco_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "Muon",
+                "target_collections": [
+                    "SelectedMuon"
+                ]
+            },
+            "photon_id_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "photon_zaid_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedPhoton",
+                "target_collections": [
+                    [
+                        "SelectedPhoton"
+                    ]
+                ]
+            },
+            "photon_csev_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "photon_CSEV_sf"
+                },
+                "modify_central_weight": true,
+                "input_collection": "SelectedPhoton",
+                "target_collections": [
+                    [
+                        "SelectedPhoton"
+                    ]
+                ]
+            }
+        },
+        "independent_collections": {
+        }
+    },
+    "samples": {
+        "catalog": "metadata/samples/zgamma_tutorial.json",
+        "sample_list": [
+            "DYGto2LG_10to100"
+        ],
+        "years": [
+            "2023postBPix"
+        ]
+    },
+    "variables_of_interest": [
+        "fixedGridRhoAll",
+        "dZ",
+        "H_pt",
+        "H_eta",
+        "H_phi",
+        "H_mass",
+        "H_noFSR_pt",
+        "H_noFSR_eta",
+        "H_noFSR_phi",
+        "H_noFSR_mass",
+        "Z_pt",
+        "Z_eta",
+        "Z_phi",
+        "Z_mass",
+        "Z_lead_lepton_pt",
+        "Z_lead_lepton_eta",
+        "Z_lead_lepton_phi",
+        "Z_lead_lepton_mass",
+        "Z_lead_lepton_charge",
+        "Z_lead_lepton_id",
+        "Z_lead_lepton_ptE_error",
+        "Z_lead_lepton_sip3d",
+        "Z_sublead_lepton_pt",
+        "Z_sublead_lepton_eta",
+        "Z_sublead_lepton_phi",
+        "Z_sublead_lepton_mass",
+        "Z_sublead_lepton_charge",
+        "Z_sublead_lepton_id",
+        "Z_sublead_lepton_ptE_error",
+        "Z_sublead_lepton_sip3d",
+        "Z_noFSR_pt",
+        "Z_noFSR_eta",
+        "Z_noFSR_phi",
+        "Z_noFSR_mass",
+        "Z_noFSR_lead_lepton_pt",
+        "Z_noFSR_lead_lepton_eta",
+        "Z_noFSR_lead_lepton_phi",
+        "Z_noFSR_lead_lepton_mass",
+        "Z_noFSR_lead_lepton_charge",
+        "Z_noFSR_lead_lepton_id",
+        "Z_noFSR_lead_lepton_ptE_error",
+        "Z_noFSR_lead_lepton_sip3d",
+        "Z_noFSR_sublead_lepton_pt",
+        "Z_noFSR_sublead_lepton_eta",
+        "Z_noFSR_sublead_lepton_phi",
+        "Z_noFSR_sublead_lepton_mass",
+        "Z_noFSR_sublead_lepton_charge",
+        "Z_noFSR_sublead_lepton_id",
+        "Z_noFSR_sublead_lepton_ptE_error",
+        "Z_noFSR_sublead_lepton_sip3d",
+        "ALP_pt",
+        "ALP_eta",
+        "ALP_phi",
+        "ALP_mass",
+        "ALP_lead_photon_mvaID",
+        "ALP_lead_photon_pt",
+        "ALP_lead_photon_eta",
+        "ALP_lead_photon_phi",
+        "ALP_lead_photon_mass",
+        "ALP_lead_photon_energyRaw",
+        "ALP_lead_photon_energyErr",
+        "ALP_lead_photon_r9",
+        "ALP_lead_photon_sieie",
+        "ALP_lead_photon_hoe",
+        "ALP_lead_photon_hoe_PUcorr",
+        "ALP_lead_photon_hcalPFClusterIso",
+        "ALP_lead_photon_hcalPFClusterIso_PUcorr",
+        "ALP_lead_photon_ecalPFClusterIso",
+        "ALP_lead_photon_ecalPFClusterIso_PUcorr",
+        "ALP_lead_photon_chiso",
+        "ALP_lead_photon_chiso_PUcorr",
+        "ALP_lead_photon_alliso",
+        "ALP_lead_photon_sieip",
+        "ALP_lead_photon_etaWidth",
+        "ALP_lead_photon_phiWidth",
+        "ALP_lead_photon_s4",
+        "ALP_lead_photon_trkSumPtHollowConeDR03",
+        "ALP_lead_photon_trkSumPtSolidConeDR04",
+        "ALP_lead_photon_pfChargedIso",
+        "ALP_lead_photon_pfChargedIsoWorstVtx",
+        "ALP_lead_photon_esEffSigmaRR",
+        "ALP_lead_photon_esEnergyOverRawE",
+        "ALP_lead_photon_electronVeto",
+        "ALP_lead_photon_lep_near_dR",
+        "ALP_sublead_photon_mvaID",
+        "ALP_sublead_photon_pt",
+        "ALP_sublead_photon_eta",
+        "ALP_sublead_photon_phi",
+        "ALP_sublead_photon_mass",
+        "ALP_sublead_photon_energyRaw",
+        "ALP_sublead_photon_energyErr",
+        "ALP_sublead_photon_r9",
+        "ALP_sublead_photon_sieie",
+        "ALP_sublead_photon_hoe",
+        "ALP_sublead_photon_hoe_PUcorr",
+        "ALP_sublead_photon_hcalPFClusterIso",
+        "ALP_sublead_photon_hcalPFClusterIso_PUcorr",
+        "ALP_sublead_photon_ecalPFClusterIso",
+        "ALP_sublead_photon_ecalPFClusterIso_PUcorr",
+        "ALP_sublead_photon_chiso",
+        "ALP_sublead_photon_chiso_PUcorr",
+        "ALP_sublead_photon_alliso",
+        "ALP_sublead_photon_sieip",
+        "ALP_sublead_photon_etaWidth",
+        "ALP_sublead_photon_phiWidth",
+        "ALP_sublead_photon_s4",
+        "ALP_sublead_photon_trkSumPtHollowConeDR03",
+        "ALP_sublead_photon_trkSumPtSolidConeDR04",
+        "ALP_sublead_photon_pfChargedIso",
+        "ALP_sublead_photon_pfChargedIsoWorstVtx",
+        "ALP_sublead_photon_esEffSigmaRR",
+        "ALP_sublead_photon_esEnergyOverRawE",
+        "ALP_sublead_photon_electronVeto",
+        "ALP_sublead_photon_lep_near_dR",
+        "ALP_PhotonIso",
+        "muon_1_ptErr",
+        "muon_2_ptErr",
+        "muon_3_ptErr",
+        "muon_4_ptErr",
+        "gamma_fsr_pt",
+        "gamma_fsr_eta",
+        "gamma_fsr_phi",
+        "gamma_fsr_mass",
+        "gamma_fsr_relIso03",
+        "gamma_fsr_dROverEt2",
+        "gamma_fsr_muonIdx",
+        "max_I_mini",
+        "n_leptons",
+        "n_electrons",
+        "n_muons",
+        "n_iso_photons",
+        "n_fsr",
+        "weight_central",
+        "run",
+        "event",
+        "luminosityBlock",
+        "pass_only_dimu",
+        "pass_simu_or_dimu",
+        "pass_only_diel",
+        "pass_siel_or_diel",
+        "z_mumu",
+        "z_ee",
+        "n_photons_sel",
+        "n_photons_AN2020",
+        "has_1merged_cand",
+        "has_1merged_AN2020",
+        "pass_allcuts_merged_AN2020",
+        "n_MLPhoton",
+        "n_MLPhoton_diphoton",
+        "has_1MLPhoton_diphoton",
+        "pass_allcuts_merged_ML",
+        "MLPhoton_lead_pt",
+        "MLPhoton_lead_eta",
+        "MLPhoton_lead_phi",
+        "MLPhoton_lead_mass",
+        "MLPhoton_lead_massEnergyRatio",
+        "MLPhoton_lead_diphotonScore",
+        "MLPhoton_lead_monophotonScore",
+        "MLPhoton_lead_hadronScore",
+        "MLPhoton_lead_pfIsolation"
+    ],
+    "branches": [
+        "GenVtx_z",
+        "PV_z",
+        "PV_npvs",
+        "PV_npvsGood",
+        "genWeight",
+        "Generator_weight",
+        "Rho_fixedGridRhoAll",
+        "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL",
+        "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8",
+        "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL",
+        "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ",
+        "HLT_Ele27_WPTight_Gsf",
+        "HLT_Ele30_WPTight_Gsf",
+        "HLT_Ele32_WPTight_Gsf",
+        "HLT_Ele32_WPTight_Gsf_L1DoubleEG",
+        "HLT_Ele35_WPTight_Gsf",
+        "HLT_IsoMu20",
+        "HLT_IsoMu24",
+        "HLT_IsoMu27",
+        "HLT_IsoTkMu24",
+        "HLT_Mu50",
+        "HLT_IsoMu24_eta2p1",
+        "Photon_pt",
+        "Photon_eta",
+        "Photon_phi",
+        "Photon_mass",
+        "Photon_pixelSeed",
+        "Photon_vidNestedWPBitmap",
+        "Photon_mvaID",
+        "Photon_electronVeto",
+        "Photon_electronIdx",
+        "Photon_genPartIdx",
+        "Photon_jetIdx",
+        "Photon_s4",
+        "Photon_sieip",
+        "Photon_sieie",
+        "Photon_energyRaw",
+        "Photon_energyErr",
+        "Photon_r9",
+        "Photon_hoe",
+        "Photon_hoe_PUcorr",
+        "Photon_hcalPFClusterIso",
+        "Photon_ecalPFClusterIso",
+        "Photon_pfRelIso03_chg_quadratic",
+        "Photon_pfRelIso03_all_quadratic",
+        "Photon_pfRelIso03_chg",
+        "Photon_pfRelIso03_all",
+        "Photon_isScEtaEB",
+        "Photon_isScEtaEE",
+        "Photon_etaWidth",
+        "Photon_phiWidth",
+        "Photon_trkSumPtHollowConeDR03",
+        "Photon_trkSumPtSolidConeDR04",
+        "Photon_pfChargedIso",
+        "Photon_pfChargedIsoWorstVtx",
+        "Photon_esEffSigmaRR",
+        "Photon_esEnergyOverRawE",
+        "Photon_photonIso",
+        "Photon_chargedHadronIso",
+        "Photon_genPartFlav",
+        "Photon_mvaID",
+        "Photon_mvaID_WP80",
+        "Photon_mvaID_WP90",
+        "Photon_x_calo",
+        "Photon_y_calo",
+        "Photon_z_calo",
+        "Photon_seedGain",
+        "MLPhoton_pt",
+        "MLPhoton_eta",
+        "MLPhoton_phi",
+        "MLPhoton_mass",
+        "MLPhoton_massEnergyRatio",
+        "MLPhoton_diphotonScore",
+        "MLPhoton_monophotonScore",
+        "MLPhoton_hadronScore",
+        "MLPhoton_pfIsolation",
+        "MLPhoton_r1",
+        "MLPhoton_r2",
+        "MLPhoton_r3",
+        "nMLPhoton",
+        "FsrPhoton_dROverEt2",
+        "FsrPhoton_electronIdx",
+        "FsrPhoton_eta",
+        "FsrPhoton_muonIdx",
+        "FsrPhoton_phi",
+        "FsrPhoton_pt",
+        "FsrPhoton_relIso03",
+        "nFsrPhoton",
+        "Muon_pt",
+        "Muon_eta",
+        "Muon_phi",
+        "Muon_mass",
+        "Muon_charge",
+        "Muon_ptErr",
+        "Muon_bsConstrainedPt",
+        "Muon_bsConstrainedPtErr",
+        "Muon_miniPFRelIso_all",
+        "Muon_pfRelIso03_all",
+        "Muon_pfRelIso04_all",
+        "Muon_sip3d",
+        "Muon_dxy",
+        "Muon_dz",
+        "Muon_isGlobal",
+        "Muon_isTracker",
+        "Muon_tightId",
+        "Muon_mediumId",
+        "Muon_looseId",
+        "Muon_highPtId",
+        "Muon_ptErr",
+        "Muon_genPartIdx",
+        "Muon_nTrackerLayers",
+        "Electron_pt",
+        "Electron_eta",
+        "Electron_deltaEtaSC",
+        "Electron_phi",
+        "Electron_mass",
+        "Electron_energyErr",
+        "Electron_ptErr",
+        "Electron_charge",
+        "Electron_miniPFRelIso_all",
+        "Electron_pfRelIso03_all",
+        "Electron_dxy",
+        "Electron_dz",
+        "Electron_sip3d",
+        "Electron_mvaHZZIso",
+        "Electron_mvaIso_WP90",
+        "Electron_mvaIso_WP80",
+        "Electron_mvaFall17V2Iso_WP90",
+        "Electron_mvaFall17V2Iso_WP80",
+        "Electron_mvaFall17V2Iso_WPL",
+        "Electron_energyErr",
+        "Electron_r9",  
+        "Electron_genPartIdx",
+        "GenPart_eta",
+        "GenPart_genPartIdxMother",
+        "GenPart_mass",
+        "GenPart_pdgId",
+        "GenPart_phi",
+        "GenPart_pt",
+        "GenPart_status",
+        "GenPart_statusFlags",
+        "TrigObj_id",
+        "TrigObj_filterBits",
+        "genWeight",
+        "run",
+        "event",
+        "luminosityBlock",
+        "fixedGridRhoAll",
+        "Pileup_nTrueInt",
+        "LHEScaleWeight_Zero",
+        "Photon_dEsigmaDown",
+        "Photon_dEsigmaUp",
+        "Photon_pt_ScaleUp",
+        "Photon_pt_ScaleDown",
+        "Muon_corrected_pt",
+        "Muon_scaleUp_pt",
+        "Muon_scaleDown_pt",
+        "Muon_smearUp_pt",
+        "Muon_smearDown_pt",
+        "TrigObj_id",
+        "TrigObj_filterBits"
+    ],
+    "branch_map": {
+        "mc": [
+            [
+                [
+                    "Muon",
+                    "pt"
+                ],
+                [
+                    "Muon",
+                    "corrected_pt"
+                ]
+            ],
+            [
+                [
+                    "Muon",
+                    "ptErr"
+                ],
+                [
+                    "Muon",
+                    "bsConstrainedPtErr"
+                ]
+            ],
+            [
+                [
+                    "Electron",
+                    "pt"
+                ],
+                [
+                    "Electron",
+                    "corrected_pt"
+                ]
+            ],
+            [
+                [
+                    "Photon",
+                    "pt"
+                ],
+                [
+                    "Photon",
+                    "corrected_pt"
+                ]
+            ]
+        ],
+        "data": []
+    }
+}

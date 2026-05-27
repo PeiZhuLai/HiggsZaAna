@@ -50,9 +50,18 @@ REWEIGHT_VARS = [
     "pho2Pt",
     "H_pt",
 
-    # 6. mass-hypothesis variable: most important, but safest to correct last
+    # 6. derived BDT features (computed inside load_frame, not stored in ntuples)
+    "pho_pt_asym",
+    "pho_dR_over_ma",
+    "min_pho_pt_over_ma",
+    "ma_resid_norm",
+
+    # 7. mass-hypothesis variable: most important, but safest to correct last
     "param",
 ]
+
+# Variables that are computed at load time from other branches (no physical branch).
+DERIVED_VARS = {"pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm"}
 
 MASS_HYPOTHESES = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0, 25.0, 30.0]
 
@@ -160,9 +169,15 @@ def pick_existing_branch(
 
 def required_logical_branches(vars_to_read: Sequence[str]) -> List[str]:
     branches = {"H_m", "ALP_m"}
+    # Derived features need pho1Pt/pho2Pt and var_dR_g1g2 in the underlying frame.
+    if any(v in DERIVED_VARS for v in vars_to_read):
+        branches.update({"pho1Pt", "pho2Pt", "var_dR_g1g2"})
     for var in vars_to_read:
-        if var != "param":
-            branches.add(var)
+        if var == "param":
+            continue
+        if var in DERIVED_VARS:
+            continue
+        branches.add(var)
     return sorted(branches)
 
 
@@ -228,10 +243,28 @@ def load_frame(path: str, tree_name: str, vars_to_read: Sequence[str], weight_br
     for logical in vars_to_read:
         if logical == "param":
             continue
+        if logical in DERIVED_VARS:
+            continue
         physical = branch_map.get(logical)
         if physical is None:
             raise KeyError(f"{label}: logical branch {logical} was not resolved")
         frame[logical] = pd.to_numeric(raw[physical], errors="coerce")
+
+    # Compute derived features from already-loaded base columns.
+    if any(v in DERIVED_VARS for v in vars_to_read):
+        pt1 = frame["pho1Pt"].to_numpy(dtype=float)
+        pt2 = frame["pho2Pt"].to_numpy(dtype=float)
+        dR = frame["var_dR_g1g2"].to_numpy(dtype=float)
+        ma = frame["ALP_m"].to_numpy(dtype=float)
+        ma_safe = np.where(np.isfinite(ma) & (ma > 0.5), ma, 0.5)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            if "pho_pt_asym" in vars_to_read:
+                frame["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+            if "pho_dR_over_ma" in vars_to_read:
+                frame["pho_dR_over_ma"] = dR / ma_safe
+            if "min_pho_pt_over_ma" in vars_to_read:
+                frame["min_pho_pt_over_ma"] = np.minimum(pt1, pt2) / ma_safe
+        # ma_resid_norm depends on the mass hypothesis set below in the "param" block.
 
     physical_weight = branch_map["__weight__"]
     if physical_weight is None:
@@ -239,7 +272,7 @@ def load_frame(path: str, tree_name: str, vars_to_read: Sequence[str], weight_br
     else:
         frame["__weight__"] = pd.to_numeric(raw[physical_weight], errors="coerce").fillna(0.0)
 
-    if "param" in vars_to_read:
+    if "param" in vars_to_read or "ma_resid_norm" in vars_to_read:
         h_m = pd.to_numeric(frame["H_m"], errors="coerce").to_numpy(dtype=float)
         alp_m = pd.to_numeric(frame["ALP_m"], errors="coerce").to_numpy(dtype=float)
         if "event" in branch_map and branch_map["event"] is not None:
@@ -250,7 +283,11 @@ def load_frame(path: str, tree_name: str, vars_to_read: Sequence[str], weight_br
             mass_hyp = deterministic_mass_from_index(frame.shape[0], seed, MASS_HYPOTHESES)
             param_method = "row_order_rng"
         with np.errstate(divide="ignore", invalid="ignore"):
-            frame["param"] = (alp_m - mass_hyp) / h_m
+            if "param" in vars_to_read:
+                frame["param"] = (alp_m - mass_hyp) / h_m
+            if "ma_resid_norm" in vars_to_read:
+                ma_hyp_safe = np.where(mass_hyp > 0.5, mass_hyp, 0.5)
+                frame["ma_resid_norm"] = (alp_m - mass_hyp) / ma_hyp_safe
         frame["__param_mass_hypothesis__"] = mass_hyp
         branch_map["__param_method__"] = param_method
 

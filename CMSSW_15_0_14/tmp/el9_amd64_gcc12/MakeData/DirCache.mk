@@ -1,0 +1,10 @@
+ALL_SUBSYSTEMS+=RecoEgamma
+subdirs_src_RecoEgamma = src_RecoEgamma_EgammaMLPhotonProducers
+subdirs_src += src_RecoEgamma
+ALL_PACKAGES += RecoEgamma/EgammaMLPhotonProducers
+subdirs_src_RecoEgamma_EgammaMLPhotonProducers := src_RecoEgamma_EgammaMLPhotonProducers_src src_RecoEgamma_EgammaMLPhotonProducers_test
+ALL_SUBSYSTEMS+=MLDataFormats
+subdirs_src_MLDataFormats = src_MLDataFormats_EgammaCandidates
+subdirs_src += src_MLDataFormats
+ALL_PACKAGES += MLDataFormats/EgammaCandidates
+subdirs_src_MLDataFormats_EgammaCandidates := src_MLDataFormats_EgammaCandidates_src

@@ -362,11 +362,14 @@ tdrstyle.setTDRStyle()
 # load the model from disk
 # model = pickle.load(open(BDT_filename, 'rb'))
 
-pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_pho1IetaIeta55', 
+pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_pho1IetaIeta55',
 'pho2Pt': '4_pho2Pt', 'pho2R9': '5_pho2R9', 'pho2IetaIeta55': '6_pho2IetaIeta55',
 'pho1ECALIso': '7_pho1ECALIso', 'pho2ECALIso': '8_pho2ECALIso', 'ALP_calculatedPhotonIso': '9_ALP_calculatedPhotonIso',
 'var_dR_Za': '10_var_dR_Za', 'var_dR_g1g2': '11_var_dR_g1g2', 'var_dR_g1Z': '12_var_dR_g1Z',
-'var_PtaOverMh': '13_var_PtaOverMh', 'H_pt': '14_H_pt', 'param': '15_param', 'ALP_m': '16_ALP_m'}
+'var_PtaOverMh': '13_var_PtaOverMh', 'H_pt': '14_H_pt',
+'pho_pt_asym': '15_pho_pt_asym', 'pho_dR_over_ma': '16_pho_dR_over_ma',
+'min_pho_pt_over_ma': '17_min_pho_pt_over_ma', 'ma_resid_norm': '18_ma_resid_norm',
+'param': '19_param', 'ALP_m': '20_ALP_m'}
 
 # NEW: 輸出檔名依 pdfName_map 排序；沒對應就用原本 var_name
 def _pdf_output_name(var_name: str) -> str:
@@ -903,6 +906,11 @@ def main():
         histos['var_MhMZ'][sample] = TH1F('var_MhMZ' + '_' + sample, 'var_MhMZ' + '_' + sample, 130, 180., 310.)
         histos['ALP_calculatedPhotonIso'][sample] = TH1F('ALP_calculatedPhotonIso' + '_' + sample, 'ALP_calculatedPhotonIso' + '_' + sample, 25, 0., 125.)
         histos['param'][sample] = TH1F('param' + '_' + sample, 'param' + '_' + sample, 25, -0.3, 0.6)
+        # Derived BDT features added to recover low-ma sensitivity
+        histos['pho_pt_asym'][sample]        = TH1F('pho_pt_asym'        + '_' + sample, 'pho_pt_asym'        + '_' + sample, 40, -1.0, 1.0)
+        histos['pho_dR_over_ma'][sample]     = TH1F('pho_dR_over_ma'     + '_' + sample, 'pho_dR_over_ma'     + '_' + sample, 40,  0.0, 4.0)
+        histos['min_pho_pt_over_ma'][sample] = TH1F('min_pho_pt_over_ma' + '_' + sample, 'min_pho_pt_over_ma' + '_' + sample, 60,  0.0, 60.0)
+        histos['ma_resid_norm'][sample]      = TH1F('ma_resid_norm'      + '_' + sample, 'ma_resid_norm'      + '_' + sample, 40, -1.0, 1.0)
 
         if args.mva:
             # 僅為選定質量建立 MVA 相關直方圖
@@ -1062,12 +1070,28 @@ def main():
 
                 if sample in analyzer_cfg.sig_names:
                     param_val = (ntup.ALP_m - mass_list[sample])/ntup.H_m
+                    ma_hyp_val = mass_list[sample]
                 else:
                     # mass_random = random.choice(search_mA_list)
                     mass_random = random.choice(mass_values)
                     param_val = (ntup.ALP_m - mass_random)/ntup.H_m
+                    ma_hyp_val = mass_random
 
                 histos['param'][sample].Fill( param_val, weight )
+
+                # Derived features
+                pt1 = float(ntup.ALP_lead_photon_pt)
+                pt2 = float(ntup.ALP_sublead_photon_pt)
+                ma_safe = ntup.ALP_m if ntup.ALP_m > 0.5 else 0.5
+                ma_hyp_safe = ma_hyp_val if ma_hyp_val > 0.5 else 0.5
+                pho_pt_asym_val        = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+                pho_dR_over_ma_val     = float(ntup.var_dR_g1g2) / ma_safe
+                min_pho_pt_over_ma_val = min(pt1, pt2) / ma_safe
+                ma_resid_norm_val      = (ntup.ALP_m - ma_hyp_val) / ma_hyp_safe
+                histos['pho_pt_asym'][sample].Fill( pho_pt_asym_val, weight )
+                histos['pho_dR_over_ma'][sample].Fill( pho_dR_over_ma_val, weight )
+                histos['min_pho_pt_over_ma'][sample].Fill( min_pho_pt_over_ma_val, weight )
+                histos['ma_resid_norm'][sample].Fill( ma_resid_norm_val, weight )
 
                 if args.sideband_reweight_unc and fill_systematics:
                     sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
@@ -1079,7 +1103,8 @@ def main():
                     )
 
                 if fill_systematics:
-                    var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa, 'param':param_val}
+                    var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa, 'param':param_val,
+                               'pho_pt_asym':pho_pt_asym_val, 'pho_dR_over_ma':pho_dR_over_ma_val, 'min_pho_pt_over_ma':min_pho_pt_over_ma_val, 'ma_resid_norm':ma_resid_norm_val}
                     if args.mva:
                         for ALP_mass in target_masses:
                             var_map['mvaVal_'+ALP_mass] = MVA_value[ALP_mass]

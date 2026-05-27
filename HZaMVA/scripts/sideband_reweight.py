@@ -19,9 +19,14 @@ DEFAULT_REWEIGHT_JSON = os.environ.get("HZA_SIDEBAND_REWEIGHT_JSON", DEFAULT_REW
 VAR_ALIASES = {
     "H_m": ("H_m", "H_mass"),
     "ALP_m": ("ALP_m", "ALP_mass"),
+    "pho1Pt": ("pho1Pt", "ALP_lead_photon_pt"),
+    "pho2Pt": ("pho2Pt", "ALP_sublead_photon_pt"),
     "pho1ECALIso": ("pho1ECALIso", "pho1PIso_noCorr", "ALP_lead_photon_ecalPFClusterIso"),
     "pho2ECALIso": ("pho2ECALIso", "pho2PIso_noCorr", "ALP_sublead_photon_ecalPFClusterIso"),
 }
+
+# Derived features that are NOT in any ROOT branch — must be computed from base columns.
+DERIVED_VARS = ("pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm")
 
 
 def _finite_float(value, default=np.nan):
@@ -137,10 +142,48 @@ class SidebandReweighter:
                 return self.param_values(frame, output_col="param")
             return frame["param"].to_numpy(dtype=float)
 
+        if var in DERIVED_VARS:
+            if var in frame.columns:
+                return frame[var].to_numpy(dtype=float)
+            return self._derived_values_for_dataframe(frame, var)
+
         column = _first_present_dataframe_column(frame, var)
         if column is None:
             raise KeyError(f"Missing sideband reweight variable '{var}' in DataFrame.")
         return frame[column].to_numpy(dtype=float)
+
+    def _derived_values_for_dataframe(self, frame, var):
+        def _col(name):
+            actual = _first_present_dataframe_column(frame, name)
+            if actual is None:
+                raise KeyError(f"Cannot compute derived '{var}': missing base column '{name}'")
+            return frame[actual].to_numpy(dtype=float)
+
+        if var == "pho_pt_asym":
+            pt1 = _col("pho1Pt")
+            pt2 = _col("pho2Pt")
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+        if var == "pho_dR_over_ma":
+            dR = _col("var_dR_g1g2")
+            ma = _col("ALP_m")
+            ma_safe = np.where(np.isfinite(ma) & (ma > 0.5), ma, 0.5)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return dR / ma_safe
+        if var == "min_pho_pt_over_ma":
+            pt1 = _col("pho1Pt")
+            pt2 = _col("pho2Pt")
+            ma = _col("ALP_m")
+            ma_safe = np.where(np.isfinite(ma) & (ma > 0.5), ma, 0.5)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return np.minimum(pt1, pt2) / ma_safe
+        if var == "ma_resid_norm":
+            ma = _col("ALP_m")
+            mass_hyp = self.mass_hypotheses_for_dataframe(frame)
+            ma_hyp_safe = np.where(mass_hyp > 0.5, mass_hyp, 0.5)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return (ma - mass_hyp) / ma_hyp_safe
+        raise KeyError(f"Unknown derived variable: {var}")
 
     def weights_for_dataframe(self, frame):
         weights = np.ones(len(frame), dtype=float)
@@ -161,8 +204,8 @@ class SidebandReweighter:
         return frame
 
     def _object_value(self, obj, var, row_index=None):
-        if var == "param":
-            attr = _first_present_object_attr(obj, "param")
+        if var == "param" or var == "ma_resid_norm":
+            attr = _first_present_object_attr(obj, "param") if var == "param" else None
             if attr is not None:
                 return _finite_float(getattr(obj, attr))
 
@@ -182,12 +225,48 @@ class SidebandReweighter:
             else:
                 idx = 0 if row_index is None else int(row_index)
                 mass_hyp = _mass_from_row_order(idx + 1, self.seed, self.mass_hypotheses)[idx]
-            return (alp_m - mass_hyp) / h_m
+            if var == "param":
+                return (alp_m - mass_hyp) / h_m
+            ma_hyp_safe = mass_hyp if mass_hyp > 0.5 else 0.5
+            return (alp_m - mass_hyp) / ma_hyp_safe
+
+        if var in DERIVED_VARS:
+            return self._derived_object_value(obj, var)
 
         attr = _first_present_object_attr(obj, var)
         if attr is None:
             return np.nan
         return _finite_float(getattr(obj, attr))
+
+    def _derived_object_value(self, obj, var):
+        def _attr(name):
+            actual = _first_present_object_attr(obj, name)
+            if actual is None:
+                return np.nan
+            return _finite_float(getattr(obj, actual))
+
+        if var == "pho_pt_asym":
+            pt1 = _attr("pho1Pt")
+            pt2 = _attr("pho2Pt")
+            if not (math.isfinite(pt1) and math.isfinite(pt2)):
+                return np.nan
+            return (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+        if var == "pho_dR_over_ma":
+            dR = _attr("var_dR_g1g2")
+            ma = _attr("ALP_m")
+            if not (math.isfinite(dR) and math.isfinite(ma)):
+                return np.nan
+            ma_safe = ma if ma > 0.5 else 0.5
+            return dR / ma_safe
+        if var == "min_pho_pt_over_ma":
+            pt1 = _attr("pho1Pt")
+            pt2 = _attr("pho2Pt")
+            ma = _attr("ALP_m")
+            if not (math.isfinite(pt1) and math.isfinite(pt2) and math.isfinite(ma)):
+                return np.nan
+            ma_safe = ma if ma > 0.5 else 0.5
+            return min(pt1, pt2) / ma_safe
+        return np.nan
 
     def weight_for_object(self, obj, row_index=None):
         weight = 1.0
