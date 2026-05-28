@@ -1,0 +1,19 @@
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/run_dataVmc_condor_job.sh
+arguments = "$(region_key) $(final_tag) $(sample_tag) $(samples)"
+initialdir = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor
+getenv = True
+should_transfer_files = NO
+
+request_cpus = 1
+request_memory = 4000MB
+request_disk = 20000MB
++JobFlavour = "tomorrow"
+
+environment = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
+
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).out
+error  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).err
+log    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/dataVmc.$(ClusterId).log
+
+queue region_key, final_tag, sample_tag, samples from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/dataVmc_resubmit_jobs.txt
