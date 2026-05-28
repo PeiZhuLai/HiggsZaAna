@@ -69,8 +69,9 @@ pdfName_map = {
     "var_dR_g1Z": "12_var_dR_g1Z",
     "var_PtaOverMh": "13_var_PtaOverMh",
     "H_pt": "14_H_pt",
-    "param": "15_param",
-    "ALP_m": "16_ALP_m",
+    "pho_pt_asym": "15_pho_pt_asym",
+    "param": "16_param",
+    "ALP_m": "17_ALP_m",
 }
 
 MVA_LARGER_NBINS = 20

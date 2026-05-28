@@ -1527,6 +1527,61 @@ class ZaTaggerRun3(Tagger):
                 if not weighted:
                     awkward_utils.add_field(events, "pass_allcuts_merged_ML", ak.fill_none(final_cut, False), overwrite=True)
 
+            # ----------------------------------------------------------
+            # MLPhoton truth-match to gen ã (pdgId=9000005) — ROI residual
+            # (moved here from calculate_gen_info so it always runs and
+            #  we don't depend on later events-vs-zgammas field plumbing.)
+            # ----------------------------------------------------------
+            if not self.is_data and "GenPart" in events.fields:
+                try:
+                    gen = events.GenPart
+                    is_alp = abs(gen.pdgId) == 9000005
+                    gen_alp = gen[is_alp]
+                    gen_alp = gen_alp[ak.argsort(gen_alp.pt, ascending=False, axis=1)]
+                    a_cand_ml = ak.firsts(gen_alp)
+
+                    a_eta = a_cand_ml.eta[:, None]
+                    a_phi = a_cand_ml.phi[:, None]
+                    deta = ml.eta - a_eta
+                    dphi = (ml.phi - a_phi + numpy.pi) % (2 * numpy.pi) - numpy.pi
+                    dr = numpy.sqrt(deta * deta + dphi * dphi)
+
+                    best_idx = ak.argmin(dr, axis=1, keepdims=True)
+                    min_dr = ak.min(dr, axis=1)
+                    matched_ml = ak.firsts(ml[best_idx])
+
+                    ml_mass_lead = ak.fill_none(matched_ml.mass, DUMMY_VALUE)
+                    gen_ma_val = ak.fill_none(a_cand_ml.mass, DUMMY_VALUE)
+                    residual = ak.where(
+                        (ml_mass_lead > -100) & (gen_ma_val > -100),
+                        ml_mass_lead - gen_ma_val,
+                        DUMMY_VALUE,
+                    )
+
+                    awkward_utils.add_field(events, "MergedML_dR_to_genA",
+                                            ak.fill_none(min_dr, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_pt",
+                                            ak.fill_none(matched_ml.pt, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_eta",
+                                            ak.fill_none(matched_ml.eta, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_phi",
+                                            ak.fill_none(matched_ml.phi, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_mass", ml_mass_lead, overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_massEnergyRatio",
+                                            ak.fill_none(matched_ml.massEnergyRatio, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_diphotonScore",
+                                            ak.fill_none(matched_ml.diphotonScore, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_monophotonScore",
+                                            ak.fill_none(matched_ml.monophotonScore, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_hadronScore",
+                                            ak.fill_none(matched_ml.hadronScore, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_pfIsolation",
+                                            ak.fill_none(matched_ml.pfIsolation, DUMMY_VALUE), overwrite=True)
+                    awkward_utils.add_field(events, "MergedML_residual_mass", residual, overwrite=True)
+                    awkward_utils.add_field(events, "GenALP_mass_inEvents", gen_ma_val, overwrite=True)
+                except Exception as _e:
+                    logger.warning(f"[MLPhoton truth match in select] skipped: {_e}")
+
         all_cuts = ee_all_cut | mm_all_cut
 
         elapsed_time = time.time() - start
@@ -1723,7 +1778,7 @@ class ZaTaggerRun3(Tagger):
                                         ak.fill_none(matched_ml.pfIsolation, DUMMY_VALUE), overwrite=True)
                 awkward_utils.add_field(zgammas, "MergedML_residual_mass", residual, overwrite=True)
             except Exception as _e:
-                logger.debug(f"[MLPhoton truth match] skipped: {_e}")
+                logger.warning(f"[MLPhoton truth match] skipped: {_e}")
 
         # (Optional) a(9000005) -> γγ : try to select ALP->γγ separately; if absent, branches will be dummy
         try:

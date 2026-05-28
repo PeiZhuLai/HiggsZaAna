@@ -105,11 +105,8 @@ class Plot_Config:
             'var_PtaOverMa': "p_{T,a}/m_{#gamma#gamma}",
             'var_MhMa': "m_{ll#gamma#gamma} + m_{#gamma#gamma}",
             'param': "(m_{a} - m_{a,hyp})/m_{ll#gamma#gamma}",
-            # Derived BDT features (mass-merging discriminators)
+            # Derived BDT feature (only one kept after corr study)
             'pho_pt_asym': "(p_{T,#gamma1}-p_{T,#gamma2})/(p_{T,#gamma1}+p_{T,#gamma2})",
-            'pho_dR_over_ma': "#Delta R(#gamma#gamma)/m_{a}",
-            'min_pho_pt_over_ma': "min(p_{T,#gamma})/m_{a}",
-            'ma_resid_norm': "(m_{a} - m_{a,hyp})/m_{a,hyp}",
         }
 
     def SetHistStyles(self, hist, sample):

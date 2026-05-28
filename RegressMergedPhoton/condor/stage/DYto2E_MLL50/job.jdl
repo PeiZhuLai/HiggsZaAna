@@ -1,0 +1,15 @@
+Universe                = vanilla
+Executable              = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/run_one_file.sh
+Arguments               = $(input_url) $(out_name) $(out_dir)
+should_transfer_files   = NO
+use_x509userproxy       = true
+x509userproxy           = /afs/cern.ch/user/p/pelai/.x509up_pelai
+JobBatchName            = "MLPhoton_Regressing_DYto2E_MLL50"
+Log                     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/DYto2E_MLL50/logs/job_$(Cluster)_$(Process).log
+Output                  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/DYto2E_MLL50/logs/job_$(Cluster)_$(Process).out
+Error                   = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/DYto2E_MLL50/logs/job_$(Cluster)_$(Process).err
++JobFlavour             = "workday"
+RequestCpus             = 1
+RequestMemory           = 4000
+RequestDisk             = 4000000
+Queue input_url, out_name, out_dir from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/DYto2E_MLL50/args.txt

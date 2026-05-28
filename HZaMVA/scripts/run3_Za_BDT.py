@@ -34,7 +34,7 @@ PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 # Names of features that are derived on the fly inside add_derived_features().
 # bdt_input_branches() must NOT request these from ROOT — they don't exist as branches.
-_DERIVED_FEATURE_SET = {"pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm"}
+_DERIVED_FEATURE_SET = {"pho_pt_asym"}
 SIDEBAND_REWEIGHTER = load_sideband_reweighter()
 if SIDEBAND_REWEIGHTER is not None:
     print("Loaded sideband reweight JSON:", SIDEBAND_REWEIGHTER.source_path)
@@ -488,32 +488,22 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
 # 15. (m_a - m_a, hype) / mH
 
 variables = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt"]
-# Derived features added to recover low-ma sensitivity.
-# These describe photon-merging / bremsstrahlung patterns that the original 14 vars
-# do not isolate; they are computed from existing branches so no re-ntuple is needed.
-derived_variables = ["pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm"]
+# Derived feature added to recover low-ma sensitivity.
+# pho_pt_asym is the only derived var kept; pho_dR_over_ma / min_pho_pt_over_ma
+# are highly correlated with existing kinematic vars (|corr|>0.6), and
+# ma_resid_norm duplicates (ma-ma_hyp)/mH already in `param`.
+derived_variables = ["pho_pt_asym"]
 variables = variables + derived_variables
 mass_variables = ["ALP_m", "H_m"]
 wt_variables = ['factor']
 
 
 def add_derived_features(dataframe):
-    """Augment df in-place with the four derived BDT features."""
+    """Augment df in-place with the kept derived BDT feature."""
     import numpy as _np
     pt1 = dataframe["pho1Pt"].astype(float)
     pt2 = dataframe["pho2Pt"].astype(float)
-    ma = dataframe["ALP_m"].astype(float)
-    dR = dataframe["var_dR_g1g2"].astype(float)
-    ma_safe = _np.where(ma > 0.5, ma, 0.5)
     dataframe["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
-    dataframe["pho_dR_over_ma"] = dR / ma_safe
-    dataframe["min_pho_pt_over_ma"] = _np.minimum(pt1, pt2) / ma_safe
-    if "mass" in dataframe.columns:
-        m_hyp = dataframe["mass"].astype(float)
-        m_hyp_safe = _np.where(m_hyp > 0.5, m_hyp, 0.5)
-        dataframe["ma_resid_norm"] = (ma - m_hyp) / m_hyp_safe
-    else:
-        dataframe["ma_resid_norm"] = 0.0
 
 file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
 bkg_name = ['All_Bkg']
@@ -549,7 +539,6 @@ for year in years:
     for dataset in bkg_name + data_name:
         dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
-        # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm now.
         add_derived_features(dfs[year][dataset])
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
@@ -561,8 +550,6 @@ for year in years:
             dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
-            # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm with the real hypothesis.
-            add_derived_features(dfs[year][dataset][mass])
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs']
 
 
@@ -595,7 +582,7 @@ n_data_SB = np.sum(data_SB.values[:,wt_var_indices])
 n_bkg_SB = np.sum(bkg_SB.values[:,wt_var_indices])
 print("weighted Sideband event: data", n_data_SB, "bkg:", n_bkg_SB)
 
-file_name = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt", "pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm", "param", "ALP_m", "H_m"]
+file_name = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt", "pho_pt_asym", "param", "ALP_m", "H_m"]
 
 xlabel = [
     r"$\gamma_{Leading}\ P_{T}$",
@@ -613,9 +600,6 @@ xlabel = [
     r"$P_{t,a} / m_{H}$",
     r"$P_{T,H}$",
     r"$(p_{T,1}-p_{T,2})/(p_{T,1}+p_{T,2})$",
-    r"$\Delta R(\gamma\gamma) / m_{a}$",
-    r"$\min(p_{T,\gamma}) / m_{a}$",
-    r"$(m_{a} - m_{a,\mathrm{hyp}}) / m_{a,\mathrm{hyp}}$",
     r"$(m_{a} - m_{a,\mathrm{hyp}}) / m_{H}$",
     r"$m_{a}$",
     r"$m_{H}$",
@@ -637,9 +621,6 @@ x_limits = {
     'var_PtaOverMh':(-0.1, 0.9),
     'H_pt':(-20, 300),
     'pho_pt_asym': (-1.0, 1.0),
-    'pho_dR_over_ma': (0.0, 4.0),
-    'min_pho_pt_over_ma': (0.0, 60.0),
-    'ma_resid_norm': (-1.0, 1.0),
     'param':(-1, 1),
     'ALP_m':(0, 55),
     'H_m':(110, 180),
@@ -661,9 +642,6 @@ bin_sizes = {
     'var_PtaOverMh': 0.02,
     'H_pt': 4,
     'pho_pt_asym': 0.05,
-    'pho_dR_over_ma': 0.1,
-    'min_pho_pt_over_ma': 1.0,
-    'ma_resid_norm': 0.05,
     'param': 0.05,
     'ALP_m': 1,
     'H_m': 0.5,
@@ -1977,24 +1955,6 @@ cats = [[0.0, 0.12999999523162842], [0.12999999523162842, 1.]]
 cats[0][0]
 for i in range(2):
     draw_dataMC(var_name='H_mass', BDT_low=cats[i][0], BDT_high=cats[i][1], nbins = 80, range_hl=(100,180), output_name=f"cat2_H_mass_{i}.pdf")
-
-def draw_dataMC(var_name, BDT_low, BDT_high, nbins = 50,range_hl=(0,1), output_name=None):
-    plt.figure(figsize=(8, 6))
-    hist_DY, bins = np.histogram(y_test_frame[var_name][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']==1) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], bins=nbins,range=range_hl)
-    hist_data, _ = np.histogram(data_all_frame[var_name][(data_all_frame['disc']>BDT_low) & (data_all_frame['disc']<=BDT_high) & ((data_all_frame['H_mass']<115) | (data_all_frame['H_mass']>135))], bins=nbins,range=range_hl)
-    hist_data_err = np.sqrt(hist_data)
-    bins = bins + (bins[1]-bins[0])/2.
-
-    plt.bar(bins[:-1], hist_DY, width=np.diff(bins), label='DY')
-    plt.hist(y_test_frame[var_name][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)], weights=y_test_frame['weight'][(y_test_frame['truth']<0) & (y_test_frame['disc']>BDT_low) & (y_test_frame['disc']<=BDT_high)]*50, bins=bins, histtype='step', color='r', label='Signal * 50')
-    plt.errorbar(bins[:-1], hist_data, yerr=hist_data_err, fmt='.', c='black', label='data', markersize=8,capthick=0)
-
-    plt.legend()
-    plt.xlabel(var_name)
-    plt.ylabel('Weighted Frequency')
-    # plt.title('Stacked Weighted Histogram of Mass by Truth')
-    if output_name is not None:
-        savefig_and_show(output_name)
 
 cats = [[0.0, 0.925000011920929], [0.925000011920929, 0.9599999785423279], [0.9599999785423279, 0.9700000286102295], [0.9700000286102295, 1.]]
 

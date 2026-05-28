@@ -26,7 +26,7 @@ VAR_ALIASES = {
 }
 
 # Derived features that are NOT in any ROOT branch — must be computed from base columns.
-DERIVED_VARS = ("pho_pt_asym", "pho_dR_over_ma", "min_pho_pt_over_ma", "ma_resid_norm")
+DERIVED_VARS = ("pho_pt_asym",)
 
 
 def _finite_float(value, default=np.nan):
@@ -164,25 +164,6 @@ class SidebandReweighter:
             pt2 = _col("pho2Pt")
             with np.errstate(divide="ignore", invalid="ignore"):
                 return (pt1 - pt2) / (pt1 + pt2 + 1e-6)
-        if var == "pho_dR_over_ma":
-            dR = _col("var_dR_g1g2")
-            ma = _col("ALP_m")
-            ma_safe = np.where(np.isfinite(ma) & (ma > 0.5), ma, 0.5)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                return dR / ma_safe
-        if var == "min_pho_pt_over_ma":
-            pt1 = _col("pho1Pt")
-            pt2 = _col("pho2Pt")
-            ma = _col("ALP_m")
-            ma_safe = np.where(np.isfinite(ma) & (ma > 0.5), ma, 0.5)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                return np.minimum(pt1, pt2) / ma_safe
-        if var == "ma_resid_norm":
-            ma = _col("ALP_m")
-            mass_hyp = self.mass_hypotheses_for_dataframe(frame)
-            ma_hyp_safe = np.where(mass_hyp > 0.5, mass_hyp, 0.5)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                return (ma - mass_hyp) / ma_hyp_safe
         raise KeyError(f"Unknown derived variable: {var}")
 
     def weights_for_dataframe(self, frame):
@@ -204,8 +185,8 @@ class SidebandReweighter:
         return frame
 
     def _object_value(self, obj, var, row_index=None):
-        if var == "param" or var == "ma_resid_norm":
-            attr = _first_present_object_attr(obj, "param") if var == "param" else None
+        if var == "param":
+            attr = _first_present_object_attr(obj, "param")
             if attr is not None:
                 return _finite_float(getattr(obj, attr))
 
@@ -225,10 +206,7 @@ class SidebandReweighter:
             else:
                 idx = 0 if row_index is None else int(row_index)
                 mass_hyp = _mass_from_row_order(idx + 1, self.seed, self.mass_hypotheses)[idx]
-            if var == "param":
-                return (alp_m - mass_hyp) / h_m
-            ma_hyp_safe = mass_hyp if mass_hyp > 0.5 else 0.5
-            return (alp_m - mass_hyp) / ma_hyp_safe
+            return (alp_m - mass_hyp) / h_m
 
         if var in DERIVED_VARS:
             return self._derived_object_value(obj, var)
@@ -251,21 +229,6 @@ class SidebandReweighter:
             if not (math.isfinite(pt1) and math.isfinite(pt2)):
                 return np.nan
             return (pt1 - pt2) / (pt1 + pt2 + 1e-6)
-        if var == "pho_dR_over_ma":
-            dR = _attr("var_dR_g1g2")
-            ma = _attr("ALP_m")
-            if not (math.isfinite(dR) and math.isfinite(ma)):
-                return np.nan
-            ma_safe = ma if ma > 0.5 else 0.5
-            return dR / ma_safe
-        if var == "min_pho_pt_over_ma":
-            pt1 = _attr("pho1Pt")
-            pt2 = _attr("pho2Pt")
-            ma = _attr("ALP_m")
-            if not (math.isfinite(pt1) and math.isfinite(pt2) and math.isfinite(ma)):
-                return np.nan
-            ma_safe = ma if ma > 0.5 else 0.5
-            return min(pt1, pt2) / ma_safe
         return np.nan
 
     def weight_for_object(self, obj, row_index=None):
