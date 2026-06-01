@@ -501,6 +501,17 @@ fi
 # Train MVA
 if [[ "$RUN_HIGGSZA_TRAIN_MVA" == "1" ]]; then
     echo_step "HiggsZaAna: train MVA"
+
+    activate_conda_env "higgs-alp-ana" \
+        "$ANACONDA_SETUP" \
+        "$ANACONDA_CONDA_SH" \
+        "$MINICONDA_SETUP" \
+        "$MINICONDA_CONDA_SH" \
+        "${CONDA_EXE:+${CONDA_EXE%/bin/conda}/etc/profile.d/conda.sh}" \
+        "${HOME}/anaconda3/etc/profile.d/conda.sh" \
+        "${HOME}/miniconda3/etc/profile.d/conda.sh" \
+        "/usr/etc/profile.d/conda.sh"
+
     cd "${PROJECT_DIR}/HZaMVA/scripts"
     python3 1_make_sideband_reweight.py
     bash 2_train.sh

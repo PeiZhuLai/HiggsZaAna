@@ -490,6 +490,12 @@ class AnalysisManager():
             else:
                 config["skimmed_files"] = []
 
+            # Pass MLPhoton friend-tree top-level config through to per-job configs.
+            # Looked up from the top-level analysis config (config_dict).
+            for k in ("mlphoton_friend", "mlphoton_parent_map", "mlphoton_dir", "mlphoton_tag"):
+                if k in self.config:
+                    config[k] = self.config[k]
+
 
             for x in ["systematics", "tag_sequence", "function", "variables_of_interest"]:
                 config[x] = copy.deepcopy(getattr(self, x))
@@ -582,7 +588,26 @@ class AnalysisManager():
 
         with_skimmed = config.get("with_skimmed", False)
         skimmed_files_paths = config.get("skimmed_files", []) # Get paths, default to empty list
-        
+
+        # MLPhoton friend-tree integration (slim MLNanoAOD via event-ID JOIN).
+        # Activated when the sample config defines mlphoton_friend = true and
+        # provides mlphoton_parent_map / mlphoton_dir / mlphoton_tag.
+        mlphoton_friend = config.get("mlphoton_friend", False)
+        _ml_loader_attach = None
+        if mlphoton_friend:
+            try:
+                from higgs_dna.utils.mlphoton_loader import attach_mlphoton, load_parent_map
+                _ml_parent_map = load_parent_map(config["mlphoton_parent_map"])
+                _ml_dir        = config["mlphoton_dir"]
+                _ml_tag        = config["mlphoton_tag"]
+                logger.info("[MLPhoton friend] enabled: dir=%s tag=%s map=%s",
+                            _ml_dir, _ml_tag, config["mlphoton_parent_map"])
+                def _ml_loader_attach(ev, nano_url):
+                    return attach_mlphoton(ev, nano_url, _ml_parent_map, _ml_dir, _ml_tag, logger=logger)
+            except Exception as e:
+                logger.warning(f"[MLPhoton friend] disabled — setup failed: {e}")
+                _ml_loader_attach = None
+
         for file_idx, file in enumerate(files):
             # Process the main file first
             try:
@@ -645,7 +670,15 @@ class AnalysisManager():
                 #     events_file = pt_correction_mc(events_file, year)
 
             f.close()
-            
+
+            # MLPhoton friend-tree attach (event-ID JOIN). Happens BEFORE the
+            # legacy with_skimmed merge so the tagger sees events.MLPhoton.
+            if _ml_loader_attach is not None:
+                try:
+                    events_file = _ml_loader_attach(events_file, file)
+                except Exception as e:
+                    logger.warning(f"[MLPhoton friend] attach failed for {file}: {e}")
+
             # Process corresponding skimmed file if available (only for MC)
             if with_skimmed and not is_data and file_idx < len(skimmed_files_paths):
                 skimmed_file = skimmed_files_paths[file_idx]

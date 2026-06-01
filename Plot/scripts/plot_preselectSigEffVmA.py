@@ -43,7 +43,7 @@ palette_hex_ele = [
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95,
-            'combined_run3':170.84 }
+            'combined_run3':172.13 }
 # 移除：YEAR 未定義時會直接噴錯；改為在 _plot_year() 依 year 動態取用
 # LUMI_FB = float(lumiMap[YEAR])
 

@@ -141,7 +141,11 @@ class JobsManager():
 
         """
 
-        columns, lines = os.get_terminal_size()
+        try:
+            columns, lines = os.get_terminal_size()
+        except OSError:
+            # No controlling terminal (e.g. background / cron / redirected stdout).
+            columns, lines = 120, 40
 
         if len(self.tasks) > int(lines/2): # don't take up more than half the terminal window
             scrolling = True

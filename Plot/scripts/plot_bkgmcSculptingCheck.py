@@ -15,6 +15,11 @@ LIB_DIR = PLOT_DIR / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+# Allow importing the sideband reweighter helper that lives next to the BDT.
+_HZAMVA_SCRIPTS_DIR = SCRIPT_DIR.parent.parent / "HZaMVA" / "scripts"
+if str(_HZAMVA_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_HZAMVA_SCRIPTS_DIR))
+
 from ROOT import TH1F, THStack, TCanvas, TLegend, TPad, TColor, gROOT
 
 from Analyzer_Configs import Analyzer_Config
@@ -22,6 +27,12 @@ from Plot_Configs import Plot_Config
 from Plot_Helper import LoadNtuples, MakeRatioPlot, Get_StatUnc, Draw_unc, SaveCanvPic
 import CMS_lumi
 import tdrstyle
+
+try:
+    from sideband_reweight import load_sideband_reweighter
+except Exception as _exc:  # pragma: no cover - best-effort import
+    load_sideband_reweighter = None
+    print(f"[Warning] Cannot import sideband_reweight helper: {_exc}")
 
 
 DEFAULT_MVA_CUT_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
@@ -76,7 +87,7 @@ LUMI_MAP = {
 }
 BKG_LABELS = {"DYJetsToLL": "Z + jets", "DYGto2LG": "Z + #gamma"}
 _EFF_CACHE: Dict[str, dict] = {}
-DATA_MARKER_SIZE = 1.3
+DATA_MARKER_SIZE = 1.8
 BDT_SHAPE_COLORS = [
     ROOT.kBlack,
     ROOT.kBlue + 1,
@@ -87,9 +98,14 @@ BDT_SHAPE_COLORS = [
     ROOT.kSpring + 5,
     ROOT.kOrange + 1,
     ROOT.kRed + 1,
-    ROOT.kMagenta + 1,
+    ROOT.kMagenta + 3,
 ]
 BDT_SHAPE_LINE_STYLES = [1, 2, 7, 9]
+# Per-bin overrides (BDT bin index -> line style). Force the highest BDT bin
+# (0.9 < BDT <= 1.0, idx=9) to a solid line so it does not get confused with idx=8.
+BDT_SHAPE_LINE_STYLE_OVERRIDES = {
+    9: 1,
+}
 SIGNAL_COLOR_HEX = {
     "M1":  "#2563EB",
     "M2":  "#14B8A6",
@@ -838,7 +854,9 @@ def _draw_bkg_mass_shapes_by_bdt(
             draw_hist.Scale(1.0 / norm)
 
         color = BDT_SHAPE_COLORS[idx % len(BDT_SHAPE_COLORS)]
-        line_style = BDT_SHAPE_LINE_STYLES[idx % len(BDT_SHAPE_LINE_STYLES)]
+        line_style = BDT_SHAPE_LINE_STYLE_OVERRIDES.get(
+            idx, BDT_SHAPE_LINE_STYLES[idx % len(BDT_SHAPE_LINE_STYLES)]
+        )
         draw_hist.SetLineColor(color)
         draw_hist.SetLineStyle(line_style)
         draw_hist.SetLineWidth(3)
@@ -954,6 +972,7 @@ def _fill_histograms(
     blind: bool,
     only_ele: bool,
     only_mu: bool,
+    sideband_reweighter=None,
 ) -> None:
     mva_branch_map: Dict[str, Dict[int, Optional[str]]] = {}
     extra_histos = extra_histos or []
@@ -974,6 +993,28 @@ def _fill_histograms(
         missing = [mass for mass, branch in branch_map.items() if branch is None]
         if missing:
             print(f"[Warning] sample={sample} missing MVA branch for mA={missing}")
+
+    # When sideband reweight is enabled, also need the input vars for the reweight steps.
+    if sideband_reweighter is not None:
+        for sample in analyzer_cfg.bkg_names:
+            chain = ntuples.get(sample)
+            if not chain:
+                continue
+            try:
+                rwgt_branches = set()
+                for iteration in getattr(sideband_reweighter, "iterations", []):
+                    for step in iteration.get("steps", []):
+                        rwgt_branches.add(step.get("var"))
+                rwgt_branches.update(("pho1ECALIso", "pho2ECALIso", "pho1PIso_noCorr", "pho2PIso_noCorr",
+                                      "ALP_lead_photon_ecalPFClusterIso", "ALP_sublead_photon_ecalPFClusterIso",
+                                      "H_mass", "ALP_mass", "event"))
+                for branch in list(rwgt_branches):
+                    if not branch or branch == "param":
+                        continue
+                    if chain.GetListOfBranches() and chain.GetListOfBranches().FindObject(branch):
+                        chain.SetBranchStatus(branch, 1)
+            except Exception as _exc_rw:
+                print(f"[Warning] sideband reweight branch enable failed for {sample}: {_exc_rw}")
 
     for sample in analyzer_cfg.samp_names:
         ntup = ntuples[sample]
@@ -1006,6 +1047,13 @@ def _fill_histograms(
             weight = float(getattr(ntup, "weight", 1.0))
             if sample == "Data":
                 weight = 1.0
+            elif sideband_reweighter is not None and sample in analyzer_cfg.bkg_names:
+                try:
+                    rwgt = sideband_reweighter.weight_for_object(ntup, row_index=i_evt)
+                    weight *= float(rwgt)
+                except Exception as _exc_rw:
+                    if i_evt < 3:
+                        print(f"[Warning] reweight failed for sample={sample} evt={i_evt}: {_exc_rw}")
 
             for mass in masses_to_fill:
                 cut = mva_cuts.get(mass)
@@ -1098,6 +1146,7 @@ def _run_plot_suite(
     skip_bdt_shape_plots: bool,
     bdt_shape_bins: int,
     selection_label: Optional[str] = None,
+    sideband_reweighter=None,
 ) -> None:
     output_dirs = _build_output_dir_map(base_output_dir, skip_bdt_shape_plots)
     _print_output_dir_map(suite_label, base_output_dir, output_dirs, skip_bdt_shape_plots)
@@ -1149,6 +1198,7 @@ def _run_plot_suite(
         blind=blind,
         only_ele=only_ele,
         only_mu=only_mu,
+        sideband_reweighter=sideband_reweighter,
     )
 
     for mass in TARGET_MASSES:
@@ -1269,6 +1319,19 @@ def main():
         default=BDT_SHAPE_NBINS,
         help="Number of uniform BDT-score bins for bkg_mass_shapes_by_bdt plots.",
     )
+    parser.add_argument(
+        "--use-sideband-reweight",
+        dest="use_sideband_reweight",
+        action="store_true",
+        default=False,
+        help="Apply the iterative sideband reweighting JSON to MC background weights.",
+    )
+    parser.add_argument(
+        "--sideband-reweight-json",
+        dest="sideband_reweight_json",
+        default=None,
+        help="Path to sideband reweight JSON. Falls back to HZA_SIDEBAND_REWEIGHT_JSON or the default.",
+    )
     args = parser.parse_args()
 
     if args.year != "run3":
@@ -1286,6 +1349,20 @@ def main():
     print(f"[Input] MVA cut JSON: {mva_cut_path}")
     mva_cuts = _complete_mva_cuts(_parse_mva_cuts(str(mva_cut_path)), TARGET_MASSES)
 
+    sideband_reweighter = None
+    if args.use_sideband_reweight:
+        if load_sideband_reweighter is None:
+            print("[Warning] sideband_reweight helper not available; skip reweighting.")
+        else:
+            if args.sideband_reweight_json:
+                sideband_reweighter = load_sideband_reweighter(args.sideband_reweight_json, required=True)
+            else:
+                sideband_reweighter = load_sideband_reweighter()
+            if sideband_reweighter is not None:
+                print(f"[Reweight] Loaded sideband reweight JSON: {sideband_reweighter.source_path}")
+            else:
+                print("[Warning] Sideband reweight JSON not found; running without reweighting.")
+
     _run_plot_suite(
         suite_label="Nominal",
         year=args.year,
@@ -1299,6 +1376,7 @@ def main():
         skip_bdt_shape_plots=args.skip_bdt_shape_plots,
         bdt_shape_bins=args.bdt_shape_bins,
         selection_label=None,
+        sideband_reweighter=sideband_reweighter,
     )
 
     if not args.skip_control_sample_plots:
@@ -1317,6 +1395,7 @@ def main():
                 skip_bdt_shape_plots=args.skip_bdt_shape_plots,
                 bdt_shape_bins=args.bdt_shape_bins,
                 selection_label="Control sample",
+                sideband_reweighter=sideband_reweighter,
             )
         else:
             print(f"[Warning] Control sample directory not found. Skip extra control plots: {control_sample_dir}")

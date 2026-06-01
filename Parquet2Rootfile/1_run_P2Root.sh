@@ -78,9 +78,7 @@ process_sample() {
             command+="-o ${target}${sample}/${year}.root"
         fi
         
-        if [ "$type" = "Sig_MC" ]; then
-            command+=" --split"
-        fi
+        command+=" --split"
 
         # 使用函数执行命令
         execute_command "$command" &
@@ -101,16 +99,14 @@ process_sample_syst() {
     local type="$2"
     local year="$3"
     local uod="$4"
-    
+
     for syst in "${systs[@]}"; do
         corr="${syst}_${uod}"
         command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_za.py "
         command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
         command+="-o ${target}${sample}_${syst}_${uod}/${year}.root"
-        
-        if [ "$type" = "Sig_MC" ]; then
-            command+=" --split"
-        fi
+
+        command+=" --split"
 
         # 使用函数执行命令
         execute_command "$command" &

@@ -10,8 +10,11 @@
 
 set -e
 
-MASS_TAG="${1:?Usage: $0 <mass_tag> <DAS_dataset>}"
-DATASET="${2:?Usage: $0 <mass_tag> <DAS_dataset>}"
+MASS_TAG="${1:?Usage: $0 <mass_tag> <DAS_dataset> [mc|data] [year]}"
+DATASET="${2:?Usage: $0 <mass_tag> <DAS_dataset> [mc|data] [year]}"
+MODE="${3:-mc}"   # mc (default) or data
+YEAR="${4:-2024}" # data era (ignored for mc)
+FILES_PER_JOB="${FILES_PER_JOB:-1}"  # how many input files cmsRun consumes per condor job
 
 OUT_EOS="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD/${MASS_TAG}"
 STAGE="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/${MASS_TAG}"
@@ -42,34 +45,59 @@ fi
 NFILES=$(wc -l < "${FILES_TXT}")
 echo "Got ${NFILES} files in ${FILES_TXT}"
 
-# ----- condor args file: input_url output_name output_dir -----
+# ----- condor args file: <inputs-list-file> <output_name> <output_dir> -----
+# Per-group URL lists are written to stage/<tag>/inputs/group_NNNN.txt with one
+# URL per line. args.txt has exactly 3 whitespace-separated tokens per line and
+# NO commas anywhere — HTCondor treats both spaces and commas as field
+# separators, so comma-joined URLs in args.txt break the queue parser.
+INPUTS_DIR="${STAGE}/inputs"
+mkdir -p "${INPUTS_DIR}"
+rm -f "${INPUTS_DIR}"/group_*.txt   # clean stale groups
+
 ARGS_TXT="${STAGE}/args.txt"
 > "${ARGS_TXT}"
-i=0
+i=0          # cumulative file counter
+gi=0         # group counter (= condor job index)
+group_file=""
 while IFS= read -r f; do
     i=$((i+1))
-    out_name="${MASS_TAG}_$(printf '%04d' ${i}).root"
-    echo "root://cms-xrd-global.cern.ch/${f} ${out_name} ${OUT_EOS}" >> "${ARGS_TXT}"
+    if [ -z "${group_file}" ]; then
+        gi=$((gi+1))
+        group_file="${INPUTS_DIR}/group_$(printf '%04d' ${gi}).txt"
+        > "${group_file}"
+    fi
+    echo "root://cms-xrd-global.cern.ch/${f}" >> "${group_file}"
+    if [ $((i % FILES_PER_JOB)) -eq 0 ]; then
+        out_name="${MASS_TAG}_$(printf '%04d' ${gi}).root"
+        echo "${group_file} ${out_name} ${OUT_EOS}" >> "${ARGS_TXT}"
+        group_file=""
+    fi
 done < "${FILES_TXT}"
+# flush remainder
+if [ -n "${group_file}" ]; then
+    out_name="${MASS_TAG}_$(printf '%04d' ${gi}).root"
+    echo "${group_file} ${out_name} ${OUT_EOS}" >> "${ARGS_TXT}"
+fi
+echo "Will submit ${gi} condor jobs (${FILES_PER_JOB} files per job)"
 
 # ----- JDL -----
 JDL="${STAGE}/job.jdl"
 cat > "${JDL}" <<JDLEOF
 Universe                = vanilla
 Executable              = ${WORKER}
-Arguments               = \$(input_url) \$(out_name) \$(out_dir)
+Arguments               = \$(input_url) \$(out_name) \$(out_dir) ${MODE} ${YEAR}
 should_transfer_files   = NO
 use_x509userproxy       = true
 x509userproxy           = ${PROXY}
 JobBatchName            = "MLPhoton_Regressing_${MASS_TAG}"
-Log                     = ${LOG_DIR}/job_\$(Cluster)_\$(Process).log
-Output                  = ${LOG_DIR}/job_\$(Cluster)_\$(Process).out
-Error                   = ${LOG_DIR}/job_\$(Cluster)_\$(Process).err
+Log                     = ${LOG_DIR}/all_jobs.log
+Output                  = ${LOG_DIR}/job_\$(Process).out
+Error                   = ${LOG_DIR}/job_\$(Process).err
 +JobFlavour             = "workday"
 RequestCpus             = 1
 RequestMemory           = 4000
 RequestDisk             = 4000000
-Queue input_url, out_name, out_dir from ${ARGS_TXT}
+Queue input_url out_name out_dir from ${ARGS_TXT}
 JDLEOF
 
 echo "JDL written to: ${JDL}"

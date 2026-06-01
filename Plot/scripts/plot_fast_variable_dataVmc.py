@@ -224,6 +224,7 @@ def draw_fast_on_canvas(
                 scaled_sig[sample].Draw("HISTSAME")
 
     histos["Data"].SetMarkerStyle(20)
+    histos["Data"].SetMarkerSize(1.4)
     histos["Data"].SetLineWidth(2)
     histos["Data"].GetXaxis().SetTickLength(0.04)
 

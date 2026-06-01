@@ -5,6 +5,12 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${script_dir}/.." && pwd)"
 cd "${repo_dir}"
 
+# Force this repo's higgs_dna to be picked up before the conda egg-link copy
+# (which points to /afs/.../HZgamma/HiggsZGammaAna/HiggsDNA and has no
+# za_tagger_merged.py). Matches the pattern used by run_ana_*_tnp_zmmg.sh.
+unset PYTHONPATH
+export PYTHONPATH="${repo_dir}"
+
 outdir="${OUTDIR:-/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC}"
 config="${CONFIG:-metadata/za_merged_signal_run3.json}"
 log_level="${LOG_LEVEL:-INFO}" # DEBUG # INFO

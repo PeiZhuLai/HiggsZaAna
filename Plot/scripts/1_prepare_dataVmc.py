@@ -906,7 +906,7 @@ def main():
         histos['ALP_calculatedPhotonIso'][sample] = TH1F('ALP_calculatedPhotonIso' + '_' + sample, 'ALP_calculatedPhotonIso' + '_' + sample, 25, 0., 125.)
         histos['param'][sample] = TH1F('param' + '_' + sample, 'param' + '_' + sample, 25, -0.3, 0.6)
         # Derived BDT features added to recover low-ma sensitivity
-        histos['pho_pt_asym'][sample]        = TH1F('pho_pt_asym'        + '_' + sample, 'pho_pt_asym'        + '_' + sample, 40, -1.0, 1.0)
+        histos['pho_pt_asym'][sample]        = TH1F('pho_pt_asym'        + '_' + sample, 'pho_pt_asym'        + '_' + sample, 40,  0.0, 1.0)
 
         if args.mva:
             # 僅為選定質量建立 MVA 相關直方圖
@@ -1074,6 +1074,7 @@ def main():
                 histos['param'][sample].Fill( param_val, weight )
 
                 # Derived feature: photon pT asymmetry (only derived var kept after corr study).
+                # Lead pT >= sublead pT by construction, so the signed form is in [0, 1].
                 pt1 = float(ntup.ALP_lead_photon_pt)
                 pt2 = float(ntup.ALP_sublead_photon_pt)
                 pho_pt_asym_val = (pt1 - pt2) / (pt1 + pt2 + 1e-6)

@@ -16,15 +16,26 @@ import os
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
 
-from Configuration.Eras.Era_Run3_2024_cff import Run3_2024
-
 options = VarParsing("analysis")
 options.register("year", "2024",
                  VarParsing.multiplicity.singleton, VarParsing.varType.string,
-                 "Data-taking year")
+                 "Data-taking year (2022preEE/2022postEE/2023preBPix/2023postBPix/2024)")
 options.parseArguments()
 
-process = cms.Process("MLNANO", Run3_2024)
+# ---- era + GT selection based on year ----
+if options.year.startswith("2024"):
+    from Configuration.Eras.Era_Run3_2024_cff import Run3_2024 as ERA
+    _GT = "150X_mcRun3_2024_realistic_v2"
+elif options.year.startswith("2023"):
+    from Configuration.Eras.Era_Run3_2023_cff import Run3_2023 as ERA
+    _GT = "130X_mcRun3_2023_realistic_v15" if "preBPix" in options.year else "130X_mcRun3_2023_realistic_postBPix_v6"
+elif options.year.startswith("2022"):
+    from Configuration.Eras.Era_Run3_cff import Run3 as ERA
+    _GT = "130X_mcRun3_2022_realistic_v5" if "preEE" in options.year else "130X_mcRun3_2022_realistic_postEE_v6"
+else:
+    raise RuntimeError(f"Unsupported year: {options.year}")
+
+process = cms.Process("MLNANO", ERA)
 
 process.load("Configuration.StandardSequences.Services_cff")
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
@@ -99,22 +110,31 @@ process.NANOAODSIMoutput = cms.OutputModule(
         filterName=cms.untracked.string(""),
     ),
     fileName=cms.untracked.string(options.outputFile or "mlnano_run3.root"),
-    outputCommands=process.NANOAODSIMEventContent.outputCommands,
+    # Slim output: only keep MLPhoton flat table; run/luminosityBlock/event are
+    # part of the Events tree skeleton and are written automatically.
+    # Standard NanoAOD content (Photon, Electron, Muon, Jet, HLT, L1, ...) is
+    # NOT duplicated — downstream HiggsDNA reads those from the existing
+    # NanoAODv15 files via friend tree on (run, luminosityBlock, event).
+    outputCommands=cms.untracked.vstring(
+        "drop *",
+        "keep nanoaodFlatTable_mlphotonsTable_*_*",
+    ),
 )
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, "150X_mcRun3_2024_realistic_v2", "")
+process.GlobalTag = GlobalTag(process.GlobalTag, _GT, "")
 
 process.mlphotons_step = cms.Path(process.mlphotons)
 process.mlphotonsTable_step = cms.Path(process.mlphotonsTable)
-process.nanoAOD_step = cms.Path(process.nanoSequenceMC)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.NANOAODSIMoutput_step = cms.EndPath(process.NANOAODSIMoutput)
 
+# Slim production: skip nanoSequenceMC entirely. We only need MLPhoton; the
+# standard NanoAOD tables (Photon/Electron/Muon/Jet/HLT/L1/...) live in the
+# upstream NanoAODv15 file that HiggsDNA reads as the main input.
 process.schedule = cms.Schedule(
     process.mlphotons_step,
     process.mlphotonsTable_step,
-    process.nanoAOD_step,
     process.endjob_step,
     process.NANOAODSIMoutput_step,
 )

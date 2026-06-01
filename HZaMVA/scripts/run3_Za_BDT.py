@@ -514,8 +514,12 @@ mass_list = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 15., 20., 25., 30.]
 
 years = ['run3']
 bkg_tree_name = "inclusive"
-sig_tree_name = "train"
-TRAIN_MASS_LOW = 95
+bkg_train_tree_name = "train"
+bkg_test_tree_name = "test"
+sig_train_tree_name = "train"
+sig_val_tree_name = "validation"
+sig_test_tree_name = "test"
+TRAIN_MASS_LOW = 110
 TRAIN_MASS_HIGH = 180
 bkg_data_selection = "H_m>{} && H_m<{}".format(TRAIN_MASS_LOW, TRAIN_MASS_HIGH)
 sig_selection = "H_m>{} && H_m<{}".format(TRAIN_MASS_LOW, TRAIN_MASS_HIGH)
@@ -523,7 +527,11 @@ print("Background training mass range:", bkg_data_selection)
 print("Signal training mass range:", sig_selection)
 
 def bdt_matrix_columns():
-    return variables + mass_variables + wt_variables + ["mass", "param"]
+    # bdt_split: 0 = "train" tree -> BDT train sample,
+    #            1 = "validation" tree -> BDT test sample.
+    # Background and data get bdt_split=0 as a placeholder; they're split
+    # independently with train_test_split below.
+    return variables + mass_variables + wt_variables + ["mass", "param", "bdt_split"]
 
 def keep_bdt_matrix_columns(dataframe, label):
     missing = [column for column in bdt_matrix_columns() if column not in dataframe.columns]
@@ -537,9 +545,10 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_train_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
         add_derived_features(dfs[year][dataset])
+        dfs[year][dataset]['bdt_split'] = 0
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
@@ -547,11 +556,29 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_train_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
+            dfs[year][dataset][mass]['bdt_split'] = 0
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs']
 
+# Load test trees (30% of inclusive) for unbiased BDT evaluation
+dfs_test = {}
+for year in years:
+    dfs_test[year] = {}
+    for dataset in bkg_name:
+        dfs_test[year][dataset], _ = convert_ntuple_dataframe("{}/{}/".format(file_path, dataset), "run3.root", bkg_test_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        assign_background_param(dfs_test[year][dataset])
+        add_derived_features(dfs_test[year][dataset])
+        dfs_test[year][dataset]['bdt_split'] = 0
+        apply_sideband_reweight_to_bkg(dfs_test[year][dataset], "{} {} test".format(year, dataset))
+    for dataset in sig_name:
+        dfs_test[year][dataset] = {}
+        for mass in mass_list:
+            dfs_test[year][dataset][mass], _ = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_test_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
+            dfs_test[year][dataset][mass]["mass"] = mass
+            dfs_test[year][dataset][mass]['param'] = (dfs_test[year][dataset][mass]['ALP_m'] - dfs_test[year][dataset][mass]['mass']) / dfs_test[year][dataset][mass]['H_m']
+            dfs_test[year][dataset][mass]['bdt_split'] = 0
 
 df_bkg_dy   = pd.concat([dfs[y]["All_Bkg"] for y in years])
 df_bkg_all  = pd.concat([dfs[y][bkg] for y in years for bkg in bkg_name ])
@@ -561,11 +588,16 @@ df_sig_all  = pd.concat([dfs[y][sig][m] for y in years for sig in sig_name for m
 
 df_data_all = pd.concat([dfs[y][dataset] for y in years for dataset in data_name])
 
+df_bkg_dy_test = pd.concat([dfs_test[y]["All_Bkg"] for y in years])
+df_sig_a_test  = pd.concat([dfs_test[y]["All_Sig"][m] for y in years for m in mass_list])
+
 df_bkg_dy = keep_bdt_matrix_columns(df_bkg_dy, "df_bkg_dy")
 df_bkg_all = keep_bdt_matrix_columns(df_bkg_all, "df_bkg_all")
 df_sig_a = keep_bdt_matrix_columns(df_sig_a, "df_sig_a")
 df_sig_all = keep_bdt_matrix_columns(df_sig_all, "df_sig_all")
 df_data_all = keep_bdt_matrix_columns(df_data_all, "df_data_all")
+df_bkg_dy_test = keep_bdt_matrix_columns(df_bkg_dy_test, "df_bkg_dy_test")
+df_sig_a_test  = keep_bdt_matrix_columns(df_sig_a_test,  "df_sig_a_test")
 
 
 [df_sig_all['mass']]
@@ -779,6 +811,10 @@ background = df_bkg_all.values
 background_DY = df_bkg_dy.values
 # background_ZG = df_bkg_ZG.values
 
+# test arrays: 30% of inclusive, read from pre-split test trees
+signal_a_test      = df_sig_a_test.values
+background_DY_test = df_bkg_dy_test.values
+
 nsigw = np.sum(signal[:,wt_var_indices])
 nbkgw = np.sum(background[:,wt_var_indices])
 nbkgw_DY = np.sum(background_DY[:,wt_var_indices])
@@ -793,41 +829,28 @@ scale_weight = (1.0*bkg)/(sig*1.0)
 
 sig_label_a = np.ones(len(signal_a))
 bkg_label_DY = np.zeros(len(background_DY))
+sig_label_a_test = np.ones(len(signal_a_test))
+bkg_label_DY_test = np.zeros(len(background_DY_test))
 
 sig_proc_a = -1*np.ones(len(signal_a))
 bkg_proc_DY = np.ones(len(background_DY))
+sig_proc_a_test = -1*np.ones(len(signal_a_test))
+bkg_proc_DY_test = np.ones(len(background_DY_test))
 
 x = np.concatenate((signal_a, background_DY))
 y = np.concatenate((sig_label_a, bkg_label_DY))
 z = np.concatenate((sig_proc_a, bkg_proc_DY))
 
 seed = 123
-signal_train_fraction_in_tree = 0.20 / 0.50
-signal_test_fraction_in_tree = 0.30 / 0.50
-background_train_fraction = 0.60
-background_test_fraction = 0.40
 
-signal_indices = np.arange(len(signal_a))
-background_indices = np.arange(len(background_DY))
+# Use pre-split train (50%) / test (30%) trees directly — no further random split needed.
+x_train = np.concatenate((signal_a, background_DY))
+y_train = np.concatenate((sig_label_a, bkg_label_DY))
+z_train = np.concatenate((sig_proc_a, bkg_proc_DY))
 
-sig_train_idx, sig_test_idx = train_test_split(
-    signal_indices,
-    test_size=signal_test_fraction_in_tree,
-    random_state=seed,
-)
-bkg_train_idx, bkg_test_idx = train_test_split(
-    background_indices,
-    test_size=background_test_fraction,
-    random_state=seed,
-)
-
-x_train = np.concatenate((signal_a[sig_train_idx], background_DY[bkg_train_idx]))
-y_train = np.concatenate((sig_label_a[sig_train_idx], bkg_label_DY[bkg_train_idx]))
-z_train = np.concatenate((sig_proc_a[sig_train_idx], bkg_proc_DY[bkg_train_idx]))
-
-x_test = np.concatenate((signal_a[sig_test_idx], background_DY[bkg_test_idx]))
-y_test = np.concatenate((sig_label_a[sig_test_idx], bkg_label_DY[bkg_test_idx]))
-z_test = np.concatenate((sig_proc_a[sig_test_idx], bkg_proc_DY[bkg_test_idx]))
+x_test = np.concatenate((signal_a_test, background_DY_test))
+y_test = np.concatenate((sig_label_a_test, bkg_label_DY_test))
+z_test = np.concatenate((sig_proc_a_test, bkg_proc_DY_test))
 
 rng = np.random.RandomState(seed)
 train_perm = rng.permutation(len(x_train))
@@ -839,16 +862,9 @@ x_test = x_test[test_perm]
 y_test = y_test[test_perm]
 z_test = z_test[test_perm]
 
-print("Signal split from train tree: train {:.1f}% / test {:.1f}% (effective 20% / 30% if train tree is 50% of inclusive signal)".format(
-    100.0 * signal_train_fraction_in_tree,
-    100.0 * signal_test_fraction_in_tree,
-))
-print("Background split from inclusive sample: train {:.1f}% / test {:.1f}%".format(
-    100.0 * background_train_fraction,
-    100.0 * background_test_fraction,
-))
-print("Signal entries in train/test:", len(sig_train_idx), len(sig_test_idx))
-print("Background entries in train/test:", len(bkg_train_idx), len(bkg_test_idx))
+print("Global split: train=50% (train tree) / validate=20% (unused in BDT) / test=30% (test tree)")
+print("Signal entries in train/test:", len(signal_a), len(signal_a_test))
+print("Background entries in train/test:", len(background_DY), len(background_DY_test))
 
 x_train_reduced = x_train[:,var_indices]
 x_train_w = x_train[:,wt_var_indices].flatten()
@@ -1419,10 +1435,11 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_train_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
         # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm now.
         add_derived_features(dfs[year][dataset])
+        dfs[year][dataset]['bdt_split'] = 0
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
@@ -1430,9 +1447,10 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_train_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
+            dfs[year][dataset][mass]['bdt_split'] = 0
 
 
 
@@ -1970,10 +1988,12 @@ for year in years:
     dfs[year] = {}
     tree[year] = {}
     for dataset in bkg_name + data_name:
-        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", bkg_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
+        tree_name = bkg_test_tree_name if dataset in bkg_name else bkg_tree_name
+        dfs[year][dataset], tree[year][dataset] = convert_ntuple_dataframe("{}/{}/".format(file_path,dataset), "run3.root", tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=bkg_data_selection)
         assign_background_param(dfs[year][dataset])
         # 'mass' (hypothesis) was assigned after add_derived_features(); recompute ma_resid_norm now.
         add_derived_features(dfs[year][dataset])
+        dfs[year][dataset]['bdt_split'] = 0
         if dataset in bkg_name:
             apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
 
@@ -1981,9 +2001,10 @@ for year in years:
         dfs[year][dataset] = {}
         tree[year][dataset] = {}
         for mass in mass_list:
-            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
+            dfs[year][dataset][mass], tree[year][dataset][mass] = convert_ntuple_dataframe("{}/mA_M{}/".format(file_path, str(int(mass))), 'run3.root', sig_test_tree_name, bdt_input_branches(variables+mass_variables+wt_variables), selections=sig_selection)
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
+            dfs[year][dataset][mass]['bdt_split'] = 0
 
 
 df_bkg_dy   = pd.concat([dfs[y]["All_Bkg"] for y in years])

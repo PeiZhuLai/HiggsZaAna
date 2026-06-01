@@ -11,15 +11,32 @@
 
 set -e
 
-INPUT_URL="$1"
+INPUT_ARG="$1"
 OUTPUT_NAME="$2"
 OUTPUT_DIR="$3"
+MODE="${4:-mc}"   # mc (default) or data
+YEAR="${5:-2024}" # only used for data: 2022preEE / 2022postEE / 2023preBPix / 2023postBPix / 2024
+
+# INPUT_ARG is either:
+#   (a) a single root://... URL, or
+#   (b) a path to a text file containing one root://... URL per line (FILES_PER_JOB>1)
+# Resolve to a comma-separated URL list for cmsRun inputFiles=.
+if [[ "${INPUT_ARG}" == root://* ]] || [[ "${INPUT_ARG}" == http* ]]; then
+    INPUT_URL="${INPUT_ARG}"
+elif [ -f "${INPUT_ARG}" ]; then
+    INPUT_URL=$(paste -sd, "${INPUT_ARG}")
+else
+    echo "ERROR: input arg is neither a URL nor a readable file: ${INPUT_ARG}"
+    exit 1
+fi
 
 echo "==== MLNanoAOD worker ===="
 echo "host=$(hostname)"
 echo "date=$(date)"
-echo "input=${INPUT_URL}"
+echo "input_arg=${INPUT_ARG}"
+echo "n_input_files=$(echo "${INPUT_URL}" | tr ',' '\n' | wc -l)"
 echo "output=${OUTPUT_DIR}/${OUTPUT_NAME}"
+echo "mode=${MODE} year=${YEAR}"
 echo "proxy=${X509_USER_PROXY}"
 echo "=========================="
 
@@ -35,25 +52,46 @@ mkdir -p "${WORKDIR}"
 cd "${WORKDIR}"
 echo "workdir=${WORKDIR}"
 
-CFG=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/CMSSW_15_0_14/src/RecoEgamma/EgammaMLPhotonProducers/test/Prod_MLNanoAOD_run3_mc.py
-
-cmsRun "${CFG}" \
-    inputFiles="${INPUT_URL}" \
-    outputFile="${OUTPUT_NAME}" \
-    maxEvents=-1
-
-# cmsRun output filename: <stem>_numEventN.root when maxEvents>0; without when -1 the original filename is kept
-LOCAL_OUT="${OUTPUT_NAME}"
-if [ ! -f "${LOCAL_OUT}" ]; then
-    # fallback: pick the produced .root
-    LOCAL_OUT=$(ls -t *.root | head -1)
+if [ "${MODE}" = "data" ]; then
+    CFG=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/CMSSW_15_0_14/src/RecoEgamma/EgammaMLPhotonProducers/test/Prod_MLNanoAOD_run3_data.py
+else
+    CFG=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/CMSSW_15_0_14/src/RecoEgamma/EgammaMLPhotonProducers/test/Prod_MLNanoAOD_run3_mc.py
 fi
-echo "local_output=${LOCAL_OUT}"
-echo "size=$(stat -c%s "${LOCAL_OUT}" 2>/dev/null)"
 
+# Run cmsRun ONCE PER INPUT URL — one output per input file.
+# Each output is named "<tag-prefix>_<MiniAOD-UUID>.root" so downstream HiggsDNA
+# can pair it 1:1 with the NanoAODv15 child by querying DAS for the same UUID.
+url_list_csv="${INPUT_URL}"
+tag_prefix=$(basename "${OUTPUT_NAME}" .root | sed -E 's/_[0-9]+$//')   # strip trailing _NNNN
+i=0
+for url in ${url_list_csv//,/ }; do
+    i=$((i+1))
+    # MiniAOD basename without extension is its UUID-like identifier
+    uuid=$(basename "${url}" .root)
+    sub_out="${tag_prefix}_${uuid}.root"
+    echo "---- cmsRun $i: ${url} -> ${sub_out}"
+    cmsRun "${CFG}" \
+        inputFiles="${url}" \
+        outputFile="${sub_out}" \
+        maxEvents=-1 \
+        year="${YEAR}" || {
+        echo "ERROR: cmsRun failed for ${url} (uuid ${uuid})"
+        exit 1
+    }
+done
+
+# Copy each per-URL output to EOS, preserving the 1:1 UUID mapping.
 mkdir -p "${OUTPUT_DIR}"
-cp "${LOCAL_OUT}" "${OUTPUT_DIR}/${OUTPUT_NAME}"
-echo "==== done copy to ${OUTPUT_DIR}/${OUTPUT_NAME} ===="
+for sub_root in "${tag_prefix}"_*.root; do
+    [ -f "${sub_root}" ] || continue
+    dst="${OUTPUT_DIR}/${sub_root}"
+    cp "${sub_root}" "${dst}" || {
+        echo "ERROR: cp failed: ${sub_root} -> ${dst}"
+        exit 1
+    }
+    echo "copied: ${dst} ($(stat -c%s "${sub_root}") bytes)"
+done
+echo "==== done all UUID outputs to ${OUTPUT_DIR}/ ===="
 
 cd /
 rm -rf "${WORKDIR}"

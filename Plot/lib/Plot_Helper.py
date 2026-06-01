@@ -323,6 +323,7 @@ def MakeRatioPlot(h_data, h_MC, var_name):
     ratio_plot.SetMinimum(0.4)
     ratio_plot.SetMaximum(1.6)
     ratio_plot.SetMarkerStyle(20)
+    ratio_plot.SetMarkerSize(1.4)
 
     ratio_plot.GetYaxis().SetNdivisions(505)
     ratio_plot.GetYaxis().SetTitle("Data / SM")
@@ -754,6 +755,7 @@ def DrawOnCanv(canv, var_name, plt_cfg, stacks, histos, scaled_sig, ratio_plot, 
                 scaled_sig[sample].Draw('HISTSAME')
 
     histos['Data'].SetMarkerStyle(20)
+    histos['Data'].SetMarkerSize(1.4)
     histos['Data'].SetLineWidth(2)
     histos['Data'].GetXaxis().SetTickLength(0.04)
     

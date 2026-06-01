@@ -25,8 +25,6 @@ from __future__ import annotations
 import argparse
 import glob
 import os
-from collections import defaultdict
-
 import awkward as ak
 import numpy as np
 import uproot
@@ -41,7 +39,6 @@ except Exception:
 
 
 ELECTRON_TIGHT_BIT = 4  # Electron_cutBased: 0 fail, 1 veto, 2 loose, 3 medium, 4 tight
-PROBE_TAG_DR = 0.4    # tag↔probe separation
 ZMASS_LO, ZMASS_HI = 60.0, 120.0
 ETA_BINS = [(0.0, 0.5, "central"), (0.5, 1.0, "middle"), (1.0, 1.44, "forward")]
 MLPHOTON_MATCH_DR = 0.05  # AN §5.2 uses ΔR<0.04
@@ -99,66 +96,6 @@ def tag_probe(events: ak.Array) -> dict[str, np.ndarray]:
         "dipscore": events.MLPhoton_diphotonScore,
     })
 
-    pairs = ak.combinations(ele, 2, fields=["a", "b"])
-    pairs = pairs[(pairs.a.charge * pairs.b.charge) == -1]
-
-    a_tight = pairs.a.cb >= ELECTRON_TIGHT_BIT
-    b_tight = pairs.b.cb >= ELECTRON_TIGHT_BIT
-    # Symmetric: either side can be tag; keep both legs as probe rows
-    # We build two flat probe lists (a-as-probe and b-as-probe) and concat.
-    flats = []
-    for tag_field, probe_field, tag_is_tight in [
-        ("b", "a", b_tight),
-        ("a", "b", a_tight),
-    ]:
-        m = tag_is_tight & (getattr(pairs, probe_field).pt > PROBE_ID_MIN_PT)
-        sel = pairs[m]
-        if len(sel) == 0:
-            continue
-        tag = getattr(sel, tag_field)
-        probe = getattr(sel, probe_field)
-
-        # m_ll
-        cosh_d_eta = np.cosh(tag.eta - probe.eta)
-        cos_d_phi = np.cos(tag.phi - probe.phi)
-        mll = np.sqrt(2.0 * tag.pt * probe.pt * (cosh_d_eta - cos_d_phi))
-
-        peakmask = (mll > ZMASS_LO) & (mll < ZMASS_HI)
-        # Restrict to barrel-ish for ML photon comparison
-        peakmask = peakmask & (np.abs(probe.eta) < 1.44)
-        sel = sel[peakmask]
-        if len(sel) == 0:
-            continue
-        probe = getattr(sel, probe_field)
-        tag = getattr(sel, tag_field)
-        mll = mll[peakmask]
-
-        # Truth-match probe to MLPhoton by ΔR
-        # Need per-event MLPhoton broadcast against probe within event
-        ev_idx = ak.local_index(sel, axis=0)  # not directly usable; instead
-        # rebuild: we iterate row by row using flat-numpy.
-        flats.append((probe, mll))
-
-    if not flats:
-        return {k: np.array([]) for k in ["probe_pt", "probe_eta", "probe_phi",
-                                          "mll", "mlphoton_mass", "mlphoton_dr"]}
-
-    # Convert each probe+mll to flat numpy along event×pair axis
-    out: dict[str, list[np.ndarray]] = defaultdict(list)
-    for probe, mll in flats:
-        probe_pt = ak.to_numpy(ak.flatten(probe.pt))
-        probe_eta = ak.to_numpy(ak.flatten(probe.eta))
-        probe_phi = ak.to_numpy(ak.flatten(probe.phi))
-        mll_flat = ak.to_numpy(ak.flatten(mll))
-        out["probe_pt"].append(probe_pt)
-        out["probe_eta"].append(probe_eta)
-        out["probe_phi"].append(probe_phi)
-        out["mll"].append(mll_flat)
-
-    # MLPhoton match: do it after probe extraction by looping events.
-    # Simpler path: per probe row we need the event's MLPhoton list.
-    # For that we recompute the structured probe list keeping ev index.
-    # To avoid complicating things, do a second pass on flattened events:
     n_pho_per_ev = ak.to_numpy(ak.num(ml))
     ml_eta_flat = ak.to_numpy(ak.flatten(ml.eta))
     ml_phi_flat = ak.to_numpy(ak.flatten(ml.phi))
@@ -253,20 +190,35 @@ def summarise_by_eta(probes: dict[str, np.ndarray]) -> None:
 def plot_spectra(probes: dict[str, np.ndarray], outpath: str) -> None:
     if not HAVE_MPL or len(probes["mlphoton_mass"]) == 0:
         return
-    fig, ax = plt.subplots(1, 1, figsize=(7, 5))
+    fig, (ax_mll, ax_m) = plt.subplots(1, 2, figsize=(13, 5))
+
+    # Left: mll diagnostic — confirm Z peak in TnP selection
+    mll_bins = np.linspace(60, 120, 61)
+    ax_mll.hist(probes["mll"], bins=mll_bins, histtype="step", lw=1.8, color="steelblue",
+                label=f"N={len(probes['mll'])}")
+    ax_mll.axvline(91.2, ls="--", lw=1.2, color="gray", label="$m_Z = 91.2$ GeV")
+    ax_mll.set_xlabel(r"$m_{\ell\ell}$ [GeV]")
+    ax_mll.set_ylabel("tag-probe pairs / 1 GeV")
+    ax_mll.set_title("TnP selection: dielectron mass")
+    ax_mll.legend(fontsize=9)
+    ax_mll.grid(alpha=0.3)
+
+    # Right: probe MLPhoton regressed mass by |η| bin
     eta = np.abs(probes["probe_eta"])
-    bins = np.linspace(0.0, 0.6, 61)
+    bins = np.linspace(0.0, 1.2, 121)
     for lo, hi, name in ETA_BINS:
         sel = (eta >= lo) & (eta < hi)
         if sel.sum() == 0:
             continue
-        ax.hist(probes["mlphoton_mass"][sel], bins=bins, histtype="step", lw=1.6,
-                label=f"|η| {lo}-{hi} ({name}, N={sel.sum()})")
-    ax.set_xlabel(r"$m_\Gamma^{\rm regressed}$ on Z→ee probe [GeV]")
-    ax.set_ylabel("probes / 10 MeV")
-    ax.set_title("Z→ee tag-and-probe MLPhoton regressed mass (Run3 2024)")
-    ax.legend()
-    ax.grid(alpha=0.3)
+        ax_m.hist(probes["mlphoton_mass"][sel], bins=bins, histtype="step", lw=1.6,
+                  label=f"|η| {lo}-{hi} ({name}, N={sel.sum()})")
+    ax_m.set_xlabel(r"$m_\Gamma^{\rm regressed}$ on Z→ee probe [GeV]")
+    ax_m.set_ylabel("probes / 10 MeV")
+    ax_m.set_title("MLPhoton regressed mass (Run3 2024)")
+    ax_m.legend(fontsize=9)
+    ax_m.grid(alpha=0.3)
+
+    fig.suptitle("Z→ee tag-and-probe ONNX validation", fontsize=12)
     plt.tight_layout()
     plt.savefig(outpath, dpi=130)
     print(f"plot saved: {outpath}")

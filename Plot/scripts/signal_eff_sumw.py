@@ -42,7 +42,7 @@ INPUT_BASE_TREE_NAME = "test"
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95, 
-            'Run3':170.84 }
+            'Run3':172.13 }
 
 # 改：LUMI_FB 應根據 years_sig 動態加總，而非固定 YEAR
 def _sum_lumi_fb(years: List[str]) -> float:

@@ -11,10 +11,12 @@ Two modes:
                  sum across N events, each centered on its own seed crystal.
                  Equivalent to the AN-20-142 Fig 2 average shower template.
 
-Input: a ROOT file produced by dump_rechits_cfg.py
+Input: a ROOT file produced by dump_rechits_cfg.py, stored under
+       /eos/home-p/pelai/HZa/root_rechit/
        (TTree path: 'dumper/rechits' under TFileService default folder).
 
-Output: under /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/rechits_2d/.
+Output: PNG/PDF only (no ROOT) under
+        /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/rechits_2d/.
 """
 
 from __future__ import annotations
@@ -22,15 +24,20 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import sys
 
 import ROOT
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from _cms_style import cms_label
+
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
+ROOT.gStyle.SetOptTitle(0)
 ROOT.gStyle.SetPalette(ROOT.kBird)
 ROOT.gStyle.SetNumberContours(64)
 
-DEFAULT_INPUT = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/rechits_2d/dumps/mA_M1_rechits_100ev.root"
+DEFAULT_INPUT = "/eos/home-p/pelai/HZa/root_rechit/mA_M1_rechits_100ev_numEvent100.root"
 DEFAULT_OUT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/rechits_2d"
 
 ISIZE = 30  # window size (Cluster::isize in the MLPhoton producer)
@@ -43,6 +50,12 @@ def _make_th2(name: str, title: str) -> ROOT.TH2F:
         ISIZE, -ISIZE / 2.0, ISIZE / 2.0,
         ISIZE, -ISIZE / 2.0, ISIZE / 2.0,
     )
+    for ax in (h.GetXaxis(), h.GetYaxis(), h.GetZaxis()):
+        ax.SetTitleSize(0.055)
+        ax.SetLabelSize(0.05)
+    h.GetXaxis().SetTitleOffset(1.00)
+    h.GetYaxis().SetTitleOffset(1.10)
+    h.GetZaxis().SetTitleOffset(1.20)
     h.SetContour(64)
     return h
 
@@ -82,18 +95,20 @@ def _fill_into(h: ROOT.TH2F, ieta, iphi, energy, seed_ieta: int, seed_iphi: int)
 
 
 def _draw_save(h: ROOT.TH2F, out_stub: str, *, logz: bool = True):
-    c = ROOT.TCanvas(f"c_{h.GetName()}", h.GetTitle(), 720, 640)
-    c.SetLeftMargin(0.12)
-    c.SetRightMargin(0.16)
+    c = ROOT.TCanvas(f"c_{h.GetName()}", h.GetTitle(), 800, 660)
+    c.SetLeftMargin(0.13)
+    c.SetRightMargin(0.18)
     c.SetTopMargin(0.10)
-    c.SetBottomMargin(0.12)
+    c.SetBottomMargin(0.14)
     if logz and h.GetMaximum() > 0:
         c.SetLogz(True)
         h.SetMinimum(1e-3)
     h.Draw("COLZ")
 
+    cms_lab = cms_label(year="2024", x_left=0.13, x_right=0.82)
+
     os.makedirs(os.path.dirname(out_stub), exist_ok=True)
-    for ext in ("png", "pdf", "root"):
+    for ext in ("png", "pdf"):
         path = f"{out_stub}.{ext}"
         c.SaveAs(path)
         print(f"[plot_rechits_2d] saved {path}")

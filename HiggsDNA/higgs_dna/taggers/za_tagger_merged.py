@@ -1459,6 +1459,30 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(events, "n_photons_AN2020", ak.fill_none(n_an_pho, 0), overwrite=True)
             awkward_utils.add_field(events, "has_1merged_AN2020", has_1merged_AN, overwrite=True)
 
+            # Merged H candidate (AN2020): Z + single AN2020-selected photon.
+            # Pick the first photon that passed pass_phid_AN2020; build its 4-vector.
+            _an_pho = ak.firsts(events.Photon[events.Photon["pass_phid_AN2020"]])
+            _an_valid = has_1merged_AN & has_z_cand
+            _an_pt   = ak.where(_an_valid, ak.fill_none(_an_pho.pt,   0.0), 0.0)
+            _an_eta  = ak.where(_an_valid, ak.fill_none(_an_pho.eta,  0.0), 0.0)
+            _an_phi  = ak.where(_an_valid, ak.fill_none(_an_pho.phi,  0.0), 0.0)
+            _an_mass = ak.zeros_like(_an_pt)
+            _z_pt_an   = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.pt,   0.0), 0.0)
+            _z_eta_an  = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.eta,  0.0), 0.0)
+            _z_phi_an  = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.phi,  0.0), 0.0)
+            _z_mass_an = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.mass, 0.0), 0.0)
+            _h_an = (
+                ak.zip({"pt": _z_pt_an, "eta": _z_eta_an, "phi": _z_phi_an, "mass": _z_mass_an}, with_name="Momentum4D")
+                + ak.zip({"pt": _an_pt, "eta": _an_eta,   "phi": _an_phi,   "mass": _an_mass},   with_name="Momentum4D")
+            )
+            sel_h_merged_AN2020 = ak.fill_none(
+                (_h_an.mass > options["mass_h"][0]) & (_h_an.mass < options["mass_h"][1]),
+                False,
+            )
+            awkward_utils.add_field(events, "H_merged_AN2020_mass",
+                                    ak.where(_an_valid, _h_an.mass, DUMMY_VALUE),
+                                    overwrite=True)
+
             for weighted in (False, True):
                 if weighted and not hasattr(events, "Generator_weight"):
                     continue
@@ -1466,11 +1490,12 @@ class ZaTaggerRun3(Tagger):
                     events=events,
                     cut_type="zgammas_merged_AN2020_w" if weighted else "zgammas_merged_AN2020",
                     steps=[
-                        ("N_lep_sel", z_ee_cut | z_mumu_cut),
-                        ("trig_cut", trigger_cut),
+                        ("N_lep_sel",  z_ee_cut | z_mumu_cut),
+                        ("trig_cut",   trigger_cut),
                         ("lep_pt_cut", trigger_pt_cut),
                         ("has_z_cand", has_z_cand),
                         ("has_1merged", has_1merged_AN),
+                        ("sel_h",      sel_h_merged_AN2020),
                     ],
                     weighted=weighted,
                 )
@@ -1509,6 +1534,28 @@ class ZaTaggerRun3(Tagger):
             awkward_utils.add_field(events, "n_MLPhoton_diphoton", n_ml_diphoton, overwrite=True)
             awkward_utils.add_field(events, "has_1MLPhoton_diphoton", has_1ml_diphoton, overwrite=True)
 
+            # Merged Higgs candidate: Z + MLPhoton_lead → H mass window
+            # ZCand 4-vector is safe only where has_z_cand; MLPhoton_lead is safe only where has_1ml_diphoton.
+            _z_pt   = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.pt,   0.0), 0.0)
+            _z_eta  = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.eta,  0.0), 0.0)
+            _z_phi  = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.phi,  0.0), 0.0)
+            _z_mass = ak.where(has_z_cand, ak.fill_none(z_cand.ZCand.mass, 0.0), 0.0)
+            _ml_valid = has_1ml_diphoton & (events.MLPhoton_lead_pt != DUMMY_VALUE)
+            _ml_pt   = ak.where(_ml_valid, events.MLPhoton_lead_pt,   0.0)
+            _ml_eta  = ak.where(_ml_valid, events.MLPhoton_lead_eta,  0.0)
+            _ml_phi  = ak.where(_ml_valid, events.MLPhoton_lead_phi,  0.0)
+            _ml_mass = ak.where(_ml_valid, events.MLPhoton_lead_mass, 0.0)
+            _z_p4  = ak.zip({"pt": _z_pt,  "eta": _z_eta,  "phi": _z_phi,  "mass": _z_mass},  with_name="Momentum4D")
+            _ml_p4 = ak.zip({"pt": _ml_pt, "eta": _ml_eta, "phi": _ml_phi, "mass": _ml_mass}, with_name="Momentum4D")
+            _h_merged = _z_p4 + _ml_p4
+            sel_h_merged_ml = ak.fill_none(
+                (_h_merged.mass > options["mass_h"][0]) & (_h_merged.mass < options["mass_h"][1]),
+                False,
+            )
+            awkward_utils.add_field(events, "H_merged_ML_mass",
+                                    ak.where(has_z_cand & _ml_valid, _h_merged.mass, DUMMY_VALUE),
+                                    overwrite=True)
+
             for weighted in (False, True):
                 if weighted and not hasattr(events, "Generator_weight"):
                     continue
@@ -1516,16 +1563,36 @@ class ZaTaggerRun3(Tagger):
                     events=events,
                     cut_type="zgammas_merged_ML_w" if weighted else "zgammas_merged_ML",
                     steps=[
-                        ("N_lep_sel", z_ee_cut | z_mumu_cut),
-                        ("trig_cut", trigger_cut),
-                        ("lep_pt_cut", trigger_pt_cut),
-                        ("has_z_cand", has_z_cand),
+                        ("N_lep_sel",              z_ee_cut | z_mumu_cut),
+                        ("trig_cut",               trigger_cut),
+                        ("lep_pt_cut",             trigger_pt_cut),
+                        ("has_z_cand",             has_z_cand),
                         ("has_1MLPhoton_diphoton", has_1ml_diphoton),
+                        ("sel_h",                  sel_h_merged_ml),
                     ],
                     weighted=weighted,
                 )
                 if not weighted:
                     awkward_utils.add_field(events, "pass_allcuts_merged_ML", ak.fill_none(final_cut, False), overwrite=True)
+
+            # ee / μμ channel breakdown (matches resolved zgammas_ele / zgammas_mu structure)
+            for weighted in (False, True):
+                if weighted and not hasattr(events, "Generator_weight"):
+                    continue
+                for ch_tag, ch_cut in (("ele", z_ee_cut), ("mu", z_mumu_cut)):
+                    self._register_sequential_event_cutflow(
+                        events=events,
+                        cut_type=f"zgammas_merged_ML_{ch_tag}_w" if weighted else f"zgammas_merged_ML_{ch_tag}",
+                        steps=[
+                            ("N_lep_sel",              ch_cut),
+                            ("trig_cut",               trigger_cut),
+                            ("lep_pt_cut",             trigger_pt_cut),
+                            ("has_z_cand",             has_z_cand),
+                            ("has_1MLPhoton_diphoton", has_1ml_diphoton),
+                            ("sel_h",                  sel_h_merged_ml),
+                        ],
+                        weighted=weighted,
+                    )
 
             # ----------------------------------------------------------
             # MLPhoton truth-match to gen ã (pdgId=9000005) — ROI residual
@@ -1583,6 +1650,21 @@ class ZaTaggerRun3(Tagger):
                     logger.warning(f"[MLPhoton truth match in select] skipped: {_e}")
 
         all_cuts = ee_all_cut | mm_all_cut
+
+        # Save the resolved-pass flag so downstream can identify "resolved-only"
+        # vs "merged-only" vs "both" events in the parquet.
+        awkward_utils.add_field(events, "pass_allcuts_resolved",
+                                ak.fill_none(all_cuts, False),
+                                overwrite=True)
+
+        # For the merged/resolved strategy diagnostic study, also keep events
+        # that pass either merged selection (AN2020 or ML) — they're saved with
+        # the per-flag bools so downstream can categorise events as merged-only,
+        # resolved-only, or overlap.
+        if "pass_allcuts_merged_ML" in events.fields:
+            all_cuts = all_cuts | ak.fill_none(events.pass_allcuts_merged_ML, False)
+        if "pass_allcuts_merged_AN2020" in events.fields:
+            all_cuts = all_cuts | ak.fill_none(events.pass_allcuts_merged_AN2020, False)
 
         elapsed_time = time.time() - start
         logger.debug("[ZGammaTagger] %s, syst variation : %s, total time to execute select_zgammas: %.6f s" % (self.name, self.current_syst, elapsed_time))

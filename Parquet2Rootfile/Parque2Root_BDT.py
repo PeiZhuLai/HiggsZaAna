@@ -893,9 +893,12 @@ def main():
     final_events += data.shape[0]
 
     indices = np.arange(len(data))
-    train_mask = indices % 2 == 0
-    test_mask = indices % 2 == 1
+    bucket = indices % 10
+    train_mask = bucket < 5                       # 0-4 -> 50% train
+    val_mask   = (bucket >= 5) & (bucket < 7)     # 5-6 -> 20% validation
+    test_mask  = bucket >= 7                      # 7-9 -> 30% test
     data_train = data[train_mask]
+    data_validation = data[val_mask]
     data_test = data[test_mask]
     # data_zero_jet = data.query("n_jets == 0 & n_leptons == 2 & MET_pt < 90")
     # data_one_jet = data.query("n_jets == 1 & n_leptons == 2 & MET_pt < 90")
@@ -910,6 +913,7 @@ def main():
         f['inclusive'] = data
         if args.split:
             f['train'] = data_train
+            f['validation'] = data_validation
             f['test'] = data_test
         # f['zero_jet'] = data_zero_jet
         # f['one_jet'] = data_one_jet
