@@ -98,7 +98,7 @@ BDT_SHAPE_COLORS = [
     ROOT.kSpring + 5,
     ROOT.kOrange + 1,
     ROOT.kRed + 1,
-    ROOT.kMagenta + 3,
+    ROOT.kMagenta,
 ]
 BDT_SHAPE_LINE_STYLES = [1, 2, 7, 9]
 # Per-bin overrides (BDT bin index -> line style). Force the highest BDT bin

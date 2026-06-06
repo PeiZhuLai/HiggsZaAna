@@ -160,8 +160,9 @@ class SidebandReweighter:
             return frame[actual].to_numpy(dtype=float)
 
         if var == "pho_pt_asym":
-            pt1 = _col("pho1Pt")
-            pt2 = _col("pho2Pt")
+            # H_m-normalized pT; the H_m factor cancels so this equals the raw-pT asymmetry.
+            pt1 = _col("pho1Pt_oHm")
+            pt2 = _col("pho2Pt_oHm")
             with np.errstate(divide="ignore", invalid="ignore"):
                 return (pt1 - pt2) / (pt1 + pt2 + 1e-6)
         raise KeyError(f"Unknown derived variable: {var}")
@@ -224,8 +225,8 @@ class SidebandReweighter:
             return _finite_float(getattr(obj, actual))
 
         if var == "pho_pt_asym":
-            pt1 = _attr("pho1Pt")
-            pt2 = _attr("pho2Pt")
+            pt1 = _attr("pho1Pt_oHm")
+            pt2 = _attr("pho2Pt_oHm")
             if not (math.isfinite(pt1) and math.isfinite(pt2)):
                 return np.nan
             return (pt1 - pt2) / (pt1 + pt2 + 1e-6)

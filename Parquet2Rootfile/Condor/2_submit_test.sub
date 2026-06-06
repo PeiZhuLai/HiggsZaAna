@@ -1,0 +1,31 @@
+# 全部放 AFS，避免 EOS 限制
+initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/run_parquet2root.sh
+
+log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).log
+
+# stdout/stderr 仍然可以每个 job 一份
+output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).out
+error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).err
+
+# 显式把 stdin 置空，避免再被误认为用 ARG_IN
+input           = /dev/null
+stream_output   = False
+stream_error    = False
+
+universe        = vanilla
+request_cpus    = 1
+request_memory  = 2GB
+request_disk    = 20000MB
++JobFlavour     = "workday"
++JobBatchName   = "p2root_MVAScore_TEST"
+nice_user       = True
+
+# Reuse the conda tarball built by Plot/Condor; do not create a second env_cache here.
+environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
+
+# 用新的参数名（避开 INPUT/OUTPUT/IN/OUT）
+arguments       = $(ARG_IN) $(ARG_OUT) $(ARG_CORR) $(ARG_SPLIT)
+
+# 从 TSV 读取（按顺序匹配，无表头）
+queue ARG_IN, ARG_OUT, ARG_CORR, ARG_SPLIT from joblist_test.tsv

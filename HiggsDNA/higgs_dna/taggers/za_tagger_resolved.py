@@ -17,6 +17,7 @@ from higgs_dna.taggers.tagger import Tagger, NOMINAL_TAG
 from higgs_dna.utils import awkward_utils, misc_utils
 from higgs_dna.selections import object_selections, lepton_selections, jet_selections, tau_selections, physics_utils
 from higgs_dna.selections import gen_selections
+from higgs_dna.tools.zmass_constraint_refit import refit_lepton_pts
 
 # Run3 Photon cut-based ID
 # H/E Loose
@@ -380,6 +381,64 @@ class ZaTaggerRun3(Tagger):
         z_ee_cut = ak.fill_none(best_z.LeadLepton.id == 11, False)
         z_mumu_cut = ak.fill_none(best_z.LeadLepton.id == 13, False)
         return z_cands, best_z, z_ee_cut, z_mumu_cut
+
+    def _refit_z_candidate(self, z_cand):
+        """對選中的 Z 候選做 Z mass-constraint 逐輕子 pT refit，回傳 dressed refit Z 四動量。
+
+        z_cand 為 event-level（option type）的最佳 Z 候選；其 LeadLepton / SubleadLepton
+        皆帶有 bare_* 與 fsr_* 欄位（見 assign_fsr_photon / _attach_refit_fields）：
+        bare_* 為 dressed 前的裸輕子四動量，fsr_* 為這顆輕子被指派到的 FSR 光子
+        （沒有時為 0）。eta/phi/mass 固定，僅浮動兩顆裸輕子的 pT；FSR 光子固定併入
+        m_ll 約束，refit 後再加回對應輕子組成 dressed 的 refit Z。沒有合法 Z 的事件
+        回傳 None（讓下游 fill_none 寫入 DUMMY_VALUE）。
+        """
+        lead = z_cand.LeadLepton
+        sub = z_cand.SubleadLepton
+
+        def _flat(arr, fill=0.0):
+            return ak.to_numpy(ak.fill_none(arr, fill))
+
+        pt1_refit, pt2_refit = refit_lepton_pts(
+            _flat(lead.bare_pt), _flat(lead.bare_eta), _flat(lead.bare_phi),
+            _flat(lead.bare_mass), _flat(lead.ptE_error),
+            _flat(sub.bare_pt), _flat(sub.bare_eta), _flat(sub.bare_phi),
+            _flat(sub.bare_mass), _flat(sub.ptE_error),
+            _flat(lead.fsr_pt), _flat(lead.fsr_eta), _flat(lead.fsr_phi),
+            _flat(sub.fsr_pt), _flat(sub.fsr_eta), _flat(sub.fsr_phi),
+        )
+
+        def _dressed(obj, pt_new):
+            lep = ak.zip(
+                {
+                    "pt": ak.Array(pt_new),
+                    "eta": ak.fill_none(obj.bare_eta, 0.0),
+                    "phi": ak.fill_none(obj.bare_phi, 0.0),
+                    "mass": ak.fill_none(obj.bare_mass, 0.0),
+                },
+                with_name="Momentum4D",
+            )
+            # FSR 光子（無質量）；pt==0 表示沒有 FSR → 貢獻零向量
+            fsr_pt = ak.fill_none(obj.fsr_pt, 0.0)
+            fsr = ak.zip(
+                {
+                    "pt": fsr_pt,
+                    "eta": ak.fill_none(obj.fsr_eta, 0.0),
+                    "phi": ak.fill_none(obj.fsr_phi, 0.0),
+                    "mass": ak.zeros_like(fsr_pt),
+                },
+                with_name="Momentum4D",
+            )
+            return lep + fsr
+
+        z_refit_p4 = _dressed(lead, pt1_refit) + _dressed(sub, pt2_refit)
+
+        # 沒有合法 Z 候選的事件標成 None，讓下游 fill_none 寫入 DUMMY_VALUE
+        valid = ~ak.is_none(z_cand.LeadLepton.bare_pt)
+        z_refit_p4 = ak.mask(z_refit_p4, valid)
+        # per-lepton 的 refit pT（裸輕子，未含 FSR），同樣對無效事件 mask
+        lead_pt_refit = ak.mask(ak.Array(pt1_refit), valid)
+        sub_pt_refit = ak.mask(ak.Array(pt2_refit), valid)
+        return z_refit_p4, lead_pt_refit, sub_pt_refit
 
     def _build_trigger_pt_cuts(
         self,
@@ -761,7 +820,12 @@ class ZaTaggerRun3(Tagger):
 
         # 修正 electrons 和 muons（包含 FSR）
         # electrons_withFSR = self.assign_fsr_photon(electrons, FSRphotons)
-        electrons_withFSR = electrons
+        # 電子不做 FSR recovery（FSR 已大致併入 supercluster），但仍附上 Z-refit
+        # 需要的 bare 四動量與 FSR=0 欄位，使下游 z_cand 的兩種 channel 欄位一致。
+        _ele_zero = ak.zeros_like(electrons.pt)
+        electrons_withFSR = self._attach_refit_fields(
+            electrons, electrons, _ele_zero, _ele_zero, _ele_zero
+        )
         muons_withFSR = self.assign_fsr_photon(muons, FSRphotons)
         z_cands, _, z_ee_cut, z_mumu_cut = self._build_best_z_candidates(
             electrons_withFSR,
@@ -950,6 +1014,14 @@ class ZaTaggerRun3(Tagger):
             has_z_cand_nosip3d = ak.num(z_cands_nosip3d) >= 1
             z_cand_nosip3d = ak.firsts(z_cands_nosip3d)
 
+        # --- Z mass-constraint kinematic refit (per-lepton pT likelihood fit) ---
+        # 對選中的 Z 候選，固定 eta/phi/mass，僅浮動兩顆「裸輕子」的 pT 以最大化
+        # Gauss(pt1)*Gauss(pt2)*ZLineshape(m_ll) 的似然，藉此提升 m_ll → m_Za 的
+        # 解析度（見 higgs_dna/tools/zmass_constraint_refit.py）。muon channel 的
+        # FSR 光子會被併入 m_ll 約束（固定在 reco 值），refit 後再加回對應輕子上以
+        # 組成 dressed 的 refit Z；電子不做 FSR（已大致併入 supercluster）。
+        z_refit_p4, lead_pt_refit, sub_pt_refit = self._refit_z_candidate(z_cand)
+
         # Add Z-related fields to array
         # NOTE: sip3d only (no ip3d fallback)
         for field in ["pt", "eta", "costheta", "phi", "mass", "charge", "id", "ptE_error", "sip3d"]:
@@ -992,6 +1064,29 @@ class ZaTaggerRun3(Tagger):
                 f"Z_noFSR_sublead_lepton_{field}",
                 ak.fill_none(getattr(z_cand_noFSR.SubleadLepton, field), DUMMY_VALUE)
             )
+
+        # Z mass-constraint refit 輸出（leptons + muon FSR；ALP/photon 不變）
+        for field in ["pt", "eta", "phi", "mass"]:
+            awkward_utils.add_field(
+                events,
+                "Z_%s_refit" % field,
+                ak.fill_none(getattr(z_refit_p4, field), DUMMY_VALUE),
+                overwrite=True,
+            )
+        # per-lepton 的 refit pT（裸輕子，未含 FSR）
+        awkward_utils.add_field(
+            events, "Z_lead_lepton_pt_refit",
+            ak.fill_none(lead_pt_refit, DUMMY_VALUE), overwrite=True,
+        )
+        awkward_utils.add_field(
+            events, "Z_sublead_lepton_pt_refit",
+            ak.fill_none(sub_pt_refit, DUMMY_VALUE), overwrite=True,
+        )
+        # m_Z refit 別名
+        awkward_utils.add_field(
+            events, "mZ_refit",
+            ak.fill_none(z_refit_p4.mass, DUMMY_VALUE), overwrite=True,
+        )
 
         # Make gamma candidate-level cuts
         has_2gamma_cand = (ak.num(photons) >= 2) #& (events.n_iso_photons == 0) # only for dy samples
@@ -1230,6 +1325,21 @@ class ZaTaggerRun3(Tagger):
                 f"H_noFSR_{field}",
                 ak.fill_none(getattr(h_cand_noFSR, field), DUMMY_VALUE)
             )
+
+        # Z mass-constraint refit 後的 Higgs(=Za) 候選：refit 後的 Z 加上不變的 ALP
+        h_cand_refit = z_refit_p4 + alp_cand.ALPCand
+        for field in ["pt", "eta", "phi", "mass"]:
+            awkward_utils.add_field(
+                events,
+                "H_%s_refit" % field,
+                ak.fill_none(getattr(h_cand_refit, field), DUMMY_VALUE),
+                overwrite=True,
+            )
+        # m_H refit 別名
+        awkward_utils.add_field(
+            events, "mH_refit",
+            ak.fill_none(h_cand_refit.mass, DUMMY_VALUE), overwrite=True,
+        )
 
         all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
 
@@ -2196,7 +2306,9 @@ class ZaTaggerRun3(Tagger):
         
         # ---- 0. 若所有事件都没有 photon，直接返回 ----
         if ak.max(ak.num(fsr_photons)) == 0:
-            return leptons                    # nothing to do
+            # 仍附上 refit 需要的「裸輕子」與「FSR=0」欄位，確保下游 z_cand 一致
+            zero = ak.zeros_like(leptons.pt)
+            return self._attach_refit_fields(leptons, leptons, zero, zero, zero)
 
         # ---- 1. 确保每个 event 至少有 1 个 “占位 photon” ----
         #    （避免在完全空列表上索引越界）
@@ -2249,4 +2361,22 @@ class ZaTaggerRun3(Tagger):
             "mass"
         )
 
+        # 附上 Z mass-constraint refit 需要的輸入：dressed 之前的「裸輕子」四動量
+        # 與這顆輕子實際被指派到的 FSR 光子（沒有時為 0）。如此下游選到的 z_cand
+        # 不論哪一對都能取得 refit 所需的 bare/FSR 資訊。
+        corrected = self._attach_refit_fields(
+            corrected, leptons, best_ph.pt, best_ph.eta, best_ph.phi
+        )
+
         return corrected
+
+    def _attach_refit_fields(self, leptons_dressed, bare_leptons, fsr_pt, fsr_eta, fsr_phi):
+        """把 Z-refit 所需的 bare 輕子 4-momentum 與指派的 FSR 光子記在輕子上。"""
+        out = ak.with_field(leptons_dressed, bare_leptons.pt,   "bare_pt")
+        out = ak.with_field(out,             bare_leptons.eta,  "bare_eta")
+        out = ak.with_field(out,             bare_leptons.phi,  "bare_phi")
+        out = ak.with_field(out,             bare_leptons.mass, "bare_mass")
+        out = ak.with_field(out, fsr_pt,  "fsr_pt")
+        out = ak.with_field(out, fsr_eta, "fsr_eta")
+        out = ak.with_field(out, fsr_phi, "fsr_phi")
+        return out

@@ -146,6 +146,10 @@ def _is_background_sample(sample: str, analyzer_cfg: AC.Analyzer_Config) -> bool
     return sample in analyzer_cfg.bkg_names
 
 
+def _is_mc_sample(sample: str, analyzer_cfg: AC.Analyzer_Config) -> bool:
+    return sample in analyzer_cfg.bkg_names or sample in analyzer_cfg.sig_names
+
+
 def _systematic_central_branch(sys_name: str) -> Optional[str]:
     if sys_name.endswith("_up"):
         return sys_name[:-3] + "_central"
@@ -403,7 +407,7 @@ def _require_branch(chain, sample: str, branch: str, purpose: str) -> None:
 
 
 def _nominal_weight_expr(chain, sample: str, analyzer_cfg: AC.Analyzer_Config, args) -> str:
-    if args.use_sideband_reweight and _is_background_sample(sample, analyzer_cfg):
+    if args.use_sideband_reweight and _is_mc_sample(sample, analyzer_cfg):
         if _has_branch(chain, "weight_sideband_rwgt"):
             return "weight_sideband_rwgt"
         raise FastBackendUnsupported(

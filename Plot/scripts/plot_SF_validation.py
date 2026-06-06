@@ -140,7 +140,9 @@ PLOTS: Tuple[PlotSpec, ...] = (
         "sublead_muon_pt",
         "Z_sublead_lepton_pt",
         "Sublead muon p_{T} [GeV]",
-        (5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 120.0, 500.0),
+        # Drop the [5,10) GeV bin: the dimuon-HLT denominator is essentially empty there
+        # (sublead leg threshold is ~8 GeV), making the ratio dominated by a tiny denominator.
+        (10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 120.0, 500.0),
         "z_mumu == 1",
         "muon",
     ),

@@ -44,8 +44,15 @@ else:
 
 def bdt_input_branches(base_branches):
     branches = [b for b in base_branches if b not in _DERIVED_FEATURE_SET]
-    if SIDEBAND_REWEIGHTER is not None and "event" not in branches:
-        branches.append("event")
+    if SIDEBAND_REWEIGHTER is not None:
+        # The sideband reweight is applied (apply_sideband_reweight_to_bkg) before
+        # keep_bdt_matrix_columns() drops non-matrix columns, so any reweight input
+        # that is NOT already a BDT training variable must still be read from ROOT.
+        # 'event' drives the per-event mass hypothesis; 'Z_m' is a reweight step
+        # variable that is not part of the BDT training matrix.
+        for extra in ("event", "Z_m"):
+            if extra not in branches:
+                branches.append(extra)
     return branches
 
 
@@ -471,11 +478,11 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
     savefig_and_show("train_test.pdf")
     
 # Za variables
-# 1. pho1Pt: Leading photon’s pT ;
+# 1. pho1Pt_oHm: Leading photon’s pT / m_H (H_m-normalized to decorrelate from m_llgammagamma);
 # 2. pho1R9: Leading photon’s R9;
 # 3. pho1IetaIeta55: Leading photon’s σietaieta5×5;
 # 4. pho1PIso noCorr: Leading photon’s PF Photon Isolation; 
-# 5. pho2Pt: Sub-leading photon’s pT ;
+# 5. pho2Pt_oHm: Sub-leading photon’s pT / m_H (H_m-normalized);
 # 6. pho2R9: Sub-leading photon’s R9;
 # 7. pho2IetaIeta55: Sub-leading photon’s σietaieta5×5;
 # 8. pho2PIso noCorr: Sub-leading photon’s PF Photon Isolation;
@@ -484,10 +491,10 @@ def compare_train_test(clf,x_train,y_train,z_train,w_train,x_test,y_test,z_test,
 # 11. var dR g1g2: ∆R between two photons (∆R(γ1, γ2));
 # 12. var dR g1Z: ∆R between leading photon and Z (∆R(γ1, Z));
 # 13. var PtaOverMh: pTa / mH
-# 14. Hpt: HpT;
+# 14. H_pt_oHm: Higgs candidate pT / m_H (H_m-normalized);
 # 15. (m_a - m_a, hype) / mH
 
-variables = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt"]
+variables = ["pho1Pt_oHm", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt_oHm", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt_oHm"]
 # Derived feature added to recover low-ma sensitivity.
 # pho_pt_asym is the only derived var kept; pho_dR_over_ma / min_pho_pt_over_ma
 # are highly correlated with existing kinematic vars (|corr|>0.6), and
@@ -501,8 +508,10 @@ wt_variables = ['factor']
 def add_derived_features(dataframe):
     """Augment df in-place with the kept derived BDT feature."""
     import numpy as _np
-    pt1 = dataframe["pho1Pt"].astype(float)
-    pt2 = dataframe["pho2Pt"].astype(float)
+    # pho1Pt_oHm/pho2Pt_oHm are pho pT divided by H_m; the H_m factor cancels in the
+    # asymmetry, so this is numerically identical to using the raw photon pT.
+    pt1 = dataframe["pho1Pt_oHm"].astype(float)
+    pt2 = dataframe["pho2Pt_oHm"].astype(float)
     dataframe["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
 
 file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
@@ -519,7 +528,7 @@ bkg_test_tree_name = "test"
 sig_train_tree_name = "train"
 sig_val_tree_name = "validation"
 sig_test_tree_name = "test"
-TRAIN_MASS_LOW = 110
+TRAIN_MASS_LOW = 95
 TRAIN_MASS_HIGH = 180
 bkg_data_selection = "H_m>{} && H_m<{}".format(TRAIN_MASS_LOW, TRAIN_MASS_HIGH)
 sig_selection = "H_m>{} && H_m<{}".format(TRAIN_MASS_LOW, TRAIN_MASS_HIGH)
@@ -614,14 +623,14 @@ n_data_SB = np.sum(data_SB.values[:,wt_var_indices])
 n_bkg_SB = np.sum(bkg_SB.values[:,wt_var_indices])
 print("weighted Sideband event: data", n_data_SB, "bkg:", n_bkg_SB)
 
-file_name = ["pho1Pt", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt", "pho_pt_asym", "param", "ALP_m", "H_m"]
+file_name = ["pho1Pt_oHm", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt_oHm", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh", "H_pt_oHm", "pho_pt_asym", "param", "ALP_m", "H_m"]
 
 xlabel = [
-    r"$\gamma_{Leading}\ P_{T}$",
+    r"$\gamma_{Leading}\ P_{T} / m_{H}$",
     r"$\gamma_{Leading}$ R9",
     r"$\gamma_{Leading}$ $\sigma_{i\eta i\eta}^{5x5}$",
     r"$\gamma_{Leading}$ $PF_{\gamma}$ Iso",
-    r"$\gamma_{Subleading}\ P_{T}$",
+    r"$\gamma_{Subleading}\ P_{T} / m_{H}$",
     r"$\gamma_{Subleading}$ R9",
     r"$\gamma_{Subleading}$ $\sigma_{i\eta i\eta}^{5x5}$",
     r"$\gamma_{Subleading}$ $PF_{\gamma}$ Iso",
@@ -630,7 +639,7 @@ xlabel = [
     r"$\Delta R(\gamma,\gamma)$",
     r"$\Delta R(\gamma_{Leading}, Z)$",
     r"$P_{t,a} / m_{H}$",
-    r"$P_{T,H}$",
+    r"$P_{T,H} / m_{H}$",
     r"$(p_{T,1}-p_{T,2})/(p_{T,1}+p_{T,2})$",
     r"$(m_{a} - m_{a,\mathrm{hyp}}) / m_{H}$",
     r"$m_{a}$",
@@ -638,11 +647,11 @@ xlabel = [
 ]
 
 x_limits = {
-    'pho1Pt': (6, 60),
+    'pho1Pt_oHm': (0.0, 0.6),
     'pho1R9': (0.15, 1.3),
     'pho1IetaIeta55': (0.003, 0.04),
     'pho1PIso_noCorr': (-2, 25),
-    'pho2Pt': (6, 60),
+    'pho2Pt_oHm': (0.0, 0.5),
     'pho2R9': (0.15, 1.3),
     'pho2IetaIeta55': (0.003, 0.04),
     'pho2PIso_noCorr': (-2, 25),
@@ -651,7 +660,7 @@ x_limits = {
     'var_dR_g1g2':(-0.2, 4.2),
     'var_dR_g1Z':(-0.6, 6),
     'var_PtaOverMh':(-0.1, 0.9),
-    'H_pt':(-20, 300),
+    'H_pt_oHm':(0.0, 2.5),
     'pho_pt_asym': (-1.0, 1.0),
     'param':(-1, 1),
     'ALP_m':(0, 55),
@@ -659,11 +668,11 @@ x_limits = {
 }
 
 bin_sizes = {
-    'pho1Pt': 1,
+    'pho1Pt_oHm': 0.01,
     'pho1R9': 0.025,
     'pho1IetaIeta55': 0.001,
     'pho1PIso_noCorr': 1.,
-    'pho2Pt': 1,
+    'pho2Pt_oHm': 0.01,
     'pho2R9': 0.025,
     'pho2IetaIeta55': 0.001,
     'pho2PIso_noCorr': 1.,
@@ -672,7 +681,7 @@ bin_sizes = {
     'var_dR_g1g2': 0.1,
     'var_dR_g1Z': 0.2,
     'var_PtaOverMh': 0.02,
-    'H_pt': 4,
+    'H_pt_oHm': 0.04,
     'pho_pt_asym': 0.05,
     'param': 0.05,
     'ALP_m': 1,

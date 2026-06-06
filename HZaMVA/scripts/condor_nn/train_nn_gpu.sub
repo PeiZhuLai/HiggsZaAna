@@ -1,0 +1,35 @@
+# HTCondor GPU submit template for hza_NN BDT->NN training (CERN lxplus).
+#   condor_submit train_nn_gpu.sub
+# Output goes to ./logs/ ; the job runs train_nn_gpu.sh on a GPU node.
+
+BASE                    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/condor_nn
+
+universe                = vanilla
+executable              = $(BASE)/train_nn_gpu.sh
+arguments               = $(LAMBDA)
+
+output                  = $(BASE)/logs/train_nn.permassXL.lam$(LAMBDA).$(ClusterId).out
+error                   = $(BASE)/logs/train_nn.permassXL.lam$(LAMBDA).$(ClusterId).err
+log                     = $(BASE)/logs/train_nn.permassXL.lam$(LAMBDA).$(ClusterId).log
+
+# --- GPU request (this is what sends the job to a GPU node, e.g. the Tesla T4 pool) ---
+request_gpus            = 1
+request_cpus            = 4
+request_memory          = 16 GB
+
+# JobFlavour sets the max wall time. Pick one:
+#   espresso=20min  microcentury=1h  longlunch=2h  workday=8h
+#   tomorrow=1d     testmatch=3d     nextweek=1w
++JobFlavour             = "tomorrow"
+
+# Optional: pin a specific GPU model (uncomment to require a T4 / V100 / A100)
+# requirements          = regexp("Tesla T4", TARGET.GPUs_DeviceName)
+
+# AFS/EOS are mounted on CERN workers, so no file transfer is needed.
+should_transfer_files   = NO
+
+# Do NOT export the submit-side environment (conda is set up inside the job script).
+getenv                  = False
+
+# Per-mass DisCo (disco_masses=1..5, 40 epochs) EXTREME lambda: can we force R->1 at the cost of AUC?
+queue LAMBDA in 500 1000 2000

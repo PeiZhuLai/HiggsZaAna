@@ -244,7 +244,7 @@ def get_sideband_reweight_uncertainty_weights(ntup, sample, analyzer_cfg, centra
         not args.use_sideband_reweight
         or not args.sideband_reweight_unc
         or SIDEBAND_REWEIGHTER is None
-        or not is_background_sample(sample, analyzer_cfg)
+        or not is_mc_sample(sample, analyzer_cfg)
     ):
         return {}
 
@@ -280,9 +280,12 @@ def get_sideband_reweight_uncertainty_weights(ntup, sample, analyzer_cfg, centra
 def is_background_sample(sample, analyzer_cfg):
     return sample in analyzer_cfg.bkg_names
 
+def is_mc_sample(sample, analyzer_cfg):
+    return sample in analyzer_cfg.bkg_names or sample in analyzer_cfg.sig_names
+
 def get_event_weight(ntup, sample, analyzer_cfg, row_index=None):
     weight = ntup.weight
-    if not args.use_sideband_reweight or not is_background_sample(sample, analyzer_cfg):
+    if not args.use_sideband_reweight or not is_mc_sample(sample, analyzer_cfg):
         return weight
 
     try:
@@ -362,11 +365,11 @@ tdrstyle.setTDRStyle()
 # load the model from disk
 # model = pickle.load(open(BDT_filename, 'rb'))
 
-pdfName_map = {'pho1Pt': '1_pho1Pt', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_pho1IetaIeta55',
-'pho2Pt': '4_pho2Pt', 'pho2R9': '5_pho2R9', 'pho2IetaIeta55': '6_pho2IetaIeta55',
+pdfName_map = {'pho1Pt_oHm': '1_pho1Pt_oHm', 'pho1R9': '2_pho1R9', 'pho1IetaIeta55': '3_pho1IetaIeta55',
+'pho2Pt_oHm': '4_pho2Pt_oHm', 'pho2R9': '5_pho2R9', 'pho2IetaIeta55': '6_pho2IetaIeta55',
 'pho1ECALIso': '7_pho1ECALIso', 'pho2ECALIso': '8_pho2ECALIso', 'ALP_calculatedPhotonIso': '9_ALP_calculatedPhotonIso',
 'var_dR_Za': '10_var_dR_Za', 'var_dR_g1g2': '11_var_dR_g1g2', 'var_dR_g1Z': '12_var_dR_g1Z',
-'var_PtaOverMh': '13_var_PtaOverMh', 'H_pt': '14_H_pt',
+'var_PtaOverMh': '13_var_PtaOverMh', 'H_pt_oHm': '14_H_pt_oHm',
 'pho_pt_asym': '15_pho_pt_asym',
 'param': '16_param', 'ALP_m': '17_ALP_m'}
 
@@ -629,7 +632,10 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
         "Z_mass",
         "ALP_m",
         "H_pt",
+        "H_pt_oHm",
         "pho1Pt",
+        "pho1Pt_oHm",
+        "pho2Pt_oHm",
         "ALP_lead_photon_pt",
         "ALP_lead_photon_eta",
         "ALP_lead_photon_phi",
@@ -665,7 +671,7 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
         needed.add("z_ee")
     if args.mva:
         needed.update(branch for branch in mva_branches if branch)
-    if args.use_sideband_reweight and is_background_sample(sample, analyzer_cfg):
+    if args.use_sideband_reweight and is_mc_sample(sample, analyzer_cfg):
         needed.update((
             "weight_sideband_rwgt",
             "event",
@@ -873,7 +879,7 @@ def main():
         histos[var_name] = {}
 
     for sample in analyzer_cfg.samp_names:
-        histos['pho1Pt'][sample]    = TH1F('pho1Pt'    + '_' + sample, 'pho1Pt'    + '_' + sample, 42,  8., 50.)
+        histos['pho1Pt_oHm'][sample]    = TH1F('pho1Pt_oHm'    + '_' + sample, 'pho1Pt_oHm'    + '_' + sample, 30,  0., 0.6)
         histos['pho1eta'][sample]    = TH1F('pho1eta'    + '_' + sample, 'pho1eta'    + '_' + sample, 30,  -3., 3.)
         histos['pho1phi'][sample]    = TH1F('pho1phi'    + '_' + sample, 'pho1phi'    + '_' + sample, 40,  -4., 4.)
         histos['pho1R9'][sample]    = TH1F('pho1R9'    + '_' + sample, 'pho1R9'    + '_' + sample, 25,  0.1, 1.)
@@ -882,7 +888,7 @@ def main():
         histos['pho1CIso'][sample]    = TH1F('pho1CIso'    + '_' + sample, 'pho1CIso'    + '_' + sample, 35, 0., 0.35)
         histos['pho1HCALIso'][sample]  = TH1F('pho1HCALIso'    + '_' + sample, 'pho1HCALIso'    + '_' + sample, 25, 0., 4.0)
         histos['pho1HOE'][sample]    = TH1F('pho1HOE'    + '_' + sample, 'pho1HOE'    + '_' + sample, 25, 0., 0.01)
-        histos['pho2Pt'][sample]    = TH1F('pho2Pt'    + '_' + sample, 'pho2Pt'    + '_' + sample, 22,  8., 30.)
+        histos['pho2Pt_oHm'][sample]    = TH1F('pho2Pt_oHm'    + '_' + sample, 'pho2Pt_oHm'    + '_' + sample, 25,  0., 0.5)
         histos['pho2eta'][sample]    = TH1F('pho2eta'    + '_' + sample, 'pho2eta'    + '_' + sample, 30,  -3., 3.)
         histos['pho2phi'][sample]    = TH1F('pho2phi'    + '_' + sample, 'pho2phi'    + '_' + sample, 40,  -4., 4.)
         histos['pho2R9'][sample]    = TH1F('pho2R9'    + '_' + sample, 'pho2R9'    + '_' + sample, 25,  0.1, 1.)
@@ -893,7 +899,7 @@ def main():
         histos['pho2HOE'][sample]    = TH1F('pho2HOE'    + '_' + sample, 'pho2HOE'    + '_' + sample, 25, 0., 0.1)
         histos['Z_m'][sample]    = TH1F('Z_m'    + '_' + sample, 'Z_m'    + '_' + sample, 80,  50., 130.)
         histos['H_m'][sample]    = TH1F('H_m'    + '_' + sample, 'H_m'    + '_' + sample, 85,  95., 180.)
-        histos['H_pt'][sample]    = TH1F('H_pt'    + '_' + sample, 'H_pt'    + '_' + sample, 80,  0., 160.)
+        histos['H_pt_oHm'][sample]    = TH1F('H_pt_oHm'    + '_' + sample, 'H_pt_oHm'    + '_' + sample, 50,  0., 2.5)
         histos['ALP_m'][sample] = TH1F('ALP_m' + '_' + sample, 'ALP_m' + '_' + sample, 40, 0., 40.)
         histos['var_dR_g1g2'][sample] = TH1F('var_dR_g1g2' + '_' + sample, 'var_dR_g1g2' + '_' + sample, 25, 0., 5)
         histos['var_PtaOverMa'][sample] = TH1F('var_PtaOverMa' + '_' + sample, 'var_PtaOverMa' + '_' + sample, 25, 0., 100.)
@@ -1024,13 +1030,13 @@ def main():
                             histos['mvaVal_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
                             histos['mvaVal_larger_3sigma_'+ALP_mass][sample].Fill( MVA_value[ALP_mass], weight )
 
-                histos['pho1Pt'][sample].Fill( ntup.ALP_lead_photon_pt, weight )
+                histos['pho1Pt_oHm'][sample].Fill( ntup.pho1Pt_oHm, weight )
                 histos['pho1eta'][sample].Fill( ntup.ALP_lead_photon_eta, weight )
                 histos['pho1phi'][sample].Fill( ntup.ALP_lead_photon_phi, weight )
                 histos['pho1R9'][sample].Fill( ntup.ALP_lead_photon_r9, weight )
                 histos['pho1IetaIeta55'][sample].Fill( ntup.ALP_lead_photon_sieie, weight )
                 histos['pho1ECALIso'][sample].Fill( ntup.ALP_lead_photon_ecalPFClusterIso, weight )
-                histos['pho2Pt'][sample].Fill( ntup.ALP_sublead_photon_pt, weight )
+                histos['pho2Pt_oHm'][sample].Fill( ntup.pho2Pt_oHm, weight )
                 histos['pho2eta'][sample].Fill( ntup.ALP_sublead_photon_eta, weight )
                 histos['pho2phi'][sample].Fill( ntup.ALP_sublead_photon_phi, weight )
                 histos['pho2R9'][sample].Fill( ntup.ALP_sublead_photon_r9, weight )
@@ -1050,7 +1056,7 @@ def main():
                 else:        
                     histos['H_m'][sample].Fill( ntup.H_m, weight )
 
-                histos['H_pt'][sample].Fill( ntup.H_pt, weight )
+                histos['H_pt_oHm'][sample].Fill( ntup.H_pt_oHm, weight )
                 histos['ALP_m'][sample].Fill( ntup.ALP_m, weight )
                 histos['Z_m'][sample].Fill( ntup.Z_mass, weight )
 
@@ -1090,7 +1096,7 @@ def main():
                     )
 
                 if fill_systematics:
-                    var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt':ntup.pho1Pt, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt':ntup.ALP_sublead_photon_pt, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt':ntup.H_pt, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa, 'param':param_val,
+                    var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt_oHm':ntup.pho1Pt_oHm, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt_oHm':ntup.pho2Pt_oHm, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt_oHm':ntup.H_pt_oHm, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa, 'param':param_val,
                                'pho_pt_asym':pho_pt_asym_val}
                     if args.mva:
                         for ALP_mass in target_masses:
@@ -1128,7 +1134,7 @@ def main():
                     continue
                 print(f"  mass={ALP_mass:>3s} sample={s:>10s} Entries={h.GetEntries():8.0f}  Integral={h.Integral():.3f}")
 
-    for var in ['H_m', 'pho1Pt', 'Z_m']:
+    for var in ['H_m', 'pho1Pt_oHm', 'Z_m']:
         entries = histos[var][sample].GetEntries()
         print(f"[{sample}] {var} histogram entries: {entries}")
 

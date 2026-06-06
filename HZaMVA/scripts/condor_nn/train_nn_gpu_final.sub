@@ -1,0 +1,24 @@
+# HTCondor GPU submit for the FORMAL/production NN training (per-mass DisCo, lambda=100).
+#   condor_submit train_nn_gpu_final.sub
+# Trains the chosen best model and writes loss/overtraining PDFs into ../plots_nn.
+
+BASE                    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/condor_nn
+
+universe                = vanilla
+executable              = $(BASE)/train_nn_gpu_final.sh
+arguments               = $(SEED)
+
+output                  = $(BASE)/logs/train_nn.final.lam100.s$(SEED).$(ClusterId).out
+error                   = $(BASE)/logs/train_nn.final.lam100.s$(SEED).$(ClusterId).err
+log                     = $(BASE)/logs/train_nn.final.lam100.s$(SEED).$(ClusterId).log
+
+request_gpus            = 1
+request_cpus            = 4
+request_memory          = 16 GB
++JobFlavour             = "tomorrow"
+
+should_transfer_files   = NO
+getenv                  = False
+
+# epochs=30 validated config; scan seeds, pick lowest R(mA=1) afterwards (DisCo variance).
+queue SEED in 1 2 3

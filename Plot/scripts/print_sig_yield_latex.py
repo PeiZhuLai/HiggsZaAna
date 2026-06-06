@@ -143,7 +143,14 @@ def latex_table_per_year(yields, mAs, years, channels, out_path=None):
 def latex_table_per_mA(yields, mAs, years, out_path=None):
     lines = [
         "% Expected signal yield per mA (years summed). yield = (1/0.3) * sumEntries.",
-        "\\begin{tabular}{cccc}",
+        "\\begin{table}[h]",
+        "\\begin{center}",
+        "\\topcaption{Expected signal yield ($\\mathrm{ggH}\\!\\rightarrow\\!Z\\alpha\\!\\rightarrow\\!2\\ell 2\\gamma$) "
+        "in the electron and muon channels after the BDT category selection, "
+        "with the assumed cross section 0.1pb and branching ratio 100\\% of $\\mathrm{ggH}\\!\\rightarrow\\!Z\\alpha\\!\\rightarrow\\!2\\ell 2\\gamma$, summed over Run3 eras (172.13~fb$^{-1}$).}",
+        "\\label{tab:expected_sig_yield_perMA}",
+        "\\small",
+        "\\begin{tabular}{|c|c|c|c|}",
         "\\hline",
         "$m_a$ [GeV] & $N_{\\mathrm{sig}}^{ele}$ & $N_{\\mathrm{sig}}^{\\mu}$ & $N_{\\mathrm{sig}}^{e+\\mu}$ \\\\",
         "\\hline",
@@ -156,7 +163,7 @@ def latex_table_per_mA(yields, mAs, years, out_path=None):
         lines.append("{} & {:.3f} & {:.3f} & {:.3f} \\\\".format(m, e, u, e + u))
     lines.append("\\hline")
     lines.append("Total & {:.3f} & {:.3f} & {:.3f} \\\\".format(grand_e, grand_m, grand_e + grand_m))
-    lines += ["\\hline", "\\end{tabular}"]
+    lines += ["\\hline", "\\end{tabular}", "\\end{center}", "\\end{table}"]
     text = "\n".join(lines)
     if out_path:
         with open(out_path, "w") as fp:

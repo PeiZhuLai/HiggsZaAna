@@ -68,7 +68,7 @@ python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --
 
 # ## Update cutflow
 python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/4_collect_cutflow.py
-python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/5_merge_cutflow.py.py
+python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/5_merge_cutflow.py
 
 # # Signal efficinecy after MVA cut
 python3 $scriptsDir/collect_MVAcut_points_run3.py

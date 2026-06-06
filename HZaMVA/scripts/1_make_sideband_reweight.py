@@ -44,16 +44,22 @@ REWEIGHT_VARS = [
     "pho1R9",
     "pho2R9",
 
-    # 5. kinematic variables
+    # 5. kinematic variables (photon/Higgs pT normalized by H_m to decorrelate from m_llgammagamma)
     "var_PtaOverMh",
-    "pho1Pt",
-    "pho2Pt",
-    "H_pt",
+    "pho1Pt_oHm",
+    "pho2Pt_oHm",
+    "H_pt_oHm",
 
     # 6. derived BDT feature (computed inside load_frame, not stored in ntuples)
     "pho_pt_asym",
 
-    # 7. mass-hypothesis variable: most important, but safest to correct last
+    # 7. invariant masses (sideband selection is on H_m: bins inside the signal
+    # window get factor=1 since both data and bkg are empty there, so the
+    # correction only acts on the sideband bins themselves)
+    "Z_m",
+    "H_m",
+
+    # 8. mass-hypothesis variable: most important, but safest to correct last
     "param",
 ]
 
@@ -65,6 +71,7 @@ MASS_HYPOTHESES = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0
 BRANCH_ALIASES = {
     "pho1ECALIso": ["pho1ECALIso", "pho1PIso_noCorr", "ALP_lead_photon_ecalPFClusterIso"],
     "pho2ECALIso": ["pho2ECALIso", "pho2PIso_noCorr", "ALP_sublead_photon_ecalPFClusterIso"],
+    "Z_m": ["Z_m", "Z_mass"],
 }
 
 
@@ -166,9 +173,9 @@ def pick_existing_branch(
 
 def required_logical_branches(vars_to_read: Sequence[str]) -> List[str]:
     branches = {"H_m", "ALP_m"}
-    # Derived features need pho1Pt/pho2Pt and var_dR_g1g2 in the underlying frame.
+    # Derived features need pho1Pt_oHm/pho2Pt_oHm and var_dR_g1g2 in the underlying frame.
     if any(v in DERIVED_VARS for v in vars_to_read):
-        branches.update({"pho1Pt", "pho2Pt", "var_dR_g1g2"})
+        branches.update({"pho1Pt_oHm", "pho2Pt_oHm", "var_dR_g1g2"})
     for var in vars_to_read:
         if var == "param":
             continue
@@ -248,9 +255,10 @@ def load_frame(path: str, tree_name: str, vars_to_read: Sequence[str], weight_br
         frame[logical] = pd.to_numeric(raw[physical], errors="coerce")
 
     # Compute derived features from already-loaded base columns.
+    # pho_pt_asym uses H_m-normalized pT; the H_m factor cancels so it equals the raw-pT asymmetry.
     if any(v in DERIVED_VARS for v in vars_to_read):
-        pt1 = frame["pho1Pt"].to_numpy(dtype=float)
-        pt2 = frame["pho2Pt"].to_numpy(dtype=float)
+        pt1 = frame["pho1Pt_oHm"].to_numpy(dtype=float)
+        pt2 = frame["pho2Pt_oHm"].to_numpy(dtype=float)
         with np.errstate(divide="ignore", invalid="ignore"):
             if "pho_pt_asym" in vars_to_read:
                 frame["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)

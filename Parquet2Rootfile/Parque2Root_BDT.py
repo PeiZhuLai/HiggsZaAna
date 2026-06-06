@@ -36,6 +36,28 @@ def get_model():
             _MODEL_CACHE = pickle.load(f)
     return _MODEL_CACHE
 
+# --- Two-model scheme (H_m-normalized _oHm features) -------------------------------------
+# mA=1-3 sculpt strongly: a dedicated low-mass BDT on a reduced, low-(m_llgg-correlation)
+# variable set drives R(mA=1-3)->~1. mA>=4 has no sculpting and keeps the full 16-var model.
+# Routing: ma in {1,2,3} -> low-mass model; ma in 4..30 -> high-mass model.
+LOW_MODEL_FILE  = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_lowmass_run3.pkl"
+HIGH_MODEL_FILE = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_highmass_run3.pkl"
+LOW_MASSES = {1, 2, 3}
+_LOW_CACHE = None
+_HIGH_CACHE = None
+def get_low_model():
+    global _LOW_CACHE
+    if _LOW_CACHE is None:
+        with open(LOW_MODEL_FILE, 'rb') as f:
+            _LOW_CACHE = pickle.load(f)
+    return _LOW_CACHE
+def get_high_model():
+    global _HIGH_CACHE
+    if _HIGH_CACHE is None:
+        with open(HIGH_MODEL_FILE, 'rb') as f:
+            _HIGH_CACHE = pickle.load(f)
+    return _HIGH_CACHE
+
 def getArgs():
     parser = ArgumentParser(description="Skim the input ntuples for Hmumu XGBoost analysis.")
     parser.add_argument('-i', '--input', action='store', default='inputs', help='Path to the input ntuple')
@@ -601,6 +623,17 @@ MVA_FEATURE_COLUMNS = [
     "param",
 ]
 
+# Feature order for the two _oHm models (must match training: hza_features.FULL16 / the low set).
+HIGH_FEATURE_COLUMNS = [
+    "pho1Pt_oHm", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr",
+    "pho2Pt_oHm", "pho2R9", "pho2IetaIeta55", "pho2PIso_noCorr",
+    "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z",
+    "var_PtaOverMh", "H_pt_oHm", "pho_pt_asym", "param",
+]
+LOW_FEATURE_COLUMNS = [
+    "ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho1Pt_oHm", "param",
+]
+
 def compute_MVA_Score(x, wanted_ma):
     """
     與 ALP_plot_param.py 一致的輸入變數順序，回傳 predict_proba 的正類機率。
@@ -651,16 +684,17 @@ def compute_MVA_Score(x, wanted_ma):
 
 def add_mva_scores(data, masses=range(1, 31)):
     """
-    Add MVA_Score_mA_M* columns using batched XGBoost inference.
-
-    The old implementation called predict_proba once per row per mass. For large
-    parquet files that is effectively dominated by Python overhead. Here each
-    mass is evaluated with one dense feature matrix.
+    Add MVA_Score_mA_M* columns using batched XGBoost inference, TWO-MODEL scheme:
+      ma in {1,2,3}  -> low-mass model  (reduced _oHm feature set, LOW_FEATURE_COLUMNS)
+      ma in 4..30    -> high-mass model (full 16 _oHm features, HIGH_FEATURE_COLUMNS)
+    Features are the H_m-normalized (_oHm) ones decorate() builds before this call, matching
+    how both models were trained (hza_features._feat). Each mass = one dense matrix.
     """
     try:
-        model = get_model()
+        low_model = get_low_model()
+        high_model = get_high_model()
     except Exception as e:
-        print("WARNING: failed to load MVA model: %s" % e)
+        print("WARNING: failed to load MVA model(s): %s" % e)
         for ma in masses:
             data[f"MVA_Score_mA_M{ma}"] = np.nan
         return data
@@ -669,34 +703,37 @@ def add_mva_scores(data, masses=range(1, 31)):
     alp_mass = pd.to_numeric(data["ALP_mass"], errors="coerce").to_numpy(dtype=float)
     valid_base = np.isfinite(h_mass) & (h_mass != 0)
 
-    # Derived feature that does not depend on the mass hypothesis is computed once.
-    pt1 = pd.to_numeric(data["pho1Pt"], errors="coerce").to_numpy(dtype=float)
-    pt2 = pd.to_numeric(data["pho2Pt"], errors="coerce").to_numpy(dtype=float)
+    # pho_pt_asym from the _oHm pT (H_m cancels, so identical to the raw asym up to the 1e-6).
+    p1o = pd.to_numeric(data["pho1Pt_oHm"], errors="coerce").to_numpy(dtype=float)
+    p2o = pd.to_numeric(data["pho2Pt_oHm"], errors="coerce").to_numpy(dtype=float)
     with np.errstate(divide="ignore", invalid="ignore"):
-        pho_pt_asym = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+        pho_pt_asym = (p1o - p2o) / (p1o + p2o + 1e-6)
 
-    # Pre-compute the 14 base columns (no param, no derived) once
-    base_only_columns = [c for c in MVA_FEATURE_COLUMNS if c not in ("param", "pho_pt_asym")]
-    base_features = data[base_only_columns].apply(pd.to_numeric, errors="coerce")
+    # Pre-pull every non-(param/pho_pt_asym) column either model needs, once.
+    needed = [c for c in set(HIGH_FEATURE_COLUMNS + LOW_FEATURE_COLUMNS)
+              if c not in ("param", "pho_pt_asym")]
+    col = {c: pd.to_numeric(data[c], errors="coerce").to_numpy(dtype=float) for c in needed}
+    col["pho_pt_asym"] = pho_pt_asym
+
+    def matrix_for(feat_cols, param):
+        return np.column_stack([(param if c == "param" else col[c]) for c in feat_cols])
 
     score_columns = {}
     for ma in masses:
         scores = np.full(data.shape[0], np.nan, dtype=float)
         with np.errstate(divide="ignore", invalid="ignore"):
             param = (alp_mass - ma) / h_mass
-
-        features = base_features.copy()
-        features["pho_pt_asym"] = pho_pt_asym
-        features["param"] = param
-        matrix = features[MVA_FEATURE_COLUMNS].to_numpy(dtype=float)
+        if ma in LOW_MASSES:
+            feat_cols, model = LOW_FEATURE_COLUMNS, low_model
+        else:
+            feat_cols, model = HIGH_FEATURE_COLUMNS, high_model
+        matrix = matrix_for(feat_cols, param)
         valid = valid_base & np.isfinite(matrix).all(axis=1)
-
         if np.any(valid):
             try:
                 scores[valid] = model.predict_proba(matrix[valid])[:, 1]
             except Exception as e:
                 print("WARNING: failed to evaluate MVA score for mA_M%s: %s" % (ma, e))
-
         score_columns[f"MVA_Score_mA_M{ma}"] = scores
 
     return pd.concat([data, pd.DataFrame(score_columns, index=data.index)], axis=1)
@@ -723,7 +760,11 @@ def decorate(data):
     data['pho2PIso_noCorr'] = data.ALP_sublead_photon_ecalPFClusterIso
     data['ALP_calculatedPhotonIso'] = data.ALP_PhotonIso
     data['var_PtaOverMh'] = data.ALP_pt / data.H_mass
-    data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1) 
+    # H_m-normalized photon/Higgs pT (decorrelate BDT inputs from m_llgammagamma to suppress low-ma sculpting)
+    data['pho1Pt_oHm'] = data.ALP_lead_photon_pt / data.H_mass
+    data['pho2Pt_oHm'] = data.ALP_sublead_photon_pt / data.H_mass
+    data['H_pt_oHm'] = data.H_pt / data.H_mass
+    data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1)
     data['var_dR_g1g2'] = data.apply(lambda x: compute_dR_g1_g2(x), axis=1) 
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 
     

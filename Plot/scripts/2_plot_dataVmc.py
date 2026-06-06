@@ -55,10 +55,10 @@ args = parser.parse_args()
 SIDEBAND_REWEIGHT_UNC_SYS_NAMES = ("sideband_rwgt_reweight_up", "sideband_rwgt_reweight_down")
 
 pdfName_map = {
-    "pho1Pt": "1_pho1Pt",
+    "pho1Pt_oHm": "1_pho1Pt_oHm",
     "pho1R9": "2_pho1R9",
     "pho1IetaIeta55": "3_pho1IetaIeta55",
-    "pho2Pt": "4_pho2Pt",
+    "pho2Pt_oHm": "4_pho2Pt_oHm",
     "pho2R9": "5_pho2R9",
     "pho2IetaIeta55": "6_pho2IetaIeta55",
     "pho1ECALIso": "7_pho1ECALIso",
@@ -68,7 +68,7 @@ pdfName_map = {
     "var_dR_g1g2": "11_var_dR_g1g2",
     "var_dR_g1Z": "12_var_dR_g1Z",
     "var_PtaOverMh": "13_var_PtaOverMh",
-    "H_pt": "14_H_pt",
+    "H_pt_oHm": "14_H_pt_oHm",
     "pho_pt_asym": "15_pho_pt_asym",
     "param": "16_param",
     "ALP_m": "17_ALP_m",
@@ -77,6 +77,20 @@ pdfName_map = {
 MVA_LARGER_NBINS = 20
 MVA_LARGER_XMIN = 0.0
 MVA_LARGER_XMAX = 1.0
+
+# Per-variable x-axis display range overrides. Applied on top of the histogram's
+# native binning to clip the rendered range (does not rebin). Use for variables
+# whose stored histogram is wider than the physically meaningful region.
+VAR_X_RANGE_OVERRIDE = {
+    "pho_pt_asym": (0.0, 1.0),
+}
+
+# Per-variable rebin factor (combines N consecutive bins into one).
+# Use to widen visual bin width without re-running the data preparation step.
+VAR_REBIN_OVERRIDE = {
+    "H_pt_oHm": 2,
+    "Z_m":  2,
+}
 SIGMA_REGION_SCALES = {
     "1sigma": 1.0,
     "1P5sigma": 1.5,
@@ -347,6 +361,16 @@ def _draw_all(histos, histos_sys, var_names, target_masses, analyzer_cfg, plot_c
     cms_label = MakeCMSDASLabel()
 
     for var_name in var_names:
+        if var_name in VAR_REBIN_OVERRIDE:
+            rebin_n = int(VAR_REBIN_OVERRIDE[var_name])
+            if rebin_n > 1:
+                for _h in histos[var_name].values():
+                    _h.Rebin(rebin_n)
+                if histos_sys.get(var_name):
+                    for _per_sample in histos_sys[var_name].values():
+                        for _h_sys in _per_sample.values():
+                            _h_sys.Rebin(rebin_n)
+
         if var_name == "H_m":
             scale_factor = SideBandScaleBkgToData(histos, histos_sys, analyzer_cfg, signal_low=115.0, signal_high=135.0)
         else:
@@ -367,6 +391,14 @@ def _draw_all(histos, histos_sys, var_names, target_masses, analyzer_cfg, plot_c
         ratio_plot = MakeRatioPlot(histos[var_name]["Data"], stacks["all"].GetStack().Last(), var_name)
         legend = MakeLegend(plot_cfg, histos[var_name], scaled_sig)
         total_unc = Total_Unc(stacks["bkg"], histos_sys[var_name], analyzer_cfg)
+
+        if var_name in VAR_X_RANGE_OVERRIDE:
+            x_lo, x_hi = VAR_X_RANGE_OVERRIDE[var_name]
+            for _h in histos[var_name].values():
+                _h.GetXaxis().SetRangeUser(x_lo, x_hi)
+            for _h_sig in scaled_sig.values():
+                _h_sig.GetXaxis().SetRangeUser(x_lo, x_hi)
+            ratio_plot.GetXaxis().SetLimits(x_lo, x_hi)
 
         if args.ln:
             canv = CreateCanvas(var_name + "_log")

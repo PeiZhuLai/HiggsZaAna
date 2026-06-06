@@ -533,7 +533,11 @@ def decorate(data):
     data['pho2PIso_noCorr'] = data.ALP_sublead_photon_ecalPFClusterIso
     data['ALP_calculatedPhotonIso'] = data.ALP_PhotonIso
     data['var_PtaOverMh'] = data.ALP_pt / data.H_mass
-    data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1) 
+    # H_m-normalized photon/Higgs pT (decorrelate BDT inputs from m_llgammagamma to suppress low-ma sculpting)
+    data['pho1Pt_oHm'] = data.ALP_lead_photon_pt / data.H_mass
+    data['pho2Pt_oHm'] = data.ALP_sublead_photon_pt / data.H_mass
+    data['H_pt_oHm'] = data.H_pt / data.H_mass
+    data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1)
     data['var_dR_g1g2'] = data.apply(lambda x: compute_dR_g1_g2(x), axis=1) 
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 
 
