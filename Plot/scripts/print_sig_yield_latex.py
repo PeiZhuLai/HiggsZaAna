@@ -155,14 +155,10 @@ def latex_table_per_mA(yields, mAs, years, out_path=None):
         "$m_a$ [GeV] & $N_{\\mathrm{sig}}^{ele}$ & $N_{\\mathrm{sig}}^{\\mu}$ & $N_{\\mathrm{sig}}^{e+\\mu}$ \\\\",
         "\\hline",
     ]
-    grand_e = grand_m = 0.0
     for m in mAs:
         e = sum((yields.get((m, "ele", yr)) or 0.0) for yr in years)
         u = sum((yields.get((m, "mu",  yr)) or 0.0) for yr in years)
-        grand_e += e; grand_m += u
-        lines.append("{} & {:.3f} & {:.3f} & {:.3f} \\\\".format(m, e, u, e + u))
-    lines.append("\\hline")
-    lines.append("Total & {:.3f} & {:.3f} & {:.3f} \\\\".format(grand_e, grand_m, grand_e + grand_m))
+        lines.append("{} & {:.1f} & {:.1f} & {:.1f} \\\\".format(m, e, u, e + u))
     lines += ["\\hline", "\\end{tabular}", "\\end{center}", "\\end{table}"]
     text = "\n".join(lines)
     if out_path:

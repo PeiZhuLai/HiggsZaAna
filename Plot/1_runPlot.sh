@@ -73,6 +73,20 @@ python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/5_merge_cutflo
 # # Signal efficinecy after MVA cut
 python3 $scriptsDir/collect_MVAcut_points_run3.py
 
+## MVA model diagnostic plots (ROC, correlation matrices, per-feature distributions,
+## feature importance, BDT score, and the low-mass overtraining plot). Regenerated from the
+## DEPLOYED model pkls (NO retraining), so the AN figures always match the model that produced
+## the limits. Scripts live in HZaMVA/scripts (must run from there for hza_features import).
+mvaScriptsDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts'
+mvaUsingDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using'
+mvaPlotDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA'
+(
+  cd "$mvaScriptsDir" || exit 1
+  python3 plot_mva_diagnostics.py --model "$mvaUsingDir/model_Za_BDT_lowmass_run3.pkl"  --meta "$mvaUsingDir/model_Za_BDT_lowmass_run3.meta.json"  --outdir "$mvaPlotDir/run3_lowmass"
+  python3 plot_mva_diagnostics.py --model "$mvaUsingDir/model_Za_BDT_highmass_run3.pkl" --meta "$mvaUsingDir/model_Za_BDT_highmass_run3.meta.json" --outdir "$mvaPlotDir/run3_highmass"
+  python3 plot_overtrain_lowmass.py
+)
+
 ## Batch 1
 python3 $scriptsDir/signal_eff_sumw.py &
 python $scriptsDir/BDT_ma_2D_lib.py &

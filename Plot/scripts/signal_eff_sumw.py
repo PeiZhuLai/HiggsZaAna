@@ -31,7 +31,7 @@ YEAR = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]
 XS_PB = 0.1
 BR = 1.0
 KEEP_FB = 1000.0
-TEST_TO_ALL = 2.0
+TEST_TO_ALL = 1.0 / 0.3  # p2root 只把 30% 事件放進 test tree，需放大回全樣本（原本 2.0 = 1/0.5）
 ALT_WEIGHT_CANDS = ["weight","genWeight","eventWeight"]
 SYS_Ele = []  # will be filled by _discover_sys_branches() in main()
 SYS_Ele_central = []  # will be filled by _discover_sys_branches() in main()

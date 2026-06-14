@@ -15,6 +15,8 @@ OUT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/roi_residual
 
 PARQUET_BASE_A=/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all
 PARQUET_BASE_B=/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC_MLNANO
+# M1 (mA=1.0) was merged into a separate directory, not _all; include it so it is not skipped.
+PARQUET_BASE_C=/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC_MLNANO_M1
 
 declare -A GENMA
 GENMA[M0p1]=0.1
@@ -32,7 +34,7 @@ mkdir -p "${OUT_DIR}"
 
 for tag in M0p1 M0p2 M0p3 M0p4 M0p5 M0p6 M0p7 M0p8 M0p9 M1; do
     parquet=""
-    for base in "${PARQUET_BASE_A}" "${PARQUET_BASE_B}"; do
+    for base in "${PARQUET_BASE_A}" "${PARQUET_BASE_B}" "${PARQUET_BASE_C}"; do
         cand="${base}/mA_MLNANO_${tag}_2024/merged_nominal.parquet"
         if [ -f "${cand}" ]; then
             parquet="${cand}"
@@ -47,9 +49,11 @@ for tag in M0p1 M0p2 M0p3 M0p4 M0p5 M0p6 M0p7 M0p8 M0p9 M1; do
     tag_label=$(echo "mA_${gen_ma}" | sed 's/\./p/')
     out_stub="${OUT_DIR}/${tag_label}"
     echo "===== ${tag} (gen ma=${gen_ma}) → ${out_stub}_{mGamma,residual} ====="
+    # NOTE: hza_ana's ROOT is broken (import ROOT -> SIGBUS on EOS .pcm mmap).
+    # Use higgs-alp-ana, which has a working ROOT plus pandas/pyarrow.
     env -i HOME=${HOME} PATH=/usr/bin:/bin bash -lc "
         source /eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh
-        conda activate hza_ana
+        conda activate higgs-alp-ana
         python ${PLOTTER} ${parquet} --gen-ma ${gen_ma} --output-stub ${out_stub} > /dev/null 2>&1
     "
 done

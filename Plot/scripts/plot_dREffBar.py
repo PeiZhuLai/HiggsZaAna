@@ -32,6 +32,33 @@ outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/dREffBar"
 # Define the list of mA values
 mAs = ["mA_M1", "mA_M2", "mA_M3", "mA_M4", "mA_M5", "mA_M6", "mA_M7", "mA_M8", "mA_M9", "mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
 
+# ---- Full-range (mA 0.1 -> 30) gen-level dR(gg) plot, 2024 only ----
+# The reco var_dR_g1g2 used by the per-year plots above does not exist at low
+# mass (the two photons merge into one reco object), so the full-range plot is
+# built from the GEN-level branch GenALP_dR_gg instead. The low/mid masses come
+# from the friend-tree merged parquet (consistent merged-tagger selection over
+# 0.1-10); 15/20/25/30 are only available from the resolved ROOT inputs (and are
+# ~fully resolved there anyway, so the pipeline switch is cosmetically seamless).
+GEN_DR_BRANCH = "GenALP_dR_gg"
+FRIEND_BASE = "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend"
+# masses served by the friend parquet (gen dR, merged-tagger selection)
+FRIEND_MASSES = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# high masses only available from the resolved ROOT inputs
+ROOT_ONLY_MASSES = [15, 20, 25, 30]
+
+
+def _ma_tag_from_mass(mass: float) -> str:
+    """0.1 -> 'mA_M0p1', 1 -> 'mA_M1', 30 -> 'mA_M30'."""
+    if float(mass).is_integer():
+        return f"mA_M{int(mass)}"
+    return "mA_M" + ("%g" % mass).replace(".", "p")
+
+
+def _ma_label_from_mass(mass: float) -> str:
+    """Axis label: integers show as '1', fractions as '0.1'."""
+    return str(int(mass)) if float(mass).is_integer() else ("%g" % mass)
+
 
 YEAR_ORDER = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
 
@@ -450,13 +477,208 @@ def _plot_dr_fraction_bar_year(
         pass
     _ = _keep
 
+def _fractions_from_dr_array(dr: np.ndarray) -> Optional[Tuple[float, float, float]]:
+    """3-region fractions from a gen dR(gg) array:
+      f1 = P(dR < 0.1), f2 = P(0.1 < dR < 0.3), f3 = P(dR > 0.3)."""
+    dr = np.asarray(dr, dtype=float)
+    dr = dr[np.isfinite(dr) & (dr >= 0.0)]
+    if dr.size == 0:
+        return None
+    f1 = float(np.mean(dr < 0.1))
+    f2 = float(np.mean((dr >= 0.1) & (dr < 0.3)))
+    f3 = float(np.mean(dr >= 0.3))
+    s = f1 + f2 + f3
+    if s > 0:
+        f1, f2, f3 = f1 / s, f2 / s, f3 / s
+    return f1, f2, f3
+
+
+def _read_gen_dr_friend(mass: float) -> Optional[np.ndarray]:
+    """Read the gen dR(gg) array from the 2024 friend-tree merged parquet."""
+    import pyarrow.parquet as pq
+    import pyarrow.compute as pc
+    tag = _ma_tag_from_mass(mass)
+    fpath = Path(FRIEND_BASE) / tag / f"{tag}_2024" / "merged_nominal.parquet"
+    if not fpath.exists():
+        return None
+    col = pq.read_table(str(fpath), columns=[GEN_DR_BRANCH])[GEN_DR_BRANCH]
+    return np.asarray(pc.list_flatten(col).combine_chunks())
+
+
+def _read_gen_dr_root(mass: float, year: str = "2024") -> Optional[np.ndarray]:
+    """Read the gen dR(gg) array from the resolved ROOT inputs (inclusive tree)."""
+    tag = _ma_tag_from_mass(mass)
+    fpath = Path(baseDir) / tag / f"{year}.root"
+    if not fpath.exists():
+        return None
+    with uproot.open(str(fpath)) as f:
+        t = f["inclusive"]
+        if GEN_DR_BRANCH not in set(t.keys()):
+            return None
+        arr = t[GEN_DR_BRANCH].array(library="ak")
+    return ak.to_numpy(ak.flatten(arr, axis=None))
+
+
+def _load_gen_dr_fractions_2024() -> List[Tuple[float, float, float, float]]:
+    """Build (mass, f1, f2, f3) rows for the full 0.1->30 range, 2024 only.
+    Friend parquet for 0.1-10, resolved ROOT for 15/20/25/30."""
+    rows: List[Tuple[float, float, float, float]] = []
+    for mass in FRIEND_MASSES:
+        dr = _read_gen_dr_friend(mass)
+        if dr is None or dr.size == 0:
+            print(f"[dREffBar] WARN no friend gen-dR for mA={mass}")
+            continue
+        fr = _fractions_from_dr_array(dr)
+        if fr:
+            rows.append((float(mass), *fr))
+    for mass in ROOT_ONLY_MASSES:
+        dr = _read_gen_dr_root(mass)
+        if dr is None or dr.size == 0:
+            print(f"[dREffBar] WARN no ROOT gen-dR for mA={mass}")
+            continue
+        fr = _fractions_from_dr_array(dr)
+        if fr:
+            rows.append((float(mass), *fr))
+    rows.sort(key=lambda r: r[0])
+    return rows
+
+
+def _plot_dr_fraction_bar_full(
+    rows: List[Tuple[float, float, float, float]],
+    out_dir: Path,
+    *,
+    out_name: str = "dRFracBar_2024_full.pdf",
+    year: str = "2024",
+) -> None:
+    """Tall horizontal stacked-bar plot of gen dR(gg) fractions vs mA (0.1->30)."""
+    if not rows:
+        return
+    n = len(rows)
+
+    # Taller canvas: scale height with the number of rows.
+    height = int(220 + 56 * n)
+    c = ROOT.TCanvas("c_drFracBar_full", "", 800, height)
+    ROOT.gStyle.SetOptStat(0)
+    c.SetMargin(0.15, 0.06, 0.09, 0.08)  # left, right, bottom, top
+    c.SetTickx()
+    c.SetTicky()
+    c.cd()
+
+    frame = ROOT.TH2F("frame_drFracBar_full", "", 1, 0.0, 100.0, n, 0.0, float(n))
+    frame.SetDirectory(0)
+    frame.SetTitle("")
+    frame.GetXaxis().SetTitle("Fraction (%)")
+    frame.GetYaxis().SetTitle("m_{a} (GeV)")
+    frame.GetXaxis().SetTitleOffset(1.05)
+    frame.GetYaxis().SetTitleOffset(1.45)
+    frame.GetXaxis().SetTitleSize(0.040)
+    frame.GetYaxis().SetTitleSize(0.040)
+    frame.GetXaxis().SetLabelSize(0.035)
+    frame.GetYaxis().SetLabelSize(0.050)
+    for i, (ma, _, _, _) in enumerate(rows, start=1):
+        frame.GetYaxis().SetBinLabel(i, _ma_label_from_mass(ma))
+    frame.Draw("")
+
+    if ROOT.gPad:
+        ROOT.gPad.SetGridx(1)
+        ROOT.gPad.SetGridy(0)
+
+    col1 = _root_color("#FF688B", fallback=ROOT.kBlue + 1)   # dR < 0.1
+    col2 = _root_color("#FFD557", fallback=ROOT.kGreen + 2)  # 0.1 < dR < 0.3
+    col3 = _root_color("#9CD1FF", fallback=ROOT.kRed + 1)    # dR > 0.3
+
+    leg = ROOT.TLegend(0.15, 0.93, 0.94, 0.965)
+    leg.SetNColumns(3)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(0)
+    leg.SetTextFont(42)
+    leg.SetTextSize(0.026)
+    b1 = ROOT.TBox(0, 0, 0, 0); b1.SetFillColor(col1); b1.SetLineColor(col1)
+    b2 = ROOT.TBox(0, 0, 0, 0); b2.SetFillColor(col2); b2.SetLineColor(col2)
+    b3 = ROOT.TBox(0, 0, 0, 0); b3.SetFillColor(col3); b3.SetLineColor(col3)
+    leg.AddEntry(b1, "#DeltaR(#gamma,#gamma) < 0.1", "f")
+    leg.AddEntry(b2, "0.1 < #DeltaR(#gamma,#gamma) < 0.3", "f")
+    leg.AddEntry(b3, "#DeltaR(#gamma,#gamma) > 0.3", "f")
+
+    latex = ROOT.TLatex()
+    latex.SetTextFont(42)
+    latex.SetTextSize(0.028)
+
+    _keep = [frame, b1, b2, b3, leg]
+    bar_h = 0.72
+    for idx, (ma, f1, f2, f3) in enumerate(rows):
+        y0 = float(idx) + (1.0 - bar_h) / 2.0
+        y1 = float(idx) + 1.0 - (1.0 - bar_h) / 2.0
+        p1, p2, p3 = 100.0 * f1, 100.0 * f2, 100.0 * f3
+        x0 = 0.0
+        x1 = x0 + p1
+        x2 = x1 + p2
+        x3 = x2 + p3
+        bx1 = ROOT.TBox(x0, y0, x1, y1); bx1.SetFillColor(col1); bx1.SetLineColor(col1)
+        bx2 = ROOT.TBox(x1, y0, x2, y1); bx2.SetFillColor(col2); bx2.SetLineColor(col2)
+        bx3 = ROOT.TBox(x2, y0, x3, y1); bx3.SetFillColor(col3); bx3.SetLineColor(col3)
+        bx1.Draw("SAME"); bx2.Draw("SAME"); bx3.Draw("SAME")
+        _keep += [bx1, bx2, bx3]
+
+        def _draw_pct(xl, xr, yy0, yy1, val):
+            if (xr - xl) < 7.0:
+                return
+            latex.SetTextAlign(22)
+            latex.DrawLatex((xl + xr) / 2.0, (yy0 + yy1) / 2.0, f"{val:.1f}%")
+
+        _draw_pct(x0, x1, y0, y1, p1)
+        _draw_pct(x1, x2, y0, y1, p2)
+        _draw_pct(x2, x3, y0, y1, p3)
+
+    lat2 = ROOT.TLatex()
+    lat2.SetNDC()
+    lat2.SetTextFont(42)
+    lat2.SetTextSize(0.034)
+    lat2.DrawLatex(c.GetLeftMargin(), 0.975, "#bf{CMS} #it{Simulation}")
+    _keep.append(lat2)
+
+    lumi_fb = _lumi_fb_for_year(year)
+    if lumi_fb is not None:
+        lat_lumi = ROOT.TLatex()
+        lat_lumi.SetNDC()
+        lat_lumi.SetTextFont(42)
+        lat_lumi.SetTextAlign(31)
+        lat_lumi.SetTextSize(0.030)
+        lat_lumi.DrawLatex(0.94, 0.975, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
+        _keep.append(lat_lumi)
+
+    leg.Draw()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_pdf = out_dir / out_name
+    c.Modified()
+    c.Update()
+    if ROOT.gPad:
+        ROOT.gPad.RedrawAxis()
+    c.SaveAs(str(out_pdf))
+    try:
+        c.Close()
+    except Exception:
+        pass
+    _ = _keep
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
-    parser.add_argument("--year", default="all", help="Year to plot (e.g. 2022preEE). Use 'all' to plot all years.")
+    parser.add_argument("--year", default="all",
+                        help="Year to plot (e.g. 2022preEE). Use 'all' to plot all years "
+                             "(also emits the full-range 2024 gen-dR plot). "
+                             "Use 'full2024' for only the full-range mA 0.1->30 gen-dR plot.")
     args = parser.parse_args()
 
     in_dir = Path(baseDir)
     out_dir = Path(outDir)
+
+    # Full-range (mA 0.1 -> 30) gen-level dR(gg) plot, 2024 only.
+    if args.year == "full2024":
+        rows = _load_gen_dr_fractions_2024()
+        print(f"[dREffBar] full-range 2024 rows: {len(rows)} mass points")
+        _plot_dr_fraction_bar_full(rows, out_dir)
+        return
 
     # NEW: load bkg counts once (year -> bkg event count)
     global _BKG_EVENT_BY_YEAR
@@ -498,6 +720,11 @@ def main():
                 out_dir,
                 out_name=f"dRFracBar_{year}.pdf",
             )
+
+    # Also emit the full-range (mA 0.1 -> 30) gen-level dR(gg) plot for 2024.
+    rows = _load_gen_dr_fractions_2024()
+    print(f"[dREffBar] full-range 2024 rows: {len(rows)} mass points")
+    _plot_dr_fraction_bar_full(rows, out_dir)
 
 if __name__ == "__main__":
     main()

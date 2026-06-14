@@ -66,6 +66,8 @@ H_M_XMIN = 95.0
 H_M_XMAX = 180.0
 H_M_BIN_COARSE_WIDTH = 5.0
 H_M_BIN_COARSE_XMAX = 180.0
+H_M_BIN_COARSE10_WIDTH = 10.0
+H_M_BIN_COARSE10_XMAX = 185.0   # 95..185 -> 9 bins of 10 GeV; edges align with SR (115/135) and peak (125)
 H_M_BIN_SIGNAL_OVERLAY_WIDTH = 2.0
 H_M_BIN_SIGNAL_OVERLAY_XMAX = 181.0
 BDT_SHAPE_NBINS = 10
@@ -1103,12 +1105,14 @@ def _build_output_dir_map(base_output_dir: Path, skip_bdt_shape_plots: bool) -> 
         "bkg_only": base_output_dir / "bkgOnly",
         "bkg_only_bin5": base_output_dir / "bkgOnly_bin5GeV",
         "signal_nearest_bin5": base_output_dir / "signalNearest_bin5GeV",
+        "signal_nearest_bin10": base_output_dir / "signalNearest_bin10GeV",
         "bdt_mass_shapes": base_output_dir / "bdtMassShapes",
     }
     output_dirs["signal_mixture"].mkdir(parents=True, exist_ok=True)
     output_dirs["bkg_only"].mkdir(parents=True, exist_ok=True)
     output_dirs["bkg_only_bin5"].mkdir(parents=True, exist_ok=True)
     output_dirs["signal_nearest_bin5"].mkdir(parents=True, exist_ok=True)
+    output_dirs["signal_nearest_bin10"].mkdir(parents=True, exist_ok=True)
     if not skip_bdt_shape_plots:
         output_dirs["bdt_mass_shapes"].mkdir(parents=True, exist_ok=True)
     return output_dirs
@@ -1120,6 +1124,7 @@ def _print_output_dir_map(label: str, base_output_dir: Path, output_dirs: Dict[s
     print(f"[{label}] Bkg-only directory: {output_dirs['bkg_only']}")
     print(f"[{label}] Bkg-only 5 GeV directory: {output_dirs['bkg_only_bin5']}")
     print(f"[{label}] Signal nearest 5 GeV directory: {output_dirs['signal_nearest_bin5']}")
+    print(f"[{label}] Signal nearest 10 GeV directory: {output_dirs['signal_nearest_bin10']}")
     if not skip_bdt_shape_plots:
         print(f"[{label}] BDT-binned bkg mass-shape directory: {output_dirs['bdt_mass_shapes']}")
 
@@ -1171,6 +1176,10 @@ def _run_plot_suite(
         analyzer_cfg,
         bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE_XMAX, H_M_BIN_COARSE_WIDTH),
     )
+    histos_signal_nearest_bin10 = _book_histograms(
+        analyzer_cfg,
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE10_XMAX, H_M_BIN_COARSE10_WIDTH),
+    )
     histos_signal_nearest_overlay_2gev = _book_histograms(
         analyzer_cfg,
         sample_names=analyzer_cfg.sig_names,
@@ -1192,7 +1201,7 @@ def _run_plot_suite(
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
-        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_overlay_2gev],
+        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_bin10, histos_signal_nearest_overlay_2gev],
         bdt_shape_histos=bdt_shape_histos,
         bdt_shape_edges=bdt_shape_edges,
         blind=blind,
@@ -1266,6 +1275,23 @@ def _run_plot_suite(
             logy=logy,
             show_signal=True,
             name_suffix="_signalNearest_bin5GeV",
+            channel_mode=channel_mode,
+            signal_shape_mode="nearest",
+            signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
+            signal_source_histos=histos_signal_nearest_overlay_2gev[mass],
+            signal_source_all_histos=histos_signal_nearest_overlay_2gev,
+            selection_label=selection_label,
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos_signal_nearest_bin10[mass],
+            all_histos=histos_signal_nearest_bin10,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dirs["signal_nearest_bin10"],
+            logy=logy,
+            show_signal=True,
+            name_suffix="_signalNearest_bin10GeV",
             channel_mode=channel_mode,
             signal_shape_mode="nearest",
             signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,

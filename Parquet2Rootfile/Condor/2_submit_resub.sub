@@ -1,0 +1,36 @@
+# 重投失败/陈旧的 177 个 scoring job（新 6 特征模型）。
+# 与 2_submit.sub 相同，但：(a) queue 从 joblist_resub.tsv；(b) max_materialize 限并行。
+# 23:39 farm 一次给 ~190 个 slot，全部同时读 AFS 1.1GB tarball + EOS conda env →
+# env-setup I/O 被打爆 → job 卡在 setup 近 2h → 撞 MaxRuntime 被驱逐空转。
+# max_materialize=40 把同时存活的 job 压到 <=40，避免再打爆 EOS/AFS。
+initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/run_parquet2root.sh
+
+log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).log
+output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).out
+error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).err
+
+input           = /dev/null
+stream_output   = False
+stream_error    = False
+
+# 真正的 .root 输出由 python 直接写到 EOS，不走 condor 回传（避免 pelai.cc 回传卡 held）。
+should_transfer_files     = YES
+when_to_transfer_output   = ON_EXIT
+transfer_output_files     = ""
+
+universe        = vanilla
+request_cpus    = 1
+request_memory  = 2GB
+request_disk    = 5000MB
++JobFlavour     = "longlunch"
++JobBatchName   = "p2root_MVAScore_resub"
+
+# 关键：限制同时存活(idle+running)的 job 数，避免 env-setup I/O 风暴。
+max_materialize = 40
+
+environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
+
+arguments       = $(ARG_IN) $(ARG_OUT) $(ARG_CORR) $(ARG_SPLIT)
+
+queue ARG_IN, ARG_OUT, ARG_CORR, ARG_SPLIT from joblist_resub.tsv

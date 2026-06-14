@@ -82,12 +82,20 @@ def cms_label(*, lumi: float | str | None = None,
     if lumi is None and year is not None and year in LUMI_BY_YEAR:
         lumi = LUMI_BY_YEAR[year]
 
+    # CMS-standard label: bold "CMS" + italic suffix (e.g. "CMS Simulation" ->
+    # "#bf{CMS} #it{Simulation}"). Use font 42 and inline #bf/#it so the suffix
+    # is italic, not bold. (matches plot_MVASigEffVmA.py)
+    parts = cms_text.split(None, 1)
+    if parts and parts[0] == "CMS":
+        label_latex = "#bf{CMS}" + (" #it{%s}" % parts[1] if len(parts) > 1 else "")
+    else:
+        label_latex = "#bf{%s}" % cms_text
     txt_left = ROOT.TLatex()
     txt_left.SetNDC(True)
-    txt_left.SetTextFont(62)
+    txt_left.SetTextFont(42)
     txt_left.SetTextSize(text_size)
     txt_left.SetTextAlign(11)
-    txt_left.DrawLatex(x_left, y, cms_text)
+    txt_left.DrawLatex(x_left, y, label_latex)
 
     txt_right = ROOT.TLatex()
     txt_right.SetNDC(True)

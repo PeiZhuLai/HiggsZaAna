@@ -215,6 +215,7 @@ wait_for_cluster_via_log() {
     local max_missing_before_seen="${CONDOR_LOG_MAX_MISSING_BEFORE_SEEN:-24}"
     local seen_cluster=0
     local missing_before_seen=0
+    local release_attempts=0
     local status_line total idle running completed aborted held unknown
 
     echo "[Condor] fallback to user log polling for cluster ${cluster_id}"
@@ -246,8 +247,16 @@ wait_for_cluster_via_log() {
         echo "[Condor][log] cluster ${cluster_id}: total=${total} idle=${idle} running=${running} completed=${completed} aborted=${aborted} held=${held} unknown=${unknown}"
 
         if [[ "$held" -gt 0 ]]; then
-            echo "[ERROR] cluster ${cluster_id} has held job(s) according to user log ${log_file}." >&2
-            return 1
+            # Same held-tolerance as the condor_q path: release + continue, up to a cap. (2026-06-10)
+            release_attempts=$((release_attempts + held))
+            if [[ "$release_attempts" -gt "${CONDOR_MAX_RELEASES:-200}" ]]; then
+                echo "[ERROR] cluster ${cluster_id}: exceeded ${CONDOR_MAX_RELEASES:-200} held-releases (user log); giving up." >&2
+                return 1
+            fi
+            echo "[Condor][log] cluster ${cluster_id}: ${held} held; releasing + continuing (cumulative releases=${release_attempts})"
+            condor_release "$cluster_id" -constraint 'JobStatus==5' >/dev/null 2>&1 || true
+            sleep "$poll_seconds"
+            continue
         fi
 
         if [[ "$idle" -eq 0 && "$running" -eq 0 ]]; then
@@ -283,6 +292,7 @@ wait_for_cluster_via_queue() {
     local query_failures=0
     local missing_before_seen=0
     local seen_cluster=0
+    local release_attempts=0
     local q_output q_status
     local proc_id job_status hold_reason
     local total idle running held removing completed suspended unknown
@@ -375,8 +385,18 @@ wait_for_cluster_via_queue() {
         echo "$status_line"
 
         if [[ "$held" -gt 0 ]]; then
-            echo "[ERROR] cluster ${cluster_id} has held job(s): ${first_hold_reason}" >&2
-            return 1
+            # AFS ".out" transfer timeouts (flaky bigbird26 AP) mark jobs held even though
+            # the EOS .root output is written directly by the worker. Don't abort on a single
+            # transient held: release them and keep waiting, up to a cap. (2026-06-10)
+            release_attempts=$((release_attempts + held))
+            if [[ "$release_attempts" -gt "${CONDOR_MAX_RELEASES:-200}" ]]; then
+                echo "[ERROR] cluster ${cluster_id}: exceeded ${CONDOR_MAX_RELEASES:-200} held-releases; giving up. Last: ${first_hold_reason}" >&2
+                return 1
+            fi
+            echo "[Condor] cluster ${cluster_id}: ${held} held (${first_hold_reason}); releasing + continuing (cumulative releases=${release_attempts})"
+            condor_release "$cluster_id" -constraint 'JobStatus==5' >/dev/null 2>&1 || true
+            sleep "$poll_seconds"
+            continue
         fi
 
         sleep "$poll_seconds"
@@ -607,8 +627,20 @@ fi
 ### ----------- MVA Cut 
 if [[ "$RUN_FLASHGG_MVA_CUT" == "1" ]]; then
     echo_step "flashggFinalFit: MVA cut"
-    python3 "$baseDir/MVAcut/run3_ReReco_Sys/scripts/apply_bdt_data.py" &
+    # apply_bdt_data.py was backgrounded + unmonitored; a transient EOS "No route to host"
+    # crashed it mid-way -> partial/stale data MVAcut, silently. Retry + WAIT + fail loud. (2026-06-11)
+    ( ok=0; for a in 1 2 3 4 5; do
+        if python3 "$baseDir/MVAcut/run3_ReReco_Sys/scripts/apply_bdt_data.py"; then
+            echo "[apply_bdt_data] OK on attempt $a"; ok=1; break
+        fi
+        echo "[apply_bdt_data] attempt $a failed; retry in 30s"; sleep 30
+      done; [ "$ok" = 1 ] ) &
+    _apply_data_pid=$!
     bash "$baseDir/shellScripts/mva/run_apply_bdt_sig_6jobs.sh"
+    if ! wait "$_apply_data_pid"; then
+        echo "[ERROR] apply_bdt_data.py failed after 5 retries" >&2
+        exit 1
+    fi
 else
     echo_skip "flashggFinalFit: MVA cut"
 fi
@@ -632,6 +664,26 @@ fi
 if [[ "$RUN_FLASHGG_BACKGROUND" == "1" ]]; then
     echo_step "flashggFinalFit: background"
     bash "$baseDir/shellScripts/bkg/Condor/subjob_bkg.sh"
+    # subjob_bkg.sh submits Fit_bkg condor jobs and returns immediately; wait for them to
+    # finish before collecting/using the background workspaces, otherwise the datacard stage
+    # races ahead on stale/incomplete envelopes (2026-06). Held-tolerant (AFS .out blips).
+    echo "[Condor] waiting for Fit_bkg jobs to finish ..."
+    while true; do
+        # Tolerate transient condor_q failures (schedd hiccups) AND empty results without
+        # tripping `set -e`/pipefail: capture output with `|| {retry}`, count with `|| true`.
+        if ! _qa=$(condor_q -constraint 'JobBatchName=="Fit_bkg" && (JobStatus==1 || JobStatus==2)' -af ClusterId 2>/dev/null); then
+            echo "[Condor] condor_q failed; retry in 30s"; sleep 30; continue
+        fi
+        _qh=$(condor_q -constraint 'JobBatchName=="Fit_bkg" && JobStatus==5' -af ClusterId 2>/dev/null || true)
+        _bn=$(printf '%s' "$_qa" | grep -c . || true); _bn=${_bn:-0}
+        _bh=$(printf '%s' "$_qh" | grep -c . || true); _bh=${_bh:-0}
+        if [[ "$_bh" -gt 0 ]]; then
+            echo "[Condor] Fit_bkg: ${_bh} held -> releasing"; condor_release -constraint 'JobBatchName=="Fit_bkg" && JobStatus==5' >/dev/null 2>&1 || true
+        fi
+        echo "[Condor] Fit_bkg active=${_bn} held=${_bh}"
+        [[ "$_bn" -eq 0 ]] && break
+        sleep 30
+    done
     bash "$baseDir/shellScripts/bkg/Condor/collect_bkg_results.sh"
 else
     echo_skip "flashggFinalFit: background"

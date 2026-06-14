@@ -32,7 +32,6 @@ YEAR = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]
 XS_PB = 0.1
 BR = 1.0
 KEEP_FB = 1000.0
-TEST_TO_ALL = 2.0
 ALT_WEIGHT_CANDS = ["weight","genWeight","eventWeight"]
 SYS_Ele = []  # will be filled by _discover_sys_branches() in main()
 SYS_Ele_central = []  # will be filled by _discover_sys_branches() in main()
@@ -1044,27 +1043,26 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
         _info(f"wrote {out_path}")
 
     # 新增：在 5years 模式把 interpolated y 寫成 JSON（每個 channel 一份）
-    # if name_suffix == "_5years" and interp_payload["values"]:
-    #     json_name = f"{fname}_quadratic_interp_ma_points.json"
-    #     jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
-    #     json_path = jsonOutDir / json_name
-    #     meta = {
-    #         "input_years": years,
-    #         "mva_cut_json": optimized_BDT_Cut,
-    #         "input_base": INPUT_BASE,
-    #         "tree": INPUT_BASE_TREE_NAME,
-    #         "xs_pb": XS_PB,
-    #         "br": BR,
-    #         "keep_fb": KEEP_FB,
-    #         "test_to_all": TEST_TO_ALL,
-    #     }
-    #     try:
-    #         with open(json_path, "w") as jf:
-    #             # 重點：不要 sort_keys，不然 "10" 會又排到 "2" 前面
-    #             json.dump({"meta": meta, **interp_payload}, jf, indent=2, sort_keys=False)
-    #         print(f"[資訊] 已輸出 quadratic curve 內插點 JSON：{json_path}")
-    #     except Exception as e:
-    #         print(f"[警告] 寫出 JSON 失敗：{json_path} ({e})")
+    if name_suffix == "_5years" and interp_payload["values"]:
+        json_name = f"{fname}_quadratic_interp_ma_points.json"
+        jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
+        json_path = jsonOutDir / json_name
+        meta = {
+            "input_years": years,
+            "mva_cut_json": optimized_BDT_Cut,
+            "input_base": INPUT_BASE,
+            "tree": INPUT_BASE_TREE_NAME,
+            "xs_pb": XS_PB,
+            "br": BR,
+            "keep_fb": KEEP_FB,
+        }
+        try:
+            with open(json_path, "w") as jf:
+                # 重點：不要 sort_keys，不然 "10" 會又排到 "2" 前面
+                json.dump({"meta": meta, **interp_payload}, jf, indent=2, sort_keys=False)
+            print(f"[資訊] 已輸出 quadratic curve 內插點 JSON：{json_path}")
+        except Exception as e:
+            print(f"[警告] 寫出 JSON 失敗：{json_path} ({e})")
 
     return out_path
 

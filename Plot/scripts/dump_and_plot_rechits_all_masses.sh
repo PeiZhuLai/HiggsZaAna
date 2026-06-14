@@ -70,9 +70,12 @@ for tag in M0p1 M0p2 M0p3 M0p4 M0p5 M0p6 M0p7 M0p8 M0p9 M1; do
         continue
     fi
     echo "===== plot ${tag}: ${dump} → ${out_dir} ====="
+    # NOTE: hza_ana's ROOT install is broken (import ROOT -> SIGBUS while
+    # mmapping its .pcm modules on EOS). Use higgs-alp-ana, whose ROOT imports
+    # cleanly, for the plotting stage.
     env -i HOME=${HOME} PATH=/usr/bin:/bin bash -lc "
         source /eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh
-        conda activate hza_ana
+        conda activate higgs-alp-ana
         python ${PLOTTER} ${dump} --mode event -n ${N_EVENTS} --out-dir ${out_dir}
     "
 done

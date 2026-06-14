@@ -63,33 +63,71 @@ fi
 # can pair it 1:1 with the NanoAODv15 child by querying DAS for the same UUID.
 url_list_csv="${INPUT_URL}"
 tag_prefix=$(basename "${OUTPUT_NAME}" .root | sed -E 's/_[0-9]+$//')   # strip trailing _NNNN
-i=0
+# Resilience: transient XrdAdaptor file-open failures via the global redirector
+# are common at scale. Retry each file a few times; if it still fails, SKIP it
+# (do NOT abort the whole job — that would throw away the other good outputs).
+# Missing UUIDs are recovered by a resubmit pass (output-presence is the ledger).
+i=0; nok=0; nfail=0; FAILED_URLS=""
 for url in ${url_list_csv//,/ }; do
     i=$((i+1))
     # MiniAOD basename without extension is its UUID-like identifier
     uuid=$(basename "${url}" .root)
     sub_out="${tag_prefix}_${uuid}.root"
     echo "---- cmsRun $i: ${url} -> ${sub_out}"
-    cmsRun "${CFG}" \
-        inputFiles="${url}" \
-        outputFile="${sub_out}" \
-        maxEvents=-1 \
-        year="${YEAR}" || {
-        echo "ERROR: cmsRun failed for ${url} (uuid ${uuid})"
-        exit 1
-    }
+    ok=0
+    for attempt in 1 2 3; do
+        if cmsRun "${CFG}" \
+            inputFiles="${url}" \
+            outputFile="${sub_out}" \
+            maxEvents=-1 \
+            year="${YEAR}"; then
+            ok=1; break
+        fi
+        echo "WARN: cmsRun attempt ${attempt}/3 failed for ${uuid}; cleaning partial + backoff"
+        rm -f "${sub_out}"
+        sleep $((attempt * 30))
+    done
+    if [ "${ok}" -eq 1 ]; then
+        nok=$((nok+1))
+    else
+        echo "ERROR: cmsRun failed after 3 attempts for ${url} (uuid ${uuid}) — skipping"
+        nfail=$((nfail+1)); FAILED_URLS="${FAILED_URLS} ${url}"
+    fi
 done
+echo "cmsRun summary: ok=${nok} fail=${nfail} of ${i}"
+[ -n "${FAILED_URLS}" ] && echo "FAILED_URLS:${FAILED_URLS}"
+# A job that produced nothing is a real failure → exit 1 so condor marks it.
+if [ "${nok}" -eq 0 ]; then
+    echo "ERROR: no outputs produced by this job (all ${i} inputs failed)"
+    exit 1
+fi
 
 # Copy each per-URL output to EOS, preserving the 1:1 UUID mapping.
-mkdir -p "${OUTPUT_DIR}"
+# On batch nodes the EOS home/user fuse mount (eoshome-p) may not be writable,
+# so fall back to xrdcp via the matching MGM if a plain cp fails.
+EOS_MGM=""
+case "${OUTPUT_DIR}" in
+    /eos/home-*) inst=$(echo "${OUTPUT_DIR}" | sed -E 's#^/eos/(home-[a-z]).*#\1#'); EOS_MGM="root://eos${inst}.cern.ch" ;;
+    /eos/user/*) EOS_MGM="root://eosuser.cern.ch" ;;
+    /eos/project*) EOS_MGM="root://eosproject.cern.ch" ;;
+esac
+
+mkdir -p "${OUTPUT_DIR}" 2>/dev/null
+if [ -n "${EOS_MGM}" ]; then
+    xrdfs "${EOS_MGM}" mkdir -p "${OUTPUT_DIR}" 2>/dev/null || true
+fi
+
 for sub_root in "${tag_prefix}"_*.root; do
     [ -f "${sub_root}" ] || continue
     dst="${OUTPUT_DIR}/${sub_root}"
-    cp "${sub_root}" "${dst}" || {
-        echo "ERROR: cp failed: ${sub_root} -> ${dst}"
+    if cp "${sub_root}" "${dst}" 2>/dev/null; then
+        echo "copied (cp): ${dst} ($(stat -c%s "${sub_root}") bytes)"
+    elif [ -n "${EOS_MGM}" ] && xrdcp -f "${sub_root}" "${EOS_MGM}/${dst}"; then
+        echo "copied (xrdcp): ${EOS_MGM}/${dst} ($(stat -c%s "${sub_root}") bytes)"
+    else
+        echo "ERROR: copy failed (cp and xrdcp): ${sub_root} -> ${dst}"
         exit 1
-    }
-    echo "copied: ${dst} ($(stat -c%s "${sub_root}") bytes)"
+    fi
 done
 echo "==== done all UUID outputs to ${OUTPUT_DIR}/ ===="
 

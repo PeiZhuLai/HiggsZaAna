@@ -1,0 +1,33 @@
+#!/bin/bash
+# Resume 5-feat rerun after AFS-blip held 306 scoring jobs (2026-06-10).
+# 904 roots already 5-feat; the 305 stale roots were deleted + held jobs removed.
+# INITIAL=0 (no full re-submit), RESUBMIT=1 (backfill the deleted/missing via existence check),
+# then determine-cut -> plot -> flashgg -> limits. AN push held. IMPACT/BIAS off.
+set -uo pipefail
+cd /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna
+
+RUN_HIGGSZA_CLEAN_OUTPUTS=0 \
+RUN_HIGGSZA_MERGE_PARQUET=0 \
+RUN_HIGGSZA_P2ROOT=0 \
+RUN_HIGGSZA_TRAIN_MVA=0 \
+RUN_HIGGSZA_P2ROOT_MVA_SCORE=1 \
+RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL=0 \
+RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT=1 \
+RUN_HIGGSZA_DETERMINE_MVA_CUT=1 \
+RUN_HIGGSZA_DETERMINE_MVA_CUT_INITIAL=1 \
+RUN_HIGGSZA_DETERMINE_MVA_CUT_RESUBMIT=1 \
+RUN_HIGGSZA_PLOT=1 \
+RUN_FLASHGG_ENV=1 \
+RUN_FLASHGG_MVA_CUT=1 \
+RUN_FLASHGG_TREE2WS=1 \
+RUN_FLASHGG_BACKGROUND=1 \
+RUN_FLASHGG_SIGNAL=1 \
+RUN_FLASHGG_DATACARD=1 \
+RUN_FLASHGG_COMBINE_LIMITS=1 \
+RUN_FLASHGG_PLOT_LIMITS=1 \
+RUN_FLASHGG_IMPACT=0 \
+RUN_FLASHGG_BIAS=0 \
+RUN_FLASHGG_COLLECT_BKG=1 \
+RUN_EXIT_CMSSW_ENV=1 \
+RUN_UPDATE_AN=0 \
+bash 1_grand.sh

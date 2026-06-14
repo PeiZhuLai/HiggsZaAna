@@ -17,7 +17,8 @@ asym = (a["pho1Pt_oHm"]-a["pho2Pt_oHm"])/(a["pho1Pt_oHm"]+a["pho2Pt_oHm"]+1e-6)
 # direct low model @ ma=1
 low = pickle.load(open(P.LOW_MODEL_FILE, "rb"))
 param1 = (a["ALP_m"]-1)/a["H_m"]
-Xl = np.column_stack([a["ALP_calculatedPhotonIso"], a["var_dR_g1g2"], a["pho1R9"], a["pho1Pt_oHm"], param1])
+Xl = np.column_stack([a["ALP_calculatedPhotonIso"], a["var_dR_g1g2"], a["pho1R9"], a["pho1Pt_oHm"],
+                      a["pho1PIso_noCorr"], param1])
 s_low = low.predict_proba(Xl)[:, 1]
 # direct high model @ ma=5
 high = pickle.load(open(P.HIGH_MODEL_FILE, "rb"))

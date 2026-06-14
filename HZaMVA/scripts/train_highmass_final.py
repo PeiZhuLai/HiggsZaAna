@@ -16,7 +16,7 @@ LOWVARS = ["pho1Pt_oHm","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt_oHm"
 FEATS = LOWVARS + ["param"]
 IDX = [FULL16.index(n) for n in FEATS]
 OUT = "model_Za_BDT_highmass_run3"
-PLOT = "plots_highmass/overtrain_highmass_run3.pdf"
+PLOT = "../plots_MVA/run3_highmass/overtrain_highmass_run3.pdf"
 
 def weighted_auc(vals, y, w):
     o = np.argsort(vals, kind="mergesort"); y = y[o]; w = w[o]; is_b = y < 0.5
@@ -92,18 +92,19 @@ print(f"[save] {OUT}.pkl / .json / .meta.json")
 
 # --- overtraining plot (best-effort; matplotlib/scipy import can be flaky on EOS) ---
 try:
-    import os; os.makedirs("plots_highmass", exist_ok=True)
+    import os; os.makedirs("../plots_MVA/run3_highmass", exist_ok=True)
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(8, 6)); rng = (0, 1); bins = 40
-    plt.hist(0, color="w", label=f"Sig K-S p = {p_sig:.3g} (n=4000)")
-    plt.hist(0, color="w", label=f"Bkg K-S p = {p_bk:.3g} (n=4000)")
+    plt.plot([], [], " ", label=f"Sig K-S p = {p_sig:.3g}")
+    plt.plot([], [], " ", label=f"Bkg K-S p = {p_bk:.3g}")
     plt.hist(sig_tr, color="r", alpha=0.5, range=rng, bins=bins, density=True, weights=wst, histtype="stepfilled", label="Sig (Train)")
     plt.hist(bk_tr,  color="b", alpha=0.5, range=rng, bins=bins, density=True, weights=wbt, histtype="stepfilled", label="Bkg (Train)")
     for v, ww, c, lab in ((sig_te, wse, "r", "Sig (Test)"), (bk_te, wbe, "b", "Bkg (Test)")):
         h, e = np.histogram(v, bins=bins, range=rng, density=True, weights=ww); ctr = (e[:-1]+e[1:])/2
         err = np.sqrt(np.clip(h*len(v)/max(h.sum(),1e-9), 0, None))/(len(v)/max(h.sum(),1e-9))
         plt.errorbar(ctr, h, yerr=err, fmt=".", c=c, label=lab, markersize=8)
-    plt.xlabel("low-mass BDT score", fontsize=16); plt.ylabel("Arbitrary Units", fontsize=16)
+    plt.xlim(-0.1, 1.1)
+    plt.xlabel(r"$m_{a} \geq 4$ GeV BDT score", fontsize=16); plt.ylabel("Arbitrary Units", fontsize=16)
     plt.legend(loc="upper center", fontsize=12, frameon=False); plt.tight_layout()
     fig.savefig(PLOT, dpi=200); print(f"[plot] {PLOT}")
 except Exception as e:

@@ -98,3 +98,16 @@ BRANCHES = {
         "any" : ["event", "run", "luminosityBlock"]
     }
 }
+
+COLOR = {
+  "kP10Cyan": "#92dadd",
+  "kP10Ash": "#717581",
+  "kP10Green": "#b9ac70",
+  "kP10Orange": "#e76300",
+  "kP10Brown": "#a96b59",
+  "kP10Violet": "#832db6",
+  "kP10Gray": "#94a4a2",
+  "kP10Red": "#bd1f01",
+  "kP10Yellow": "#ffa90e",
+  "kP10Blue": "#3f90da"
+}

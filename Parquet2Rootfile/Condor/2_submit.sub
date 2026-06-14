@@ -4,7 +4,9 @@ executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Cond
 
 log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).log
 
-# stdout/stderr 仍然可以每个 job 一份
+# stdout/stderr 每个 job 一份（标准 schedd 只能放 AFS，不能在 submit 档里用 /eos 路径）。
+# 注意：AFS 抖动时 ".out" 回传可能逾时把 job 卡成 held（2026-06-10 经验）；
+# 真遇到就 release/重投，不要把这里改成 /eos（condor 会拒绝提交）。
 output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).out
 error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/logs/$(ClusterId).$(ProcId).err
 
@@ -13,13 +15,24 @@ input           = /dev/null
 stream_output   = False
 stream_error    = False
 
+# 真正的 .root 输出由 python 直接写到 EOS，不走 condor 回传。
+# 不要把 scratch 里的杂档（如 ROOT/cling 留下的 pelai.cc）回传到 AFS，
+# 否则 AFS 抖动时会以 "Transfer output files failure" 把 job 卡成 held。
+should_transfer_files     = YES
+when_to_transfer_output   = ON_EXIT
+transfer_output_files     = ""
+
 universe        = vanilla
 request_cpus    = 1
 request_memory  = 2GB
-request_disk    = 20000MB
-+JobFlavour     = "workday"
+# 实测峰值 disk ~3.4GB(conda env 解压主导)、memory ~1GB；20GB/8h 是配不到 slot 的主因。
+# disk 收到 5GB、flavour 收到 longlunch(2h，job 实跑 20-44 分)以匹配更多 slot。
+request_disk    = 5000MB
++JobFlavour     = "longlunch"
 +JobBatchName   = "p2root_MVAScore"
-nice_user       = True
+# nice_user 已移除：normal fair-share 优先序，farm 忙时能拿到更多 slot
+# （代价：竞争 group 配额）。如需礼貌模式改回 nice_user = True。
+# nice_user       = True
 
 # Reuse the conda tarball built by Plot/Condor; do not create a second env_cache here.
 environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"

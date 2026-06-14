@@ -310,9 +310,9 @@ class CondorJob(Job):
 
     """
     REQUESTS = {
-            "REQ_MEMORY" : 20000, # request 20GB of memory
+            "REQ_MEMORY" : 13000, # 13GB: covers observed peak RSS ~11.9GB (friend bkg, 2963 jobs; median 38MB, p99 6.8GB) with margin, was 20GB
             "REQ_DISK" : 20000, # request ~20GB of disk
-            "REQ_NCPUS" : 2 # just 2 CPU
+            "REQ_NCPUS" : 1 # 1 CPU: jobs are single-threaded (measured ~0.99 cpu usage), was 2
     }
 
     @classmethod

@@ -16,7 +16,7 @@ MODE="${3:-mc}"   # mc (default) or data
 YEAR="${4:-2024}" # data era (ignored for mc)
 FILES_PER_JOB="${FILES_PER_JOB:-1}"  # how many input files cmsRun consumes per condor job
 
-OUT_EOS="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD/${MASS_TAG}"
+OUT_EOS="/eos/home-p/pelai/HZa/MLNanoAOD/${MASS_TAG}"
 STAGE="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/${MASS_TAG}"
 LOG_DIR="${STAGE}/logs"
 WORKER="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/run_one_file.sh"
@@ -97,6 +97,7 @@ Error                   = ${LOG_DIR}/job_\$(Process).err
 RequestCpus             = 1
 RequestMemory           = 4000
 RequestDisk             = 4000000
+max_materialize         = 40
 Queue input_url out_name out_dir from ${ARGS_TXT}
 JDLEOF
 
