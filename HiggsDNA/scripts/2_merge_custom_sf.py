@@ -49,6 +49,8 @@ ELECTRON_ISO_SFS = (
 )
 MUON_ISO_ERAS = ("2024", "2025")
 MUON_ISO_EFFS = ("muiso0p1", "muiso0p15")
+MUON_TRIGGER_ERAS = ("2024", "2025")
+MUON_TRIGGER_LEGS = ("8", "17", "24")
 
 
 def parse_args() -> argparse.Namespace:
@@ -550,9 +552,8 @@ def merge_electron_iso(base_dir: Path, era: str, input_sf: str, output_sf: str) 
 
 
 def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
-    era_dir = era_out_dir(base_dir, era)
-    source = era_dir / f"hzg_{output_sf}_{era}_efficiencies.json"
-    output = era_dir / f"hza_{output_sf}_{era}_efficiencies.json"
+    source = raw_dir(base_dir, era) / f"hzg_{output_sf}_{era}_efficiencies.json"
+    output = era_out_dir(base_dir, era) / f"hza_{output_sf}_{era}_efficiencies.json"
     if not source.exists():
         raise FileNotFoundError(
             f"Missing collected muon miniIso efficiency JSON: {source}. "
@@ -560,6 +561,20 @@ def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
         )
     payload = load_json(source)
     payload["description"] = f"HZG custom {output_sf} efficiencies"
+    write_json(payload, output)
+    return output
+
+
+def muon_trigger_efficiency(base_dir: Path, era: str, leg: str) -> Path:
+    source = raw_dir(base_dir, era) / f"hzg_mutrig{leg}_{era}_efficiencies.json"
+    output = era_out_dir(base_dir, era) / f"hza_mutrig{leg}_{era}_efficiencies.json"
+    if not source.exists():
+        raise FileNotFoundError(
+            f"Missing collected muon trigger efficiency JSON: {source}. "
+            "Run 1_collect_custom_sf.sh after producing the muon trigger leg efficiency JSONs."
+        )
+    payload = load_json(source)
+    payload["description"] = f"HZG custom mutrig{leg} efficiencies"
     write_json(payload, output)
     return output
 
@@ -605,6 +620,10 @@ def main() -> None:
     for era in MUON_ISO_ERAS:
         for output_sf in MUON_ISO_EFFS:
             outputs.append(muon_iso_efficiency(base_dir, era, output_sf))
+
+    for era in MUON_TRIGGER_ERAS:
+        for leg in MUON_TRIGGER_LEGS:
+            outputs.append(muon_trigger_efficiency(base_dir, era, leg))
     validate_with_correctionlib(outputs)
 
 

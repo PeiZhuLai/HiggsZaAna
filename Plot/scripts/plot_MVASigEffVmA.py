@@ -71,8 +71,8 @@ MARKER_SIZE = 1.3
 LINE_WIDTH = 3
 # 新增：固定 y 軸範圍
 Y_MIN = 18.0
-Y_MAX_GROUPS = 110   # 3條線(2022/2023/2024)用
-Y_MAX_5YEARS = 110   # 5條線(逐年)用：請改成你想要的值
+Y_MAX_GROUPS = 130   # 3條線(2022/2023/2024)用
+Y_MAX_5YEARS = 130   # 5條線(逐年)用：請改成你想要的值
 
 # 新增：error bar 最小可見門檻（單位：y 軸的百分比）
 ERR_ABS_FLOOR = 0.02   # 例如 0.02 (%)；太小會看不到

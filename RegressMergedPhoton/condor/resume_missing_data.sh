@@ -24,7 +24,7 @@ SAMPLE_JSON="${REPO_DIR}/HiggsDNA/metadata/samples/zgamma_tutorial_sample_manage
 
 WORKER="${SCRIPT_DIR}/run_one_file.sh"
 PROXY="${X509_USER_PROXY:-/afs/cern.ch/user/p/pelai/.x509up_pelai}"
-OUT_BASE="/eos/home-p/pelai/HZa/MLNanoAOD"
+OUT_BASE="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD"
 WANTED_ERA="${1:-2024}"
 DRY_RUN="${DRY_RUN:-0}"
 FILES_PER_JOB="${FILES_PER_JOB:-8}"
@@ -67,16 +67,14 @@ for entry in "${entries[@]}"; do
     fi
     nfiles=$(wc -l < "${FILES_TXT}")
 
-    # missing = files whose <tag>_<uuid>.root output is absent
+    # missing = input files whose UUID has no output yet. Match by UUID (the
+    # final _-delimited token, since UUIDs have no underscores) so BOTH naming
+    # schemes count as done: "<tag>_<uuid>.root" and "<tag>_resume_<uuid>.root".
+    DONE_TXT="${STAGE}/done_uuids.txt"
+    ls "${OUT_EOS}"/*.root 2>/dev/null | sed -E 's#.*_([0-9a-fA-F-]+)\.root$#\1#' | sort -u > "${DONE_TXT}"
     MISS_TXT="${STAGE}/missing.txt"
-    : > "${MISS_TXT}"
-    while IFS= read -r f; do
-        [ -z "$f" ] && continue
-        uuid=$(basename "$f" .root)
-        if [ ! -f "${OUT_EOS}/${tag}_${uuid}.root" ]; then
-            echo "root://cms-xrd-global.cern.ch/${f}" >> "${MISS_TXT}"
-        fi
-    done < "${FILES_TXT}"
+    awk 'NR==FNR{done[$0]=1;next}{n=$0; sub(/.*\//,"",n); sub(/\.root$/,"",n); if(!(n in done)) print "root://cms-xrd-global.cern.ch/"$0}' \
+        "${DONE_TXT}" "${FILES_TXT}" > "${MISS_TXT}"
     nmiss=$(wc -l < "${MISS_TXT}")
 
     if [ "${nmiss}" -eq 0 ]; then

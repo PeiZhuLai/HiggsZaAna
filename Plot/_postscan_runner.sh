@@ -49,36 +49,9 @@ draw_plot_output() {
     echo "[DONE] $(date '+%F %T')" >> "$log_file"
 }
 
-if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
-    for finalTag in nominal sideband_rwgt; do
-        for regionKey in SR CR mva; do
-            draw_plot_output "$regionKey" "$finalTag"
-        done
-    done
-else
-    echo "[Info] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS; skip 2_plot_dataVmc.py"
-fi
-
-# 0: Full Region, 1: Signal Region, 2: Contral Region
-# ## ALP Optimization 2 categories
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 2 --inputTag sideband_rwgt
-
-# ## ALP Optimization 1 category
-python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
-
-# ## Update cutflow
-python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/4_collect_cutflow.py
-python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/5_merge_cutflow.py
-
-# # Signal efficinecy after MVA cut
-python3 $scriptsDir/collect_MVAcut_points_run3.py
-
-# --write-json restores the R=1 low-mass working points (mA1,2,3) into
-# MVAcut_points_run3.json AFTER collect_MVAcut_points_run3.py has overwritten them with the
-# significance-maximizing cut. This keeps the JSON authoritative so the next ALP_Optimization
-# run draws the blue "Working Point" line on sigVScore_M1/2/3 at the scan-selected cut.
-python3 $scriptsDir/scan_score_R_significance.py --write-json
-
+# [auto] activate plotting env (higgs-alp-ana) so bare python3 has ROOT/matplotlib/uproot
+export PATH=/eos/home-p/pelai/App/Conda/.conda/envs/higgs-alp-ana/bin:$PATH
+echo "[postscan] python3 = $(which python3)"
 ## MVA model diagnostic plots (ROC, correlation matrices, per-feature distributions,
 ## feature importance, BDT score, and the low-mass overtraining plot). Regenerated from the
 ## DEPLOYED model pkls (NO retraining), so the AN figures always match the model that produced

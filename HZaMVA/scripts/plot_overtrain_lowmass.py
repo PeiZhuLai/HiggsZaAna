@@ -59,6 +59,20 @@ print(f"[result] capped-KS p: sig={p_sig:.3g}  bkg={p_bk:.3g}")
 
 import os; os.makedirs(os.path.dirname(PLOT), exist_ok=True)
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
+
+# ---- CMS-Preliminary label, copied verbatim from plot_mva_diagnostics.py so the style
+# ---- (bold "CMS" + italic "Preliminary" + lumi) matches ROC.pdf exactly. ----
+def add_cms_preliminary(fig, cms_fontsize=36):
+    if fig.subplotpars.top > 0.88:
+        fig.subplots_adjust(top=0.88)
+    left = max(fig.subplotpars.left, 0.02)
+    right = min(fig.subplotpars.right, 0.98)
+    prelim_x = min(left + 2.7 * cms_fontsize / 72.0 / fig.get_figwidth(), right - 0.20)
+    fig.text(left, 0.965, "CMS", fontsize=cms_fontsize, fontweight="bold", ha="left", va="top")
+    fig.text(prelim_x, 0.965, "Preliminary", fontsize=cms_fontsize - 4, fontstyle="italic", ha="left", va="top")
+    fig.text(right, 0.965, r"$172.13\ \mathrm{fb}^{-1}\ (13.6\ \mathrm{TeV})$",
+             fontsize=cms_fontsize - 4, ha="right", va="top")
+
 fig = plt.figure(figsize=(8, 6)); rng = (0, 1); bins = 40
 plt.plot([], [], " ", label=f"Sig K-S p = {p_sig:.3g}")
 plt.plot([], [], " ", label=f"Bkg K-S p = {p_bk:.3g}")
@@ -70,5 +84,7 @@ for v, ww, c, lab in ((sig_te, wse, "r", "Sig (Test)"), (bk_te, wbe, "b", "Bkg (
     plt.errorbar(ctr, h, yerr=err, fmt=".", c=c, label=lab, markersize=8)
 plt.xlim(-0.1, 1.1)
 plt.xlabel(r"$m_{a} = 1, 2, 3$ GeV BDT score", fontsize=16); plt.ylabel("Arbitrary Units", fontsize=16)
-plt.legend(loc="upper center", fontsize=12, frameon=False); plt.tight_layout()
+plt.legend(loc="upper center", fontsize=12, frameon=False)
+fig.tight_layout(rect=[0, 0, 1, 0.93])
+add_cms_preliminary(fig, cms_fontsize=18)   # identical CMS-Preliminary style to ROC.pdf
 fig.savefig(PLOT, dpi=200); print(f"[plot] {PLOT}")

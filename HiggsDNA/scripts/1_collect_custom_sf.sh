@@ -9,7 +9,7 @@ scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scri
 photon_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 electron_eras=(2024 2025)
 muon_id_eras=(2024 2025)
-muon_trigger_eras=(2024)
+muon_trigger_eras=(2024 2025)
 muon_iso_eras=(2024 2025)
 all_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024 2025)
 
@@ -52,6 +52,40 @@ collect_muo_json() {
     local relpath="$2"
 
     rsync_json "$muoSFDir/Run${era}/$relpath" "$HiggsDNADir/$(era_dir "$era")"
+}
+
+# Muon trigger leg efficiencies live under different TnP filenames per era: 2024
+# used the legacy hza_mutrig<leg> name, while 2025+ uses the new hzg_mu<leg>leg
+# name. Collect both into a consistent hzg_mutrig<leg>_<era>_efficiencies.json
+# intermediate so the merge step can emit the hza_mutrig<leg>_<era> names the
+# analysis (HLT_systematics.py) expects.
+mutrig_src_name() {
+    local era="$1"
+    local leg="$2"
+    case "$era" in
+        2024) echo "hza_mutrig${leg}_${era}_efficiencies.json" ;;
+        *)    echo "hzg_mu${leg}leg_${era}_efficiencies.json" ;;
+    esac
+}
+
+# Muon miniIso efficiencies arrive already named hzg_muiso*<era>; that is the
+# intermediate the merge step converts to hza_muiso*<era>. Collect it into
+# custom_SF_raw so only the final hza_ JSON lands in the era output directory.
+collect_muo_iso() {
+    local era="$1"
+    local relpath="$2"
+
+    rsync_json "$muoSFDir/Run${era}/$relpath" "$(raw_dir "$era")"
+}
+
+collect_muo_trigger() {
+    local era="$1"
+    local leg="$2"
+    local src="$muoSFDir/Run${era}/NUM_Mu${leg}leg_DEN_HToZa_SignalMuons/$(mutrig_src_name "$era" "$leg")"
+    local dst="$(raw_dir "$era")"
+
+    mkdir -p "$dst"
+    rsync -av -- "$src" "$dst/hzg_mutrig${leg}_${era}_efficiencies.json"
 }
 
 for era in "${all_eras[@]}"; do
@@ -121,14 +155,14 @@ for era in "${muon_id_eras[@]}"; do
 done
 
 for era in "${muon_trigger_eras[@]}"; do
-    collect_muo_json "$era" "NUM_Mu8leg_DEN_HToZa_SignalMuons/hza_mutrig8_${era}_efficiencies.json"
-    collect_muo_json "$era" "NUM_Mu17leg_DEN_HToZa_SignalMuons/hza_mutrig17_${era}_efficiencies.json"
-    collect_muo_json "$era" "NUM_Mu24leg_DEN_HToZa_SignalMuons/hza_mutrig24_${era}_efficiencies.json"
+    for leg in 8 17 24; do
+        collect_muo_trigger "$era" "$leg"
+    done
 done
 
 for era in "${muon_iso_eras[@]}"; do
-    collect_muo_json "$era" "NUM_MuIso0p1_DEN_HToZa_SignalMuons_Trigger/hzg_muiso0p1_${era}_efficiencies.json"
-    collect_muo_json "$era" "NUM_MuIso0p15_DEN_HToZa_SignalMuons_Trigger/hzg_muiso0p15_${era}_efficiencies.json"
+    collect_muo_iso "$era" "NUM_MuIso0p1_DEN_HToZa_SignalMuons_Trigger/hzg_muiso0p1_${era}_efficiencies.json"
+    collect_muo_iso "$era" "NUM_MuIso0p15_DEN_HToZa_SignalMuons_Trigger/hzg_muiso0p15_${era}_efficiencies.json"
 done
 
 ###------------------------

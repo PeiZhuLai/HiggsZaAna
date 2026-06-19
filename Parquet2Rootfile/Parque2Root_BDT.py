@@ -786,14 +786,19 @@ def decorate(data):
     data['factor'] = data.weight_central
     data['is_center'] = data.apply(lambda x: compute_is_center(x), axis=1)
 
-    # data['H_ptt'] = data.apply(lambda x: compute_H_ptt(x), axis=1)
-    # data['H_al'] = data.apply(lambda x: compute_H_al(x), axis=1)
-    # data['H_bt'] = data.apply(lambda x: compute_H_bt(x), axis=1)
-    # data['Z_cos_theta'] = data.apply(lambda x:compute_Z_cosTheta(x), axis=1)
-    # data['lep_cos_theta'] = data.apply(lambda x: compute_l_costheta(x), axis=1)
-    # data['lep_phi'] = data.apply(lambda x: compute_l_phi(x), axis=1)
-    # data['l1g_deltaR'] = data.apply(lambda x: compute_dR1lg(x), axis=1) 
-    # data['l2g_deltaR'] = data.apply(lambda x: compute_dR2lg(x), axis=1)
+    # --- HZgamma ggF-style variables (2026-06-15): lepton/angular/jet info that is
+    #     largely orthogonal to m_llgammagamma. Mirrors HtoZg ggF BDT inputs.
+    data['H_ptt'] = data.apply(lambda x: compute_H_ptt(x), axis=1)              # pTt
+    data['H_al'] = data.apply(lambda x: compute_H_al(x), axis=1)
+    data['H_bt'] = data.apply(lambda x: compute_H_bt(x), axis=1)
+    data['Z_cos_theta'] = data.apply(lambda x:compute_Z_cosTheta(x), axis=1)    # cosTheta (production)
+    data['lep_cos_theta'] = data.apply(lambda x: compute_l_costheta(x), axis=1) # costheta (decay)
+    data['lep_phi'] = data.apply(lambda x: compute_l_phi(x), axis=1)            # phi
+    # NOTE: l1g/l2g_deltaR computed below, AFTER Z_lead/sublead_lepton_deltaphi exist.
+    # raw eta of leptons / photon (HZgamma ggF #4-6)
+    data['lead_lepton_eta'] = data.Z_lead_lepton_eta
+    data['sublead_lepton_eta'] = data.Z_sublead_lepton_eta
+    data['gamma_eta_raw'] = data.gamma_eta
 
     data['HZ_relM'] = data.H_mass / data.Z_mass
     data['H_relpt'] = data.H_pt / data.H_mass
@@ -801,7 +806,7 @@ def decorate(data):
     data['Z_lead_lepton_relpt'] = data.Z_lead_lepton_pt / data.H_mass
     data['Z_sublead_lepton_relpt'] = data.Z_sublead_lepton_pt / data.H_mass
     data['gamma_relpt'] = data.gamma_pt / data.H_mass
-    # data['gamma_ptRelErr'] = data.apply(lambda x:compute_gamma_relEerror(x), axis=1)
+    data['gamma_ptRelErr'] = data.apply(lambda x:compute_gamma_relEerror(x), axis=1)   # sigmaE/E
     data['G_ECM'] = data.apply(lambda x:compute_G_ECM(x), axis=1)
     data['Z_ECM'] = data.apply(lambda x:compute_Z_ECM(x), axis=1)
     data['Z_rapCM'] = data.apply(lambda x:compute_Z_rapCM(x), axis=1)
@@ -819,30 +824,15 @@ def decorate(data):
     data['Z_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'Z_phi'), axis=1)
     data['Z_lead_lepton_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'Z_lead_lepton_phi'), axis=1)
     data['Z_sublead_lepton_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'Z_sublead_lepton_phi'), axis=1)
+    # dR(gamma, lepton) — needs the lepton-gamma deltaphi above. compute_dR1lg=max, compute_dR2lg=min.
+    data['l1g_deltaR'] = data.apply(lambda x: compute_dR1lg(x), axis=1)
+    data['l2g_deltaR'] = data.apply(lambda x: compute_dR2lg(x), axis=1)
+    data['max_lg_deltaR'] = data[['l1g_deltaR', 'l2g_deltaR']].max(axis=1)
+    data['min_lg_deltaR'] = data[['l1g_deltaR', 'l2g_deltaR']].min(axis=1)
     # Jet 
-    # data['max_jet_deltaR'] = data[['jet1G_deltaR', 'jet2G_deltaR']].max(axis=1)
-    # data['min_jet_deltaR'] = data[['jet1G_deltaR', 'jet2G_deltaR']].min(axis=1)
-    # data['MET_deltaphi'] = data.apply(lambda x: compute_Delta_Phi(x, 'MET_phi'), axis=1)
-    # data['MET_relpt'] = data.MET_pt / data.H_mass
-    # data['system_pt'] = data.apply(lambda x: compute_system_pt(x), axis=1)
-    # data['jet_pair_pt'] = data.apply(lambda x: compute_jet_pair_pt(x), axis=1)
-    # data['jet_1_relpt'] = data.jet_1_pt / data.H_mass
-    # data['jet_2_relpt'] = data.jet_2_pt / data.H_mass
-    # for i in np.arange(1,5):
-    #     data['jet_%d_deltaphi' %i] = data.apply(lambda x: compute_Delta_Phi(x, "jet", min_jet=i), axis=1)
-    #     data['jet%dG_deltaR' %i] = data.apply(lambda x: compute_Delta_R(x, min_jet=i), axis=1)
-    # data['mass_jj'] = data.apply(lambda x: compute_mass_jj(x), axis=1)
-    # data['max_two_jet_btag'] = data.apply(lambda x: compute_max_two_jet_btag(x), axis=1)
-    # data['jet_ptt'] = data.apply(lambda x: compute_jet_ptt(x), axis=1)
-    # data['delta_eta_jj'] = data.apply(lambda x: compute_delta_eta_jj(x), axis=1)
-    # data['delta_phi_jj'] = data.apply(lambda x: compute_delta_phi_jj(x), axis=1)
-    # data['delta_phi_zgjj'] = data.apply(lambda x: compute_delta_phi_zg_jj(x), axis=1)
-    # data['delta_eta_zgjj'] = data.apply(lambda x: compute_delta_eta_zg_jj(x), axis=1)
-    # data['photon_zeppenfeld'] = data.apply(lambda x: compute_photon_zeppenfeld(x), axis=1)
-    # data['H_zeppenfeld'] = data.apply(lambda x: compute_H_zeppenfeld(x), axis=1)
-    # data['pt_balance'] = data.apply(lambda x: compute_pt_balance(x), axis=1)
-    # data['pt_balance_0j'] = data.apply(lambda x: compute_pt_balance_0j(x), axis=1)
-    # data['pt_balance_1j'] = data.apply(lambda x: compute_pt_balance_1j(x), axis=1)
+    # --- Jet variables intentionally NOT stored for HZa (inclusive low-mass ALP search;
+    #     merged-photon kinematics drive discrimination, jets are not used). Jet compute_*
+    #     helpers remain in the file if ever needed.
     # data[['Jets_QGscore_Lead', 'Jets_QGflag_Lead', 'Jets_QGscore_Sub', 'Jets_QGflag_Sub']] = data.apply(lambda x: compute_QG(x), axis=1, result_type='expand')
     # data.rename(columns={'Muons_Minv_MuMu_Paper': 'm_mumu', 'Muons_Minv_MuMu_VH': 'm_mumu_VH', 'EventInfo_EventNumber': 'eventNumber', 'Jets_jetMultip': 'n_j'}, inplace=True)
     # data.drop(['PassesttHSelection', 'PassesVHSelection', 'GlobalWeight', 'SampleOverlapWeight', 'EventWeight_MCCleaning_5'], axis=1, inplace=True)

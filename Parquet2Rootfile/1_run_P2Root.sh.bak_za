@@ -70,7 +70,7 @@ process_sample() {
     fi
     
     for year in "${years[@]}"; do
-        command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
+        command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_za.py "
         command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
         if [ "$type" = "Data" ]; then
             command+="-o ${target}Data/${year}.root"
@@ -102,7 +102,7 @@ process_sample_syst() {
 
     for syst in "${systs[@]}"; do
         corr="${syst}_${uod}"
-        command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
+        command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_za.py "
         command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
         command+="-o ${target}${sample}_${syst}_${uod}/${year}.root"
 

@@ -58,6 +58,30 @@ parser.add_option("-c", "--nCats",   dest="nCats",    default=5,    type="int", 
 (options, args) = parser.parse_args()
 
 
+# ---------------------------------------------------------------------------------------------
+# Low-mass (mA=1,2,3) working points are NOT the significance-maximizing cut found by the
+# category optimization below: they are the R=1 sculpting working points selected by
+# scan_score_R_significance.py and pinned in MVAcut_points_run3.json. Override the blue
+# "Working Point" line on the sigVScore plots for those masses so they show the cut actually
+# used in the analysis. Higher masses keep the significance-optimized line. [Pei-Zhu 2026-06-18]
+MVACUT_JSON = os.path.join(PLOT_DIR, 'output', 'MVAcut_points_run3.json')
+LOWMASS_WP_OVERRIDE = {'M1', 'M2', 'M3'}
+
+def load_wp_overrides():
+    overrides = {}
+    try:
+        with open(MVACUT_JSON) as f_json:
+            doc = json.load(f_json)
+        for entry in doc.get('results', []):
+            name = "M%d" % int(entry['mA'])
+            if name in LOWMASS_WP_OVERRIDE and entry.get('MVAcut') is not None:
+                overrides[name] = float(entry['MVAcut'])
+    except Exception as exc:
+        print("[wp-override] could not read %s: %s" % (MVACUT_JSON, exc))
+    return overrides
+
+WP_OVERRIDE = load_wp_overrides()
+
 
 gROOT.SetBatch(True)
 tdrstyle.setTDRStyle()
@@ -838,7 +862,11 @@ def main():
                 gPad.Modified()
                 gPad.Update()
 
-                Line = TLine((partition_final['all'][0][0]-1)*w - 0.1, y_low, (partition_final['all'][0][0]-1)*w - 0.1, 2.0 * ymax)
+                wp_x = (partition_final['all'][0][0]-1)*w - 0.1
+                if sig in WP_OVERRIDE:
+                    wp_x = WP_OVERRIDE[sig]
+                    print("[wp-override] %s: working-point line moved to scan-selected cut %.4f" % (sig, wp_x))
+                Line = TLine(wp_x, y_low, wp_x, 2.0 * ymax)
                 Line.SetLineStyle(7)
                 Line.SetLineWidth(3)
                 Line.SetLineColor(4)

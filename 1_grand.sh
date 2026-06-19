@@ -12,6 +12,7 @@ RUN_HIGGSZA_CLEAN_OUTPUTS="${RUN_HIGGSZA_CLEAN_OUTPUTS:-0}"
 RUN_HIGGSZA_MERGE_PARQUET="${RUN_HIGGSZA_MERGE_PARQUET:-0}"
 RUN_HIGGSZA_P2ROOT="${RUN_HIGGSZA_P2ROOT:-0}"
 RUN_HIGGSZA_TRAIN_MVA="${RUN_HIGGSZA_TRAIN_MVA:-0}"
+RUN_HIGGSZA_LOWMASS_GGF_SCAN="${RUN_HIGGSZA_LOWMASS_GGF_SCAN:-0}"   # low-mass BDT: compare HZgamma ggF-style variable sets (AUC vs R(mA1))
 RUN_HIGGSZA_P2ROOT_MVA_SCORE="${RUN_HIGGSZA_P2ROOT_MVA_SCORE:-0}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL="${RUN_HIGGSZA_P2ROOT_MVA_SCORE_INITIAL:-0}"
 RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT="${RUN_HIGGSZA_P2ROOT_MVA_SCORE_RESUBMIT:-0}"
@@ -26,6 +27,7 @@ RUN_FLASHGG_BACKGROUND="${RUN_FLASHGG_BACKGROUND:-1}"
 RUN_FLASHGG_SIGNAL="${RUN_FLASHGG_SIGNAL:-1}"
 RUN_FLASHGG_DATACARD="${RUN_FLASHGG_DATACARD:-1}"
 RUN_FLASHGG_COMBINE_LIMITS="${RUN_FLASHGG_COMBINE_LIMITS:-1}"
+RUN_FLASHGG_OBSERVED_LIMITS="${RUN_FLASHGG_OBSERVED_LIMITS:-0}"   # 1 = also run observed/UNBLINDED limits
 RUN_FLASHGG_PLOT_LIMITS="${RUN_FLASHGG_PLOT_LIMITS:-1}"
 RUN_FLASHGG_IMPACT="${RUN_FLASHGG_IMPACT:-1}"
 RUN_FLASHGG_BIAS="${RUN_FLASHGG_BIAS:-1}"
@@ -534,6 +536,14 @@ if [[ "$RUN_HIGGSZA_TRAIN_MVA" == "1" ]]; then
 
     cd "${PROJECT_DIR}/HZaMVA/scripts"
     python3 1_make_sideband_reweight.py
+    # Low-mass HZgamma ggF-style variable scan: compares min5 / +angles / +ggf_orth / full16(+ggf)
+    # feature sets by pooled AUC(mA1-3) and R(mA) sculpting. Needs the p2root ROOT regenerated
+    # with the new branches first (RUN_HIGGSZA_P2ROOT -> Parque2Root_BDT.py). Inspect the table
+    # and update the production low-mass feature list before retraining.
+    if [[ "$RUN_HIGGSZA_LOWMASS_GGF_SCAN" == "1" ]]; then
+        echo_step "HiggsZaAna: low-mass ggF variable scan"
+        python3 train_lowmass_bdt.py
+    fi
     bash 2_train.sh
     bash 3_save_model.sh
 else
@@ -721,8 +731,14 @@ fi
 if [[ "$RUN_FLASHGG_COMBINE_LIMITS" == "1" ]]; then
     echo_step "flashggFinalFit: combine limits"
     cd "$baseDir/Combine"
-    sh 1_makeLimits.sh
-    sh 2_text2ws.sh
+    sh 2_text2ws.sh                  # build root_t2w workspaces from per-mA Bernstein multipdf
+    sh 1_makeLimits.sh               # blind expected AsymptoticLimits -> output_combine_results/
+    if [[ "$RUN_FLASHGG_OBSERVED_LIMITS" == "1" ]]; then
+        sh 1b_makeLimits_observed.sh # observed/UNBLINDED AsymptoticLimits -> output_combine_results_observed/
+        sh 1c_significance.sh        # observed LOCAL significance per mA -> output_significance/
+        # GLOBAL significance (look-elsewhere): toy-based, see shellScripts/significance/Condor/
+        # bash $baseDir/shellScripts/significance/Condor/subjob_global_sig.sh
+    fi
 else
     echo_skip "flashggFinalFit: combine limits"
 fi

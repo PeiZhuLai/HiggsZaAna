@@ -20,6 +20,30 @@ BASE_VARS = ["pho1Pt_oHm","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt_oH
 FEATURES  = BASE_VARS + ["pho_pt_asym", "param"]
 NFEAT     = len(FEATURES)
 READ      = BASE_VARS + ["H_m","ALP_m","factor"]
+
+# HZgamma ggF-style candidate variables (2026-06-15), produced by Parque2Root_BDT.py.
+# Largely orthogonal to m_llgammagamma: lepton/photon angles, dR(gamma,l), sigmaE/E, jets.
+# Pass as `extra=` to _load() and feed to build_matrix(); pick a subset during training.
+HZG_GGF_VARS = [
+    "H_ptt",                                    # pTt (system pT balance)
+    "Z_cos_theta", "lep_cos_theta", "lep_phi",  # cosTheta / costheta / phi
+    "min_lg_deltaR", "max_lg_deltaR",           # min/max dR(gamma, lepton)
+    "lead_lepton_eta", "sublead_lepton_eta", "gamma_eta_raw",
+    "gamma_ptRelErr",                           # sigmaE/E
+]   # NOTE: jet variables deliberately excluded for HZa (inclusive low-mass search)
+
+def build_matrix(a, mhyp, var_list):
+    """Flexible feature matrix for an arbitrary var_list (BASE_VARS + HZG_GGF_VARS + derived).
+    'pho_pt_asym' and 'param' are derived; everything else is read straight from the array."""
+    cols = []
+    for v in var_list:
+        if v == "pho_pt_asym":
+            cols.append((a["pho1Pt_oHm"]-a["pho2Pt_oHm"])/(a["pho1Pt_oHm"]+a["pho2Pt_oHm"]+1e-6))
+        elif v == "param":
+            cols.append((a["ALP_m"]-mhyp)/a["H_m"])
+        else:
+            cols.append(a[v])
+    return np.column_stack(cols)
 # Extra branches the sideband reweighter needs on the background frame
 # (Z_m is a reweight step variable; event drives the per-event mass hypothesis).
 REWEIGHT_EXTRA = ["Z_m", "event"]
