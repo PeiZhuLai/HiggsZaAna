@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Full auto: build 32 DATA 2-hop parent maps -> verify overlap -> launch
+# HiggsDNA merged-ML friend production on CERN condor for all datasets.
+# Detached background driver for the HZa_merged per-mA ROI downstream.
+set -uo pipefail
+
+REPO=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA
+ENVDIR=/eos/home-p/pelai/App/Conda/.conda/envs/hza_ana
+export CONDA_PREFIX=$ENVDIR
+export PATH=$ENVDIR/bin:/cvmfs/cms.cern.ch/common:/usr/bin:/bin
+export X509_USER_PROXY=/tmp/x509up_u175325
+export PYTHONPATH=$REPO
+cd "$REPO"
+HZAPY=$ENVDIR/bin/python
+
+CATALOG=metadata/samples/za_merged_data_2024_perds.json
+MLBASE=/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD
+STATUS=${STATUS:-/tmp/pelai/claude-175325/-afs-cern-ch-user-p-pelai/3184959c-b995-4b33-a181-dcda35c8d7f1/scratchpad/data_ml_prod_status.txt}
+: > "$STATUS"
+log(){ echo "[$(date +%H:%M:%S)] $*" | tee -a "$STATUS"; }
+
+mapfile -t TAGS < <($HZAPY -c "import json;print('\n'.join(sorted(json.load(open('$CATALOG')).keys())))")
+log "Step A: building/validating ${#TAGS[@]} data parent maps (2-hop)"
+
+# ---- Step A: parent maps ----
+for tag in "${TAGS[@]}"; do
+    pm="metadata/parent_maps/${tag}.json"
+    das=$($HZAPY -c "import json;print(json.load(open('$CATALOG'))['$tag']['files']['2024'][0])")
+    # skip if already valid (>0 overlap with the MLNanoAOD dir)
+    if [ -f "$pm" ]; then
+        ok=$($HZAPY - "$pm" "$MLBASE/$tag" <<'PY'
+import json,os,re,sys
+pm,mld=sys.argv[1],sys.argv[2]
+U=re.compile(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})')
+try:
+    d=json.load(open(pm)); uu=set(u for v in d.values() for u in v)
+    fu=set(U.search(f).group(1) for f in os.listdir(mld) if U.search(f))
+    print(1 if (uu and len(uu&fu)/len(uu)>0.5) else 0)
+except Exception: print(0)
+PY
+)
+        if [ "$ok" = "1" ]; then log "  [skip] $tag parent map already valid"; continue; fi
+    fi
+    log "  [build] $tag  ($das)"
+    $HZAPY scripts/build_parent_map_data.py --nano-dataset "$das" --out "$pm" --workers 24 \
+        >> "$STATUS" 2>&1 || log "  [WARN] parent map build failed for $tag"
+done
+
+# ---- verify all present & overlap ----
+missing=0
+for tag in "${TAGS[@]}"; do
+    pm="metadata/parent_maps/${tag}.json"
+    ov=$($HZAPY - "$pm" "$MLBASE/$tag" <<'PY'
+import json,os,re,sys
+pm,mld=sys.argv[1],sys.argv[2]
+U=re.compile(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})')
+try:
+    d=json.load(open(pm)); uu=set(u for v in d.values() for u in v)
+    fu=set(U.search(f).group(1) for f in os.listdir(mld) if U.search(f))
+    print("%d/%d"%(len(uu&fu),len(uu)))
+except Exception as e: print("ERR")
+PY
+)
+    log "  overlap $tag: $ov"
+    [[ "$ov" == "ERR" || "$ov" == 0/* ]] && missing=$((missing+1))
+done
+if [ "$missing" -gt 0 ]; then
+    log "Step A INCOMPLETE: $missing tags without a valid parent map. STOPPING before condor."
+    exit 1
+fi
+log "Step A done: all ${#TAGS[@]} parent maps valid."
+
+# ---- Step B: HiggsDNA condor production for all tags ----
+log "Step B: launching HiggsDNA merged-ML friend condor production (FPO=${FPO:-2}, mem=${CONDOR_REQ_MEMORY:-10000}MB)"
+export TAGS=$(IFS=,; echo "${TAGS[*]}")
+export BATCH_SYSTEM=condor
+export FPO=${FPO:-2}
+export N_CORES=${N_CORES:-4}
+export CONDOR_REQ_MEMORY=${CONDOR_REQ_MEMORY:-10000}
+export OUTDIR_BASE=/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend
+bash scripts/run_merged_data_ml_friend.sh >> "$STATUS" 2>&1
+log "Step B driver returned. Check per-tag merged_nominal.parquet under $OUTDIR_BASE/Data_2024_*/"

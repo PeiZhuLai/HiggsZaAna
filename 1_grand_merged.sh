@@ -5,11 +5,13 @@
 #                         photon),  built on the flashggFinalFit framework
 #                         (same machinery as the resolved 1_grand.sh).
 #
-#  Physics: fit observable = CMS_hza_mass = m(ll + merged-photon) (peaks ~125
-#  GeV). Merged photons carry NO m_a resolution -> ONE inclusive merged category
-#  cat0 and one H_mass signal peak per m_a hypothesis (study doc Part2-3). Signal
-#  = double-CB peak with 8 photon/lepton shape systematics; background =
-#  data-driven discrete-profiling envelope (RooMultiPdf), shared across all m_a.
+#  Physics (per-mA ROI, doc sec.12): fit observable = CMS_hza_mass =
+#  H_merged_ML_mass = m(ll + MLPhoton_lead), recomputed in merged_p2root.py
+#  (peaks ~125). Selection = pass_allcuts_merged_ML. Each m_a opens a ROI window
+#  on MLPhoton_lead_mass (reco ML merged-photon mass; tracks m_a) -> a DIFFERENT
+#  data sub-sample -> a PER-mA background (like resolved binning by m_gg~m_a).
+#  Signal = double-CB with lepton/photon shape systematics; background =
+#  data-driven discrete-profiling envelope (RooMultiPdf), fit PER m_a.
 #
 #  Lumi: only 2024 data exists today; the datacard projects to the full Run-3
 #  lumi (2022+2023+2024 = 172.13 fb^-1) via makeYields --lumi (single x1.567).
@@ -19,7 +21,7 @@
 #    [1] merged_p2root.py   : friend parquet -> flashgg DiphotonTree ROOT trees
 #    [2] Tree2WS            : signal (per lep) + data -> RooWorkspace
 #    [3] signal model       : fTest -> calcPhotonSyst -> signalFit (DCB + syst)
-#    [4] background          : fTest_ALP_turnOn -> merged multipdf (one fit)
+#    [4] background          : fTest_ALP_turnOn -> PER-mA multipdf (per-mA ROI)
 #    [5] datacard           : makeYields(--mergedLowMA --lumi) -> makeDatacard
 #                             -> text2workspace
 #    [6] combine             : AsymptoticLimits per m_a
@@ -42,6 +44,8 @@ EOS="${EOS:-/eos/project/h/htozg-dy-privatemc/pelai/HZa}"
 CMSSW_SRC="${CMSSW_SRC:-/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src}"
 FLASHGG="${FLASHGG:-${CMSSW_SRC}/flashggFinalFit}"
 ROOT_MVACUT="${ROOT_MVACUT:-/eos/home-p/pelai/HZa/root_MVAcut}"
+# Signal ML parquet (all 9 sub-GeV mass points, nominal+16 syst; MLPhoton_lead_*).
+SIG_ML_DIR="${SIG_ML_DIR:-/eos/home-p/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all}"
 
 # Sub-GeV mass points (flashgg label form, e.g. 0p5 == m_a 0.5 GeV) and channels.
 MASSES="${MASSES:-0p1 0p2 0p3 0p4 0p5 0p6 0p7 0p8 0p9}"
@@ -60,6 +64,9 @@ RESOLVED_LIMITS_DIR="${RESOLVED_LIMITS_DIR:-${FLASHGG}/Combine/output_combine_re
 # flashgg outputs
 SIG_DIR="${FLASHGG}/Signal"
 BKG_WSDIR="${BKG_WSDIR:-${FLASHGG}/Background/ALP_BkgModel_merged}"
+# per-mA ROI: bkg multipdf + data live per-mA under ${BKG_WSDIR}/<m>/ and
+# ${ROOT_MVACUT}/data/Data_merged_M<m>/ (Stage 4 / Stage 2). BKG_MERGED/DATA_WS
+# (the old single shared paths) are retained only for backward-compat references.
 BKG_MERGED="${BKG_WSDIR}/merged"
 DATA_WS="${ROOT_MVACUT}/data/Data_merged/ws/run3.root"
 DC_DIR="${FLASHGG}/Datacard"
@@ -165,8 +172,11 @@ if [[ "$RUN_P2ROOT" == "1" ]]; then
     echo_step "merged: parquet -> flashgg ROOT trees (signal + data)"
     activate_pyroot_env
     sig_csv=$(echo "$MASSES" | sed -E 's/([0-9p]+)/M\1/g; s/ +/,/g')
+    # per-mA ROI ML path: signal from Sig_MC_MLNANO_all, data per-mA (merged_p2root
+    # uses its DATA_ML_GLOB default = parquet_friend/Data_2024_*/). Writes
+    # sig/mA_M<m>/output_<year>.root and data/Data_merged_M<m>/run3.root (PER-mA).
     python3 "${MERGED_DIR}/merged_p2root.py" \
-        --indir "${EOS}/parquet_friend" --outdir "${ROOT_MVACUT}" \
+        --indir "${SIG_ML_DIR}" --outdir "${ROOT_MVACUT}" \
         --signals "$sig_csv" --year "$YEAR" --do-signal --do-data
 else
     echo_skip "merged: parquet -> ROOT"
@@ -195,11 +205,15 @@ if [[ "$RUN_TREE2WS" == "1" ]]; then
         done
     done
     run_parallel "${jobs[@]}"
-    # data (single merged tree)
-    python3 trees2ws_data.py --inputConfig config.py \
-        --inputTreeFile "${ROOT_MVACUT}/data/Data_merged/run3.root" \
-        > logs/data_merged.log 2>&1
-    echo "  Tree2WS done (signal + data)"
+    # data: PER-mA now (each m_a has its own ROI sub-sample) ->
+    #   data/Data_merged_M<m>/run3.root  ->  data/Data_merged_M<m>/ws/run3.root
+    for m in $MASSES; do
+        dtree="${ROOT_MVACUT}/data/mA_M${m}/run3.root"
+        [[ -f "$dtree" ]] || { echo "  [WARN] missing per-mA data tree M${m}: $dtree"; continue; }
+        python3 trees2ws_data.py --inputConfig config.py \
+            --inputTreeFile "$dtree" > "logs/data_mA_M${m}.log" 2>&1
+    done
+    echo "  Tree2WS done (signal + per-mA data)"
 else
     echo_skip "merged: Tree2WS"
 fi
@@ -232,46 +246,54 @@ else
 fi
 
 # =============================================================================
-#  Stage 4 -- background: one discrete-profiling fit on the merged data WS
+#  Stage 4 -- background: PER-mA discrete-profiling fit on each m_a data ROI WS
 # =============================================================================
 if [[ "$RUN_BKG" == "1" ]]; then
-    echo_step "merged: background discrete-profiling envelope (single merged fit)"
+    echo_step "merged: background discrete-profiling envelope (PER-mA ROI)"
     cd "${FLASHGG}/Background"
     if [[ ! -x ./bin/fTest_ALP_turnOn ]]; then
         echo "[ERROR] ./bin/fTest_ALP_turnOn missing (compile Background first)" >&2; exit 1
     fi
-    if [[ ! -f "$DATA_WS" ]]; then
-        echo "[ERROR] merged data WS not found: ${DATA_WS} (run Stage 2)" >&2; exit 1
-    fi
-    mkdir -p "${BKG_MERGED}/HZAmassInde_fTest"
-    ./bin/fTest_ALP_turnOn -i "${DATA_WS}" \
-        --saveMultiPdf "${BKG_MERGED}/CMS-HGG_mva_13p6TeV_multipdf.root" \
-        -D "${BKG_MERGED}/HZAmassInde_fTest" \
-        --mass_ALP 1 -c 1 --isFlashgg 0 --isData 0 -f data, \
-        --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
-        --gtoys "$GOF_TOYS" > "${BKG_MERGED}/ftest.log" 2>&1
-    [[ -f "${BKG_MERGED}/CMS-HGG_mva_13p6TeV_multipdf.root" ]] \
-        && echo "  bkg multipdf: ${BKG_MERGED}/CMS-HGG_mva_13p6TeV_multipdf.root" \
-        || { echo "[ERROR] bkg multipdf not produced; see ${BKG_MERGED}/ftest.log" >&2; exit 1; }
-    # Banded Data+envelope bkg plot (AllFitResults style). One SHARED merged-category
-    # fit -> per-mA bkgplot_M0p<i>.pdf are symlinks to it (the m_llГ observable is the
-    # Higgs mass, NOT mA, so the background is identical for every mA hypothesis).
-    if [[ -x ./bin/makeBkgPlots_ALP ]]; then
-        AFR="${BKG_MERGED}/AllFitResults"; mkdir -p "$AFR"
-        ./bin/makeBkgPlots_ALP -b "${BKG_MERGED}/CMS-HGG_mva_13p6TeV_multipdf.root" \
-            -d "${BKG_MERGED}/BkgPlots" --total_OutDir "$AFR" -o "${BKG_MERGED}/BkgPlots.root" \
-            --sqrts 13p6TeV --isMultiPdf --useBinnedData --massStep 2.5 --mhVal 125.0 --maVal 1 \
-            --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
-            --intLumi "$RUN3_LUMI" -c 0 --isFlashgg 0 --doBands > "${BKG_MERGED}/bkgplot.log" 2>&1 || true
-        [[ -f "$AFR/bkgplot_1.pdf" ]] && { mv -f "$AFR/bkgplot_1.pdf" "$AFR/bkgplot_merged_cat0.pdf"; mv -f "$AFR/allPdfs_1.pdf" "$AFR/allPdfs_merged_cat0.pdf" 2>/dev/null; }
-        if [[ -f "$AFR/bkgplot_merged_cat0.pdf" ]]; then
-            for mm in $MASSES; do
-                ln -sf bkgplot_merged_cat0.pdf "$AFR/bkgplot_M${mm}.pdf"
-                ln -sf allPdfs_merged_cat0.pdf "$AFR/allPdfs_M${mm}.pdf"
-            done
-            echo "  bkg AllFitResults: ${AFR} (1 shared fit + per-mA symlinks)"
+    # PER-mA: each m_a selects a different MLPhoton_lead_mass ROI sub-sample -> its
+    # own data spectrum -> its own multipdf. Output dir = ${BKG_WSDIR}/<m> so it
+    # matches makeYields bkg_mass_for_io=<mass_ALP> (Stage 5). Unlike the old shared
+    # fit, the per-mA bkgplots are genuinely different (different data sub-samples).
+    n_bkg=0
+    for m in $MASSES; do
+        data_ws="${ROOT_MVACUT}/data/mA_M${m}/ws/run3.root"
+        if [[ ! -f "$data_ws" ]]; then
+            echo "  [WARN] M${m} data WS not found: ${data_ws}; skip"; continue
         fi
-    fi
+        bkg_m="${BKG_WSDIR}/${m}"
+        mkdir -p "${bkg_m}/HZAmassInde_fTest"
+        ./bin/fTest_ALP_turnOn -i "${data_ws}" \
+            --saveMultiPdf "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" \
+            -D "${bkg_m}/HZAmassInde_fTest" \
+            --mass_ALP 1 -c 1 --isFlashgg 0 --isData 0 -f data, \
+            --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
+            --gtoys "$GOF_TOYS" > "${bkg_m}/ftest.log" 2>&1
+        if [[ ! -f "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" ]]; then
+            echo "[ERROR] M${m} bkg multipdf not produced; see ${bkg_m}/ftest.log" >&2; continue
+        fi
+        echo "  M${m} bkg multipdf: ${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root"
+        n_bkg=$((n_bkg+1))
+        # per-mA banded Data+envelope plot (real per-mA, NOT a shared symlink)
+        if [[ -x ./bin/makeBkgPlots_ALP ]]; then
+            AFR="${bkg_m}/AllFitResults"; mkdir -p "$AFR"
+            ma_gev="${m//p/.}"   # flashgg label 0p5 -> physical mA 0.5 GeV for the plot label
+            ./bin/makeBkgPlots_ALP -b "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" \
+                -d "${bkg_m}/BkgPlots" --total_OutDir "$AFR" -o "${bkg_m}/BkgPlots.root" \
+                --sqrts 13p6TeV --isMultiPdf --useBinnedData --massStep 2.5 --mhVal 125.0 --maVal "${ma_gev}" \
+                --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
+                --intLumi "$RUN3_LUMI" -c 0 --isFlashgg 0 --doBands > "${bkg_m}/bkgplot.log" 2>&1 || true
+            # makeBkgPlots names outputs bkgplot_<%.0f>.pdf (0 or 1 for sub-GeV); glob picks the single file per per-mA dir
+            for base in bkgplot allPdfs; do
+                f=$(ls "$AFR"/${base}_[0-9]*.pdf 2>/dev/null | head -1)
+                [[ -n "$f" ]] && mv -f "$f" "$AFR/${base}_M${m}.pdf"
+            done
+        fi
+    done
+    echo "  per-mA bkg fits done: ${n_bkg} under ${BKG_WSDIR}/<m>/"
 else
     echo_skip "merged: background fit"
 fi
@@ -357,7 +379,7 @@ fi
 
 echo_step "merged pipeline done"
 echo "  signal models : ${SIG_DIR}/outdir_<lep>/signalFit/output/"
-echo "  bkg multipdf  : ${BKG_MERGED}/CMS-HGG_mva_13p6TeV_multipdf.root"
+echo "  bkg multipdf  : ${BKG_WSDIR}/<m>/CMS-HGG_mva_13p6TeV_multipdf.root (per-mA ROI)"
 echo "  datacards     : ${DC_OUT}/<m>_pruned_datacard_leptons.txt"
 echo "  limits        : ${LIMDIR}/higgsCombine_merged_flashgg_M0p*.root"
 echo "  limit plot    : ${PLOTDIR}/Limits_XS_lowmA_flashgg_run3.{pdf,png}"

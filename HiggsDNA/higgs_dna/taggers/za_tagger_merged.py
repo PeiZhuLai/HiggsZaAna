@@ -1528,9 +1528,16 @@ class ZaTaggerRun3(Tagger):
                     overwrite=True,
                 )
 
-            # Diphoton-like multiplicity (score > 0.5) and merged-category flag
+            # Diphoton-like multiplicity (score > 0.5) and merged-category flag.
+            # Require >=1 (not ==1): the leading MLPhoton is already picked by
+            # highest diphotonScore (see ml_sorted above), so a second, softer
+            # score>0.5 candidate (usually pileup/fake) should NOT veto the whole
+            # event. Recovers ~+10% signal across all m_a with no peak degradation
+            # (verified 2026-07-02: recovered n_dip>=2 events peak at ~123 GeV,
+            # core fraction unchanged). Mirrors the resolved analysis (pick best,
+            # do not veto on multiplicity).
             n_ml_diphoton = ak.fill_none(ak.sum(ml.diphotonScore > 0.5, axis=1), 0)
-            has_1ml_diphoton = ak.fill_none(n_ml_diphoton == 1, False)
+            has_1ml_diphoton = ak.fill_none(n_ml_diphoton >= 1, False)
             awkward_utils.add_field(events, "n_MLPhoton_diphoton", n_ml_diphoton, overwrite=True)
             awkward_utils.add_field(events, "has_1MLPhoton_diphoton", has_1ml_diphoton, overwrite=True)
 

@@ -917,8 +917,16 @@ def main() -> None:
                     denominator_cut(weight.denominator_branches),
                 )
 
-                scale_to_data(data_hist, after_hist)
-                scale_to_data(data_hist, before_hist)
+                # Normalise MC-with-SF (after) to data, then scale MC-without-SF
+                # (before) by the SAME factor. Normalising `before` separately to
+                # data would absorb the SF's overall (few-%) effect, leaving only
+                # the residual shape change; sharing after's factor keeps the SF's
+                # full effect (normalisation + shape) visible on the plot.
+                after_integral = after_hist.Integral()
+                if after_integral > 0:
+                    shared_scale = data_hist.Integral() / after_integral
+                    after_hist.Scale(shared_scale)
+                    before_hist.Scale(shared_scale)
 
                 if args.normalize:
                     for hist in (data_hist, after_hist, before_hist):

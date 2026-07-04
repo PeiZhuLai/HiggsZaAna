@@ -171,15 +171,22 @@ class ControlZeeZmmgTagger(ZaTaggerRun3):
         if (not self.is_data) and "GenVtx_z" in events.fields and "PV_z" in events.fields:
             awkward_utils.add_field(events, "dZ", events.GenVtx_z - events.PV_z, overwrite=True)
 
-        # triggers
-        ele_trigger_cut = (
-            self._or_triggers(events, self.options["single_ele_trigger"].get(year, []))
-            | self._or_triggers(events, self.options["double_ele_trigger"].get(year, []))
-        )
-        mu_trigger_cut = (
-            self._or_triggers(events, self.options["single_muon_trigger"].get(year, []))
-            | self._or_triggers(events, self.options["double_muon_trigger"].get(year, []))
-        )
+        # triggers (single/double 分開算，供 trigger-path flag 用)
+        single_ele = self._or_triggers(events, self.options["single_ele_trigger"].get(year, []))
+        double_ele = self._or_triggers(events, self.options["double_ele_trigger"].get(year, []))
+        single_mu = self._or_triggers(events, self.options["single_muon_trigger"].get(year, []))
+        double_mu = self._or_triggers(events, self.options["double_muon_trigger"].get(year, []))
+        ele_trigger_cut = single_ele | double_ele
+        mu_trigger_cut = single_mu | double_mu
+
+        # trigger-path decision flags（與 za_tagger_resolved 一致 + 額外 inclusive dimu/diel）
+        # pass_simu_or_dimu = single|double mu (OR)；pass_only_dimu = double & ~single；pass_dimu = double(inclusive)
+        awkward_utils.add_field(events, "pass_simu_or_dimu", ak.fill_none(mu_trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_only_dimu", ak.fill_none(double_mu, False) & ~ak.fill_none(single_mu, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_dimu", ak.fill_none(double_mu, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_siel_or_diel", ak.fill_none(ele_trigger_cut, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_only_diel", ak.fill_none(double_ele, False) & ~ak.fill_none(single_ele, False), overwrite=True)
+        awkward_utils.add_field(events, "pass_diel", ak.fill_none(double_ele, False), overwrite=True)
 
         # ==============================================================
         # Z -> ee  control
@@ -252,6 +259,46 @@ class ControlZeeZmmgTagger(ZaTaggerRun3):
         pass_zmmg = ak.fill_none(has_zmmg_cand & mm_kin_cut & mu_trigger_cut, False)
 
         # ==============================================================
+        # Trigger-SF control regions（乾淨 dimuon / dielectron CR，N_gamma=0）
+        # 用來驗 combined trigger SF：用 pass_*_or_*/pass_dimu/pass_diel flag 在 CR 內算
+        # ratio = N(pass OR) / N(pass di-lepton trigger)。記錄條件需至少通過對應 OR-trigger。
+        # ==============================================================
+        ZWIN = (80.0, 100.0)
+        # dimuon CR：剛好 2 muon、0 photon、OSSF、80<m_mumu<100
+        mm_cr = ak.combinations(muons, 2, fields=["l1", "l2"])
+        mm_cr = mm_cr[(mm_cr.l1.charge * mm_cr.l2.charge) == -1]
+        mm_cr["Z"] = mm_cr.l1 + mm_cr.l2
+        mm_cr = mm_cr[ak.argsort(abs(mm_cr.Z.mass - Z_MASS), axis=1)]
+        dimu_cr = ak.firsts(mm_cr)
+        m_mumu_cr = ak.fill_none(dimu_cr.Z.mass, DUMMY_VALUE)
+        _dl_is1 = dimu_cr.l1.pt >= dimu_cr.l2.pt
+        dimu_lead_pt = ak.fill_none(ak.where(_dl_is1, dimu_cr.l1.pt, dimu_cr.l2.pt), DUMMY_VALUE)
+        dimu_sub_pt = ak.fill_none(ak.where(_dl_is1, dimu_cr.l2.pt, dimu_cr.l1.pt), DUMMY_VALUE)
+        dimu_lead_eta = ak.fill_none(ak.where(_dl_is1, dimu_cr.l1.eta, dimu_cr.l2.eta), DUMMY_VALUE)
+        pass_dimu_cr = ak.fill_none((n_muons == 2) & (n_photons == 0) & (m_mumu_cr > ZWIN[0]) & (m_mumu_cr < ZWIN[1]), False)
+
+        # dielectron CR：剛好 2 electron、0 muon、0 photon、OSSF、80<m_ee<100（重用 zee_cand，視窗同為 [80,100]）
+        m_ee_cr = ak.fill_none(zee_cand.ZCand.mass, DUMMY_VALUE)
+        _el_is1 = zee_cand.LeadLepton.pt >= zee_cand.SubleadLepton.pt
+        diel_lead_pt = e_lead_pt
+        diel_sub_pt = e_sub_pt
+        diel_lead_eta = ak.fill_none(ak.where(_el_is1, zee_cand.LeadLepton.eta, zee_cand.SubleadLepton.eta), DUMMY_VALUE)
+        pass_diel_cr = ak.fill_none((n_electrons == 2) & (n_muons == 0) & (n_photons == 0) & (m_ee_cr > ZWIN[0]) & (m_ee_cr < ZWIN[1]), False)
+
+        # 記錄條件：在 CR 且至少通過對應 OR-trigger（data 一定是觸發樣本）
+        in_dimu_cr = pass_dimu_cr & ak.fill_none(mu_trigger_cut, False)
+        in_diel_cr = pass_diel_cr & ak.fill_none(ele_trigger_cut, False)
+        awkward_utils.add_field(events, "pass_dimu_cr", in_dimu_cr, overwrite=True)
+        awkward_utils.add_field(events, "pass_diel_cr", in_diel_cr, overwrite=True)
+        for nm, val in [
+            ("dimu_cr_lead_muon_pt", dimu_lead_pt), ("dimu_cr_sublead_muon_pt", dimu_sub_pt),
+            ("dimu_cr_lead_muon_eta", dimu_lead_eta), ("m_mumu_cr", m_mumu_cr),
+            ("diel_cr_lead_electron_pt", diel_lead_pt), ("diel_cr_sublead_electron_pt", diel_sub_pt),
+            ("diel_cr_lead_electron_eta", diel_lead_eta), ("m_ee_cr", m_ee_cr),
+        ]:
+            awkward_utils.add_field(events, nm, ak.fill_none(val, DUMMY_VALUE), overwrite=True)
+
+        # ==============================================================
         # region-scoped SF 集合
         # ==============================================================
         sel_electrons = electrons[ak.broadcast_arrays(pass_zee, electrons.pt)[0]]
@@ -314,10 +361,10 @@ class ControlZeeZmmgTagger(ZaTaggerRun3):
         # ==============================================================
         # cutflow
         # ==============================================================
-        presel_cut = pass_zee | pass_zmmg
+        presel_cut = pass_zee | pass_zmmg | in_dimu_cr | in_diel_cr
         self.register_cuts(
-            names=["Z->ee region", "Z->mumugamma region", "all"],
-            results=[pass_zee, pass_zmmg, presel_cut],
+            names=["Z->ee region", "Z->mumugamma region", "dimuon CR", "dielectron CR", "all"],
+            results=[pass_zee, pass_zmmg, in_dimu_cr, in_diel_cr, presel_cut],
             cut_type="event",
         )
 

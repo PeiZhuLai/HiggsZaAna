@@ -1,0 +1,9 @@
+# 2024 data MLNanoAOD — 尚未產出的檔（待來源恢復再補）
+# 補法：cd .../RegressMergedPhoton/condor
+#   REDIR=root://cmsxrootd.fnal.gov/ FILES_PER_JOB=8 bash resume_missing_data.sh 2024 'EGamma0_RunG_v2'
+#   （FNAL 不行就拿掉 REDIR 走 global；或等 CCIN2P3 tape recall）
+#
+# 狀態 2026-06-30：137882/137883 完成，僅下面 1 檔暫時全網 disk 不可讀
+# dataset: /EGamma0/Run2024G-MINIv6NANOv15-v2/MINIAOD  (tag Data_2024_EGamma0_RunG_v2)
+# 錯誤: [3011] No servers are available to read the file (FNAL) / global 亦失敗
+/store/data/Run2024G/EGamma0/MINIAOD/MINIv6NANOv15-v2/2520000/5c2466fc-2655-4a0a-b132-5dd3a4e7265a.root

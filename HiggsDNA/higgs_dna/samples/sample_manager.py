@@ -290,8 +290,11 @@ class SampleManager():
         instance : str or None
             "prod/global" or "prod/phys03". If None, auto-guess.
         redirector : str
-            xrootd redirector prefix, e.g. "root://xrootd-cms.infn.it"
+            xrootd redirector prefix, e.g. "root://xrootd-cms.infn.it".
+            Overridable via env HDNA_REDIRECTOR (e.g. root://cmsxrootd.fnal.gov) to
+            steer reads away from a flaky site (RAL) during backfill; dormant unless set.
         """
+        redirector = os.environ.get("HDNA_REDIRECTOR", redirector)
         # 1) decide instance
         guessed = self._guess_dbs_instance(sample)
         inst = instance or guessed

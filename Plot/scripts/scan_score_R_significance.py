@@ -54,22 +54,41 @@ LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 #   mA2 and mA3 do NOT use the plain R=1 crossing: at that (low-score) cut the selection keeps
 #   too much data and the background-model goodness-of-fit FAILS (asymptotic-GOF regime). We
 #   deliberately picked a slightly HIGHER BDT score near R=1, where N_data < ~425 so the toy-GOF
-#   passes while R stays ~1 (mA2: cut 0.98, N~383, R~1.07 ; mA3: cut 0.988, N~364, R~1.05).
+#   passes while R stays ~1.
+#   mA2: cut 0.982, N_data~334, R~0.99  [Pei-Zhu 2026-06-19 -- moved RIGHT from 0.98 (N~394) to
+#        suppress a 2.76 sigma excess at the old cut; 0.982 lands on the R=1 crossing, Z~18.4].
+#   mA3: cut 0.988, N~364, R~1.05.
 #   These are pinned HERE so that re-running this script -- in particular with --write-json --
 #   can NOT silently revert mA2/mA3 back to the R=1 crossing. mA1 is NOT fixed: it keeps its
 #   natural R=1 crossing (~0.963). See memory ref_hza_unblind_procedure / project_hza_lowma_pow1_R1cuts.
-FIXED_WP = {2: 0.98, 3: 0.988}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
+FIXED_WP = {2: 0.982, 3: 0.988}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
 
-mdl = pickle.load(open(MODEL, "rb"))
+import sys
+sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
+from hza_features import BASE_VARS, FEATURES   # FEATURES == BASE_VARS + ['pho_pt_asym','param']
 
-def load(path):
-    a = uproot.open(path)["inclusive"].arrays(FEATS + ["H_mass", "ALP_mass", "factor"], library="np")
+mdl      = pickle.load(open(MODEL, "rb"))            # low-mass model (mA1,2,3)
+mdl_high = pickle.load(open(HIGHMASS_MODEL, "rb"))   # high-mass model (mA4-30; used here for mA30)
+_HM_FEATS = json.load(open(HIGHMASS_META))["features"]   # high-mass model feature order (incl 'param')
+
+def load(path, feats=FEATS):
+    a = uproot.open(path)["inclusive"].arrays(list(feats) + ["H_mass", "ALP_mass", "factor"], library="np")
     m = (a["H_mass"] > 95) & (a["H_mass"] < 180) & np.isfinite(a["factor"])
     return {k: a[k][m] for k in a}
 
 def score(a, mh):
     X = np.column_stack([a[c] for c in FEATS] + [(a["ALP_mass"] - mh) / a["H_mass"]])
     return mdl.predict_proba(X)[:, 1]
+
+def score_high(a, mA):
+    """BDT score from the high-mass parametric model. Builds the full feature matrix with the
+    shared hza_features layer (BASE_VARS + derived pho_pt_asym + param), then selects the model's
+    feature order -- same construction as _bkg_R_at_cuts(). 'a' must be loaded with BASE_VARS."""
+    idx = [FEATURES.index(f) for f in _HM_FEATS]
+    asym = (a["pho1Pt_oHm"] - a["pho2Pt_oHm"]) / (a["pho1Pt_oHm"] + a["pho2Pt_oHm"] + 1e-6)
+    param = (a["ALP_mass"] - mA) / a["H_mass"]
+    X = np.column_stack([a[b] for b in BASE_VARS] + [asym, param])[:, idx]
+    return mdl_high.predict_proba(X)[:, 1]
 
 def scan(mA, bk, wB, Hb, peak, frac):
     sg = load(f"{ROOT_DIR}/mA_M{mA}/run3.root")
@@ -84,6 +103,26 @@ def scan(mA, bk, wB, Hb, peak, frac):
         R = nB / wB[pB].sum() / frac
         S = wS[(ss > thr) & pks].sum()
         Z = _significance_asimov_like(S, nB)        # Asimov-like significance, S & B in 120-130
+        pts.append((thr, R, Z))
+    return np.array(pts)
+
+def scan_high(mA):
+    """Same R / Asimov-Z scan as scan() but with the HIGH-MASS model (for the mA30 panel).
+    Self-contained: loads All_Bkg and the mA signal with BASE_VARS and scores via score_high()."""
+    bk = load(f"{ROOT_DIR}/All_Bkg/run3.root", BASE_VARS)
+    wB = np.clip(bk["factor"], 0, None); Hb = bk["H_mass"]
+    peak = (Hb > PEAK[0]) & (Hb < PEAK[1]); frac = wB[peak].sum() / wB.sum()
+    sg = load(f"{ROOT_DIR}/mA_M{mA}/run3.root", BASE_VARS)
+    wS = np.clip(sg["factor"], 0, None); Hs = sg["H_mass"]; pks = (Hs > PEAK[0]) & (Hs < PEAK[1])
+    sb, ss = score_high(bk, mA), score_high(sg, mA)
+    pts = []
+    for thr in np.linspace(*SCORE_RANGE, 45):
+        pB = sb > thr; nB = wB[pB & peak].sum()
+        if nB <= 0 or (pB & peak).sum() < 20:
+            continue
+        R = nB / wB[pB].sum() / frac
+        S = wS[(ss > thr) & pks].sum()
+        Z = _significance_asimov_like(S, nB)
         pts.append((thr, R, Z))
     return np.array(pts)
 
@@ -161,7 +200,9 @@ def draw_one(mA, pts, r1, wp, big):
     tl.SetTextSize(0.040 if big else 0.030); tl.SetTextColor(ROOT.kRed + 1)
     # Per-mA corner placement so the wrapped label sits in an empty region of each panel:
     #   mA1 bottom-left, mA2 bottom-right, mA3 top-left.  align = 10*h + v (h:1=L,3=R; v:1=bottom,3=top)
-    wp_pos = {1: (0.20, 0.22, 11), 2: (0.78, 0.22, 31), 3: (0.20, 0.83, 13)}
+    #   mA30: R is always >1.2 (no R=1 crossing); the point band fills the top, so the label goes
+    #   bottom-left where the panel is empty.
+    wp_pos = {1: (0.20, 0.22, 11), 2: (0.78, 0.22, 31), 3: (0.20, 0.83, 13), 30: (0.20, 0.24, 11)}
     wx, wy, wa = wp_pos.get(mA, (0.20, 0.22, 11))
     tl.SetTextAlign(wa)
     tl.DrawLatex(wx, wy, f"#splitline{{Working point: cut>{wp[0]:.3f},}}{{R={wp[1]:.2f}, Z={wp[2]:.1f}}}")
@@ -286,6 +327,16 @@ def main():
         cc = ROOT.TCanvas(f"c{mA}", "", 820, 740); cc.cd(); draw_one(mA, *results[mA], big=True)
         o = f"{OUTDIR}/lowmass_score_R_significance_mA{mA}.pdf"
         cc.SaveAs(o); cc.SaveAs(o.replace(".pdf", ".png")); print("saved", o)
+
+    # stand-alone mA30 panel (HIGH-MASS model). mA30 has R~1.2-1.3 across the whole scan (sculpting
+    # risk flagged by the AN R-table); its working point (red star) is the MVAcut from JSON_PATH.
+    mA = 30
+    pts30 = scan_high(mA); r1_30 = r_equals_one(pts30); wp30 = chosen_wp(mA, pts30)
+    print(f"{mA:>3}  {r1_30[0]:>9.3f}  {r1_30[2]:>7.2f}   {'-':>9}  {'-':>6}  {'-':>7}   "
+          f"{wp30[0]:>8.3f}  {wp30[1]:>6.2f}  {wp30[2]:>6.1f}   (high-mass model)")
+    cc = ROOT.TCanvas("c30", "", 820, 740); cc.cd(); draw_one(mA, pts30, r1_30, wp30, big=True)
+    o = f"{OUTDIR}/highmass_score_R_significance_mA{mA}.pdf"
+    cc.SaveAs(o); cc.SaveAs(o.replace(".pdf", ".png")); print("saved", o)
 
 if __name__ == "__main__":
     main()

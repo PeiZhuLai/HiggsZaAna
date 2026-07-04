@@ -699,6 +699,13 @@ def main():
                         float(hist_signal[r][sig].GetBinCenter(p[0]) - hist_signal[r][sig].GetBinWidth(p[0]) / 2.0)
                         for p in partitions
                     ]
+                    # Low-mass mA1/2/3 use the pinned R=1 working-point cut (MVAcut_points_run3.json),
+                    # NOT the significance-max boundary -> report that cut AND integrate the
+                    # signal-eff / smoothed-bkg details at it (so the yields table is self-consistent
+                    # with the cut actually used in the analysis). [Pei-Zhu 2026-06-20]
+                    _wp_cut = WP_OVERRIDE.get(sig) if (nCats == 1 and len(partitions) == 1 and partitions[0][0] >= 1) else None
+                    if _wp_cut is not None:
+                        boundaries = [float(_wp_cut)]
                     obj = {
                         "nCats": int(nCats),
                         "region": str(r),
@@ -708,7 +715,10 @@ def main():
                     }
                     # 僅在 1 類別時，補充詳細欄位（對照舊 txt 內容）
                     if nCats == 1 and len(partitions) == 1 and partitions[0][0] >= 1:
-                        low_bin = partitions[0][0]
+                        if _wp_cut is not None:
+                            low_bin = hist_signal[r][sig].GetXaxis().FindBin(_wp_cut + 1e-6)
+                        else:
+                            low_bin = partitions[0][0]
                         signal_total = float(hist_signal[r][sig].Integral(1, nBins+1))
                         events_total = int(hist_signal[r][sig].GetEntries())
                         signal_cut = float(hist_signal[r][sig].Integral(low_bin, nBins))

@@ -26,8 +26,11 @@ WORKER="${SCRIPT_DIR}/run_one_file.sh"
 PROXY="${X509_USER_PROXY:-/afs/cern.ch/user/p/pelai/.x509up_pelai}"
 OUT_BASE="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD"
 WANTED_ERA="${1:-2024}"
+TAGFILTER="${2:-}"                                   # optional regex: only process matching tags
 DRY_RUN="${DRY_RUN:-0}"
 FILES_PER_JOB="${FILES_PER_JOB:-8}"
+REDIR="${REDIR:-root://cms-xrd-global.cern.ch/}"     # xrootd redirector; override to force a site
+                                                     # e.g. REDIR=root://cmsxrootd.fnal.gov/ for FNAL replicas
 MODE="data"
 
 mapfile -t entries < <(python3 - "${SAMPLE_JSON}" "${WANTED_ERA}" <<'PY'
@@ -56,6 +59,7 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh > /dev/null 2>&1
 total_jobs=0; total_missing=0; n_submit=0; n_skip=0
 for entry in "${entries[@]}"; do
     IFS='|' read -r era tag das <<< "${entry}"
+    if [ -n "${TAGFILTER}" ] && ! echo "${tag}" | grep -qE "${TAGFILTER}"; then continue; fi
     STAGE="${SCRIPT_DIR}/stage/${tag}"
     OUT_EOS="${OUT_BASE}/${tag}"
     mkdir -p "${STAGE}"
@@ -73,7 +77,7 @@ for entry in "${entries[@]}"; do
     DONE_TXT="${STAGE}/done_uuids.txt"
     ls "${OUT_EOS}"/*.root 2>/dev/null | sed -E 's#.*_([0-9a-fA-F-]+)\.root$#\1#' | sort -u > "${DONE_TXT}"
     MISS_TXT="${STAGE}/missing.txt"
-    awk 'NR==FNR{done[$0]=1;next}{n=$0; sub(/.*\//,"",n); sub(/\.root$/,"",n); if(!(n in done)) print "root://cms-xrd-global.cern.ch/"$0}' \
+    awk -v redir="${REDIR}" 'NR==FNR{done[$0]=1;next}{n=$0; sub(/.*\//,"",n); sub(/\.root$/,"",n); if(!(n in done)) print redir $0}' \
         "${DONE_TXT}" "${FILES_TXT}" > "${MISS_TXT}"
     nmiss=$(wc -l < "${MISS_TXT}")
 

@@ -46,6 +46,17 @@ export SCRAM_ARCH=el9_amd64_gcc12
 cd /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/CMSSW_15_0_14/src
 eval `scramv1 runtime -sh`
 
+# XRootD timeout tuning: some dataset replicas (e.g. EGamma1_RunF at RAL-LCG2)
+# are slow and reads die with "Operation expired" (code 206) under the default
+# request timeout. Give slow remote reads a longer window before giving up, and
+# more aggressive reconnection, so global-redirector reads to laggy sites finish
+# instead of failing the whole file.
+export XRD_REQUESTTIMEOUT=7200      # per-request timeout (s); default 1800
+export XRD_STREAMTIMEOUT=1800       # idle stream timeout (s)
+export XRD_TIMEOUTRESOLUTION=30
+export XRD_CONNECTIONWINDOW=120     # time to establish a connection before retry
+export XRD_CONNECTIONRETRY=4
+
 # Workspace on local scratch
 WORKDIR="${TMPDIR:-/tmp/$USER}/mlnano_$$"
 mkdir -p "${WORKDIR}"
