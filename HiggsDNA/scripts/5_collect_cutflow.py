@@ -38,11 +38,12 @@ from typing import Dict, List, Tuple, Optional, Iterator, Iterable, Set
 
 start_time = time.time()
 
-baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs"
+# NOTE: baseDir/outputDir 可用環境變數覆蓋（方便小批量測試寫到 scratch，不動正式 JSON）
+baseDir = os.environ.get("CUTFLOW_BASEDIR", "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs")
 
 dataType = ["Data", "Bkg_MC", "Sig_MC"]
 
-outputDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
+outputDir = os.environ.get("CUTFLOW_OUTPUTDIR", "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list")
 
 # Year of Signal
 year_sig_2022 = ["2022preEE", "2022postEE"]
@@ -134,23 +135,56 @@ MUON_STUDY_CUTFLOW_TYPES = [
     "zgammas_mu_munosip3d_w",
 ]
 
+# --- NEW: photon electron-veto (CSEV) scenario cutflows ---
+# baseline (e-veto applied) vs removed, inclusive channel.
+PH_EVETO_CUTFLOW_TYPES = [
+    "zgammas_ph_eveto",
+    "zgammas_ph_eveto_w",
+    "zgammas_ph_noeveto",
+    "zgammas_ph_noeveto_w",
+]
+
+# --- NEW: dR(gamma,gamma)-binned inclusive cutflows (3 mutually-exclusive bins) ---
+DR_BIN_CUTFLOW_TYPES = [
+    "zgammas_dr_lt_0p1",
+    "zgammas_dr_lt_0p1_w",
+    "zgammas_dr_0p1_0p3",
+    "zgammas_dr_0p1_0p3_w",
+    "zgammas_dr_gt_0p3",
+    "zgammas_dr_gt_0p3_w",
+]
+
 # --- CHANGED: include PHID *_w types in default list ---
 DEFAULT_CUTFLOW_TYPES = (
     BASE_CUTFLOW_TYPES
     + SIP3D_CUTFLOW_TYPES
     + MUON_STUDY_CUTFLOW_TYPES
+    + PH_EVETO_CUTFLOW_TYPES
     + PHID_CUTFLOW_TYPES
+    + DR_BIN_CUTFLOW_TYPES
 )
 
 # A minimal mapping for nicer printing
 LABELS_COMMON = {
     "all": "Initial Events",
+    # NEW: lepton selection split (inclusive zgammas/zgammas_w only)
+    "e_sel": r"$e$ selection",
+    "emu_sel": r"$e+\mu$ selection",
     "N_lep_sel": r"$N_{l}\geq 2$",
-    "trig_cut": "Trigger",
+    "trig_cut": r"$e+\mu$+trigger",
     "lep_pt_cut": r"Lepton Trigger $p_T$ Cut",
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
+    # NEW: fine a-candidate / photon selection decomposition
+    "ph_ge2": r"$N_{\gamma}\geq 2$",
+    "ph_pt": r"$2\gamma\,p_T > 10\,\mathrm{GeV}$",
+    "ph_eta": r"$2\gamma$ $\eta$ acceptance",
+    "ph_id_hoe": r"$2\gamma$ H/E",
+    "ph_id_chiso": r"$2\gamma$ PF ch. iso",
+    "ph_id_hcaliso": r"$2\gamma$ PF HCal iso",
+    "ph_eveto": r"$2\gamma$ e-veto",
+    "ph_lepovlp": r"$2\gamma$ lepton/$\gamma$ overlap",
     "g_kin_cut": "Photon Kinematic Cuts",
-    "has_2g_cand": r"$N_{\gamma}\geq 2$",
+    "has_2g_cand": r"$N_{\gamma}\geq 2$ ($a$ candidate)",
     "sel_h": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
     "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
     "sel_h_2": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
@@ -163,7 +197,7 @@ LABELS_COMMON = {
 LABELS_COMMON_ele_ip3d = {
     "all": "Initial Events",
     "N_lep_sel": r"$N_{l}\geq 2$",
-    "trig_cut": "Trigger",
+    "trig_cut": r"$e+\mu$+trigger",
     "lep_pt_cut": r"Lepton Trigger $p_T$ Cut",
     "ele_ip3d_cut": r"Electron SIP3D Cut",
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
@@ -352,17 +386,60 @@ def parse_generator_weight_sum(text: str) -> Optional[float]:
         return None
 
 
+def _out_has_cutflow(fp: str) -> bool:
+    """該 .out 是否含 CutFlow JSON payload（=job 有跑到 tagger 產出 cutflow）。
+    失敗重投（EOS-env/cling 啟動就掛）的 .out 沒有此標記，不應被選中而蓋掉早期好的 .out。"""
+    try:
+        # 快篩：失敗重投的 .out（EOS-env/cling 啟動就掛）很小(<~5KB)，不可能有 cutflow
+        if os.path.getsize(fp) < 5000:
+            return False
+    except Exception:
+        pass
+    try:
+        with open(fp, "r", errors="ignore") as f:
+            for line in f:                      # 逐行掃，遇標記即停（大 .out 不整檔讀）
+                if "CutFlow JSON" in line:
+                    return True
+        return False
+    except Exception:
+        return False
+
+
 def pick_best_out_file(out_files: List[str]) -> Optional[str]:
     """
     If multiple *.out exist:
-    - Prefer those whose filename ends with a number like 10633893.0.out; pick the largest numeric one.
-    - Else fall back to newest mtime.
+    - 先只保留「含 CutFlow JSON」的 .out（避免失敗重投的空 .out 蓋掉有 cutflow 的舊 attempt）；
+      若都沒有，才退回全部候選。
+    - 在候選中，選檔名數字（cluster.proc）最大的；再退回 newest mtime。
     """
     if not out_files:
         return None
 
+    # 可用 env CUTFLOW_MIN_CLUSTER 只考慮 cluster 號 >= 此值的 .out：
+    # 用來排除舊 pre-eveto production 的 .out（沒有 eveto cut_type、且是 17-syst 的大檔會拖慢解析）。
+    try:
+        _min_cluster = float(os.environ.get("CUTFLOW_MIN_CLUSTER", "0") or "0")
+    except Exception:
+        _min_cluster = 0.0
+    if _min_cluster > 0:
+        filt = []
+        for fp in out_files:
+            m = _NUM_OUT_RE.search(os.path.basename(fp))
+            if m:
+                try:
+                    if float(m.group(1)) >= _min_cluster:
+                        filt.append(fp)
+                except Exception:
+                    pass
+        if filt:               # 有符合的才過濾；全不符合就退回原集合（保守）
+            out_files = filt
+
+    # 優先選有 cutflow 的 .out（多次 attempt 時，失敗的空 .out 常有更大 cluster 號會誤選）
+    with_cf = [fp for fp in out_files if _out_has_cutflow(fp)]
+    candidates = with_cf if with_cf else list(out_files)
+
     scored: List[Tuple[float, str]] = []
-    for fp in out_files:
+    for fp in candidates:
         m = _NUM_OUT_RE.search(os.path.basename(fp))
         if m:
             try:
@@ -374,8 +451,8 @@ def pick_best_out_file(out_files: List[str]) -> Optional[str]:
         return scored[-1][1]
 
     # Fallback: newest modified
-    out_files.sort(key=lambda x: os.path.getmtime(x))
-    return out_files[-1]
+    candidates.sort(key=lambda x: os.path.getmtime(x))
+    return candidates[-1]
 
 
 def iter_job_out_files(sample_dir: str) -> Iterator[str]:
@@ -920,13 +997,20 @@ def main() -> int:
     n_ok = 0
     n_skip = 0
 
+    # 可用 env CUTFLOW_DATATYPES 限制只跑某些 dataset_type（例如 "Bkg_MC,Sig_MC" 跳過龐大的 Data）
+    _dt_filter = os.environ.get("CUTFLOW_DATATYPES", "").strip()
+    _allowed_dts = set(x.strip() for x in _dt_filter.split(",") if x.strip()) if _dt_filter else None
+
     for dataset_type, dataset, year in iter_all_samples():
+        if _allowed_dts is not None and dataset_type not in _allowed_dts:
+            continue
         sample_dir = build_sample_dir(base_dir, dataset_type, dataset, year)
         if not os.path.isdir(sample_dir):
             n_skip += 1
             print(f"[SKIP] missing dir: {sample_dir}")
             continue
 
+        print(f"[..] processing {dataset_type} {dataset} {year}", flush=True)  # DEBUG progress
         out_files = list(iter_job_out_files(sample_dir))
         if not out_files:
             n_skip += 1

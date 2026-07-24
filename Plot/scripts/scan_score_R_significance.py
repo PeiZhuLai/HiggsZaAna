@@ -47,6 +47,48 @@ HIGHMASS_META  = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_
 LOWM     = [1, 2, 3]
 PEAK     = (120.0, 130.0)
 SCORE_RANGE = (0.70, 0.99)   # extended so the chosen high-score working points (mA2 0.98, mA3 0.988) are on-plot
+
+# --- stored-score inputs: regenerate the low-mass figure from the SAME BDT scores as the AN
+# sculpt-R table (make_sculpt_R_table_from_wp.py), i.e. the analysis's stored MVA_Score_mA_M{n},
+# so the figure R and the table R are computed identically (no re-scoring with the .pkl). ------
+SCORED_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
+_BKG_BY_YEAR = {
+    "2022preEE":   ["DYGto2LG_10to50", "DYGto2LG_50to100", "DYJetsToLL"],
+    "2022postEE":  ["DYGto2LG_10to50", "DYGto2LG_50to100", "DYJetsToLL"],
+    "2023preBPix": ["DYGto2LG_10to100", "DYJetsToLL"],
+    "2023postBPix": ["DYGto2LG_10to100", "DYJetsToLL"],
+    "2024":        ["DYGto2LG_10to100", "DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"],
+}
+_ERAS = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
+
+def _load_scored(paths, mA):
+    """Concatenate H_mass, factor and the stored score MVA_Score_mA_M{mA} over the given scored
+    files; apply the 95<m<180 window. Uses the analysis's own BDT score (no re-scoring)."""
+    sbr = f"MVA_Score_mA_M{mA}"
+    H, W, Sc = [], [], []
+    for p in paths:
+        if not os.path.exists(p):
+            continue
+        a = uproot.open(p)["inclusive"].arrays(["H_mass", "factor", sbr], library="np")
+        H.append(a["H_mass"]); W.append(a["factor"]); Sc.append(a[sbr])
+    H = np.concatenate(H); W = np.concatenate(W); Sc = np.concatenate(Sc)
+    m = (H > 95) & (H < 180) & np.isfinite(W) & np.isfinite(Sc)
+    return {"H_mass": H[m], "factor": W[m], "s": Sc[m]}
+
+def load_scored_bkg(mA):
+    paths = [f"{SCORED_BASE}/{s}/{y}.root" for y, ss in _BKG_BY_YEAR.items() for s in ss]
+    return _load_scored(paths, mA)
+
+def load_scored_sig(mA):
+    return _load_scored([f"{SCORED_BASE}/mA_M{mA}/{y}.root" for y in _ERAS], mA)
+
+def _R_direct(bk, cut):
+    """R at a fixed cut on the stored-score background (identical definition to the AN table:
+    RAW weights, negatives kept, so the red star equals make_sculpt_R_table_from_wp.py)."""
+    w = bk["factor"]; H = bk["H_mass"]; s = bk["s"]
+    peak = (H > PEAK[0]) & (H < PEAK[1]); frac = w[peak].sum() / w.sum()
+    pB = s > cut; denom = w[pB].sum()
+    return float(w[pB & peak].sum() / denom / frac) if denom > 0 and frac > 0 else float("nan")
 LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 
 # ---------------------------------------------------------------------------------------------
@@ -90,11 +132,14 @@ def score_high(a, mA):
     X = np.column_stack([a[b] for b in BASE_VARS] + [asym, param])[:, idx]
     return mdl_high.predict_proba(X)[:, 1]
 
-def scan(mA, bk, wB, Hb, peak, frac):
-    sg = load(f"{ROOT_DIR}/mA_M{mA}/run3.root")
-    wS = np.clip(sg["factor"], 0, None); Hs = sg["H_mass"]
+def scan(mA):
+    """R / Asimov-Z scan vs BDT cut for one low-mass hypothesis, using the STORED BDT scores
+    (MVA_Score_mA_M{mA}) on the combined DY background and the mA signal. Returns (pts, bk)."""
+    bk = load_scored_bkg(mA); sg = load_scored_sig(mA)
+    wB = bk["factor"]; Hb = bk["H_mass"]; sb = bk["s"]   # RAW weights (match the AN sculpt-R table)
+    peak = (Hb > PEAK[0]) & (Hb < PEAK[1]); frac = wB[peak].sum() / wB.sum()
+    wS = np.clip(sg["factor"], 0, None); Hs = sg["H_mass"]; ss = sg["s"]
     pks = (Hs > PEAK[0]) & (Hs < PEAK[1])
-    sb, ss = score(bk, mA), score(sg, mA)
     pts = []
     for thr in np.linspace(*SCORE_RANGE, 45):
         pB = sb > thr; nB = wB[pB & peak].sum()
@@ -104,7 +149,7 @@ def scan(mA, bk, wB, Hb, peak, frac):
         S = wS[(ss > thr) & pks].sum()
         Z = _significance_asimov_like(S, nB)        # Asimov-like significance, S & B in 120-130
         pts.append((thr, R, Z))
-    return np.array(pts)
+    return np.array(pts), bk
 
 def scan_high(mA):
     """Same R / Asimov-Z scan as scan() but with the HIGH-MASS model (for the mA30 panel).
@@ -138,12 +183,12 @@ def r_equals_one(pts):
         j = int(np.argmin(np.abs(R - 1))); best = (thr[j], R[j], Z[j])
     return best
 
-def chosen_wp(mA, pts):
-    """Final working point for this mA (used for the red star AND for --write-json).
-    Priority: FIXED_WP (hardcoded mA2/mA3) > MVAcut in JSON_PATH > R=1 crossing.
-    R and Z are interpolated from the scan curve at that cut. This decouples the chosen
-    point from r_equals_one so mA2/mA3 stay at their pinned cuts (mA2=0.98, mA3=0.988)
-    and mA1 keeps its R=1 crossing (~0.963)."""
+def chosen_wp(mA, pts, bk=None):
+    """Final working point for this mA (red star). Priority for the cut: FIXED_WP (pinned
+    mA2/mA3) > MVAcut in JSON_PATH > R=1 crossing. If a stored-score background `bk` is given
+    (low-mass path) R is computed DIRECTLY at that cut so the red star equals the AN sculpt-R
+    table value; otherwise (high-mass mA30 panel) R is interpolated from the scan curve. Z is
+    always interpolated from the scan curve."""
     cut = None
     if mA in FIXED_WP:
         cut = float(FIXED_WP[mA])               # hardcoded: never reverts to the R=1 crossing
@@ -155,9 +200,8 @@ def chosen_wp(mA, pts):
                        if int(e["mA"]) == mA and e.get("MVAcut") is not None)
         except Exception:
             return r_equals_one(pts)
-    thr = pts[:, 0]
-    R = float(np.interp(cut, thr, pts[:, 1]))
-    Z = float(np.interp(cut, thr, pts[:, 2]))
+    R = _R_direct(bk, cut) if bk is not None else float(np.interp(cut, pts[:, 0], pts[:, 1]))
+    Z = float(np.interp(cut, pts[:, 0], pts[:, 2]))
     return (cut, R, Z)
 
 keep = []   # keep ROOT objects alive
@@ -294,17 +338,18 @@ def main():
     args = ap.parse_args()
 
     os.makedirs(OUTDIR, exist_ok=True)
-    write_sculpt_R_json()   # combined R(m_a) JSON for all mass points (AN table)
+    # NB: the AN sculpt-R table (tab:sculpt_R) is now produced by make_sculpt_R_table_from_wp.py
+    # from the STORED scores; write_sculpt_R_json() (which re-scores with the .pkl) is no longer
+    # used for the table and is left disabled to avoid writing inconsistent values.
+    # write_sculpt_R_json()
     ROOT.gROOT.SetBatch(True); ROOT.gStyle.SetOptStat(0); ROOT.gStyle.SetPalette(ROOT.kBird)
-    bk = load(f"{ROOT_DIR}/All_Bkg/run3.root"); wB = np.clip(bk["factor"], 0, None); Hb = bk["H_mass"]
-    peak = (Hb > PEAK[0]) & (Hb < PEAK[1]); frac = wB[peak].sum() / wB.sum()
 
     results = {}
     print(f"{'mA':>3}  {'R=1 cut':>9}  {'Z@R=1':>7}   {'R-min cut':>9}  {'R-min':>6}  {'Z@Rmin':>7}   {'WP cut':>8}  {'R@WP':>6}  {'Z@WP':>6}")
     for mA in LOWM:
-        pts = scan(mA, bk, wB, Hb, peak, frac)
+        pts, bk = scan(mA)   # low-mass scan on the STORED BDT scores (matches the AN table)
         r1 = r_equals_one(pts); j = int(np.argmin(pts[:, 1]))
-        wp = chosen_wp(mA, pts)   # red star = MVAcut from JSON (final selected working point)
+        wp = chosen_wp(mA, pts, bk)   # red star = R directly at the JSON MVAcut (matches the AN table)
         print(f"{mA:>3}  {r1[0]:>9.3f}  {r1[2]:>7.2f}   {pts[j,0]:>9.3f}  {pts[j,1]:>6.2f}  {pts[j,2]:>7.2f}   {wp[0]:>8.3f}  {wp[1]:>6.2f}  {wp[2]:>6.1f}")
         results[mA] = (pts, r1, wp)
 

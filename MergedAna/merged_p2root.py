@@ -48,9 +48,9 @@ SEL_GE1 = os.environ.get("SEL_MERGED_GE1", "0") == "1"
 ROI_VAR = "MLPhoton_lead_mass"
 
 # Signal ML parquet (all 9 sub-GeV mass points; nominal + 16 syst per tag).
-SIG_ML = "/eos/home-p/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all"
+SIG_ML = "/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all"
 # Data ML friend parquet (per-dataset dirs from run_merged_data_ml_friend.sh).
-DATA_ML_GLOB = ("/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend/"
+DATA_ML_GLOB = ("/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend/"
                 "Data_2024_*/*/merged_nominal.parquet")
 
 # Per-mA ROI window on MLPhoton_lead_mass = [q16, q84] of the signal reco
@@ -193,7 +193,7 @@ def write_root(trees, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--indir", default=SIG_ML, help="signal ML parquet base (Sig_MC_MLNANO_all)")
-    ap.add_argument("--outdir", default="/eos/home-p/pelai/HZa/root_MVAcut")
+    ap.add_argument("--outdir", default="/eos/cms/store/group/phys_susy/pelai/HZa_merged/root_MVAcut")
     ap.add_argument("--mass-lo", type=float, default=100.0)
     ap.add_argument("--mass-hi", type=float, default=180.0)
     ap.add_argument("--signals", default="M0p1,M0p2,M0p3,M0p4,M0p5,M0p6,M0p7,M0p8,M0p9")

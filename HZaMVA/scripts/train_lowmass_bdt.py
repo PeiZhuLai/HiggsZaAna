@@ -12,7 +12,7 @@ variants (diagnosed in diag_lowma_vars.py):
 """
 import numpy as np, xgboost as xgb
 from hza_features import (_load, build_matrix, BASE_VARS, HZG_GGF_VARS,
-                          _sideband_reweight, ROOT_DIR)
+                          _sideband_reweight, signal_weight, ROOT_DIR)
 
 LOWM = [1, 2, 3]
 FULL16 = BASE_VARS + ["pho_pt_asym", "param"]
@@ -46,12 +46,12 @@ def wq(v, wt, q): o = np.argsort(v); c = np.cumsum(wt[o]) / wt.sum(); return np.
 # ---- load once: low-mass signal (train + inclusive), background (train + inclusive) ----
 # extra=GGF_READ pulls in the new HZgamma ggF-style branches (require a Parque2Root_BDT.py re-run).
 print("[load] signal mA=1,2,3 + All_Bkg (with ggF candidates) ...")
-sig_tr = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", "train", 40000, extra=GGF_READ) for m in LOWM}
-sig_in = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", "inclusive", extra=GGF_READ) for m in LOWM}
+sig_tr = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", "train", 40000, extra=GGF_READ + ["Z_m", "event"]) for m in LOWM}
+sig_in = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", "inclusive", extra=GGF_READ + ["Z_m", "event"]) for m in LOWM}
 bk_tr = _load(f"{ROOT_DIR}/All_Bkg/run3.root", "train", 400000, extra=GGF_READ + ["Z_m", "event"])
 bk_in = _load(f"{ROOT_DIR}/All_Bkg/run3.root", "inclusive", extra=GGF_READ)
 
-ws = np.concatenate([np.clip(sig_tr[m]["factor"], 0, None) for m in LOWM])
+ws = np.concatenate([np.clip(signal_weight(sig_tr[m], m), 0, None) for m in LOWM])  # signal: factor x sideband reweight
 bhyp = np.random.default_rng(1).choice(LOWM, size=len(bk_tr["H_m"]))   # per-event bkg mass hyp
 wb = np.clip(bk_tr["factor"] * _sideband_reweight(bk_tr), 0, None)
 y = np.concatenate([np.ones(len(ws)), np.zeros(len(wb))])
@@ -80,7 +80,7 @@ for name, keep in VARIANTS.items():
     for m in LOWM:
         ss = clf.predict_proba(build_matrix(sig_in[m], m, keep))[:, 1]
         sb = clf.predict_proba(build_matrix(bk_in, m, keep))[:, 1]
-        wss = np.clip(sig_in[m]["factor"], 0, None)
+        wss = np.clip(signal_weight(sig_in[m], m), 0, None)
         sv += [ss, sb]; yv += [np.ones(len(ss)), np.zeros(len(sb))]
         wv += [wss * (wBe.sum() / wss.sum()), wBe]
     auc = weighted_auc(np.concatenate(sv), np.concatenate(yv), np.concatenate(wv))

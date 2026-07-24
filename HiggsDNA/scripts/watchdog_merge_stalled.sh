@@ -25,7 +25,7 @@ export PATH=$ENVDIR/bin:/usr/bin:/bin
 export PYTHONPATH=$REPO
 cd "$REPO"
 
-FRIEND_BASE=/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend
+FRIEND_BASE=/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend
 POLL=${POLL:-60}
 STABLE_SECONDS=${STABLE_SECONDS:-600}   # no new chunk for this long => bulk production done
 STRAGGLER_MAX=${STRAGGLER_MAX:-15}      # only reap when FEW jobs remain (true RAL stragglers);
@@ -36,7 +36,9 @@ log(){ echo "[$(date +%m-%d\ %H:%M:%S)] $*" | tee -a "$WD_LOG"; }
 
 log "watchdog start (POLL=${POLL}s STABLE=${STABLE_SECONDS}s STUCK=${STUCK_MINUTES}min)"
 
-condor_total(){ condor_q 2>/dev/null | sed -n 's/.*Total for pelai: \([0-9]*\) jobs.*/\1/p' | head -1; }
+# tag-scoped: count ONLY merged-data friend jobs (Iwd = .../HZa/HiggsZaAna/HiggsDNA), so
+# co-running productions (HZgamma, Parquet2Rootfile, Sig_MC) don't block STALL detection.
+condor_total(){ condor_q pelai -af Iwd 2>/dev/null | grep -c "HZa/HiggsZaAna/HiggsDNA"; }
 # running clusters older than STUCK_MINUTES (RAL-stuck stragglers)
 stuck_clusters(){
     condor_q pelai -run -af ClusterId JobStartDate ServerTime 2>/dev/null \
@@ -46,7 +48,9 @@ merged_count(){ find "$FRIEND_BASE"/Data_2024_*/ -name merged_nominal.parquet 2>
 
 while pgrep -f orchestrate_data_ml_production >/dev/null; do
     # current tag = output_dir of the live run_analysis.py
-    outdir=$(ps -ef | grep "[r]un_analysis.py" | grep -oE -- "--output_dir [^ ]+" | awk '{print $2}' | head -1)
+    # ONLY the merged-data run_analysis (parquet_friend/Data_2024_*). A concurrent unrelated
+    # run_analysis (e.g. Sig_MC in parquet_DNA_tmp) must NOT be picked up or interfered with.
+    outdir=$(ps -ef | grep "[r]un_analysis.py" | grep -oE -- "--output_dir [^ ]+" | awk '{print $2}' | grep "parquet_friend/Data_2024_" | head -1)
     if [ -z "${outdir:-}" ]; then
         sleep "$POLL"; continue
     fi
@@ -101,7 +105,9 @@ while pgrep -f orchestrate_data_ml_production >/dev/null; do
         sleep 4
         # monitor dead -> queued jobs won't resubmit; remove exactly the leftover cluster
         # ids of THIS tag (snapshot now), never a blanket 'condor_rm pelai'.
-        leftover=$(condor_q pelai -af ClusterId 2>/dev/null | sort -u | tr '\n' ' ')
+        # remove ONLY this tag's leftover jobs (match Iwd to the tag), never a blanket
+        # pelai sweep -- a concurrent Sig_MC production shares the queue and must be spared.
+        leftover=$(condor_q pelai -af ClusterId Iwd 2>/dev/null | grep "$tag" | awk '{print $1}' | sort -u | tr '\n' ' ')
         if [ -n "${leftover// /}" ]; then
             log "condor_rm leftover clusters: $leftover"
             condor_rm $leftover >>"$WD_LOG" 2>&1

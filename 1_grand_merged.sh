@@ -40,12 +40,12 @@ set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 MERGED_DIR="${MERGED_DIR:-${PROJECT_DIR}/MergedAna}"
-EOS="${EOS:-/eos/project/h/htozg-dy-privatemc/pelai/HZa}"
+EOS="${EOS:-/eos/cms/store/group/phys_susy/pelai/HZa_merged}"
 CMSSW_SRC="${CMSSW_SRC:-/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src}"
 FLASHGG="${FLASHGG:-${CMSSW_SRC}/flashggFinalFit}"
-ROOT_MVACUT="${ROOT_MVACUT:-/eos/home-p/pelai/HZa/root_MVAcut}"
+ROOT_MVACUT="${ROOT_MVACUT:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/root_MVAcut}"
 # Signal ML parquet (all 9 sub-GeV mass points, nominal+16 syst; MLPhoton_lead_*).
-SIG_ML_DIR="${SIG_ML_DIR:-/eos/home-p/pelai/HZa/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all}"
+SIG_ML_DIR="${SIG_ML_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all}"
 
 # Sub-GeV mass points (flashgg label form, e.g. 0p5 == m_a 0.5 GeV) and channels.
 MASSES="${MASSES:-0p1 0p2 0p3 0p4 0p5 0p6 0p7 0p8 0p9}"

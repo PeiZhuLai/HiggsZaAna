@@ -24,7 +24,7 @@ SAMPLE_JSON="${REPO_DIR}/HiggsDNA/metadata/samples/zgamma_tutorial_sample_manage
 
 WORKER="${SCRIPT_DIR}/run_one_file.sh"
 PROXY="${X509_USER_PROXY:-/afs/cern.ch/user/p/pelai/.x509up_pelai}"
-OUT_BASE="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD"
+OUT_BASE="${OUT_BASE:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/MLNanoAOD}"
 WANTED_ERA="${1:-2024}"
 TAGFILTER="${2:-}"                                   # optional regex: only process matching tags
 DRY_RUN="${DRY_RUN:-0}"

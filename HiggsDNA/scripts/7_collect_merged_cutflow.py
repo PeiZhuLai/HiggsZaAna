@@ -161,6 +161,16 @@ MERGED_CUTFLOW_TYPES = [
     "zgammas_merged_ML_mu_w",
 ]
 
+# --- NEW: dR(gamma,gamma)-binned inclusive cutflows (3 mutually-exclusive bins) ---
+DR_BIN_CUTFLOW_TYPES = [
+    "zgammas_dr_lt_0p1",
+    "zgammas_dr_lt_0p1_w",
+    "zgammas_dr_0p1_0p3",
+    "zgammas_dr_0p1_0p3_w",
+    "zgammas_dr_gt_0p3",
+    "zgammas_dr_gt_0p3_w",
+]
+
 # --- CHANGED: include PHID *_w types in default list ---
 DEFAULT_CUTFLOW_TYPES = (
     BASE_CUTFLOW_TYPES
@@ -168,17 +178,30 @@ DEFAULT_CUTFLOW_TYPES = (
     + MUON_STUDY_CUTFLOW_TYPES
     + PHID_CUTFLOW_TYPES
     + MERGED_CUTFLOW_TYPES
+    + DR_BIN_CUTFLOW_TYPES
 )
 
 # A minimal mapping for nicer printing
 LABELS_COMMON = {
     "all": "Initial Events",
+    # NEW: lepton selection split (inclusive zgammas/zgammas_w only)
+    "e_sel": r"$e$ selection",
+    "emu_sel": r"$e+\mu$ selection",
     "N_lep_sel": r"$N_{l}\geq 2$",
-    "trig_cut": "Trigger",
+    "trig_cut": r"$e+\mu$+trigger",
     "lep_pt_cut": r"Lepton Trigger $p_T$ Cut",
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",
+    # NEW: fine a-candidate / photon selection decomposition
+    "ph_ge2": r"$N_{\gamma}\geq 2$",
+    "ph_pt": r"$2\gamma\,p_T > 10\,\mathrm{GeV}$",
+    "ph_eta": r"$2\gamma$ $\eta$ acceptance",
+    "ph_id_hoe": r"$2\gamma$ H/E",
+    "ph_id_chiso": r"$2\gamma$ PF ch. iso",
+    "ph_id_hcaliso": r"$2\gamma$ PF HCal iso",
+    "ph_eveto": r"$2\gamma$ e-veto",
+    "ph_lepovlp": r"$2\gamma$ lepton/$\gamma$ overlap",
     "g_kin_cut": "Photon Kinematic Cuts",
-    "has_2g_cand": r"$N_{\gamma}\geq 2$",
+    "has_2g_cand": r"$N_{\gamma}\geq 2$ ($a$ candidate)",
     "sel_h": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
     "sel_h_1": r"$m_{ll} + m_{ll\gamma\gamma} > 185\,\mathrm{GeV}$",
     "sel_h_2": r"$95\,\mathrm{GeV} < m_{ll\gamma\gamma} < 180\,\mathrm{GeV}$",
@@ -194,7 +217,7 @@ LABELS_COMMON = {
 LABELS_COMMON_ele_ip3d = {
     "all": "Initial Events",
     "N_lep_sel": r"$N_{l}\geq 2$",
-    "trig_cut": "Trigger",
+    "trig_cut": r"$e+\mu$+trigger",
     "lep_pt_cut": r"Lepton Trigger $p_T$ Cut",
     "ele_ip3d_cut": r"Electron SIP3D Cut",
     "has_z_cand": r"$m_{ll} > 50\,\mathrm{GeV}$",

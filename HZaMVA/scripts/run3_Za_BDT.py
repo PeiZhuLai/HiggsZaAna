@@ -45,7 +45,7 @@ else:
 def bdt_input_branches(base_branches):
     branches = [b for b in base_branches if b not in _DERIVED_FEATURE_SET]
     if SIDEBAND_REWEIGHTER is not None:
-        # The sideband reweight is applied (apply_sideband_reweight_to_bkg) before
+        # The sideband reweight is applied (apply_sideband_reweight) before
         # keep_bdt_matrix_columns() drops non-matrix columns, so any reweight input
         # that is NOT already a BDT training variable must still be read from ROOT.
         # 'event' drives the per-event mass hypothesis; 'Z_m' is a reweight step
@@ -64,7 +64,11 @@ def assign_background_param(dataframe):
         dataframe["param"] = (dataframe["ALP_m"] - dataframe["mass"]) / dataframe["H_m"]
 
 
-def apply_sideband_reweight_to_bkg(dataframe, label):
+def apply_sideband_reweight(dataframe, label):
+    # Generic per-event sideband reweight, applied to BOTH background and signal frames so
+    # signal and background see the SAME data/MC shape correction before the BDT is trained.
+    # (For signal, the mass-hypothesis 'param' column is the true-mass param set at load time;
+    #  out-of-sideband H_m/param bins fall outside the factor edges -> lookup returns 1.)
     if SIDEBAND_REWEIGHTER is None:
         return dataframe
     dataframe["factor_nominal"] = dataframe["factor"]
@@ -559,7 +563,7 @@ for year in years:
         add_derived_features(dfs[year][dataset])
         dfs[year][dataset]['bdt_split'] = 0
         if dataset in bkg_name:
-            apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
+            apply_sideband_reweight(dfs[year][dataset], "{} {}".format(year, dataset))
 
     for dataset in sig_name:
         dfs[year][dataset] = {}
@@ -569,6 +573,8 @@ for year in years:
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             dfs[year][dataset][mass]['bdt_split'] = 0
+            # Apply the SAME sideband reweight to signal as to background (uses the true-mass param above).
+            apply_sideband_reweight(dfs[year][dataset][mass], "{} {} mA{}".format(year, dataset, mass))
             # dfs[year][dataset]['factor'] = dfs[year][dataset]['factor'] * dfs[year][dataset]['pho1SFs'] * dfs[year][dataset]['pho2SFs']
 
 # Load test trees (30% of inclusive) for unbiased BDT evaluation
@@ -580,7 +586,7 @@ for year in years:
         assign_background_param(dfs_test[year][dataset])
         add_derived_features(dfs_test[year][dataset])
         dfs_test[year][dataset]['bdt_split'] = 0
-        apply_sideband_reweight_to_bkg(dfs_test[year][dataset], "{} {} test".format(year, dataset))
+        apply_sideband_reweight(dfs_test[year][dataset], "{} {} test".format(year, dataset))
     for dataset in sig_name:
         dfs_test[year][dataset] = {}
         for mass in mass_list:
@@ -588,6 +594,8 @@ for year in years:
             dfs_test[year][dataset][mass]["mass"] = mass
             dfs_test[year][dataset][mass]['param'] = (dfs_test[year][dataset][mass]['ALP_m'] - dfs_test[year][dataset][mass]['mass']) / dfs_test[year][dataset][mass]['H_m']
             dfs_test[year][dataset][mass]['bdt_split'] = 0
+            # Apply the SAME sideband reweight to signal as to background (uses the true-mass param above).
+            apply_sideband_reweight(dfs_test[year][dataset][mass], "{} {} mA{} test".format(year, dataset, mass))
 
 df_bkg_dy   = pd.concat([dfs[y]["All_Bkg"] for y in years])
 df_bkg_all  = pd.concat([dfs[y][bkg] for y in years for bkg in bkg_name ])
@@ -1450,7 +1458,7 @@ for year in years:
         add_derived_features(dfs[year][dataset])
         dfs[year][dataset]['bdt_split'] = 0
         if dataset in bkg_name:
-            apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
+            apply_sideband_reweight(dfs[year][dataset], "{} {}".format(year, dataset))
 
     for dataset in sig_name:
         dfs[year][dataset] = {}
@@ -1460,6 +1468,8 @@ for year in years:
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             dfs[year][dataset][mass]['bdt_split'] = 0
+            # Apply the SAME sideband reweight to signal as to background (uses the true-mass param above).
+            apply_sideband_reweight(dfs[year][dataset][mass], "{} {} mA{}".format(year, dataset, mass))
 
 
 
@@ -2004,7 +2014,7 @@ for year in years:
         add_derived_features(dfs[year][dataset])
         dfs[year][dataset]['bdt_split'] = 0
         if dataset in bkg_name:
-            apply_sideband_reweight_to_bkg(dfs[year][dataset], "{} {}".format(year, dataset))
+            apply_sideband_reweight(dfs[year][dataset], "{} {}".format(year, dataset))
 
     for dataset in sig_name:
         dfs[year][dataset] = {}
@@ -2014,6 +2024,8 @@ for year in years:
             dfs[year][dataset][mass]["mass"] = mass
             dfs[year][dataset][mass]['param'] = (dfs[year][dataset][mass]['ALP_m'] - dfs[year][dataset][mass]['mass']) / dfs[year][dataset][mass]['H_m']
             dfs[year][dataset][mass]['bdt_split'] = 0
+            # Apply the SAME sideband reweight to signal as to background (uses the true-mass param above).
+            apply_sideband_reweight(dfs[year][dataset][mass], "{} {} mA{}".format(year, dataset, mass))
 
 
 df_bkg_dy   = pd.concat([dfs[y]["All_Bkg"] for y in years])

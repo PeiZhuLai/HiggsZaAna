@@ -5,7 +5,7 @@ identical data/config/seed, prints R(m_a) for all high masses + test AUC side by
 Does NOT touch the deployed model. Runs in higgs-alp-ana.
 """
 import numpy as np, xgboost as xgb
-from hza_features import _load, _feat, BASE_VARS, _sideband_reweight, ROOT_DIR
+from hza_features import _load, _feat, BASE_VARS, _sideband_reweight, signal_weight, ROOT_DIR
 
 HM = [4,5,6,7,8,9,10,15,20,25,30]
 FULL16 = BASE_VARS + ["pho_pt_asym", "param"]
@@ -21,10 +21,10 @@ def wq(v, wt, q): o = np.argsort(v); c = np.cumsum(wt[o]) / wt.sum(); return np.
 
 # build once with FULL feature matrix; slice per feature-set via index lists
 def build(tree, n_bkg=600000):
-    sig = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, None) for m in HM}
+    sig = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, None, extra=["Z_m", "event"]) for m in HM}
     bk  = _load(f"{ROOT_DIR}/All_Bkg/run3.root", tree, n_bkg, extra=["Z_m", "event"])
     Xs = np.vstack([_feat(sig[m], m) for m in HM])
-    ws = np.concatenate([np.clip(sig[m]["factor"], 0, None) for m in HM])
+    ws = np.concatenate([np.clip(signal_weight(sig[m], m), 0, None) for m in HM])  # signal: factor x sideband reweight
     bhyp = np.random.default_rng(1).choice(HM, size=len(bk["H_m"]))
     Xb = _feat(bk, 0); Xb[:, FULL16.index("param")] = (bk["ALP_m"] - bhyp) / bk["H_m"]
     wb = np.clip(bk["factor"] * _sideband_reweight(bk), 0, None)

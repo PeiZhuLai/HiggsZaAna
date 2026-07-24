@@ -180,6 +180,15 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
     photons = ak.with_field(photons, ecalPFClusterIso_PUcorr, "ecalPFClusterIso_PUcorr")
     photons = ak.with_field(photons, chiso_PUcorr, "chiso_PUcorr")
 
+    # NEW: per-photon ID sub-cut flags used only by the fine a-candidate cutflow
+    # decomposition (see za_tagger_resolved.produce_and_select_zgammas). Default to
+    # all-True (matches the Run2 dummy ID, which is all-true); the Run3 branch below
+    # overrides them with the real H/E, PFchIso, PFHCalIso sub-cuts. This does NOT
+    # change any selection: the nominal id_cut is still phid_custom_tight.
+    ph_id_hoe_flag = no_cut
+    ph_id_chiso_flag = no_cut
+    ph_id_hcaliso_flag = no_cut
+
     if int(year) < 2020:
         phid_custom_tight = ak.ones_like(photons.pt) # all true, dummy TODO
         phid_official_tight = ak.ones_like(photons.pt) # all true, dummy TODO
@@ -341,6 +350,10 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
         PFECalIso_cut = (photons.isScEtaEB & PFECalIso_barrel_cut) | (photons.isScEtaEE & PFECalIso_endcap_cut)
 
         phid_custom_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut
+        # NEW: capture the 3 nominal ID sub-cuts (their AND == phid_custom_tight == id_cut)
+        ph_id_hoe_flag = hoe_cut
+        ph_id_chiso_flag = PFChIso_cut
+        ph_id_hcaliso_flag = PFHCalIso_cut
         phid_custom_extend_tight = hoe_cut & PFChIso_cut & PFHCalIso_cut & sieie_cut
         phid_sieie_tight = sieie_cut
         phid_PFECalIso_tight = PFECalIso_cut
@@ -485,6 +498,20 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
         ak.broadcast_arrays(photons.electronIdx, False)[1],
         ak.flatten(ak.any(new_pho[:, :, None] == new_ele, axis=-2), axis=-1)
     ) # some events may have no electrons, so we need to replace None with False
+
+    # NEW: per-photon boolean flags for the fine a-candidate cutflow decomposition.
+    # These only ADD fields to the returned photons collection; they do not alter any
+    # cut value, mask, ordering, or the returned all_cuts selection. Note that
+    #   pass_ph_id_hoe & pass_ph_id_chiso & pass_ph_id_hcaliso == id_cut (phid_custom_tight)
+    # so an upstream cumulative "N_gamma>=2" count using these reproduces the nominal
+    # photon selection exactly (see za_tagger_resolved.produce_and_select_zgammas).
+    photons = ak.with_field(photons, pt_cut, "pass_ph_pt")
+    photons = ak.with_field(photons, eta_cut, "pass_ph_eta")
+    photons = ak.with_field(photons, ph_id_hoe_flag, "pass_ph_id_hoe")
+    photons = ak.with_field(photons, ph_id_chiso_flag, "pass_ph_id_chiso")
+    photons = ak.with_field(photons, ph_id_hcaliso_flag, "pass_ph_id_hcaliso")
+    photons = ak.with_field(photons, e_veto_cut, "pass_ph_eveto")
+    photons = ak.with_field(photons, eg_overlap_cut, "pass_ph_eg_overlap")
 
     cut_names = ["no_cut", "pt", "eta", "id", "e_veto", "ele_pho_overlap"]
     cut_results = [no_cut, pt_cut, eta_cut, id_cut, e_veto_cut, eg_overlap_cut]

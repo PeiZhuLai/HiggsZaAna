@@ -178,6 +178,11 @@ DEFAULT_OPTIONS = {
         # Study removing nominal muon sip3d cut
         "study_mu_no_sip3d_replacement": True,
 
+        # NEW: photon electron-veto (CSEV) scenario study
+        # baseline (e-veto applied) vs removed, inclusive channel; mirrors the
+        # fine a-candidate decomposition (only swaps has_2gamma_cand's e-veto step).
+        "study_ph_eveto_scenarios": True,
+
         # NEW: lepton pT-binned trigger efficiency study (phid-like)
         "study_lep_trigger_eff_ptbins": True,
         # bins: [low0, low1, ..., last_low, +inf)
@@ -496,6 +501,30 @@ class ZaTaggerRun3(Tagger):
             weighted=weighted,
         )
         return running
+
+    def _photon_selh_scenario(self, photons_sel, z_cand, options):
+        """給定「已選好的 photon 集合」(Momentum4D、已做 lepton/gamma overlap)，重建
+        ALP 與 Higgs 質量窗，回傳 (has_2gamma_cand, sel_h)。定義與 nominal 主鏈完全一致，
+        供 photon-selection scenario 研究(例如拿掉 e-veto)重建完整 photon->ALP->sel_h 鏈用。
+        僅讀取 photon 四動量，不改變任何 nominal 物件。"""
+        has_2g = ak.fill_none(ak.num(photons_sel) >= 2, False)
+
+        ph = photons_sel[ak.argsort(photons_sel.pt, ascending=False, axis=1)]
+        idx = ak.local_index(ph.pt, axis=1)
+        pairs_idx = ak.combinations(idx, 2, fields=["i1", "i2"])
+        lead_idx = ak.where(ph.pt[pairs_idx.i1] >= ph.pt[pairs_idx.i2], pairs_idx.i1, pairs_idx.i2)
+        sub_idx = ak.where(ph.pt[pairs_idx.i1] >= ph.pt[pairs_idx.i2], pairs_idx.i2, pairs_idx.i1)
+        pairs = ak.zip({"LeadPhoton": ph[lead_idx], "SubleadPhoton": ph[sub_idx]})
+        pairs = pairs[ak.argsort(pairs.LeadPhoton.pt, ascending=False, axis=1)]
+        alp = ak.firsts(pairs)
+        alp_p4 = ak.with_name(alp.LeadPhoton + alp.SubleadPhoton, "Momentum4D")
+
+        h_cand = z_cand.ZCand + alp_p4
+        sel_h = ak.fill_none(
+            (h_cand.mass > options["mass_h"][0]) & (h_cand.mass < options["mass_h"][1]),
+            False,
+        )
+        return has_2g, sel_h
 
     def produce_and_select_zgammas(self, events, rho, options):
         """
@@ -1339,13 +1368,102 @@ class ZaTaggerRun3(Tagger):
 
         all_cuts = trigger_pt_cut & has_z_cand & has_2gamma_cand & sel_h #& ak.fill_none((h_cand.mass>80) & (h_cand.mass < options["mass_h"][1]), False)
 
+        # ------------------------------------------------------------------
+        # NEW: finer cutflow decomposition (intermediate counters ONLY).
+        # 完全不改變 physics selection / final mask；只為 cutflow 圖提供更細中間事件數。
+        # ------------------------------------------------------------------
+        # (需求一) lepton selection 拆成 e / e+mu 兩步（僅 inclusive zgammas/zgammas_w）。
+        #   e_sel   = >=2 同味輕子(電子或緲子)，為 emu_sel 超集合 → 單調遞減
+        #   emu_sel = 形成 best-Z 的 OSSF 輕子對 (= 舊 N_lep_sel)
+        e_sel_mask = (n_electrons >= 2) | (n_muons >= 2)
+        emu_sel_mask = z_ee_cut | z_mumu_cut
+
+        # (需求二) a-candidate / photon selection 逐項累積分解。用「所有 photon」上的
+        # per-photon flag 做累積 AND，再數該事件是否 >=2 顆通過。_m_full(含 e_veto +
+        # e/gamma overlap + lepton-photon overlap) 數 >=2 恆等於 has_2gamma_cand，
+        # 故不改變任何 selection（debug 下方 assert 檢查）。
+        _allpho = events.Photon
+        _lep_overlap = (
+            ak.fill_none(object_selections.delta_R(_allpho, muons, 0.3), True)
+            & ak.fill_none(object_selections.delta_R(_allpho, electrons, 0.3), True)
+        )
+        _m_base    = _allpho.pt > 0
+        _m_pt      = _m_base   & _allpho.pass_ph_pt
+        _m_eta     = _m_pt     & _allpho.pass_ph_eta
+        _m_hoe     = _m_eta    & _allpho.pass_ph_id_hoe
+        _m_chi     = _m_hoe    & _allpho.pass_ph_id_chiso
+        _m_hcal    = _m_chi    & _allpho.pass_ph_id_hcaliso
+        _m_eveto   = _m_hcal   & _allpho.pass_ph_eveto                              # + e-veto (CSEV)
+        _m_lepovlp = _m_eveto  & _allpho.pass_ph_eg_overlap & _lep_overlap          # + lepton/gamma overlap removal
+        _m_full    = _m_lepovlp                                                     # == 完整 photon+overlap 選取
+
+        ph_ge2_cut     = ak.sum(_m_base,    axis=1) >= 2
+        ph_pt_cut2     = ak.sum(_m_pt,      axis=1) >= 2
+        ph_eta_cut2    = ak.sum(_m_eta,     axis=1) >= 2
+        ph_hoe_cut     = ak.sum(_m_hoe,     axis=1) >= 2
+        ph_chi_cut     = ak.sum(_m_chi,     axis=1) >= 2
+        ph_hcal_cut    = ak.sum(_m_hcal,    axis=1) >= 2
+        ph_eveto_cut   = ak.sum(_m_eveto,   axis=1) >= 2
+        ph_lepovlp_cut = ak.sum(_m_lepovlp, axis=1) >= 2   # == has_2gamma_cand (debug 下方 assert)
+
+        # (需求三) a-candidate 兩光子 dR (= var_dR_g1g2 同定義)；三互斥 bin (左閉右開全覆蓋)
+        _alp_dr = alp_cand.LeadPhoton.deltaR(alp_cand.SubleadPhoton)
+        dr_lt_bin  = ak.fill_none(_alp_dr < 0.1, False)
+        dr_mid_bin = ak.fill_none((_alp_dr >= 0.1) & (_alp_dr < 0.3), False)
+        dr_gt_bin  = ak.fill_none(_alp_dr >= 0.3, False)
+
+        # debug sanity: fine 分解重現 has_2gamma_cand；三 dR bin 於 has_2g 之和 == inclusive
+        if logger.isEnabledFor(logging.DEBUG):
+            _ph_full_ge2 = ak.sum(_m_full, axis=1) >= 2
+            _mismatch = int(ak.sum(_ph_full_ge2 != has_2gamma_cand))
+            _dr_sum = (
+                int(ak.sum(has_2gamma_cand & dr_lt_bin))
+                + int(ak.sum(has_2gamma_cand & dr_mid_bin))
+                + int(ak.sum(has_2gamma_cand & dr_gt_bin))
+            )
+            logger.debug(
+                "[cutflow sanity] fine!=has_2g mismatch=%d ; dr-bin sum @has_2g=%d vs inclusive=%d",
+                _mismatch, _dr_sum, int(ak.sum(has_2gamma_cand)),
+            )
+
+        # 共用步驟片段
+        _inclusive_leading = [
+            ("e_sel", e_sel_mask),
+            ("emu_sel", emu_sel_mask),
+            ("trig_cut", trigger_cut),
+            ("lep_pt_cut", trigger_pt_cut),
+        ]
+        _fine_photon_steps = [
+            ("has_z_cand", has_z_cand),
+            ("ph_ge2", ph_ge2_cut),
+            ("ph_pt", ph_pt_cut2),
+            ("ph_eta", ph_eta_cut2),
+            ("ph_id_hoe", ph_hoe_cut),
+            ("ph_id_chiso", ph_chi_cut),
+            ("ph_id_hcaliso", ph_hcal_cut),
+            ("ph_eveto", ph_eveto_cut),
+            ("ph_lepovlp", ph_lepovlp_cut),
+            ("has_2g_cand", has_2gamma_cand),
+            ("sel_h", sel_h),
+        ]
+
         ee_all_cut = ak.num(events.Photon) < 0
         mm_all_cut = ak.num(events.Photon) < 0
-        nominal_cutflows = {
-            "zgammas": (
-                [("N_lep_sel", z_ee_cut | z_mumu_cut), ("trig_cut", trigger_cut), ("lep_pt_cut", trigger_pt_cut)],
-                False,
-            ),
+
+        # inclusive cutflows: e/e+mu split + fine photon decomposition (需求一/二)
+        for cut_type, weighted in (("zgammas", False), ("zgammas_w", True)):
+            if weighted and not hasattr(events, "Generator_weight"):
+                continue
+            self._register_sequential_event_cutflow(
+                events=events,
+                cut_type=cut_type,
+                steps=_inclusive_leading + _fine_photon_steps,
+                weighted=weighted,
+            )
+
+        # per-channel cutflows: UNCHANGED (N_lep_sel + 原 trailing)；ee_all_cut/mm_all_cut
+        # 決定最終回傳 selection，不可更動。
+        channel_cutflows = {
             "zgammas_ele": (
                 [("N_lep_sel", z_ee_cut), ("trig_cut", ele_trigger_cut), ("lep_pt_cut", ele_trigger_pt_cut)],
                 False,
@@ -1353,10 +1471,6 @@ class ZaTaggerRun3(Tagger):
             "zgammas_mu": (
                 [("N_lep_sel", z_mumu_cut), ("trig_cut", mu_trigger_cut), ("lep_pt_cut", mu_trigger_pt_cut)],
                 False,
-            ),
-            "zgammas_w": (
-                [("N_lep_sel", z_ee_cut | z_mumu_cut), ("trig_cut", trigger_cut), ("lep_pt_cut", trigger_pt_cut)],
-                True,
             ),
             "zgammas_ele_w": (
                 [("N_lep_sel", z_ee_cut), ("trig_cut", ele_trigger_cut), ("lep_pt_cut", ele_trigger_pt_cut)],
@@ -1372,22 +1486,50 @@ class ZaTaggerRun3(Tagger):
             ("has_2g_cand", has_2gamma_cand),
             ("sel_h", sel_h),
         ]
-
-        for cut_type, (leading_steps, weighted) in nominal_cutflows.items():
+        for cut_type, (leading_steps, weighted) in channel_cutflows.items():
             if weighted and not hasattr(events, "Generator_weight"):
                 continue
-
             final_cut = self._register_sequential_event_cutflow(
                 events=events,
                 cut_type=cut_type,
                 steps=leading_steps + trailing_nominal_steps,
                 weighted=weighted,
             )
-
             if cut_type == "zgammas_ele":
                 ee_all_cut = final_cut
             elif cut_type == "zgammas_mu":
                 mm_all_cut = final_cut
+
+        # (需求三) dR-binned inclusive cutflows: 從 has_2g_cand(pair 建立)起套 dr-bin。
+        _dr_bin_cutflows = [
+            ("zgammas_dr_lt_0p1", dr_lt_bin, False),
+            ("zgammas_dr_lt_0p1_w", dr_lt_bin, True),
+            ("zgammas_dr_0p1_0p3", dr_mid_bin, False),
+            ("zgammas_dr_0p1_0p3_w", dr_mid_bin, True),
+            ("zgammas_dr_gt_0p3", dr_gt_bin, False),
+            ("zgammas_dr_gt_0p3_w", dr_gt_bin, True),
+        ]
+        for cut_type, dr_mask, weighted in _dr_bin_cutflows:
+            if weighted and not hasattr(events, "Generator_weight"):
+                continue
+            self._register_sequential_event_cutflow(
+                events=events,
+                cut_type=cut_type,
+                steps=_inclusive_leading + [
+                    ("has_z_cand", has_z_cand),
+                    ("ph_ge2", ph_ge2_cut),
+                    ("ph_pt", ph_pt_cut2),
+                    ("ph_eta", ph_eta_cut2),
+                    ("ph_id_hoe", ph_hoe_cut),
+                    ("ph_id_chiso", ph_chi_cut),
+                    ("ph_id_hcaliso", ph_hcal_cut),
+                    ("ph_eveto", ph_eveto_cut),
+                    ("ph_lepovlp", ph_lepovlp_cut),
+                    ("has_2g_cand", has_2gamma_cand & dr_mask),
+                    ("sel_h", sel_h & dr_mask),
+                ],
+                weighted=weighted,
+            )
 
         # electron sip3d scenario cutflow
         if self.options.get("zgammas", {}).get("study_ele_ip3d_scenarios", False):
@@ -1468,6 +1610,77 @@ class ZaTaggerRun3(Tagger):
                     final_mu_nosip3d_cut = final_cut
 
             awkward_utils.add_field(events, "pass_allcuts_munosip3d", ak.fill_none(final_mu_nosip3d_cut, False), overwrite=True)
+
+        # --- NEW: photon electron-veto (CSEV) scenario cutflow ---
+        # 研究「拿掉 photon e-veto」對 cutflow / significance 的影響（比照 SIP3D）。
+        # e-veto 是「放寬型」cut：拿掉它會「多」進候選，故不能只加/移一個 sequential
+        # 步驟，必須重建整條 photon->ALP->sel_h 鏈（如 muon iso04/nosip3d 研究）。
+        #   baseline (eveto)  : 用 nominal has_2gamma_cand / sel_h（含 e-veto）
+        #   scenario (noeveto): 用「移除 pass_ph_eveto」重選的 photon 集合重建 ALP/sel_h
+        # nominal 主鏈與回傳 selection 完全不受影響。
+        if self.options.get("zgammas", {}).get("study_ph_eveto_scenarios", False):
+            # 重選 photon：nominal 的 per-photon 條件(pt/eta/id/eg-overlap) AND，但「不含」e-veto，
+            # 再套與 nominal 相同的 lepton/gamma overlap removal。
+            _perpho_noeveto = (
+                _allpho.pass_ph_pt
+                & _allpho.pass_ph_eta
+                & _allpho.pass_ph_id_hoe
+                & _allpho.pass_ph_id_chiso
+                & _allpho.pass_ph_id_hcaliso
+                & _allpho.pass_ph_eg_overlap
+            )  # nominal photon selection minus e-veto
+            photons_noeveto = _allpho[_perpho_noeveto]
+            _clean_noeveto = (
+                ak.fill_none(object_selections.delta_R(photons_noeveto, muons, 0.3), True)
+                & ak.fill_none(object_selections.delta_R(photons_noeveto, electrons, 0.3), True)
+            )
+            photons_noeveto = photons_noeveto[_clean_noeveto]
+            photons_noeveto = ak.with_field(photons_noeveto, ak.ones_like(photons_noeveto.pt) * 0.0, "mass")
+            photons_noeveto = ak.Array(photons_noeveto, with_name="Momentum4D")
+
+            has_2g_noeveto, sel_h_noeveto = self._photon_selh_scenario(
+                photons_noeveto, z_cand, options
+            )
+
+            # debug sanity：把 nominal photons 丟進 helper，應重現 has_2gamma_cand / sel_h
+            if logger.isEnabledFor(logging.DEBUG):
+                _h2g_chk, _selh_chk = self._photon_selh_scenario(photons, z_cand, options)
+                logger.debug(
+                    "[eveto sanity] has_2g nominal-helper mismatch=%d ; sel_h mismatch=%d ; "
+                    "noeveto extra has_2g=%d",
+                    int(ak.sum(ak.fill_none(_h2g_chk, False) != has_2gamma_cand)),
+                    int(ak.sum(ak.fill_none(_selh_chk, False) != ak.fill_none(sel_h, False))),
+                    int(ak.sum(ak.fill_none(has_2g_noeveto, False)) - ak.sum(has_2gamma_cand)),
+                )
+
+            ph_eveto_scenarios = {
+                # baseline: e-veto applied (== nominal has_2gamma_cand / sel_h)
+                "zgammas_ph_eveto":     (has_2gamma_cand, sel_h, False),
+                "zgammas_ph_eveto_w":   (has_2gamma_cand, sel_h, True),
+                # study: e-veto removed (rebuilt photon->ALP->sel_h chain)
+                "zgammas_ph_noeveto":   (has_2g_noeveto, sel_h_noeveto, False),
+                "zgammas_ph_noeveto_w": (has_2g_noeveto, sel_h_noeveto, True),
+            }
+            for cut_type, (has2g_mask, selh_mask, weighted) in ph_eveto_scenarios.items():
+                if weighted and not hasattr(events, "Generator_weight"):
+                    continue
+                final_cut = self._register_sequential_event_cutflow(
+                    events=events,
+                    cut_type=cut_type,
+                    steps=_inclusive_leading + [
+                        ("has_z_cand", has_z_cand),
+                        ("has_2g_cand", has2g_mask),
+                        ("sel_h", selh_mask),
+                    ],
+                    weighted=weighted,
+                )
+                if not weighted:
+                    awkward_utils.add_field(
+                        events,
+                        f"pass_allcuts_{cut_type.replace('zgammas_', '')}",
+                        ak.fill_none(final_cut, False),
+                        overwrite=True,
+                    )
 
         # --- NEW: 一次註冊 15 種 photon ID 情境對 cutflow("all cuts") 的影響 ---
         def _scenario_has_2gamma(events_, id_key: str):

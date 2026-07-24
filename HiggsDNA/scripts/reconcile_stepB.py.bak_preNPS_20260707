@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""
+Step B (HZa_merged data-ML friend parquet) reconciliation report.
+
+For every Data_2024_* tag under the friend base dir, report:
+  total  : number of planned jobs (= job_* dirs)
+  done   : jobs with a successful summary AND an existing output parquet
+  miss   : total - done  (retired RAL jobs + watchdog-reaped stragglers -> need backfill)
+  chunk  : sum of rows across output_job_*_nominal.parquet (metadata only, fast)
+  merged : rows in merged_nominal.parquet
+  OK?    : merged present AND chunk_rows == merged_rows (pipeline lossless for what's there)
+
+NOTE the two independent notions:
+  * lossless (chunk==merged): my merge lost nothing of what completed. Should always hold.
+  * complete (miss==0): every planned job produced output. miss>0 => backfill needed
+    (this is EXPECTED for tags where jobs hit RAL xrootd timeouts and were retired/reaped).
+
+Usage: reconcile_stepB.py [friend_base_dir]
+Exit 0 always (report only). Prints a machine-greppable BACKFILL line per incomplete tag.
+"""
+import glob
+import json
+import os
+import sys
+
+import pyarrow.parquet as pq
+
+BASE = sys.argv[1] if len(sys.argv) > 1 else \
+    "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend"
+
+
+def task_dir(tagdir):
+    subs = [d for d in glob.glob(os.path.join(tagdir, "*_2024")) if os.path.isdir(d)]
+    return subs[0] if len(subs) == 1 else None
+
+
+def rows(path):
+    try:
+        return pq.ParquetFile(path).metadata.num_rows
+    except Exception:
+        return -1
+
+
+def main():
+    tagdirs = sorted(glob.glob(os.path.join(BASE, "Data_2024_*")))
+    hdr = "%-34s %6s %6s %6s %10s %10s  %s" % (
+        "tag", "total", "done", "miss", "chunk", "merged", "status")
+    print(hdr)
+    print("-" * len(hdr))
+
+    n_tags = 0
+    n_complete = 0
+    n_lossless = 0
+    total_miss = 0
+    backfill_lines = []
+
+    for td in tagdirs:
+        tag = os.path.basename(td)
+        tdir = task_dir(td)
+        if tdir is None:
+            print("%-34s  (no *_2024 task dir)" % tag)
+            continue
+        n_tags += 1
+
+        jobdirs = glob.glob(os.path.join(tdir, "job_*"))
+        total = len(jobdirs)
+
+        # A job is DONE if its summary says successful==True. A successful job may have
+        # produced NO output parquet when 0 events passed selection (n_selected==0) -- that
+        # is not missing data. So `done` keys on the summary, and `good_outputs` (for the
+        # chunk-row check) collects only the successful jobs that DID write an output.
+        good_outputs = []
+        done = 0
+        for jd in jobdirs:
+            summ = glob.glob(os.path.join(jd, "*summary_job*.json"))
+            ok = False
+            if summ:
+                try:
+                    ok = bool(json.load(open(summ[0])).get("successful"))
+                except Exception:
+                    ok = False
+            if ok:
+                done += 1
+                out = glob.glob(os.path.join(jd, "output_job_*_nominal.parquet"))
+                if out and os.path.exists(out[0]):
+                    good_outputs.append(out[0])
+        miss = total - done
+
+        # chunk_rows over successful outputs only -> matches what the merge consumed,
+        # so chunk==merged is the true losslessness check (not skewed by orphan parquets).
+        chunk_rows = sum(r for r in (rows(f) for f in good_outputs) if r > 0)
+
+        merged = os.path.join(tdir, "merged_nominal.parquet")
+        merged_rows = rows(merged) if os.path.exists(merged) else None
+
+        lossless = (merged_rows is not None and merged_rows == chunk_rows)
+        complete = (miss == 0)
+        n_complete += 1 if complete else 0
+        n_lossless += 1 if lossless else 0
+        total_miss += max(miss, 0)
+
+        status = []
+        status.append("merged" if merged_rows is not None else "NO-MERGE")
+        status.append("lossless" if lossless else ("LOSSY" if merged_rows is not None else "-"))
+        if not complete:
+            status.append("BACKFILL(%d)" % miss)
+            backfill_lines.append("BACKFILL %s miss=%d" % (tag, miss))
+        print("%-34s %6d %6d %6d %10d %10s  %s" % (
+            tag, total, done, miss, chunk_rows,
+            str(merged_rows) if merged_rows is not None else "-",
+            " ".join(status)))
+
+    print("-" * len(hdr))
+    print("tags=%d  complete(miss==0)=%d  lossless(chunk==merged)=%d  total_missing_jobs=%d"
+          % (n_tags, n_complete, n_lossless, total_miss))
+    if backfill_lines:
+        print("\n# tags needing backfill:")
+        for b in backfill_lines:
+            print(b)
+    else:
+        print("\nAll tags complete -- no backfill needed.")
+
+
+if __name__ == "__main__":
+    main()

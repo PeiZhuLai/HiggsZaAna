@@ -747,7 +747,7 @@ fi
 if [[ "$RUN_FLASHGG_PLOT_LIMITS" == "1" ]]; then
     echo_step "flashggFinalFit: plot limits"
     cd "$baseDir/Plots"
-    sh 1_runLimitsPlot.sh
+    sh 2_runLimitsPlot.sh
 else
     echo_skip "flashggFinalFit: plot limits"
 fi

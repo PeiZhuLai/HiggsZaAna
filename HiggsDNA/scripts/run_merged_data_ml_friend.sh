@@ -32,7 +32,7 @@ cd "${repo_dir}"
 unset PYTHONPATH
 export PYTHONPATH="${repo_dir}"
 
-CATALOG="metadata/samples/za_merged_data_2024_perds.json"
+CATALOG="${CATALOG:-metadata/samples/za_merged_data_2024_perds.json}"
 DEFAULT_TAGS="$(python3 -c "import json;print(','.join(sorted(json.load(open('${CATALOG}')).keys())))")"
 
 TAGS="${TAGS:-${DEFAULT_TAGS}}"
@@ -40,14 +40,19 @@ BATCH_SYSTEM="${BATCH_SYSTEM:-condor}"
 N_CORES="${N_CORES:-4}"
 FPO="${FPO:-2}"
 SHORT="${SHORT:-0}"
-OUTDIR_BASE="${OUTDIR_BASE:-/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend}"
+OUTDIR_BASE="${OUTDIR_BASE:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend}"
 BASE_CONFIG="${BASE_CONFIG:-metadata/za_merged_data_ML_2024.json}"
 CONDOR_REQ_MEMORY="${CONDOR_REQ_MEMORY:-8000}"
-MLNANO_BASE="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD"
+MLNANO_BASE="/eos/cms/store/group/phys_susy/pelai/HZa_merged/MLNanoAOD"
 
 export HIGGSDNA_CONDOR_REQ_MEMORY="${CONDOR_REQ_MEMORY}"
 export HIGGSDNA_PARQUET_READ_RETRIES="${HIGGSDNA_PARQUET_READ_RETRIES:-6}"
 export HIGGSDNA_PARQUET_READ_RETRY_DELAY="${HIGGSDNA_PARQUET_READ_RETRY_DELAY:-20}"
+# B-mode: ship the conda-pack tarball from eos-cms and activate it node-locally on
+# each worker (avoids the eos-home fuse I/O storm). getenv=True in the condor submit
+# template propagates this to the job; jobs.py sees it and skips the eos-path python
+# rewrite. Set to empty to fall back to the classic eos-fuse env.
+export HZA_BMODE_PACK="${HZA_BMODE_PACK:-root://eoscms.cern.ch//eos/cms/store/group/phys_susy/pelai/App/hza_ana_pack.tar.gz}"
 
 CFG_DIR_REL="metadata/friend_tmp_configs"
 mkdir -p "${repo_dir}/${CFG_DIR_REL}" "${OUTDIR_BASE}"
@@ -71,15 +76,23 @@ for tag in "${TAG_LIST[@]}"; do
 
     cfg_rel="${CFG_DIR_REL}/${tag}.json"
     cfg="${repo_dir}/${cfg_rel}"
-    python3 - "${BASE_CONFIG}" "${cfg}" "${tag}" "${parent_map}" "${ml_dir}" <<'PY'
-import json, sys
-base, out, tag, parent_map, ml_dir = sys.argv[1:]
+    python3 - "${BASE_CONFIG}" "${cfg}" "${tag}" "${parent_map}" "${ml_dir}" "${CATALOG}" <<'PY'
+import json, os, sys
+base, out, tag, parent_map, ml_dir, catalog = sys.argv[1:]
 with open(base) as f:
     d = json.load(f)
+# era-generic: read the tag's era key from the per-ds catalog (2024 -> "2024",
+# 2223 -> "2022preEE"/... ); also pin samples.catalog so the base config's
+# catalog field cannot mismatch the tag's era (works for 2024 and 2022/2023).
+cat_d = json.load(open(catalog))
+era = list(cat_d[tag]["files"].keys())[0]
+d["samples"]["catalog"] = catalog
 d["samples"]["sample_list"] = [tag]
-d["samples"]["years"] = ["2024"]
+d["samples"]["years"] = [era]
 d["mlphoton_friend"] = True
-d["mlphoton_parent_map"] = parent_map
+# ABSOLUTE path so condor workers (cwd = job scratch dir) can find the parent map on afs;
+# the lxplus submit template only ships GRID_PROXY, executable+config are read from afs.
+d["mlphoton_parent_map"] = os.path.abspath(parent_map)
 d["mlphoton_dir"] = ml_dir
 d["mlphoton_tag"] = tag
 with open(out, "w") as f:

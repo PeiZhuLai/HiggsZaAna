@@ -1,0 +1,13 @@
+=== SPLIT RETRAIN DONE at 2026-07-06 18:58:36 ===
+--- lowmass result + saved pkl ---
+[result] features=['ALP_calculatedPhotonIso', 'var_dR_g1g2', 'pho1R9', 'pho1Pt_oHm', 'param']
+[result] R(mA1)=1.05 R(mA2)=1.18 R(mA3)=1.03  AUC(test,1-3)=0.9502
+[result] overtraining capped-KS p: sig=0.46  bkg=0.576
+[save] model_Za_BDT_lowmass_run3.pkl / .json / .meta.json
+-rw-r--r--. 1 pelai zh 495601 07-06_18:57 model_Za_BDT_lowmass_run3.pkl
+--- highmass result + saved pkl ---
+[result] features=['pho1Pt_oHm', 'pho1R9', 'pho1IetaIeta55', 'pho1PIso_noCorr', 'pho2Pt_oHm', 'pho2R9', 'pho2IetaIeta55', 'pho2PIso_noCorr', 'ALP_calculatedPhotonIso', 'var_dR_Za', 'var_dR_g1g2', 'var_dR_g1Z', 'var_PtaOverMh', 'H_pt_oHm', 'pho_pt_asym', 'param'] (n=16)
+[result] R: mA4=0.89  mA5=0.82  mA6=0.94  mA7=0.92  mA8=0.80  mA9=0.90  mA10=0.71  mA15=1.07  mA20=1.02  mA25=1.08  mA30=1.25   AUC(test)=0.9835
+[result] overtraining capped-KS p: sig=0.544  bkg=0.496
+[save] model_Za_BDT_highmass_run3.pkl / .json / .meta.json
+-rw-r--r--. 1 pelai zh 494067 07-06_18:58 model_Za_BDT_highmass_run3.pkl

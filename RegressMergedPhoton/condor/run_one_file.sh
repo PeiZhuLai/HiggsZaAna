@@ -121,6 +121,7 @@ case "${OUTPUT_DIR}" in
     /eos/home-*) inst=$(echo "${OUTPUT_DIR}" | sed -E 's#^/eos/(home-[a-z]).*#\1#'); EOS_MGM="root://eos${inst}.cern.ch" ;;
     /eos/user/*) EOS_MGM="root://eosuser.cern.ch" ;;
     /eos/project*) EOS_MGM="root://eosproject.cern.ch" ;;
+    /eos/cms/*)    EOS_MGM="root://eoscms.cern.ch" ;;
 esac
 
 mkdir -p "${OUTPUT_DIR}" 2>/dev/null

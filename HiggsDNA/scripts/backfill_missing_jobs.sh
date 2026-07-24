@@ -26,7 +26,7 @@ export PYTHONPATH=$REPO
 export X509_USER_PROXY=${X509_USER_PROXY:-/tmp/x509up_u175325}
 cd "$REPO"
 
-FRIEND_BASE=/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_friend
+FRIEND_BASE=/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend
 CFG_DIR=metadata/friend_tmp_configs
 CATALOG=metadata/samples/za_merged_data_2024_perds.json
 BF_LOG=${BF_LOG:-$REPO/logs/backfill_$(date +%Y%m%d).log}
@@ -39,7 +39,11 @@ STABLE_SECONDS=${STABLE_SECONDS:-600}
 STRAGGLER_MAX=${STRAGGLER_MAX:-15}
 
 log(){ echo "[$(date +%m-%d\ %H:%M:%S)] $*" | tee -a "$BF_LOG"; }
-condor_total(){ condor_q 2>/dev/null | sed -n 's/.*Total for pelai: \([0-9]*\) jobs.*/\1/p' | head -1; }
+# tag-scoped: count ONLY merged-data friend jobs (Iwd = .../HZa/HiggsZaAna/HiggsDNA),
+# so co-running productions (HZgamma, Parquet2Rootfile, Sig_MC) never inflate the count
+# or trip the "bulk done" straggler-reap. One merged tag runs at a time -> all such jobs
+# belong to the current tag.
+condor_total(){ condor_q pelai -af Iwd 2>/dev/null | grep -c "HZa/HiggsZaAna/HiggsDNA"; }
 
 incomplete_tags(){
     $PY scripts/reconcile_stepB.py "$FRIEND_BASE" 2>/dev/null \
@@ -122,7 +126,9 @@ for tag in "${TAGS[@]}"; do
         log "  bulk done ($ct job(s) left, ${idle}s since last new chunk) -> stop monitor + reap + remerge"
         kill -TERM "$ra_pid" 2>/dev/null
         sleep 4
-        leftover=$(condor_q pelai -af ClusterId 2>/dev/null | sort -u | tr '\n' ' ')
+        # reap ONLY this tag's leftover clusters (Iwd = .../HiggsDNA), never a blanket
+        # 'condor_q pelai' which would also remove co-running HZgamma / Parquet2Rootfile jobs.
+        leftover=$(condor_q pelai -af ClusterId Iwd 2>/dev/null | grep "HZa/HiggsZaAna/HiggsDNA" | awk '{print $1}' | sort -u | tr '\n' ' ')
         [ -n "${leftover// /}" ] && { log "  condor_rm $leftover"; condor_rm $leftover >>"$BF_LOG" 2>&1; }
         break
     done

@@ -16,7 +16,11 @@ MODE="${3:-mc}"   # mc (default) or data
 YEAR="${4:-2024}" # data era (ignored for mc)
 FILES_PER_JOB="${FILES_PER_JOB:-1}"  # how many input files cmsRun consumes per condor job
 
-OUT_EOS="/eos/project/h/htozg-dy-privatemc/pelai/HZa/MLNanoAOD/${MASS_TAG}"
+# Output base overridable via OUT_EOS_BASE. Default = pelai group EOS (NPS/project
+# EOS were full; HZa_merged now lives under phys_susy/pelai, matching the friend
+# producer's MLBASE so orchestrate_data_ml_production.sh finds these files).
+OUT_EOS_BASE="${OUT_EOS_BASE:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/MLNanoAOD}"
+OUT_EOS="${OUT_EOS_BASE}/${MASS_TAG}"
 STAGE="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/${MASS_TAG}"
 LOG_DIR="${STAGE}/logs"
 WORKER="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/run_one_file.sh"

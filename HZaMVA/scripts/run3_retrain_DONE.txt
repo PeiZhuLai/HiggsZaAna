@@ -1,0 +1,38 @@
+=== RETRAIN DONE at 2026-07-05 21:07:00 (PID 1577609 exited) ===
+optuna trials completed: 16
+--- model file ---
+-rw-r--r--. 1 pelai zh 1021647 07-05_21:05 model_Za_BDT_run3.pkl
+--- best-trials / final-model lines ---
+KS candidate optuna_best: p_sig_w=0.004966, p_bkg_w=0.01153, p_sig_unw=0.1183, p_bkg_unw=0.4479, min_weighted_p=0.004966, min_unweighted_p=0.1183, auc_test=0.9682, mA_top1=0.8325, mA12_pair=0.9117
+Saved loss-vs-nEstimators plot: /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3/loss_vs_nEstimators.pdf
+--- last 30 log lines ---
+[1, 189]
+significance: 5.33997175481553 ns: 854.8843911506191 nb smooth: 25345.92225074768 b_smooth_up: 26882.850819587708 b_smooth_dn: 23808.993491649628 b_nosmooth: 25246.206129280574
+[190, 198]
+significance: 71.76526895008686 ns: 1415.3257000615363 nb smooth: 112.0105094909668 b_smooth_up: 143.76078033447266 b_smooth_dn: 80.26023960113525 b_nosmooth: 125.96553802623006
+[199, 200]
+significance: 147.3640786802551 ns: 2870.8657634009332 nb smooth: 25.298664093017578 b_smooth_up: 32.411842346191406 b_smooth_dn: 18.185486793518066 b_nosmooth: 23.431259270574575
+[[1, 183], [184, 196], [197, 199], [200, 200]]
+[1, 183]
+significance: 4.056364263456905 ns: 647.595340020074 nb smooth: 25272.915376663208 b_smooth_up: 26788.914581298828 b_smooth_dn: 23756.915980815887 b_nosmooth: 25169.512977198556
+[184, 196]
+significance: 48.586367973097296 ns: 939.539019951216 nb smooth: 159.8668794631958 b_smooth_up: 205.45419597625732 b_smooth_dn: 114.2795639038086 b_nosmooth: 179.20702118987523
+[197, 199]
+significance: 90.77379441238766 ns: 1478.5067284024403 nb smooth: 37.78131580352783 b_smooth_up: 48.42761993408203 b_smooth_dn: 27.135013580322266 b_nosmooth: 43.134606962877
+[200, 200]
+significance: 131.02832799885567 ns: 2075.4347662393584 nb smooth: 12.667852401733398 b_smooth_up: 16.2270450592041 b_smooth_dn: 9.108659744262695 b_nosmooth: 3.748321226071154
+Applied sideband reweight to run3 All_Bkg: nominal sum=50117.5, reweighted sum=49618.9
+Applied sideband reweight to run3 All_Sig mA1.0: nominal sum=187.456, reweighted sum=211.416
+Applied sideband reweight to run3 All_Sig mA2.0: nominal sum=220.314, reweighted sum=256.536
+Applied sideband reweight to run3 All_Sig mA3.0: nominal sum=226.855, reweighted sum=280.074
+Applied sideband reweight to run3 All_Sig mA4.0: nominal sum=227.037, reweighted sum=281.991
+Applied sideband reweight to run3 All_Sig mA5.0: nominal sum=229.291, reweighted sum=278.171
+Applied sideband reweight to run3 All_Sig mA6.0: nominal sum=228.089, reweighted sum=264.962
+Applied sideband reweight to run3 All_Sig mA7.0: nominal sum=226.719, reweighted sum=246.379
+Applied sideband reweight to run3 All_Sig mA8.0: nominal sum=225.442, reweighted sum=231.585
+Applied sideband reweight to run3 All_Sig mA9.0: nominal sum=225.037, reweighted sum=221.803
+Applied sideband reweight to run3 All_Sig mA10.0: nominal sum=221.548, reweighted sum=210.568
+Applied sideband reweight to run3 All_Sig mA15.0: nominal sum=220.467, reweighted sum=192.411
+Applied sideband reweight to run3 All_Sig mA20.0: nominal sum=232.07, reweighted sum=195.068
+Applied sideband reweight to run3 All_Sig mA25.0: nominal sum=280.168, reweighted sum=234.164
+Applied sideband reweight to run3 All_Sig mA30.0: nominal sum=382.372, reweighted sum=303.098

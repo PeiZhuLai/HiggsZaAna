@@ -62,10 +62,14 @@ def _feat(a, mhyp):
     param = (a["ALP_m"]-mhyp)/a["H_m"]
     return np.column_stack([a[b] for b in BASE_VARS]+[asym, param])
 
-def _sideband_reweight(bkg):
-    """Per-event sideband reweight factor for the background frame (1.0 if JSON/helper missing).
-    Mirrors run3_Za_BDT.apply_sideband_reweight_to_bkg; needs Z_m/event + the _oHm pT branches."""
-    n = len(bkg["H_m"])
+def _sideband_reweight(frame_dict, param=None):
+    """Per-event sideband reweight factor (1.0 if JSON/helper missing). Needs Z_m/event + the
+    _oHm pT branches, so the frame must be loaded with extra=REWEIGHT_EXTRA.
+    Mirrors run3_Za_BDT.apply_sideband_reweight. Background: call with the raw dict -> the
+    mass-hypothesis 'param' step uses the per-event event-hash hypothesis. Signal: pass
+    param=<(ALP_m-mA_true)/H_m array> so the SAME factor set is applied with the signal's
+    TRUE param instead of the background hypothesis."""
+    n = len(frame_dict["H_m"])
     try:
         import pandas as pd
         from sideband_reweight import load_sideband_reweighter
@@ -74,18 +78,27 @@ def _sideband_reweight(bkg):
     rw = load_sideband_reweighter()
     if rw is None:
         print("[reweight] no sideband JSON found, using weight=1"); return np.ones(n)
-    frame = pd.DataFrame({k: bkg[k] for k in bkg})     # has _oHm pT, Z_m, H_m, ALP_m, event
+    frame = pd.DataFrame({k: frame_dict[k] for k in frame_dict})   # _oHm pT, Z_m, H_m, ALP_m, event
+    if param is not None:
+        frame["param"] = np.asarray(param, dtype=float)            # signal: use true-mass param
     rwgt = rw.weights_for_dataframe(frame)
     print(f"[reweight] applied sideband reweight: mean={np.nanmean(rwgt):.3f}")
     return np.where(np.isfinite(rwgt), rwgt, 1.0)
+
+def signal_weight(sig_dict, mass):
+    """Signal per-event training weight = nominal factor x sideband reweight, evaluated with the
+    signal's TRUE mass 'param' (same factor set as the background reweight). The signal dict must
+    carry the reweight step branches, i.e. be loaded with extra=REWEIGHT_EXTRA."""
+    param = (sig_dict["ALP_m"] - mass) / sig_dict["H_m"]
+    return sig_dict["factor"] * _sideband_reweight(sig_dict, param=param)
 
 def build_training_set(n_sig_per=8000, n_bkg=150000, tree="train"):
     """Build a balanced (sig vs bkg) feature/label/weight set from a given tree.
     tree="train" for training; tree="validation"/"test" gives an independent set for the
     overtraining check (the p2root files carry inclusive/train/validation/test splits)."""
-    sig = [_load(f"{ROOT_DIR}/mA_M{m}/run3.root",tree,n_sig_per) for m in MASSES]
+    sig = [_load(f"{ROOT_DIR}/mA_M{m}/run3.root",tree,n_sig_per, extra=REWEIGHT_EXTRA) for m in MASSES]
     Xs  = np.vstack([_feat(s,m) for s,m in zip(sig,MASSES)])
-    ws  = np.concatenate([s["factor"] for s in sig])
+    ws  = np.concatenate([signal_weight(s,m) for s,m in zip(sig,MASSES)])  # signal: factor x sideband reweight
     bkg = _load(f"{ROOT_DIR}/All_Bkg/run3.root",tree,n_bkg, extra=REWEIGHT_EXTRA)
     bhyp= np.random.default_rng(1).choice(MASSES, size=len(bkg["H_m"]))
     Xb  = _feat(bkg,0); Xb[:,-1] = (bkg["ALP_m"]-bhyp)/bkg["H_m"]
