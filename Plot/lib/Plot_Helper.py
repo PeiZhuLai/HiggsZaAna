@@ -173,7 +173,16 @@ def _run3_sources_for_sample(sample, ana_cfg):
         return all_sources
 
     if sample == "DYJetsToLL":
-        all_sources = [("DYJetsToLL", year) for year in getattr(ana_cfg, "years_dyll", [])]
+        # 2024 has no inclusive DYJetsToLL/2024.root; substitute the flavor-split
+        # DYJetsTo2E/2Mu/2Tau samples so the run3 DY+jets component is not silently
+        # dropped for 2024 (matches select_lib.BKG_SAMPLES_BY_YEAR / pseudo-data closure).
+        split_2024 = getattr(ana_cfg, "bkg_dyll_2024", ["DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"])
+        all_sources = []
+        for year in getattr(ana_cfg, "years_dyll", []):
+            if year == "2024" and split_2024:
+                all_sources.extend((subsample, year) for subsample in split_2024)
+            else:
+                all_sources.append(("DYJetsToLL", year))
         if filters:
             allowed_years = set(filters)
             return [(directory, year) for directory, year in all_sources if year in allowed_years]

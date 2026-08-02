@@ -1,0 +1,46 @@
+# dataVmc merge+plot (6 jobs: 3 regions x 2 tags)
+universe        = vanilla
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/runjob_datavmc_mergeplot.sh
+getenv          = True
+request_memory  = 6000
+request_cpus    = 1
++JobFlavour     = "workday"
+on_exit_hold    = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+batch_name      = dataVmc_mergeplot
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_SR.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_SR.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_SR.$(ClusterId).err
+arguments = SR nominal
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_CR.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_CR.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_CR.$(ClusterId).err
+arguments = CR nominal
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_mva.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_mva.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_nominal_mva.$(ClusterId).err
+arguments = mva nominal
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_SR.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_SR.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_SR.$(ClusterId).err
+arguments = SR sideband_rwgt
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_CR.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_CR.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_CR.$(ClusterId).err
+arguments = CR sideband_rwgt
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_mva.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_mva.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/mergeplot_sideband_rwgt_mva.$(ClusterId).err
+arguments = mva sideband_rwgt
+queue

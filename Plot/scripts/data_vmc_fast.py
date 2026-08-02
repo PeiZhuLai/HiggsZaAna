@@ -275,6 +275,10 @@ def _build_var_names(plot_cfg: PC.Plot_Config, target_masses: Sequence[str], use
 def _build_hist_specs(var_names: Iterable[str], target_masses: Sequence[str]) -> Dict[str, HistSpec]:
     base_specs = {
         "pho1Pt": HistSpec("ALP_lead_photon_pt", "pho1Pt", 42, 8.0, 50.0),
+        # 2026-08-02: complete the 06-03 var rename to p_T/m_llgg ratios. var_title_map uses
+        # the *_oHm keys; the branches exist in the scored ntuples. Binning mirrors the legacy
+        # 1_prepare_dataVmc.py so data_vmc_fast (prepare) and 2_plot_dataVmc (draw) agree.
+        "pho1Pt_oHm": HistSpec("pho1Pt_oHm", "pho1Pt_oHm", 30, 0.0, 0.6),
         "pho1eta": HistSpec("ALP_lead_photon_eta", "ALP_lead_photon_eta", 30, -3.0, 3.0),
         "pho1phi": HistSpec("ALP_lead_photon_phi", "ALP_lead_photon_phi", 40, -4.0, 4.0),
         "pho1R9": HistSpec("ALP_lead_photon_r9", "ALP_lead_photon_r9", 25, 0.1, 1.0),
@@ -296,6 +300,7 @@ def _build_hist_specs(var_names: Iterable[str], target_masses: Sequence[str]) ->
         ),
         "pho1HOE": HistSpec("ALP_lead_photon_hoe_PUcorr", "ALP_lead_photon_hoe_PUcorr", 25, 0.0, 0.01),
         "pho2Pt": HistSpec("ALP_sublead_photon_pt", "ALP_sublead_photon_pt", 22, 8.0, 30.0),
+        "pho2Pt_oHm": HistSpec("pho2Pt_oHm", "pho2Pt_oHm", 25, 0.0, 0.5),
         "pho2eta": HistSpec("ALP_sublead_photon_eta", "ALP_sublead_photon_eta", 30, -3.0, 3.0),
         "pho2phi": HistSpec("ALP_sublead_photon_phi", "ALP_sublead_photon_phi", 40, -4.0, 4.0),
         "pho2R9": HistSpec("ALP_sublead_photon_r9", "ALP_sublead_photon_r9", 25, 0.1, 1.0),
@@ -319,6 +324,7 @@ def _build_hist_specs(var_names: Iterable[str], target_masses: Sequence[str]) ->
         "Z_m": HistSpec("Z_mass", "Z_mass", 80, 50.0, 130.0),
         "H_m": HistSpec("H_m", "H_m", 85, 95.0, 180.0),
         "H_pt": HistSpec("H_pt", "H_pt", 80, 0.0, 160.0),
+        "H_pt_oHm": HistSpec("H_pt_oHm", "H_pt_oHm", 50, 0.0, 2.5),
         "ALP_m": HistSpec("ALP_m", "ALP_m", 40, 0.0, 40.0),
         "var_dR_g1g2": HistSpec("var_dR_g1g2", "var_dR_g1g2", 25, 0.0, 5.0),
         "var_PtaOverMa": HistSpec("var_PtaOverMa", "var_PtaOverMa", 25, 0.0, 100.0),

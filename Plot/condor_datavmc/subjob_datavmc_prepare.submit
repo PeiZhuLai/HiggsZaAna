@@ -1,0 +1,226 @@
+# dataVmc prepare (36 jobs: 6 sample groups x 3 regions x 2 tags)
+universe        = vanilla
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/runjob_datavmc_prepare.sh
+getenv          = True
+request_memory  = 8000
+request_cpus    = 1
++JobFlavour     = "workday"
+on_exit_hold    = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+batch_name      = dataVmc_prep
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_data.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_data.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_data.$(ClusterId).err
+arguments = SR nominal data Data
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_dyll.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_dyll.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_dyll.$(ClusterId).err
+arguments = SR nominal dyll DYJetsToLL
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_dyg.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_dyg.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_dyg.$(ClusterId).err
+arguments = SR nominal dyg DYGto2LG
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m1_m5.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m1_m5.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m1_m5.$(ClusterId).err
+arguments = SR nominal sig_m1_m5 M1,M2,M3,M4,M5
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m6_m10.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m6_m10.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m6_m10.$(ClusterId).err
+arguments = SR nominal sig_m6_m10 M6,M7,M8,M9,M10
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m15_m30.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m15_m30.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_SR_sig_m15_m30.$(ClusterId).err
+arguments = SR nominal sig_m15_m30 M15,M20,M25,M30
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_data.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_data.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_data.$(ClusterId).err
+arguments = CR nominal data Data
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_dyll.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_dyll.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_dyll.$(ClusterId).err
+arguments = CR nominal dyll DYJetsToLL
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_dyg.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_dyg.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_dyg.$(ClusterId).err
+arguments = CR nominal dyg DYGto2LG
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m1_m5.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m1_m5.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m1_m5.$(ClusterId).err
+arguments = CR nominal sig_m1_m5 M1,M2,M3,M4,M5
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m6_m10.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m6_m10.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m6_m10.$(ClusterId).err
+arguments = CR nominal sig_m6_m10 M6,M7,M8,M9,M10
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m15_m30.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m15_m30.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_CR_sig_m15_m30.$(ClusterId).err
+arguments = CR nominal sig_m15_m30 M15,M20,M25,M30
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_data.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_data.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_data.$(ClusterId).err
+arguments = mva nominal data Data
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_dyll.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_dyll.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_dyll.$(ClusterId).err
+arguments = mva nominal dyll DYJetsToLL
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_dyg.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_dyg.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_dyg.$(ClusterId).err
+arguments = mva nominal dyg DYGto2LG
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m1_m5.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m1_m5.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m1_m5.$(ClusterId).err
+arguments = mva nominal sig_m1_m5 M1,M2,M3,M4,M5
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m6_m10.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m6_m10.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m6_m10.$(ClusterId).err
+arguments = mva nominal sig_m6_m10 M6,M7,M8,M9,M10
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m15_m30.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m15_m30.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_nominal_mva_sig_m15_m30.$(ClusterId).err
+arguments = mva nominal sig_m15_m30 M15,M20,M25,M30
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_data.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_data.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_data.$(ClusterId).err
+arguments = SR sideband_rwgt data Data
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_dyll.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_dyll.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_dyll.$(ClusterId).err
+arguments = SR sideband_rwgt dyll DYJetsToLL
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_dyg.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_dyg.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_dyg.$(ClusterId).err
+arguments = SR sideband_rwgt dyg DYGto2LG
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m1_m5.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m1_m5.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m1_m5.$(ClusterId).err
+arguments = SR sideband_rwgt sig_m1_m5 M1,M2,M3,M4,M5
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m6_m10.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m6_m10.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m6_m10.$(ClusterId).err
+arguments = SR sideband_rwgt sig_m6_m10 M6,M7,M8,M9,M10
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m15_m30.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m15_m30.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_SR_sig_m15_m30.$(ClusterId).err
+arguments = SR sideband_rwgt sig_m15_m30 M15,M20,M25,M30
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_data.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_data.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_data.$(ClusterId).err
+arguments = CR sideband_rwgt data Data
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_dyll.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_dyll.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_dyll.$(ClusterId).err
+arguments = CR sideband_rwgt dyll DYJetsToLL
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_dyg.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_dyg.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_dyg.$(ClusterId).err
+arguments = CR sideband_rwgt dyg DYGto2LG
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m1_m5.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m1_m5.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m1_m5.$(ClusterId).err
+arguments = CR sideband_rwgt sig_m1_m5 M1,M2,M3,M4,M5
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m6_m10.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m6_m10.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m6_m10.$(ClusterId).err
+arguments = CR sideband_rwgt sig_m6_m10 M6,M7,M8,M9,M10
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m15_m30.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m15_m30.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_CR_sig_m15_m30.$(ClusterId).err
+arguments = CR sideband_rwgt sig_m15_m30 M15,M20,M25,M30
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_data.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_data.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_data.$(ClusterId).err
+arguments = mva sideband_rwgt data Data
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_dyll.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_dyll.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_dyll.$(ClusterId).err
+arguments = mva sideband_rwgt dyll DYJetsToLL
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_dyg.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_dyg.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_dyg.$(ClusterId).err
+arguments = mva sideband_rwgt dyg DYGto2LG
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m1_m5.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m1_m5.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m1_m5.$(ClusterId).err
+arguments = mva sideband_rwgt sig_m1_m5 M1,M2,M3,M4,M5
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m6_m10.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m6_m10.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m6_m10.$(ClusterId).err
+arguments = mva sideband_rwgt sig_m6_m10 M6,M7,M8,M9,M10
+queue
+
+log       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m15_m30.$(ClusterId).log
+output    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m15_m30.$(ClusterId).out
+error     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/condor_datavmc/logs/prep_sideband_rwgt_mva_sig_m15_m30.$(ClusterId).err
+arguments = mva sideband_rwgt sig_m15_m30 M15,M20,M25,M30
+queue

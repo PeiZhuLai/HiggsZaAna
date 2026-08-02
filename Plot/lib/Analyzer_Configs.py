@@ -101,6 +101,11 @@ class Analyzer_Config:
             self.bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
             self.bkg_2023 = ["DYGto2LG_10to100"]
             self.bkg_dyll = ["DYJetsToLL"]
+            # 2024 has no inclusive DYJetsToLL production; the DY+jets input is the
+            # flavor-split DYJetsTo2E/2Mu/2Tau. Loaded under the DYJetsToLL sample key
+            # for 2024 only (see Plot_Helper._run3_sources_for_sample). Keeps run3 DY+jets
+            # consistent with select_lib.BKG_SAMPLES_BY_YEAR / the pseudo-data closure.
+            self.bkg_dyll_2024 = ["DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"]
 
             self.bkg_names  = ['DYJetsToLL', 'DYGto2LG']
             self.samp_names = self.bkg_names + self.sig_names + ['Data']
