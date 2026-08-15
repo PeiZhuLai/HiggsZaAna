@@ -893,7 +893,7 @@ def _plot_ma_migration_matrix_year(
     c = ROOT.TCanvas(f"c_migMat_{year}", "", 900, 820)
     ROOT.gStyle.SetOptStat(0)
     ROOT.gStyle.SetPaintTextFormat("4.1f")  # one decimal
-    c.SetMargin(0.12, 0.20, 0.14, 0.08)  # left, right, bottom, top
+    c.SetMargin(0.17, 0.20, 0.14, 0.08)  # left, right, bottom, top
     c.SetTickx(); c.SetTicky()
     c.cd()
 
@@ -901,7 +901,7 @@ def _plot_ma_migration_matrix_year(
     h.SetDirectory(0)
     h.SetTitle("")
     h.GetXaxis().SetTitle("m_{a}^{True} (GeV)")
-    h.GetYaxis().SetTitle("m_{a}^{Predict} (GeV)")
+    h.GetYaxis().SetTitle("ALP mass hypothesis m_{a} (GeV)")
     h.GetZaxis().SetTitle("Fraction (%)")
     h.GetXaxis().SetTitleSize(0.05)
     h.GetYaxis().SetTitleSize(0.05)

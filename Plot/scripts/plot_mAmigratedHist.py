@@ -1231,6 +1231,109 @@ def _accumulate_alp_m_hists_by_true_ma_year(
     out = {ma: h for ma, h in out.items() if h and (h.GetEntries() > 0)}
     return out
 
+def _accumulate_alp_m_by_pred_ma_year(
+    base_dir: Path,
+    *,
+    year: str,
+    true_ma_dirs: List[str],
+    pred_mas: List[int],
+    mva_cuts: Dict[int, float],
+    alp_m_branch: str = "ALP_m",
+    bins: int = 60,
+    x_min: float = 0.0,
+    x_max: float = 40.0,
+    debug: bool = False,
+    max_files: Optional[int] = None,
+    score_prefer: str = "auto",
+    strict: bool = False,
+) -> Dict[int, ROOT.TH1F]:
+    """
+    回傳: pred_ma -> TH1F   (grouped by PREDICTED/assigned mass hypothesis)
+    每個 predicted hypothesis p 一條：把「所有 true_ma 檔中通過 p 的工作點
+    (score(p) >= cut(p)) 的事件」以其重建 ALP_m (m_gammagamma) 填入。
+    含 migration：真值 mA2 但通過 mA1 工作點的事件，會落進 pred=1 那條(在其 m_gg~2 處)，
+    與真值 mA1 通過 mA1 的事件畫在同一個 pred=1 分布裡。
+    """
+    base_dir = Path(base_dir)
+    out: Dict[int, ROOT.TH1F] = {}
+    n_opened = 0
+
+    for true_tag in true_ma_dirs:
+        true_ma = _true_ma_from_dir(true_tag)
+        if true_ma is None:
+            continue
+        fp = base_dir / true_tag / f"{year}.root"
+        if not fp.exists():
+            if debug:
+                print(f"[DEBUG] predMa(ALP_m): missing file: {fp}")
+            continue
+        if max_files is not None and n_opened >= max_files:
+            break
+
+        try:
+            with uproot.open(str(fp)) as f:
+                n_opened += 1
+                tname = _tree_pick(f)
+                if not tname:
+                    if strict:
+                        raise RuntimeError(f"predMa(ALP_m): No tree found in {fp}")
+                    continue
+                t = f[tname]
+                keys = set(map(str, t.keys()))
+                if alp_m_branch not in keys:
+                    if strict:
+                        raise RuntimeError(f"predMa(ALP_m): missing branch {alp_m_branch} in {fp}")
+                    continue
+                score_prefix = _pick_score_prefix(keys, prefer=score_prefer)
+                if score_prefix is None:
+                    if strict:
+                        raise RuntimeError(f"predMa(ALP_m): No score prefix in {fp}")
+                    continue
+                wname = _pick_weight_branch(t)
+
+                pred_here: List[int] = []
+                pred_branches: List[str] = []
+                for p in pred_mas:
+                    if p not in mva_cuts:
+                        continue
+                    b = f"{score_prefix}{p}"
+                    if b in keys:
+                        pred_here.append(int(p))
+                        pred_branches.append(b)
+                if not pred_here:
+                    if debug:
+                        print(f"[DEBUG] predMa(ALP_m): no usable pred branches in {fp}")
+                    if strict:
+                        raise RuntimeError(f"predMa(ALP_m): no usable pred branches in {fp}")
+                    continue
+
+                need = [alp_m_branch] + pred_branches
+                if wname and wname not in need:
+                    need.append(wname)
+
+                for arrs in t.iterate(need, library="ak", step_size="200 MB"):
+                    alp = arrs[alp_m_branch]
+                    w = ak.values_astype(arrs[wname], np.float64) if wname else ak.ones_like(alp, dtype=np.float64)
+                    for p in pred_here:
+                        cut = float(mva_cuts[p])
+                        mask = arrs[f"{score_prefix}{p}"] >= cut
+                        alp_sel = alp[mask]
+                        w_sel = w[mask]
+                        if int(p) not in out:
+                            out[int(p)] = _new_th1f(f"h_alp_m_predMa{p}_{year}", "", bins, x_min, x_max)
+                        hp = out[int(p)]
+                        for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
+                            hp.Fill(float(xv), float(wv))
+        except Exception as e:
+            if debug:
+                print(f"[DEBUG] predMa(ALP_m): exception reading {fp}: {e}")
+            if strict:
+                raise
+            continue
+
+    return out
+
+
 def _accumulate_alp_m_hists_predtrue_by_true_ma_year(
     base_dir: Path,
     *,
@@ -1561,19 +1664,36 @@ def main():
                 _warn(f"predtrue14(ALP_m): no histograms were filled for year={y}")
                 continue
 
+            by_pred = _accumulate_alp_m_by_pred_ma_year(
+                Path(input_root_dir),
+                year=y,
+                true_ma_dirs=signal_ma_dirs,
+                pred_mas=pred_mas,
+                mva_cuts=mva_cuts,
+                alp_m_branch="ALP_m",
+                bins=args.alp_m_bins,
+                x_min=args.alp_m_xmin,
+                x_max=args.alp_m_xmax,
+                debug=args.debug,
+                max_files=args.max_files,
+                score_prefer=args.score_prefix,
+                strict=args.strict,
+            )
+
             pred_list: List[Tuple[int, ROOT.TH1F]] = []
             true_list: List[Tuple[int, ROOT.TH1F]] = []
+
+            for p in sorted(by_pred.keys(), key=lambda m: ma_to_idx.get(m, 10**9)):
+                idx = ma_to_idx.get(p, 0)
+                col = _palette_color(idx, fallback=ROOT.kBlack)
+                ls = line_syles[idx % len(line_syles)] if line_syles else 1
+                _root_style_line(by_pred[p], col, 20, ls)
+                pred_list.append((int(p), by_pred[p]))
 
             for ma in sorted(by_ma.keys(), key=lambda m: ma_to_idx.get(m, 10**9)):
                 idx = ma_to_idx.get(ma, 0)
                 col = _palette_color(idx, fallback=ROOT.kBlack)
                 ls = line_syles[idx % len(line_syles)] if line_syles else 1
-
-                hp = by_ma[ma].get("pred")
-                if hp:
-                    _root_style_line(hp, col, 20, ls)
-                    pred_list.append((int(ma), hp))
-
                 ht = by_ma[ma].get("true")
                 if ht:
                     _root_style_line(ht, col, 20, ls)
@@ -1581,8 +1701,8 @@ def main():
 
             _plot_multi_hists_sigstyle(
                 year=y,
-                xlabel="m_{#gamma#gamma} (GeV)",
-                ylabel="Events",
+                xlabel="Reconstructed ALP mass m_{#gamma#gamma} (GeV)",
+                ylabel="Expected yield",
                 out_path=out_dir / f"mA_pred_14masses_{y}.pdf",
                 hists=pred_list,
                 normalize=False,
@@ -1590,7 +1710,7 @@ def main():
             )
             _plot_multi_hists_sigstyle(
                 year=y,
-                xlabel="m_{#gamma#gamma} (GeV)",
+                xlabel="Reconstructed ALP mass m_{#gamma#gamma} (GeV)",
                 ylabel="A.U.",
                 out_path=out_dir / f"mA_pred_14masses_{y}_norm.pdf",
                 hists=pred_list,
@@ -1599,8 +1719,8 @@ def main():
             )
             _plot_multi_hists_sigstyle(
                 year=y,
-                xlabel="m_{#gamma#gamma} (GeV)",
-                ylabel="Events",
+                xlabel="Reconstructed ALP mass m_{#gamma#gamma} (GeV)",
+                ylabel="Expected yield",
                 out_path=out_dir / f"mA_true_14masses_{y}.pdf",
                 hists=true_list,
                 normalize=False,
@@ -1637,17 +1757,31 @@ def main():
                     score_prefer=args.score_prefix,
                     strict=args.strict,
                 )
+                by_pred = _accumulate_alp_m_by_pred_ma_year(
+                    Path(input_root_dir),
+                    year=y,
+                    true_ma_dirs=signal_ma_dirs,
+                    pred_mas=pred_mas,
+                    mva_cuts=mva_cuts,
+                    alp_m_branch="ALP_m",
+                    bins=args.alp_m_bins,
+                    x_min=args.alp_m_xmin,
+                    x_max=args.alp_m_xmax,
+                    debug=args.debug,
+                    max_files=args.max_files,
+                    score_prefer=args.score_prefix,
+                    strict=args.strict,
+                )
+                for p, hp in (by_pred or {}).items():
+                    if p not in run3_sum_pred:
+                        hh = hp.Clone(_safe_root_name(f"h_alp_m_predMa{p}_Run3"))
+                        hh.SetDirectory(0)
+                        run3_sum_pred[int(p)] = hh
+                    else:
+                        run3_sum_pred[int(p)].Add(hp)
+
                 for ma, d in (by_ma or {}).items():
-                    hp, ht = d.get("pred"), d.get("true")
-
-                    if hp:
-                        if ma not in run3_sum_pred:
-                            hh = hp.Clone(_safe_root_name(f"h_alp_m_pred_trueMa{ma}_Run3"))
-                            hh.SetDirectory(0)
-                            run3_sum_pred[int(ma)] = hh
-                        else:
-                            run3_sum_pred[int(ma)].Add(hp)
-
+                    ht = d.get("true")
                     if ht:
                         if ma not in run3_sum_true:
                             hh = ht.Clone(_safe_root_name(f"h_alp_m_true_trueMa{ma}_Run3"))
@@ -1672,8 +1806,8 @@ def main():
 
             _plot_multi_hists_sigstyle(
                 year="Run3",
-                xlabel="m_{#gamma#gamma} (GeV)",
-                ylabel="Events",
+                xlabel="Reconstructed ALP mass m_{#gamma#gamma} (GeV)",
+                ylabel="Expected yield",
                 out_path=out_dir / "mA_pred_14masses_Run3.pdf",
                 hists=pred_list,
                 normalize=False,
@@ -1681,7 +1815,7 @@ def main():
             )
             _plot_multi_hists_sigstyle(
                 year="Run3",
-                xlabel="m_{#gamma#gamma} (GeV)",
+                xlabel="Reconstructed ALP mass m_{#gamma#gamma} (GeV)",
                 ylabel="A.U.",
                 out_path=out_dir / "mA_pred_14masses_Run3_norm.pdf",
                 hists=pred_list,
@@ -1690,8 +1824,8 @@ def main():
             )
             _plot_multi_hists_sigstyle(
                 year="Run3",
-                xlabel="m_{#gamma#gamma} (GeV)",
-                ylabel="Events",
+                xlabel="Reconstructed ALP mass m_{#gamma#gamma} (GeV)",
+                ylabel="Expected yield",
                 out_path=out_dir / "mA_true_14masses_Run3.pdf",
                 hists=true_list,
                 normalize=False,

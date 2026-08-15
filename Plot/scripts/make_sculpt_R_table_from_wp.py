@@ -128,7 +128,15 @@ def build_table(low_R, high_R):
     inclusive simulated background, for the low-mass and high-mass BDT models. $R=1$
     corresponds to no sculpting of the $m_{\ell\ell\gamma\gamma}$ spectrum in the
     Higgs-peak window; $R>1$ ($R<1$) indicates an enhancement (depletion) of the
-    peak window relative to the sidebands.}
+    peak window relative to the sidebands. The largest value,
+    $R(m_{a}=30~\GeV)=1.30$, is not a concern: $R$ is evaluated on the simulated
+    background, whereas the final background is the data-driven sideband fit, and a
+    single fixed-window ratio cannot distinguish a broad, smoothly-varying tilt of the
+    mass shape (absorbed by the analytic background function) from a localized fake
+    peak. This is confirmed by the background-only pseudo-data closure test
+    (Fig.~\ref{fig:sculpt_closure}), whose observed limit at $m_{a}=30~\GeV$ lies within
+    the $\pm1\sigma$ expected band with a best-fit signal strength compatible with zero,
+    showing that the $R>1$ there does not bias the result.}
     \label{tab:sculpt_R}
     \small
     \begin{tabular}{|c|c||c|c|} \hline

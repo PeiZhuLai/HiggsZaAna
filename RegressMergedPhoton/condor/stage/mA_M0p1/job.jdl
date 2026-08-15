@@ -1,15 +1,16 @@
 Universe                = vanilla
 Executable              = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/run_one_file.sh
-Arguments               = $(input_url) $(out_name) $(out_dir)
+Arguments               = $(input_url) $(out_name) $(out_dir) mc 2024
 should_transfer_files   = NO
 use_x509userproxy       = true
 x509userproxy           = /afs/cern.ch/user/p/pelai/.x509up_pelai
 JobBatchName            = "MLPhoton_Regressing_mA_M0p1"
-Log                     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/logs/job_$(Cluster)_$(Process).log
-Output                  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/logs/job_$(Cluster)_$(Process).out
-Error                   = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/logs/job_$(Cluster)_$(Process).err
+Log                     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/logs/all_jobs.log
+Output                  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/logs/job_$(Process).out
+Error                   = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/logs/job_$(Process).err
 +JobFlavour             = "workday"
 RequestCpus             = 1
 RequestMemory           = 4000
 RequestDisk             = 4000000
+max_materialize         = 40
 Queue input_url out_name out_dir from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/RegressMergedPhoton/condor/stage/mA_M0p1/args.txt

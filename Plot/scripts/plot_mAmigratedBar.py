@@ -382,7 +382,7 @@ def _plot_ma_migration_4cat_bar_year(
     frame.SetDirectory(0)
     frame.SetTitle("")
     frame.GetXaxis().SetTitle("Fraction (%)")
-    frame.GetYaxis().SetTitle("m_{a}^{Predict} (GeV)")
+    frame.GetYaxis().SetTitle("ALP mass hypothesis m_{a} (GeV)")
     frame.GetXaxis().SetTitleOffset(1.05)
     frame.GetYaxis().SetTitleOffset(1.35)
     frame.GetXaxis().SetTitleSize(0.05)

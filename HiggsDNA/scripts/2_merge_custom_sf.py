@@ -21,6 +21,7 @@ ERA_DIRS = {
     "2023postBPix": "2023postBPix_UL",
     "2024": "2024_UL",
     "2025": "2025_UL",
+    "2026": "2026_UL",
 }
 
 ERA_TAGS = {
@@ -30,10 +31,12 @@ ERA_TAGS = {
     "2023postBPix": "2023BPix",
     "2024": "2024",
     "2025": "2025",
+    "2026": "2026",
 }
 
 PHOTON_ERAS = ("2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024")
-ELECTRON_ERAS = ("2024", "2025")
+# 2026 electron SFs are measured from 2026 data against 2024 MC.
+ELECTRON_ERAS = ("2024", "2025", "2026")
 CORRECTION_NAMES = ("sf_pass", "unc_pass", "sf_fail", "unc_fail")
 EFFICIENCY_NAMES = ("effdata", "systdata", "effmc", "systmc")
 R9_SPLIT = 0.96

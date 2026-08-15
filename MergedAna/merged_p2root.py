@@ -50,8 +50,10 @@ ROI_VAR = "MLPhoton_lead_mass"
 # Signal ML parquet (all 9 sub-GeV mass points; nominal + 16 syst per tag).
 SIG_ML = "/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all"
 # Data ML friend parquet (per-dataset dirs from run_merged_data_ml_friend.sh).
+# Covers all Run-3 years: Data_2022*, Data_2023* (produced on IHEP, synced to
+# <tag>/merged/) and Data_2024_* — one glob picks up every per-dataset merged file.
 DATA_ML_GLOB = ("/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend/"
-                "Data_2024_*/*/merged_nominal.parquet")
+                "Data_202*_*/*/merged_nominal.parquet")
 
 # Per-mA ROI window on MLPhoton_lead_mass = [q16, q84] of the signal reco
 # distribution (contains the central 68% of signal; tracks m_a). Derived
@@ -76,7 +78,8 @@ SYST_MAP = {
 
 _Z = ["Z_pt", "Z_eta", "Z_phi", "Z_mass"]
 _ML = ["MLPhoton_lead_pt", "MLPhoton_lead_eta", "MLPhoton_lead_phi", "MLPhoton_lead_mass"]
-_COLS = _Z + _ML + [SEL, "n_MLPhoton_diphoton", "weight_central", "Z_lead_lepton_id"]
+_COLS = _Z + _ML + [SEL, "n_MLPhoton_diphoton", "weight_central", "Z_lead_lepton_id",
+                    "run", "luminosityBlock", "event"]  # run/lumi/event for data event-dedup
 
 
 def _p4(pt, eta, phi, m):
@@ -116,7 +119,9 @@ def load(path, tag, mlo, mhi, use_weight=True):
     d = d[(roi > lo) & (roi < hi)]
     if len(d) == 0:
         return {"CMS_hza_mass": np.array([], "float64"), "weight": np.array([], "float64"),
-                "dZ": np.array([], "float64"), "_lepid": np.array([], "float64")}
+                "dZ": np.array([], "float64"), "_lepid": np.array([], "float64"),
+                "_run": np.array([], "int64"), "_lumi": np.array([], "int64"),
+                "_event": np.array([], "int64")}
     h = _h_merged_ml_mass(d)
     m = np.isfinite(h) & (h > mlo) & (h < mhi)
     out = {"CMS_hza_mass": h[m].astype("float64")}
@@ -127,6 +132,10 @@ def load(path, tag, mlo, mhi, use_weight=True):
     out["dZ"] = np.zeros(int(m.sum()), dtype="float64")
     out["_lepid"] = (d["Z_lead_lepton_id"].to_numpy()[m] if "Z_lead_lepton_id" in d.columns
                      else np.full(int(m.sum()), 11))
+    # run/lumi/event carried for data event-dedup (0 if absent, e.g. MC)
+    for idc, col in (("_run", "run"), ("_lumi", "luminosityBlock"), ("_event", "event")):
+        out[idc] = (d[col].to_numpy()[m].astype("int64") if col in d.columns
+                    else np.zeros(int(m.sum()), dtype="int64"))
     return out
 
 
@@ -177,8 +186,19 @@ def build_data(tag, data_glob, mlo, mhi):
         print(f"[data {tag}] 0 events in ROI")
         cat = {k: np.array([], "float64") for k in ("CMS_hza_mass", "weight", "dZ")}
         return {f"DiphotonTree/Data_{SQRTS}": cat}
-    cat = {k: np.concatenate([p[k] for p in parts]) for k in ("CMS_hza_mass", "weight", "dZ")}
-    print(f"[data {tag}] ROI={ROI_WINDOWS[tag]} Data_{SQRTS} events in [{mlo},{mhi}] = {len(cat['CMS_hza_mass'])}")
+    full = {k: np.concatenate([p[k] for p in parts])
+            for k in ("CMS_hza_mass", "weight", "dZ", "_run", "_lumi", "_event")}
+    # Event-level dedup by (run, lumi, event): 2022 has overlapping muon PDs
+    # (DoubleMuon + SingleMuon + Muon), so the same event can appear in several
+    # streams; concatenating without dedup would double-count real data.
+    n_raw = len(full["CMS_hza_mass"])
+    rle = np.stack([full["_run"], full["_lumi"], full["_event"]], axis=1)
+    _, keep = np.unique(rle, axis=0, return_index=True)
+    keep = np.sort(keep)
+    cat = {k: full[k][keep] for k in ("CMS_hza_mass", "weight", "dZ")}
+    n_dup = n_raw - len(keep)
+    print(f"[data {tag}] ROI={ROI_WINDOWS[tag]} Data_{SQRTS} events in [{mlo},{mhi}] = "
+          f"{len(cat['CMS_hza_mass'])} (raw {n_raw}, deduped {n_dup} overlapping)")
     return {f"DiphotonTree/Data_{SQRTS}": cat}
 
 

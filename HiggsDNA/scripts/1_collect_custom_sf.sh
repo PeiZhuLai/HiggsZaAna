@@ -7,11 +7,11 @@ muoSFDir="${muoSFDir:-/eos/home-p/pelai/HZa/root_mTnP/efficiencies/muon/generalT
 scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts}"
 
 photon_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
-electron_eras=(2024 2025)
+electron_eras=(2024 2025 2026)
 muon_id_eras=(2024 2025)
 muon_trigger_eras=(2024 2025)
 muon_iso_eras=(2024 2025)
-all_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024 2025)
+all_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024 2025 2026)
 
 era_dir() {
     case "$1" in
@@ -21,6 +21,7 @@ era_dir() {
         2023postBPix) echo "2023postBPix_UL" ;;
         2024) echo "2024_UL" ;;
         2025) echo "2025_UL" ;;
+        2026) echo "2026_UL" ;;
         *)
             echo "Unknown era: $1" >&2
             return 1

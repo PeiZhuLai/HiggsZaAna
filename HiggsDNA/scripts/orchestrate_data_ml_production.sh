@@ -5,10 +5,12 @@
 set -uo pipefail
 
 REPO=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA
-ENVDIR=/eos/home-p/pelai/App/Conda/.conda/envs/hza_ana
+# ENVDIR overridable: point at a node-local conda-pack-unpacked env (B-mode) so the
+# submit side does NOT read the eos-home fuse env under load.
+ENVDIR="${ENVDIR:-/eos/home-p/pelai/App/Conda/.conda/envs/hza_ana}"
 export CONDA_PREFIX=$ENVDIR
 export PATH=$ENVDIR/bin:/cvmfs/cms.cern.ch/common:/usr/bin:/bin
-export X509_USER_PROXY=/tmp/x509up_u175325
+export X509_USER_PROXY="${X509_USER_PROXY:-/afs/cern.ch/user/p/pelai/.x509up_pelai}"
 export PYTHONPATH=$REPO
 cd "$REPO"
 HZAPY=$ENVDIR/bin/python
@@ -16,7 +18,8 @@ HZAPY=$ENVDIR/bin/python
 CATALOG="${CATALOG:-metadata/samples/za_merged_data_2024_perds.json}"
 export CATALOG   # Step B (run_merged_data_ml_friend.sh) honors this same catalog
 MLBASE=/eos/cms/store/group/phys_susy/pelai/HZa_merged/MLNanoAOD
-STATUS=${STATUS:-/tmp/pelai/claude-175325/-afs-cern-ch-user-p-pelai/3184959c-b995-4b33-a181-dcda35c8d7f1/scratchpad/data_ml_prod_status.txt}
+STATUS=${STATUS:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/logs/data_ml_prod_status.txt}
+mkdir -p "$(dirname "$STATUS")"
 : > "$STATUS"
 log(){ echo "[$(date +%H:%M:%S)] $*" | tee -a "$STATUS"; }
 

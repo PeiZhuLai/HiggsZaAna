@@ -60,9 +60,26 @@ def _collect(files: list[str], workers: int, label: str) -> dict[str, list[str]]
 
 def build(nano_dataset: str, mini_dataset: str, workers: int) -> dict[str, list[str]]:
     nano_files = _das_query(f"file dataset={nano_dataset}")
-    mini_files = _das_query(f"file dataset={mini_dataset}")
     if not nano_files:
         raise SystemExit(f"no nano files in {nano_dataset!r}")
+
+    # Detect the nano's file-level parent type. Some central reprocessings (e.g.
+    # 2022/2023 NanoAODv15 made directly from the 22Sep2023 MiniAOD) record the
+    # MiniAOD file as the nano's DIRECT parent, so `parent file=<nano>` returns
+    # MINIAOD UUIDs we can use straight away (no AOD grandparent join). Others
+    # (e.g. 2024 MINIv6NANOv15) record the AOD, needing the shared-AOD join below.
+    sample_parents = _das_query(f"parent file={nano_files[0]}")
+    if any("/MINIAOD" in p for p in sample_parents):
+        print(f"[data parent_map] nano={len(nano_files)}; nano->MINI DIRECT "
+              f"(file parent is MiniAOD)")
+        nano_mini = _collect(nano_files, workers, "nano->MINI")
+        mapping = {lfn: sorted(set(uuids)) for lfn, uuids in nano_mini.items()}
+        n_empty = sum(1 for v in mapping.values() if not v)
+        print(f"[data parent_map] {len(mapping)} nano files mapped; "
+              f"{n_empty} with no mini match (direct)")
+        return mapping
+
+    mini_files = _das_query(f"file dataset={mini_dataset}")
     if not mini_files:
         raise SystemExit(f"no mini files in {mini_dataset!r}")
     print(f"[data parent_map] nano={len(nano_files)} mini={len(mini_files)}")
@@ -104,6 +121,17 @@ def main() -> int:
     args = ap.parse_args()
     _check_dasgoclient()
     mini = args.mini_dataset or args.nano_dataset.replace("/NANOAOD", "/MINIAOD")
+    # Central DATA: the NanoAODv15 and its parent MiniAOD often carry different
+    # processing strings (e.g. Run2022E-NanoAODv15-v1 vs Run2022E-22Sep2023-v1),
+    # so the naive /NANOAOD->/MINIAOD substitution yields a non-existent dataset.
+    # When the substituted mini has no files, resolve the real MiniAOD via the
+    # DAS dataset-level parent of the nano.
+    if not args.mini_dataset and not _das_query(f"file dataset={mini}"):
+        parents = [p for p in _das_query(f"parent dataset={args.nano_dataset}")
+                   if p.endswith("/MINIAOD")]
+        if parents:
+            mini = sorted(parents)[0]
+            print(f"[data parent_map] resolved mini via DAS parent: {mini}")
     mapping = build(args.nano_dataset, mini, args.workers)
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:

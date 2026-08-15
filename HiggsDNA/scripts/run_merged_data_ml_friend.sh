@@ -65,6 +65,14 @@ for tag in "${TAG_LIST[@]}"; do
     ml_dir="${MLNANO_BASE}/${tag}"
     outdir="${OUTDIR_BASE}/${tag}"
 
+    # Resumability: skip a tag already merged (so a re-launch after an interruption
+    # only redoes unfinished tags instead of the whole 36-tag sweep). Set
+    # SKIP_MERGED=0 to force reprocessing.
+    if [ "${SKIP_MERGED:-1}" = "1" ] && [ -f "${outdir}/merged_nominal.parquet" ]; then
+        echo "[skip] ${tag} already merged (${outdir}/merged_nominal.parquet)"
+        n_done=$((n_done + 1)); continue
+    fi
+
     if [ ! -f "${parent_map}" ]; then
         echo "[skip] missing parent map: ${parent_map}  (build with scripts/build_parent_map.py)"
         n_fail=$((n_fail + 1)); continue

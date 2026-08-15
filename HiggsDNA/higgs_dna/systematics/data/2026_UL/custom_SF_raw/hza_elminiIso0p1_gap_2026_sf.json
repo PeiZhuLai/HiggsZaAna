@@ -1,0 +1,218 @@
+{
+  "schema_version": 2,
+  "description": "",
+  "corrections": [
+    {
+      "name": "effdata",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data eff"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "pt",
+          "eta"
+        ],
+        "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
+          [
+            -1.566,
+            -1.444,
+            0.0,
+            1.444,
+            1.566
+          ]
+        ],
+        "content": [
+          0.9093608711001738,
+          0.9393494749453145,
+          0.9402232724652893,
+          0.9173033231564642,
+          0.9551077034471521,
+          0.9649520651487653,
+          0.9678792098967364,
+          0.9604836285138167
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "systdata",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data unc"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "pt",
+          "eta"
+        ],
+        "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
+          [
+            -1.566,
+            -1.444,
+            0.0,
+            1.444,
+            1.566
+          ]
+        ],
+        "content": [
+          0.003621637507235852,
+          0.001,
+          0.001,
+          0.0065045582450728966,
+          0.0011065168343570176,
+          0.001,
+          0.001,
+          0.0016769516336915314
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "effmc",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "MC eff"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "pt",
+          "eta"
+        ],
+        "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
+          [
+            -1.566,
+            -1.444,
+            0.0,
+            1.444,
+            1.566
+          ]
+        ],
+        "content": [
+          0.8882110099432906,
+          0.9448786193454957,
+          0.9448912507442385,
+          0.889646888634361,
+          0.9474491961373603,
+          0.9773911088558769,
+          0.9787054408932592,
+          0.946911294025796
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "systmc",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        },
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "MC unc"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "pt",
+          "eta"
+        ],
+        "edges": [
+          [
+            7.0,
+            35.0,
+            500.0
+          ],
+          [
+            -1.566,
+            -1.444,
+            0.0,
+            1.444,
+            1.566
+          ]
+        ],
+        "content": [
+          0.0019882499513490283,
+          0.001,
+          0.001,
+          0.0019448515910806521,
+          0.001,
+          0.001,
+          0.001,
+          0.001
+        ],
+        "flow": "clamp"
+      }
+    }
+  ]
+}

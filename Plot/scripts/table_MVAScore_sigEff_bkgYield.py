@@ -41,12 +41,12 @@ os.makedirs(os.path.dirname(output_latex), exist_ok=True)
 latex_table = (
     "\\begin{table}[h]\n"
     "\\begin{center}\n"
-    "\\topcaption{Summary of the optimized BDT threshold, signal efficiency, and smoothed MC background yields with respect to a selection on the BDT output for each nominal signal hypothesis.}\n"
+    "\\topcaption{Summary of the optimized BDT threshold, signal efficiency (combined $ee+\\mu\\mu$), and smoothed MC background yields with respect to a selection on the BDT output for each nominal signal hypothesis. The signal efficiency is the fraction of preselected signal events passing the BDT threshold; the electron and muon channels are shown separately in Fig.~\\ref{fig:mva_sig_eff_run3}. For the low-mass hypotheses, the selected working point is illustrated on the sculpting-ratio/significance scan of Fig.~\\ref{fig:scan_score_R}.}\n"
     "\\label{tab:boundary}\n"
     "\\small\n"
     "\\begin{tabular}{|c|c|c|c|}\n"
     "\\hline\n"
-    "$m_a$ [GeV] & \\shortstack[c]{Optimized\\\\ BDT threshold} & \\shortstack[c]{Signal efficiency \\\\ w.r.t. BDT threshold} & \\shortstack[c]{Smoothed MC background yields \\\\ w.r.t. BDT threshold}\\\\\n"
+    "$m_a$ [GeV] & \\shortstack[c]{Optimized\\\\ BDT threshold} & \\shortstack[c]{Signal efficiency ($ee+\\mu\\mu$) \\\\ w.r.t. BDT threshold} & \\shortstack[c]{Smoothed MC background yields \\\\ w.r.t. BDT threshold}\\\\\n"
     "\\hline\n"
     + ("\n".join(rows) if rows else "")
     + ("\n" if rows else "")

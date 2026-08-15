@@ -103,7 +103,8 @@ LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 #   These are pinned HERE so that re-running this script -- in particular with --write-json --
 #   can NOT silently revert mA2/mA3 back to the R=1 crossing. mA1 is NOT fixed: it keeps its
 #   natural R=1 crossing (~0.963). See memory ref_hza_unblind_procedure / project_hza_lowma_pow1_R1cuts.
-FIXED_WP = {2: 0.982, 3: 0.988}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
+FIXED_WP = {2: 0.975, 3: 0.988}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
+                                  # mA2 loosened 0.982->0.975 (2026-07-26) to bring R 1.25->~1.1 (R~=1 criterion)
 
 import sys
 sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")

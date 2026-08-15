@@ -650,7 +650,7 @@ def _draw_mass_plot(
         peak_ref = max(peak_ref, signal_hist.GetMaximum())
     if peak_ref <= 0.0:
         peak_ref = 1.0
-    ymax = peak_ref * 1.4
+    ymax = peak_ref * 1.8
 
     draw_histos["Data"].SetMinimum(1e-2 if logy else 0.0)
     draw_histos["Data"].SetMaximum(ymax)
@@ -1106,6 +1106,7 @@ def _build_output_dir_map(base_output_dir: Path, skip_bdt_shape_plots: bool) -> 
         "bkg_only_bin5": base_output_dir / "bkgOnly_bin5GeV",
         "signal_nearest_bin5": base_output_dir / "signalNearest_bin5GeV",
         "signal_nearest_bin10": base_output_dir / "signalNearest_bin10GeV",
+        "signal_nearest_bin1": base_output_dir / "signalNearest_bin1GeV",
         "bdt_mass_shapes": base_output_dir / "bdtMassShapes",
     }
     output_dirs["signal_mixture"].mkdir(parents=True, exist_ok=True)
@@ -1113,6 +1114,7 @@ def _build_output_dir_map(base_output_dir: Path, skip_bdt_shape_plots: bool) -> 
     output_dirs["bkg_only_bin5"].mkdir(parents=True, exist_ok=True)
     output_dirs["signal_nearest_bin5"].mkdir(parents=True, exist_ok=True)
     output_dirs["signal_nearest_bin10"].mkdir(parents=True, exist_ok=True)
+    output_dirs["signal_nearest_bin1"].mkdir(parents=True, exist_ok=True)
     if not skip_bdt_shape_plots:
         output_dirs["bdt_mass_shapes"].mkdir(parents=True, exist_ok=True)
     return output_dirs
@@ -1180,6 +1182,10 @@ def _run_plot_suite(
         analyzer_cfg,
         bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_BIN_COARSE10_XMAX, H_M_BIN_COARSE10_WIDTH),
     )
+    histos_signal_nearest_bin1 = _book_histograms(
+        analyzer_cfg,
+        bin_edges=_build_uniform_bin_edges(H_M_XMIN, H_M_XMAX, 1.0),
+    )
     histos_signal_nearest_overlay_2gev = _book_histograms(
         analyzer_cfg,
         sample_names=analyzer_cfg.sig_names,
@@ -1201,7 +1207,7 @@ def _run_plot_suite(
         analyzer_cfg=analyzer_cfg,
         mva_cuts=mva_cuts,
         histos=histos,
-        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_bin10, histos_signal_nearest_overlay_2gev],
+        extra_histos=[histos_bkg_only_bin5, histos_signal_nearest_bin5, histos_signal_nearest_bin10, histos_signal_nearest_bin1, histos_signal_nearest_overlay_2gev],
         bdt_shape_histos=bdt_shape_histos,
         bdt_shape_edges=bdt_shape_edges,
         blind=blind,
@@ -1292,6 +1298,23 @@ def _run_plot_suite(
             logy=logy,
             show_signal=True,
             name_suffix="_signalNearest_bin10GeV",
+            channel_mode=channel_mode,
+            signal_shape_mode="nearest",
+            signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
+            signal_source_histos=histos_signal_nearest_overlay_2gev[mass],
+            signal_source_all_histos=histos_signal_nearest_overlay_2gev,
+            selection_label=selection_label,
+        )
+        _draw_mass_plot(
+            mass=mass,
+            histos=histos_signal_nearest_bin1[mass],
+            all_histos=histos_signal_nearest_bin1,
+            analyzer_cfg=analyzer_cfg,
+            plot_cfg=plot_cfg,
+            output_dir=output_dirs["signal_nearest_bin1"],
+            logy=logy,
+            show_signal=True,
+            name_suffix="_signalNearest_bin1GeV",
             channel_mode=channel_mode,
             signal_shape_mode="nearest",
             signal_scale=SIGNAL_DRAW_SCALE_NEAREST_BIN5,
