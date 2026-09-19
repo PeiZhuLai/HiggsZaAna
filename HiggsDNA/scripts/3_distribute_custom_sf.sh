@@ -96,29 +96,39 @@ done
 # NOT be applied while the MC is a single un-split Summer24 sample per year --
 # each payload says so in its own "description" field too, so the warning
 # travels with the file.
-pileup_era=2026
+#
+# The 2025 entry is the in-house RECOMPUTATION, published as a cross-check and
+# as the reference for how the 2026 payload was produced. Production still
+# applies the OFFICIAL Collisions25 payload: over the 267019 lumi sections both
+# sides share, the two agree to 4e-5, and every visible difference traces to the
+# LS sets (certification version) rather than to method or calibration. That is
+# stated in the file's own description as well.
+#
+# Entries are "<era> <filename>": 2025 joining the list means this can no longer
+# assume one era.
 pileup_files=(
-    puWeights_2026BD_Golden_Summer24_25ns_69200ub.json
-    puWeights_2026B_Golden_Summer24_25ns_69200ub.json
-    puWeights_2026D_Golden_Summer24_25ns_69200ub.json
+    "2026 puWeights_2026BD_Golden_Summer24_25ns_69200ub.json"
+    "2026 puWeights_2026B_Golden_Summer24_25ns_69200ub.json"
+    "2026 puWeights_2026D_Golden_Summer24_25ns_69200ub.json"
+    "2025 puWeights_2025recalc_Golden_Summer24_25ns_69200ub.json"
 )
 
 distribute_pileup() {
-    local fname="$1"
-    local src="$afsDir/$(era_dir "$pileup_era")/$fname"
+    local era="$1" fname="$2"
+    local src="$afsDir/$(era_dir "$era")/$fname"
     if [[ ! -f "$src" ]]; then
         echo "WARNING: missing source, skipped: $src" >&2
         return 0
     fi
-    local eos_dst="$eosDir/$pileup_era"
+    local eos_dst="$eosDir/$era"
     mkdir -p "$eos_dst"
     cp -f -- "$src" "$eos_dst/$fname"
     echo "copied $src"
     echo "    -> $eos_dst/$fname"
 }
 
-for f in "${pileup_files[@]}"; do
-    distribute_pileup "$f"
+for entry in "${pileup_files[@]}"; do
+    distribute_pileup $entry     # unquoted on purpose: splits "<era> <file>"
 done
 
 echo "done."
