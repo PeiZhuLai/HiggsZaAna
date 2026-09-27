@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """DisCo proxy step 1/2 (higgs-alp-ana, has uproot): read _oHm root, dump npz for the
 torch step. No analysis-repo writes."""
+import os
 import numpy as np, uproot
 np.random.seed(0)
-ROOT = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+ROOT = os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix")
 MASSES = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 BASE = ["pho1Pt_oHm","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt_oHm","pho2R9",
         "pho2IetaIeta55","pho2PIso_noCorr","ALP_calculatedPhotonIso","var_dR_Za",

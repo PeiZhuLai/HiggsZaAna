@@ -3,10 +3,11 @@
 settings, differing ONLY in whether pho1Pt/pho2Pt/H_pt are normalized by H_m.
 Compare 125-GeV sculpting R at a FIXED background efficiency (fair comparison).
 Read-only w.r.t. the analysis repo (self-contained training in /tmp)."""
+import os
 import numpy as np, uproot, json
 from xgboost import XGBClassifier
 
-ROOT = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+ROOT = os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix")
 MASSES = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 BASE = ["pho1Pt","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt","pho2R9",
         "pho2IetaIeta55","pho2PIso_noCorr","ALP_calculatedPhotonIso","var_dR_Za",

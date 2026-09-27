@@ -10,6 +10,7 @@ not folded into the per-event reweight.
 
 from __future__ import annotations
 
+import os
 import argparse
 import csv
 import hashlib
@@ -84,12 +85,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--data-root",
-        default="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/Data/run3.root",
+        default=os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix") + "/Data/run3.root",
         help="Input Data ROOT file.",
     )
     parser.add_argument(
         "--bkg-root",
-        default="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/All_Bkg/run3.root",
+        default=os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix") + "/All_Bkg/run3.root",
         help="Input background ROOT file.",
     )
     parser.add_argument("--tree", default="inclusive", help="Tree name to read from each ROOT file.")
@@ -119,6 +120,14 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=1e-8,
         help="Bins with background yield <= this value get factor 1.",
+    )
+    parser.add_argument(
+        "--sideband",
+        default=DEFAULT_SIDEBAND,
+        choices=sorted(SIDEBAND_DEFINITIONS),
+        help="Control region in which the corrections are derived. 'h_m' is the "
+             "nominal m(llgg) sideband; 'z_m'/'z_m_narrow' derive them around the "
+             "Z peak instead, so the difference measures the residual mismodeling.",
     )
     parser.add_argument("--seed", type=int, default=12345, help="Seed for deterministic param reconstruction.")
     parser.add_argument(
@@ -154,9 +163,41 @@ def list_json_float(values: Sequence[float]) -> List[float | None]:
     return [json_float(v) for v in values]
 
 
-def sideband_mask(frame: pd.DataFrame) -> np.ndarray:
-    h_m = pd.to_numeric(frame["H_m"], errors="coerce").to_numpy(dtype=float)
-    return ((h_m > 95.0) & (h_m < 115.0)) | ((h_m > 135.0) & (h_m < 180.0))
+# Control regions in which the data/MC corrections can be derived.
+#   h_m  : the nominal one -- the m(llgg) sidebands, excluding the Higgs window.
+#   z_m  : the L3 alternative -- sidebands around the Z peak in m(ll) instead,
+#          so that the correction is derived without reference to m(llgg). The
+#          difference between the two derivations is a genuine estimate of the
+#          residual mismodeling, unlike the current prescription which assigns
+#          the full size of the correction as its own uncertainty.
+#   z_m_narrow : a tighter window straddling the Z peak, to test how much the
+#          answer depends on where the control region sits.
+SIDEBAND_DEFINITIONS = {
+    "h_m": ("H_m", [(95.0, 115.0), (135.0, 180.0)]),
+    "z_m": ("Z_m", [(50.0, 80.0), (100.0, 120.0)]),
+    "z_m_narrow": ("Z_m", [(80.0, 86.0), (96.0, 102.0)]),
+}
+DEFAULT_SIDEBAND = "h_m"
+
+
+def sideband_mask(frame: pd.DataFrame, definition: str = DEFAULT_SIDEBAND) -> np.ndarray:
+    try:
+        column, windows = SIDEBAND_DEFINITIONS[definition]
+    except KeyError:
+        raise ValueError(
+            "Unknown sideband definition '%s'; choose one of %s"
+            % (definition, ", ".join(sorted(SIDEBAND_DEFINITIONS)))
+        )
+    values = pd.to_numeric(frame[column], errors="coerce").to_numpy(dtype=float)
+    mask = np.zeros(len(values), dtype=bool)
+    for low, high in windows:
+        mask |= (values > low) & (values < high)
+    return mask
+
+
+def sideband_description(definition: str) -> str:
+    column, windows = SIDEBAND_DEFINITIONS[definition]
+    return " or ".join("(%g < %s < %g)" % (low, column, high) for low, high in windows)
 
 
 def pick_existing_branch(
@@ -172,7 +213,10 @@ def pick_existing_branch(
 
 
 def required_logical_branches(vars_to_read: Sequence[str]) -> List[str]:
-    branches = {"H_m", "ALP_m"}
+    # Z_m is needed whenever the control region is defined on the dilepton mass;
+    # it is cheap to always read it, and leaving it out silently breaks the
+    # --sideband z_m / z_m_narrow variants.
+    branches = {"H_m", "ALP_m", "Z_m"}
     # Derived features need pho1Pt_oHm/pho2Pt_oHm and var_dR_g1g2 in the underlying frame.
     if any(v in DERIVED_VARS for v in vars_to_read):
         branches.update({"pho1Pt_oHm", "pho2Pt_oHm", "var_dR_g1g2"})
@@ -534,8 +578,10 @@ def make_payload(
             "bkg_branch_map": dict(branch_maps["bkg"]),
         },
         "selection": {
-            "sideband": "(95 < H_m < 115) or (135 < H_m < 180)",
-            "signal_window_excluded": "115 < H_m < 135",
+            "sideband_definition": args.sideband,
+            "sideband": sideband_description(args.sideband),
+            "signal_window_excluded": ("115 < H_m < 135"
+                                       if args.sideband == "h_m" else "n/a"),
         },
         "settings": {
             "reweight_vars": list(REWEIGHT_VARS),
@@ -591,8 +637,9 @@ def main() -> None:
     print(f"[load] Bkg : {args.bkg_root}")
     bkg_frame, bkg_branch_map = load_frame(args.bkg_root, args.tree, REWEIGHT_VARS, args.weight_branch, args.seed, "Bkg")
 
-    data_sb = data_frame.loc[sideband_mask(data_frame)].copy()
-    bkg_sb = bkg_frame.loc[sideband_mask(bkg_frame)].copy()
+    print(f"[sideband] {args.sideband}: {sideband_description(args.sideband)}")
+    data_sb = data_frame.loc[sideband_mask(data_frame, args.sideband)].copy()
+    bkg_sb = bkg_frame.loc[sideband_mask(bkg_frame, args.sideband)].copy()
     if data_sb.empty:
         raise ValueError("Data sideband is empty.")
     if bkg_sb.empty:

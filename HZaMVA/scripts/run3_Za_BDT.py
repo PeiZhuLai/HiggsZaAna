@@ -518,7 +518,7 @@ def add_derived_features(dataframe):
     pt2 = dataframe["pho2Pt_oHm"].astype(float)
     dataframe["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
 
-file_path = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+file_path = os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix")
 bkg_name = ['All_Bkg']
 data_name = ['Data']
 sig_name = ['All_Sig']

@@ -6,12 +6,13 @@ Read-only: loads background DY (All_Bkg inputs) + trained model, computes
 - per-mass-hypothesis corr(score, H_m) and the 125-GeV enhancement after the BDT cut
 No code in the analysis repo is modified.
 """
+import os
 import numpy as np, uproot, pickle, json
 
 FEATURES = ["pho1Pt_oHm","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt_oHm","pho2R9",
             "pho2IetaIeta55","pho2PIso_noCorr","ALP_calculatedPhotonIso","var_dR_Za",
             "var_dR_g1g2","var_dR_g1Z","var_PtaOverMh","H_pt_oHm","pho_pt_asym","param"]
-BKG = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/All_Bkg/run3.root"
+BKG = os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix") + "/All_Bkg/run3.root"
 MODEL = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_run3.pkl"
 CUTS = {r["mA"]: r["MVAcut"] for r in json.load(open(
     "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"))["results"]}

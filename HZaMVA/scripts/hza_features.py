@@ -9,9 +9,10 @@ The 16-feature order here is identical to run3_Za_BDT.py `variables + ['param']`
 _feat() matrix scores either model (NN standardizes by mu/sd; BDT feeds it raw).
 """
 from __future__ import annotations
+import os
 import numpy as np, uproot
 
-ROOT_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+ROOT_DIR = os.environ.get("HZA_P2ROOT_BASE", "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix")
 MASSES   = [1,2,3,4,5,6,7,8,9,10,15,20,25,30]
 # BDT input variables (mirror run3_Za_BDT.py `variables` + param; photon/Higgs pT are H_m-normalized)
 BASE_VARS = ["pho1Pt_oHm","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt_oHm","pho2R9",

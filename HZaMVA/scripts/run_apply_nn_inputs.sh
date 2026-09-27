@@ -7,7 +7,7 @@
 #   ./run_apply_nn_inputs.sh [MODEL.pt]
 set -o pipefail
 MODEL="${1:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_NN_run3_permass_lam100.pt}"
-INBASE="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+INBASE="${HZA_P2ROOT_BASE:-/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix}"
 OUTBASE="/eos/home-p/pelai/HZa/root_P2Root/run3_nn_scored_inputs_nominal"
 SCRIPTS="/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts"
 
