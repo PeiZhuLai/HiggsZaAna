@@ -32,7 +32,7 @@ def _significance_asimov_like(s: float, b: float) -> float:
         return 0.0
     return math.sqrt(val)
 
-ROOT_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+ROOT_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 MODEL    = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_lowmass_run3.pkl"
 HIGHMASS_MODEL = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_highmass_run3.pkl"
 FEATS    = ["ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho1Pt_oHm"]   # + param
@@ -51,10 +51,13 @@ SCORE_RANGE = (0.70, 0.99)   # extended so the chosen high-score working points 
 # --- stored-score inputs: regenerate the low-mass figure from the SAME BDT scores as the AN
 # sculpt-R table (make_sculpt_R_table_from_wp.py), i.e. the analysis's stored MVA_Score_mA_M{n},
 # so the figure R and the table R are computed identically (no re-scoring with the .pkl). ------
-SCORED_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
+SCORED_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix"
 _BKG_BY_YEAR = {
-    "2022preEE":   ["DYGto2LG_10to50", "DYGto2LG_50to100", "DYJetsToLL"],
-    "2022postEE":  ["DYGto2LG_10to50", "DYGto2LG_50to100", "DYJetsToLL"],
+    # 2026-09-24: 2022 DYGto2LG is the official inclusive PTG-10to100 sample (as for
+    # 2023/2024), not the retired PTG-10to50 + PTG-50to100 slices; the FSR-fix
+    # production contains no slice files, so the old list pointed at nothing.
+    "2022preEE":   ["DYGto2LG_10to100", "DYJetsToLL"],
+    "2022postEE":  ["DYGto2LG_10to100", "DYJetsToLL"],
     "2023preBPix": ["DYGto2LG_10to100", "DYJetsToLL"],
     "2023postBPix": ["DYGto2LG_10to100", "DYJetsToLL"],
     "2024":        ["DYGto2LG_10to100", "DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"],
@@ -103,7 +106,10 @@ LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 #   These are pinned HERE so that re-running this script -- in particular with --write-json --
 #   can NOT silently revert mA2/mA3 back to the R=1 crossing. mA1 is NOT fixed: it keeps its
 #   natural R=1 crossing (~0.963). See memory ref_hza_unblind_procedure / project_hza_lowma_pow1_R1cuts.
-FIXED_WP = {2: 0.975, 3: 0.988}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
+FIXED_WP = {2: 0.975, 3: 0.992}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
+                                  # mA3 0.988 -> 0.992 (2026-09-27): after the FSR-fix retraining the
+                                  # MC pseudo-data closure at 0.988 faked Z = 2.3; 0.992 is the only cut with
+                                  # closure Z < 1.5 and data-envelope GOF > 0.2 (pseudodata_closure/reopt_mA3)
                                   # mA2 loosened 0.982->0.975 (2026-07-26) to bring R 1.25->~1.1 (R~=1 criterion)
 
 import sys

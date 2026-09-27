@@ -7,9 +7,9 @@ Why (2026-07-23): the R value in the AN table must be the ACTUAL sculpting ratio
 adopted BDT cut, computed with the SAME BDT scores the analysis uses. Re-scoring with the
 model .pkl is fragile: the models were retrained (2026-07-06, signal reweight) after the
 old sculpt_R_run3.json / MVAcut_points_run3.json (2026-06-19) were produced, so re-scoring
-now drifts. The scored samples in run3_bdt_scored_nominal carry the FINAL-model scores
+now drifts. The scored samples in run3_bdt_scored_fsrfix carry the FINAL-model scores
 (MVA_Score_mA_M1..M30), so reading those is both correct and reproducible. This makes the
-table a single workflow step keyed to (MVAcut_points_run3.json, run3_bdt_scored_nominal).
+table a single workflow step keyed to (MVAcut_points_run3.json, run3_bdt_scored_fsrfix).
 
 Definition (identical to scan_score_R_significance._bkg_R_at_cuts):
   R(m_a) = f_peak^{pass} / f_peak^{incl},  f_peak = w(120<m<130) / w(95<m<180),
@@ -17,7 +17,7 @@ on the combined simulated DY background, at the adopted BDT cut for that mass.
 
 Env: any python3 with uproot + numpy (no ROOT needed).
 Reads:  Plot/output/MVAcut_points_run3.json                  (adopted working-point BDT cuts)
-        <run3_bdt_scored_nominal>/<sample>/<era>.root        (inclusive tree, MVA_Score_mA_M*)
+        <run3_bdt_scored_fsrfix>/<sample>/<era>.root        (inclusive tree, MVA_Score_mA_M*)
 Writes: Plot/output/latexTable_sculptR.txt                   (and optionally --into <Sec-06-04 tex>)
 """
 import argparse
@@ -29,14 +29,17 @@ import numpy as np
 import uproot
 
 # --- paths ----------------------------------------------------------------------------
-SCORED_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
+SCORED_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix"
 JSON_PATH = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 LOWMASS_META = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_lowmass_run3.meta.json"
 HIGHMASS_META = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_highmass_run3.meta.json"
 DEF_OUT = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/latexTable_sculptR.txt"
 
 # --- background combination (identical to table_interpolate_bkgYield_1.py) -------------
-_bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+# 2026-09-24: 2022 DYGto2LG is the official inclusive PTG-10to100 sample (as for
+# 2023/2024), not the retired PTG-10to50 + PTG-50to100 slices; the FSR-fix
+# production contains no slice files, so the old list pointed at nothing.
+_bkg_2022 = ["DYGto2LG_10to100"]
 _bkg_2023 = ["DYGto2LG_10to100"]
 _bkg_dyll = ["DYJetsToLL"]
 _bkg_dyll_2024 = ["DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"]

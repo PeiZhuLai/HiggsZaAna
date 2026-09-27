@@ -9,7 +9,7 @@ request_cpus = 1
 request_memory = 4000MB
 request_disk = 20000MB
 +JobFlavour = "workday"
-+JobBatchName = "HZa_dataVmc"
++JobBatchName = "HZa_dataVmc_smoke_nom"
 
 environment = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=1 SETUP_CONDA_ENV=0 CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh"
 
@@ -17,4 +17,4 @@ output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_
 error  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/$(final_tag)_$(region_key)_$(sample_tag).$(ClusterId).$(ProcId).err
 log    = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/logs/dataVmc.$(ClusterId).log
 
-queue region_key, final_tag, sample_tag, samples from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/dataVmc_jobs.txt
+queue region_key, final_tag, sample_tag, samples from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/dataVmc_smoke_jobs.txt

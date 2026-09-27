@@ -49,6 +49,16 @@ class Plot_Config:
 
     def LoadColors(self):
         self.colors["Data"] = kBlack
+        # Sub-GeV points of the merged-photon analysis (flashgg spelling: 0p5 == 0.5 GeV).
+        self.colors["M0p1"] = TColor.GetColor("#2541B2")  # deep blue
+        self.colors["M0p2"] = TColor.GetColor("#DC2626")  # red
+        self.colors["M0p3"] = TColor.GetColor("#059669")  # dark green
+        self.colors["M0p4"] = TColor.GetColor("#7C3AED")  # purple
+        self.colors["M0p5"] = TColor.GetColor("#0F766E")  # teal
+        self.colors["M0p6"] = TColor.GetColor("#84CC16")  # lime
+        self.colors["M0p7"] = TColor.GetColor("#BE185D")  # magenta
+        self.colors["M0p8"] = TColor.GetColor("#4B5563")  # dark gray
+        self.colors["M0p9"] = TColor.GetColor("#ff7f00")  # orange
         self.colors["M1"]  = TColor.GetColor("#2541B2")  # deep red
         self.colors["M2"]  = TColor.GetColor("#DC2626")  # red
         self.colors["M3"]  = TColor.GetColor("#059669")  # dark green

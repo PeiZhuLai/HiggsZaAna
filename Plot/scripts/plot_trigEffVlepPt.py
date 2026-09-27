@@ -11,7 +11,7 @@ baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
 
 outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/trigEffCompareVlepPt"
 
-rootDir = "/eos/home-p-pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+rootDir = "/eos/home-p-pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 
 treeName = "inclusive"
 
@@ -39,7 +39,7 @@ TRIG_GROUPS = {
     "ele_lead": ("trigeff_ele_lead_OR_ele", "trigeff_ele_lead_double_ele", "Electron lead"),
     "ele_sublead": ("trigeff_ele_sublead_OR_ele", "trigeff_ele_sublead_double_ele", "Electron sublead"),
     "mu_lead": ("trigeff_mu_lead_OR_mu", "trigeff_mu_lead_double_mu", "Muon lead"),
-    "mu_sublead": ("trigeff_mu_sublead_OR_mu", "trigeff_mu_lead_double_mu", "Muon sublead"),
+    "mu_sublead": ("trigeff_mu_sublead_OR_mu", "trigeff_mu_sublead_double_mu", "Muon sublead"),
 }
 
 PT_BIN_ORDER = [
@@ -948,7 +948,7 @@ def main() -> None:
             ("ee", "lead", "Electron lead", TRIG_GROUPS["ele_lead"][0]),
             ("ee", "sublead", "Electron sublead", TRIG_GROUPS["ele_sublead"][0]),
             ("mumu", "lead", "Muon lead", TRIG_GROUPS["mu_lead"][0]),
-            ("mumu", "sublead", "Muon sublead", TRIG_GROUPS["mu_lead"][0]),
+            ("mumu", "sublead", "Muon sublead", TRIG_GROUPS["mu_sublead"][0]),
         ]
 
         for ma in mas:

@@ -49,7 +49,23 @@ CONDA_ENV_NAME="${CONDA_ENV_NAME:-higgs-alp-ana}"
 ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
 LOCALIZE_CONDA_ENV="${LOCALIZE_CONDA_ENV:-auto}"
 LOCAL_CONDA_DIR="${LOCAL_CONDA_DIR:-${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/higgs-alp-ana-conda}"
-CONDA_TARBALL="${CONDA_TARBALL:-${PROJECT_DIR}/Plot/Condor/env_cache/higgs-alp-ana.tar.gz}"
+# conda env tarball：2026-09-17 從 AFS 搬到 /eos/project，改成 job 內 xrdcp 取回。
+#
+# 為什麼不放 AFS：1.1 GB 的單一大檔佔 AFS 配額（那裡只有 100 GB 且吃緊），
+# 而 EOS 正好擅長單一大檔。⚠️ 反過來**不要**把解壓後的 env（十萬個小檔）放 EOS，
+# tar 解壓到 EOS FUSE 會報 `Cannot close: Bad address` —— 規矩是「只放 tarball、
+# 在節點本地解壓」。
+#
+# 為什麼是 /eos/project 而不是 /eos/cms/.../phys_susy：實測 2026-09-16，
+# phys_susy 的 zh group 是 178.72/180.00 TB（99.29%、exceeded），
+# /eos/project/h/htozg-dy-privatemc 是 11.82/20.00 TB（59.12%、ok）。
+#
+# 為什麼是 xrdcp 而不是直接 tar 讀 EOS 路徑：走 FUSE 讀在並行下比 AFS 還脆弱；
+# xrdcp 先抓到節點本地 scratch 再解壓是 HZgamma B-mode 驗證過的作法
+# （A-mode 直接讀 EOS 上的 env 實測失敗率 30.2%，B-mode 0%）。
+CONDA_TARBALL_URL="${CONDA_TARBALL_URL:-root://eosproject-h.cern.ch//eos/project/h/htozg-dy-privatemc/pelai/App/higgs-alp-ana.tar.gz}"
+# 仍保留本地路徑的用法：設了 CONDA_TARBALL 就走它，不 xrdcp（離線／除錯用）。
+CONDA_TARBALL="${CONDA_TARBALL:-}"
 
 activate_conda_env_if_needed() {
     local should_activate=0
@@ -116,26 +132,54 @@ localize_conda_env_if_needed() {
         return 0
     fi
 
-    if [[ ! -s "$CONDA_TARBALL" ]]; then
-        echo "[ERROR] Conda localization requested, but tarball is missing: $CONDA_TARBALL" >&2
-        echo "[ERROR] Run Plot/Condor/pack_conda_env_for_condor.sh once before condor_submit." >&2
-        exit 2
-    fi
-
-    echo "[ENV] Extract conda tarball from $CONDA_TARBALL to $LOCAL_CONDA_DIR"
     rm -rf "$LOCAL_CONDA_DIR"
     mkdir -p "$LOCAL_CONDA_DIR"
-    tar -xzf "$CONDA_TARBALL" -C "$LOCAL_CONDA_DIR"
+
+    local _pack
+    if [[ -n "$CONDA_TARBALL" ]]; then
+        # 明確指定了本地路徑 -> 照舊直接讀（離線／除錯）
+        if [[ ! -s "$CONDA_TARBALL" ]]; then
+            echo "[ERROR] CONDA_TARBALL set but missing: $CONDA_TARBALL" >&2
+            exit 2
+        fi
+        _pack="$CONDA_TARBALL"
+        echo "[ENV] Extract conda tarball from $_pack to $LOCAL_CONDA_DIR"
+    else
+        # 預設：從 EOS xrdcp 到節點本地再解壓
+        _pack="${LOCAL_CONDA_DIR}.tar.gz"
+        echo "[ENV] Fetch conda tarball: $CONDA_TARBALL_URL"
+        local _t
+        for _t in 1 2 3; do
+            xrdcp -f -s "$CONDA_TARBALL_URL" "$_pack" && break
+            echo "[ENV] xrdcp attempt $_t failed, retrying in 15s" >&2
+            sleep 15
+        done
+        if [[ ! -s "$_pack" ]]; then
+            echo "[ERROR] Could not fetch conda tarball: $CONDA_TARBALL_URL" >&2
+            echo "[ERROR] Run Plot/Condor/pack_conda_env_for_condor.sh and upload it, or set CONDA_TARBALL to a local copy." >&2
+            exit 2
+        fi
+    fi
+
+    tar -xzf "$_pack" -C "$LOCAL_CONDA_DIR"
+    # 只刪自己抓下來的那份，別刪使用者指定的本地檔
+    [[ -z "$CONDA_TARBALL" ]] && rm -f "$_pack"
+
+    # 2026-09-23: export PATH BEFORE conda-unpack. conda-pack gives conda-unpack a
+    # `#!/usr/bin/env python` shebang, so it needs a python on PATH. This only worked
+    # here because SETUP_CONDA_ENV=auto had already activated the EOS env first; once
+    # that activation is removed (see dataVmc.submit) there is no python and the job
+    # dies with "/usr/bin/env: 'python': No such file or directory", return value 127.
+    # The identical chain bit the p2root scoring jobs on 2026-09-22.
+    export CONDA_PREFIX="$LOCAL_CONDA_DIR"
+    export PATH="$LOCAL_CONDA_DIR/bin:$PATH"
+    export LD_LIBRARY_PATH="$LOCAL_CONDA_DIR/lib:${LD_LIBRARY_PATH:-}"
+    PYTHON_BIN="$LOCAL_CONDA_DIR/bin/python3"
 
     if [[ -x "$LOCAL_CONDA_DIR/bin/conda-unpack" ]]; then
         echo "[ENV] Run conda-unpack"
         "$LOCAL_CONDA_DIR/bin/conda-unpack"
     fi
-
-    export CONDA_PREFIX="$LOCAL_CONDA_DIR"
-    export PATH="$LOCAL_CONDA_DIR/bin:$PATH"
-    export LD_LIBRARY_PATH="$LOCAL_CONDA_DIR/lib:${LD_LIBRARY_PATH:-}"
-    PYTHON_BIN="$LOCAL_CONDA_DIR/bin/python3"
 }
 
 mkdir -p "$LOG_DIR" "$VARIABLES_DIR"

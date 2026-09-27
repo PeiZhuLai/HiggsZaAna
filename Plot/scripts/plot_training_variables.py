@@ -61,7 +61,7 @@ ROOT.gROOT.SetBatch(True)
 # ---------------------------------------------------------------------------
 # Configuration (mirrors run3_Za_BDT.py)
 # ---------------------------------------------------------------------------
-FILE_PATH = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+FILE_PATH = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 BKG_DIR = "All_Bkg"
 TRAIN_TREE = "train"          # BDT train sample, same as run3_Za_BDT.py
 TRAIN_MASS_LOW = 95

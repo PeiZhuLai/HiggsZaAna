@@ -20,10 +20,11 @@ DYLL_YEARS = (
     "2023postBPix",
     "2024",
 )
+# 2026-09-24: 2022 DYGto2LG is the official inclusive PTG-10to100 sample, as for
+# 2023/2024. The FSR-fix production has no PTG-10to50 / PTG-50to100 slice files, so the
+# previous split generated 4 jobs per region that pointed at nonexistent inputs.
 DYG_SPLITS = (
-    ("DYGto2LG_10to50", ("2022preEE", "2022postEE")),
-    ("DYGto2LG_50to100", ("2022preEE", "2022postEE")),
-    ("DYGto2LG_10to100", ("2023preBPix", "2023postBPix", "2024")),
+    ("DYGto2LG_10to100", ("2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024")),
 )
 SIGNAL_MASSES = (
     "M1",
@@ -114,13 +115,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--localize-conda-env",
-        default="auto",
+        # 2026-09-24: default "1", not "auto". "auto" decides by whether CONDA_PREFIX is
+        # under /eos, which with getenv=True is the SUBMITTER's env, and which otherwise
+        # can only be known after activating the env straight off EOS -- the I/O storm
+        # that killed 832 of 1207 p2root scoring jobs on 2026-09-22.
+        default="1",
         choices=("auto", "1", "0"),
         help="extract a prebuilt conda tarball to worker scratch before running; auto localizes only when CONDA_PREFIX is under /eos",
     )
     parser.add_argument(
         "--setup-conda-env",
-        default="auto",
+        # 2026-09-24: default "0". The localized tarball is a complete env and
+        # localize_conda_env_if_needed() sets PATH/LD_LIBRARY_PATH/PYTHON_BIN itself, so
+        # activating from EOS first adds nothing but the EOS read.
+        default="0",
         choices=("auto", "1", "0"),
         help="run use-anaconda, anaconda, and conda activate inside each Condor job",
     )
@@ -241,6 +249,7 @@ request_cpus = 1
 request_memory = {request_memory}
 request_disk = {request_disk}
 +JobFlavour = "{job_flavour}"
++JobBatchName = "HZa_dataVmc"
 
 environment = "{environment}"
 
@@ -265,11 +274,13 @@ def main() -> int:
     condor_dir = Path(args.condor_dir).resolve() if args.condor_dir else project_dir / "Plot" / "Condor"
     jobs_file = condor_dir / args.jobs_name
     submit_file = condor_dir / args.submit_name
-    conda_tarball = (
-        Path(args.conda_tarball).resolve()
-        if args.conda_tarball
-        else condor_dir / "env_cache" / f"{args.conda_env_name}.tar.gz"
-    )
+    # 2026-09-24: no implicit fallback to condor_dir/env_cache/<env>.tar.gz. That file
+    # never exists -- pack_conda_env_for_condor.sh uploads the tarball to EOS and deletes
+    # the local copy -- so the fallback wrote a dead path into every submit file and all
+    # 81 dataVmc jobs of 2026-09-24 died in localize with "CONDA_TARBALL set but missing"
+    # (exit 2, zero-byte condor .out/.err because the wrapper tees into logs_split/).
+    # Empty means: run_dataVmc_condor_job.sh xrdcp's it from CONDA_TARBALL_URL.
+    conda_tarball = Path(args.conda_tarball).resolve() if args.conda_tarball else ""
 
     condor_dir.mkdir(parents=True, exist_ok=True)
     (condor_dir / "logs").mkdir(parents=True, exist_ok=True)
@@ -289,7 +300,7 @@ def main() -> int:
         setup_conda_env=str(args.setup_conda_env).strip(),
         conda_env_name=str(args.conda_env_name).strip(),
         anaconda_setup=str(args.anaconda_setup).strip(),
-        conda_tarball=str(conda_tarball),
+        conda_tarball=str(conda_tarball) if conda_tarball else "",
     )
 
     print(f"Final tags: {', '.join(final_tags)}")

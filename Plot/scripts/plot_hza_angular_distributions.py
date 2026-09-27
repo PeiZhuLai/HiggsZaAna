@@ -47,7 +47,7 @@ import numpy as np
 
 DUMMY_VALUE = -999.0
 DEFAULT_MASSES = (1, 5, 10, 20, 30)
-DEFAULT_INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal"
+DEFAULT_INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 
 
 Vec = Dict[str, np.ndarray]

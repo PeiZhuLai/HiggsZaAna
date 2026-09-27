@@ -65,6 +65,15 @@ PDF_NAME_MAP = {
 
 
 MASS_VALUES = {
+    "M0p1": 0.1,
+    "M0p2": 0.2,
+    "M0p3": 0.3,
+    "M0p4": 0.4,
+    "M0p5": 0.5,
+    "M0p6": 0.6,
+    "M0p7": 0.7,
+    "M0p8": 0.8,
+    "M0p9": 0.9,
     "M1": 1.0,
     "M2": 2.0,
     "M3": 3.0,
@@ -97,10 +106,23 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fast data/MC variable plotter")
     parser.add_argument("-y", "--Year", dest="year", default="run3")
     parser.add_argument("--region", dest="region", type=int, default=0)
+    parser.add_argument("--mergedOnly", dest="merged_only", action="store_true",
+                        default=False,
+                        help="keep only events passing the merged-photon "
+                             "selection (needs pass_allcuts_merged_ML / "
+                             "has_merged_info from add_merged_flag.py)")
     parser.add_argument("-m", "--mva", dest="mva", action="store_true", default=False)
     parser.add_argument("--cut", dest="cut", action="store_true", default=False)
     parser.add_argument("--cutVal", dest="cutVal", type=float, default=0.0)
     parser.add_argument("--mA", dest="mA", default="M5")
+    parser.add_argument(
+        "--sig-overlay",
+        dest="sig_overlay",
+        default="M1,M10,M20,M30",
+        help="Comma-separated signal samples overlaid on the plots when no BDT "
+             "cut is applied. Use the flashgg 'p' spelling for sub-GeV points, "
+             "e.g. M0p1,M0p2,M0p5,M0p9 for the merged-photon analysis.",
+    )
     parser.add_argument("-b", "--blind", dest="blind", action="store_true", default=False)
     parser.add_argument("-ln", "--ln", dest="ln", action="store_true", default=False)
     parser.add_argument("--ele", dest="ele", action="store_true", default=False)
@@ -123,6 +145,15 @@ def output_name(var_name: str) -> str:
     return PDF_NAME_MAP.get(var_name, var_name)
 
 
+def mass_label(sample: str) -> str:
+    """Sample key -> legend mass in GeV: M30 -> "30", M0p5 -> "0.5".
+
+    Sub-GeV points are spelled the flashgg way (0p5 == 0.5 GeV) everywhere in
+    the merged-photon chain, so the decimal point has to be put back here.
+    """
+    return sample.lstrip("M").replace("p", ".")
+
+
 def set_no_title_or_stats(obj) -> None:
     if obj:
         obj.SetTitle("")
@@ -136,13 +167,17 @@ def draw_cms_labels(canvas: ROOT.TCanvas, lumi: str) -> None:
     label.SetNDC(True)
     label.SetTextFont(42)
 
-    label.SetTextAlign(13)
+    # The upper pad spans canvas y 0.25-1.0 with a 0.085 top margin, so the frame
+    # top line sits at canvas NDC 0.936.  Both labels are bottom-aligned just
+    # above it: "CMS Preliminary" used to be top-aligned at 0.935, i.e. drawn
+    # *inside* the frame and visibly lower than the lumi string.
+    label.SetTextAlign(11)
     label.SetTextSize(0.050)
-    label.DrawLatex(0.16, 0.935, "#bf{CMS} #it{Preliminary}")
+    label.DrawLatex(0.16, 0.945, "#bf{CMS} #it{Preliminary}")
 
     label.SetTextAlign(31)
     label.SetTextSize(0.040)
-    label.DrawLatex(0.95, 0.935, f"{float(lumi):.2f} fb^{{-1}} (13.6 TeV)")
+    label.DrawLatex(0.95, 0.948, f"{float(lumi):.2f} fb^{{-1}} (13.6 TeV)")
 
 
 def draw_fast_on_canvas(
@@ -157,6 +192,7 @@ def draw_fast_on_canvas(
     bdt_cut: bool,
     mA: str,
     log_y: bool,
+    sig_overlay: Sequence[str] = ("M1", "M10", "M20", "M30"),
 ) -> None:
     ROOT.gStyle.SetOptTitle(0)
     ROOT.gStyle.SetOptStat(0)
@@ -194,8 +230,13 @@ def draw_fast_on_canvas(
         histos["Data"].SetMaximum(h_max * 1.1e4 if h_max > 0 else 1.0)
         stacks["all"].SetMaximum(h_max * 1.1e4 if h_max > 0 else 1.0)
     else:
-        histos["Data"].SetMaximum(h_max * 1.4 if h_max > 0 else 1.0)
-        stacks["all"].SetMaximum(h_max * 1.4 if h_max > 0 else 1.0)
+        # The legend block starts at pad NDC y=0.654 and the frame spans
+        # 0.19-0.915, so its bottom edge sits at 64% of the axis range: anything
+        # below a 1/0.64 = 1.56x headroom puts the histogram peak through the
+        # "Total Unc." / "Stat. Unc." rows.  1.8 leaves room for the Data error
+        # bars on top of that.
+        histos["Data"].SetMaximum(h_max * 1.8 if h_max > 0 else 1.0)
+        stacks["all"].SetMaximum(h_max * 1.8 if h_max > 0 else 1.0)
 
     histos["Data"].Draw("PE")
     histos["Data"].GetXaxis().SetLabelSize(0)
@@ -217,7 +258,8 @@ def draw_fast_on_canvas(
         scaled_sig[mA].Draw("HISTSAME")
     else:
         line_styles = [1, 2, 5, 7]
-        for sample, style in zip(["M1", "M10", "M20", "M30"], line_styles):
+        for idx, sample in enumerate(sig_overlay):
+            style = line_styles[idx % len(line_styles)]
             if sample in scaled_sig:
                 scaled_sig[sample].SetLineStyle(style)
                 scaled_sig[sample].SetLineWidth(4)
@@ -252,16 +294,16 @@ def draw_fast_on_canvas(
         ROOT.SetOwnership(legend_2, False)
         legend_2.AddEntry(
             scaled_sig[var_name.split("_")[-1]],
-            "m_{a} = %s GeV" % var_name.split("_")[-1].lstrip("M"),
+            "m_{a} = %s GeV" % mass_label(var_name.split("_")[-1]),
             "l",
         )
         legends = (legend_1, legend_2)
     else:
-        legend_1 = ROOT.TLegend(0.29, 0.816, 0.50, 0.87)
+        legend_1 = ROOT.TLegend(0.26, 0.816, 0.47, 0.87)
         ROOT.SetOwnership(legend_1, False)
         legend_1.AddEntry(histos["Data"], "Data", "PE")
 
-        legend_2 = ROOT.TLegend(0.44, 0.654, 0.73, 0.87)
+        legend_2 = ROOT.TLegend(0.41, 0.654, 0.70, 0.87)
         ROOT.SetOwnership(legend_2, False)
         bkg_labels = {"DYGto2LG": "Z + #gamma", "DYJetsToLL": "Z + jets"}
         for sample_bkg in plot_cfg.ana_cfg.bkg_names:
@@ -269,14 +311,14 @@ def draw_fast_on_canvas(
         legend_2.AddEntry(total_abs, "Total Unc.", "f")
         legend_2.AddEntry(stat_err, "Stat. Unc.", "f")
 
-        legend_3 = ROOT.TLegend(0.67, 0.654, 0.97, 0.87)
+        legend_3 = ROOT.TLegend(0.64, 0.654, 0.94, 0.87)
         ROOT.SetOwnership(legend_3, False)
         if bdt_cut:
-            legend_3.AddEntry(scaled_sig[mA], "m_{a} = %s GeV" % mA.lstrip("M"), "l")
+            legend_3.AddEntry(scaled_sig[mA], "m_{a} = %s GeV" % mass_label(mA), "l")
         else:
-            for sample in ["M1", "M10", "M20", "M30"]:
+            for sample in sig_overlay:
                 if sample in scaled_sig:
-                    legend_3.AddEntry(scaled_sig[sample], "m_{a} = %s GeV" % sample.lstrip("M"), "l")
+                    legend_3.AddEntry(scaled_sig[sample], "m_{a} = %s GeV" % mass_label(sample), "l")
         legends = (legend_1, legend_2, legend_3)
 
     for legend in legends:
@@ -353,6 +395,24 @@ def region_cut(region: int, mass_branch: str) -> str:
     if region == 2:
         return f"({base} && !({mass_branch} > 115.0 && {mass_branch} < 135.0))"
     return base
+
+
+def merged_cut(merged_only: bool) -> str:
+    """Restrict to events passing the MERGED-photon selection.
+
+    Needs pass_allcuts_merged_ML, which the standard resolved ntuples do NOT
+    carry -- run Plot/scripts/add_merged_flag.py first and point the sample
+    location at its output.
+
+    has_merged_info is required too: an event missing from the merged friend
+    parquet also ends up with pass_allcuts_merged_ML = 0, so treating "failed
+    the selection" and "was never processed" as the same thing would bias data
+    against MC whenever their friend coverage differs (data 2024 matches 94.6%,
+    not 100%).
+    """
+    if not merged_only:
+        return "1"
+    return "(has_merged_info == 1 && pass_allcuts_merged_ML == 1)"
 
 
 def channel_cut(args: argparse.Namespace) -> str:
@@ -579,8 +639,20 @@ def draw_sys_hist(
     return hist
 
 
-def sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg, signal_low=115.0, signal_high=135.0):
-    data_hist = histos.get("H_m", {}).get("Data")
+def sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg, signal_low=115.0,
+                               signal_high=135.0, reference=None):
+    """Normalize the H_m backgrounds to data using the m_llgg sidebands.
+
+    `reference` supplies the histograms the sidebands are *measured* on; the
+    scale is always *applied* to the drawn `histos["H_m"]` (and its systematic
+    variations).  The two differ in the SR: region 1 keeps only 115-135, so its
+    own histograms have no sideband left and the factor would silently fall back
+    to 1.0 -- which is why the SR plot sat at Data/SM ~ 0.55 while every other
+    variable was normalized.  main() therefore fills an unblinded, region-cut-free
+    set of H_m histograms and hands them in here.
+    """
+    source = reference if reference else histos.get("H_m", {})
+    data_hist = source.get("Data")
     if not data_hist:
         return 1.0
 
@@ -595,7 +667,8 @@ def sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg, signal_low=115.
         return left + right
 
     data_sb = sideband_integral(data_hist)
-    bkg_sb = sum(sideband_integral(histos["H_m"][sample]) for sample in analyzer_cfg.bkg_names)
+    bkg_sb = sum(sideband_integral(source[sample]) for sample in analyzer_cfg.bkg_names
+                 if sample in source)
     if data_sb <= 0 or bkg_sb <= 0:
         return 1.0
 
@@ -605,8 +678,35 @@ def sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg, signal_low=115.
         if histos_sys and "H_m" in histos_sys:
             for sys_name in analyzer_cfg.sys_names:
                 histos_sys["H_m"][sample][sys_name].Scale(scale)
-    print(f"[SideBandScale] H_m Data={data_sb:.3f} Bkg={bkg_sb:.3f} Scale={scale:.4f}")
+    origin = "region-cut-free reference" if reference else "this region"
+    print(f"[SideBandScale] H_m Data={data_sb:.3f} Bkg={bkg_sb:.3f} Scale={scale:.4f} "
+          f"(sidebands from {origin})")
     return scale
+
+
+def unblinded_hm_reference(ntuples, analyzer_cfg, args, hist_specs, base_weight,
+                           mass_branch, sigma_low, sigma_hig, mva_branch_map):
+    """H_m for Data + backgrounds over the full 95-180 window, region cut dropped.
+
+    Only the sideband normalization is read off these; nothing here is drawn.
+    Filling them BEFORE the main histogram loop matters: draw_into_hist targets
+    the histogram by name, so the reference has to be renamed out of the way
+    before make_hist() creates the real `H_m_<sample>`.
+    """
+    reference_cut = (f"({region_cut(0, mass_branch)}) && ({channel_cut(args)})"
+                     f" && ({merged_cut(args.merged_only)})")
+    reference = {}
+    for sample in ["Data"] + list(analyzer_cfg.bkg_names):
+        if sample not in ntuples:
+            continue
+        hist = draw_sample_hist(
+            ntuples[sample], sample, "H_m", hist_specs["H_m"], base_weight,
+            reference_cut, mass_branch, sigma_low, sigma_hig, args.blind,
+            mva_branch_map,
+        )
+        hist.SetName(f"H_m_ref_{sample}")
+        reference[sample] = hist
+    return reference
 
 
 def clone_sys_from_central(histos, analyzer_cfg):
@@ -636,6 +736,19 @@ def main() -> None:
         analyzer_cfg.sig_names = [args.mA]
         analyzer_cfg.samp_names = analyzer_cfg.bkg_names + analyzer_cfg.sig_names + ["Data"]
 
+    sig_overlay = [s.strip() for s in args.sig_overlay.split(",") if s.strip()]
+    if not args.cut:
+        # Overlay points that Analyzer_Configs does not list (the sub-GeV merged
+        # ones) still have to be loaded, styled and stacked, so register them
+        # here rather than in the shared config -- the resolved HZa pipeline
+        # reads the same Analyzer_Configs and must keep its own signal list.
+        extra = [s for s in sig_overlay if s not in analyzer_cfg.sig_names]
+        if extra:
+            analyzer_cfg.sig_names = list(analyzer_cfg.sig_names) + extra
+            analyzer_cfg.samp_names = analyzer_cfg.bkg_names + analyzer_cfg.sig_names + ["Data"]
+            print(f"[Config] signal overlay adds sample(s): {extra}")
+    print(f"[Config] signal overlay: {sig_overlay}")
+
     target_masses = list(analyzer_cfg.sig_names) if args.mva and args.year == "run3" else ([args.mA] if args.mva else [])
     plot_output_path = args.out_dir or os.path.join(PLOT_DIR, "plots", f"fast_plot_{analyzer_cfg.out_region_name}")
     os.makedirs(plot_output_path, exist_ok=True)
@@ -649,7 +762,11 @@ def main() -> None:
     ntuples = LoadNtuples(analyzer_cfg)
     mass_branch = common_branch(ntuples, analyzer_cfg.samp_names, ("H_m", "H_mass"))
     base_weight = common_branch(ntuples, [s for s in analyzer_cfg.samp_names if s != "Data"], ("weight", "weight_central"))
-    base_cut = f"({region_cut(args.region, mass_branch)}) && ({channel_cut(args)})"
+    base_cut = (f"({region_cut(args.region, mass_branch)}) && ({channel_cut(args)})"
+                f" && ({merged_cut(args.merged_only)})")
+    if args.merged_only:
+        print("[Config] mergedOnly: requiring has_merged_info==1 && "
+              "pass_allcuts_merged_ML==1")
     print(f"[Config] mass_branch={mass_branch}, weight_branch={base_weight}")
 
     mva_branch_map = {"__default__": {}}
@@ -675,6 +792,16 @@ def main() -> None:
     sigma_low, sigma_hig = getMassSigma(analyzer_cfg)
     hist_specs = build_hist_specs(var_names, target_masses, mva_branch_map, mass_branch)
     var_names = [var for var in var_names if var in hist_specs]
+
+    # Sideband normalization reference for H_m -- see unblinded_hm_reference().
+    # Region 0 and 2 already exclude 115-135 from their sidebands, so this gives
+    # them the same factor as before; region 1 (SR) stops falling back to 1.0.
+    hm_reference = None
+    if "H_m" in var_names:
+        hm_reference = unblinded_hm_reference(
+            ntuples, analyzer_cfg, args, hist_specs, base_weight, mass_branch,
+            sigma_low, sigma_hig, mva_branch_map,
+        )
 
     histos = {var_name: {} for var_name in var_names}
     for sample in analyzer_cfg.samp_names:
@@ -746,7 +873,8 @@ def main() -> None:
 
     for var_name in var_names:
         if var_name == "H_m":
-            scale_factor = sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg)
+            scale_factor = sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg,
+                                                      reference=hm_reference)
         else:
             scale_factor = ScaleBkgToData(histos[var_name], analyzer_cfg, histos_sys.get(var_name))
         if scale_factor != 1.0:
@@ -776,6 +904,7 @@ def main() -> None:
                 args.cut,
                 args.mA,
                 log_y=True,
+                sig_overlay=sig_overlay,
             )
             canvas.Write()
             SaveCanvPic(canvas, plot_output_path, output_name(var_name) + "_log")
@@ -793,6 +922,7 @@ def main() -> None:
                 args.cut,
                 args.mA,
                 log_y=False,
+                sig_overlay=sig_overlay,
             )
             canvas.Write()
             SaveCanvPic(canvas, plot_output_path, output_name(var_name))

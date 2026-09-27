@@ -73,7 +73,7 @@ class Analyzer_Config:
                 self.BDT_filename     = "/afs/cern.ch/work/p/pelai/HZa/ALP/Analysis_code/train_MVA/model_Za_BDT_passedEvents.pkl"
                 self.mvaCut           = {'M1':0.955, 'M2':0.98, 'M3':0.985, 'M4':0.98, 'M5':0.985, 'M6':0.99, 'M7':0.985, 'M8':0.99, 'M9':0.99, 'M10':0.99, 'M15':0.99, 'M20':0.99, 'M25':0.985, 'M30':0.98}
             elif self.year == 'run3':
-                self.sample_loc       = '/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal'
+                self.sample_loc       = '/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix'
                 self.out_dir          = '/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/variables_dataVmc'
                 self.root_output_name = "ALP_plot_run3_{0}.root".format(self.out_region_name)
                 self.BDT_filename     = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Za_BDT_run3.pkl"
@@ -98,7 +98,10 @@ class Analyzer_Config:
             self.years_22   = ["2022preEE", "2022postEE"]  # 背景（2022）
             self.years_23   = ["2023preBPix","2023postBPix", "2024"]  # 背景（2023）
             self.years_dyll = ["2022preEE","2022postEE","2023preBPix","2023postBPix", "2024"]
-            self.bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+            # 2026-09-24: 2022 DYGto2LG is the official inclusive PTG-10to100 sample (as for
+            # 2023/2024), not the retired PTG-10to50 + PTG-50to100 slices; the FSR-fix
+            # production contains no slice files, so the old list pointed at nothing.
+            self.bkg_2022 = ["DYGto2LG_10to100"]
             self.bkg_2023 = ["DYGto2LG_10to100"]
             self.bkg_dyll = ["DYJetsToLL"]
             # 2024 has no inclusive DYJetsToLL production; the DY+jets input is the

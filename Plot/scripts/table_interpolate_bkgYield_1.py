@@ -12,7 +12,7 @@ from ROOT import TH1F, TGraph, TGraphSmooth, gROOT
 gROOT.SetBatch(True)
 from array import array
 
-INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal/"
+INPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix/"
 
 # 你之前实际使用的组合：
 years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
@@ -32,7 +32,10 @@ interploate_ma_list = [11,12,13,14,16,17,18,19,21,22,23,24,26,27,28,29]
 sig_samples = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
 
 # 背景
-bkg_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+# 2026-09-24: 2022 DYGto2LG is the official inclusive PTG-10to100 sample (as for
+# 2023/2024), not the retired PTG-10to50 + PTG-50to100 slices; the FSR-fix
+# production contains no slice files, so the old list pointed at nothing.
+bkg_2022 = ["DYGto2LG_10to100"]
 bkg_2023 = ["DYGto2LG_10to100"]
 bkg_dyll = ["DYJetsToLL"]
 bkg_dyll_2024 = ["DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"]

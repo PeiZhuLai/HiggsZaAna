@@ -68,7 +68,10 @@ def _info(msg: str) -> None:
     print(f"[plot_phidsigniVmA] {msg}")
 
 # Name of Bkg Sample
-name_DYG_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+# 2026-09-24: 2022 DYGto2LG is the official inclusive PTG-10to100 sample (as for
+# 2023/2024), not the retired PTG-10to50 + PTG-50to100 slices; the FSR-fix
+# production contains no slice files, so the old list pointed at nothing.
+name_DYG_2022 = ["DYGto2LG_10to100"]
 name_DYG_2023 = ["DYGto2LG_10to100"]
 name_DYG_2024 = ["DYGto2LG_10to100"]
 name_DYJet_2022 = ["DYJetsToLL"]
