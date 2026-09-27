@@ -16,8 +16,19 @@ echo "==============STARTED=============="
 
 # Run3
 # input="/eos/home-p/pelai/HZa/parquet_DNA/"
-input="/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA/"
-target="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/"
+# input="/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA/"   # pre-FSR-fix, May 2026
+#
+# 2026-09-16, FSR-fix re-production. The production is split across two
+# directories and a single "input" cannot address it:
+#   Bkg_MC, Data -> parquet_DNA_tmp_fsrfix_fpo1   (re-run at fpo=1)
+#   Sig_MC       -> parquet_DNA_tmp_fsrfix        (complete and reconciled; NOT re-run)
+# input_for() returns the right base per type, so the two call sites below stay
+# unchanged. Setting a single "input" here silently converted the wrong
+# production -- the old value still pointed at the May parquet.
+INPUT_BKGDATA="/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix_fpo1/"
+INPUT_SIG="/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/"
+input_for() { if [ "$1" = "Sig_MC" ]; then echo "$INPUT_SIG"; else echo "$INPUT_BKGDATA"; fi; }
+target="/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix/"
 
 # Gen Info
 # input="/eos/home-p/pelai/HZa/parquet_Sig_MC_DNA/"
@@ -71,7 +82,7 @@ process_sample() {
     
     for year in "${years[@]}"; do
         command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
-        command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
+        command+="-i $(input_for "${type}")${type}/${sample}_${year}/merged_${corr}.parquet "
         if [ "$type" = "Data" ]; then
             command+="-o ${target}Data/${year}.root"
         else
@@ -103,7 +114,7 @@ process_sample_syst() {
     for syst in "${systs[@]}"; do
         corr="${syst}_${uod}"
         command="python /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Parque2Root_BDT.py "
-        command+="-i ${input}${type}/${sample}_${year}/merged_${corr}.parquet "
+        command+="-i $(input_for "${type}")${type}/${sample}_${year}/merged_${corr}.parquet "
         command+="-o ${target}${sample}_${syst}_${uod}/${year}.root"
 
         command+=" --split"
@@ -179,12 +190,19 @@ for i in {1..4};do
 # for i in {2..3};do # Sum Cut Study
 # for i in 2; do # Compliment Study
     if [ "$i" = "1" ]; then
-        samples=(DYGto2LG_10to50 DYGto2LG_50to100)
-        years=(2022preEE 2022postEE)
+        # 2026-09-21: the 2022 DYGto2LG used to be taken as two PTG slices
+        # (10to50 xs=124 + 50to100 xs=2.088). The FSR-fix production instead used the
+        # official inclusive PTG-10to100 sample (xs=126.6) for 2022 as well, matching
+        # what 2023/2024 already used -- and it carries 24-31% more MC statistics
+        # (2022preEE 74330 -> 97663, 2022postEE 256456 -> 318135). The slices were
+        # therefore never produced in parquet_DNA_tmp_fsrfix_fpo1 and this branch had
+        # nothing to read. Kept as a no-op so the loop indices below stay aligned.
+        samples=()
+        years=()
 
     elif [ "$i" = "2" ]; then
         samples=(DYGto2LG_10to100)
-        years=(2023preBPix 2023postBPix 2024)
+        years=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
         # years=(2023preBPix) # Sum Cut Study
 
     elif [ "$i" = "3" ]; then

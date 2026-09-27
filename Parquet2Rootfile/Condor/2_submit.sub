@@ -24,7 +24,7 @@ transfer_output_files     = ""
 
 universe        = vanilla
 request_cpus    = 1
-request_memory  = 2GB
+request_memory  = 3GB
 # 实测峰值 disk ~3.4GB(conda env 解压主导)、memory ~1GB；20GB/8h 是配不到 slot 的主因。
 # disk 收到 5GB、flavour 收到 longlunch(2h，job 实跑 20-44 分)以匹配更多 slot。
 request_disk    = 5000MB
@@ -34,11 +34,31 @@ request_disk    = 5000MB
 # （代价：竞争 group 配额）。如需礼貌模式改回 nice_user = True。
 # nice_user       = True
 
-# Reuse the conda tarball built by Plot/Condor; do not create a second env_cache here.
-environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
+# Reuse the conda tarball built by Plot/Condor.
+# 2026-09-22: CONDA_TARBALL is deliberately NOT set. pack_conda_env_for_condor.sh uploads
+# the 1.1 GB env to EOS and DELETES the local copy, so the old value here
+# (Plot/Condor/env_cache/higgs-alp-ana.tar.gz) pointed at a file that does not exist and
+# every job would exit 2 in localize_conda_env_if_needed before running anything.
+# With it unset, run_parquet2root.sh xrdcp's it from CONDA_TARBALL_URL on the worker,
+# the same way Plot/Condor/run_dataVmc_condor_job.sh already did.
+# 2026-09-22: SETUP_CONDA_ENV=0 + LOCALIZE_CONDA_ENV=1, not auto/auto.
+# With auto/auto the job FIRST activates the conda env straight off EOS, and only then
+# decides to localize -- because the "auto" localize test is whether CONDA_PREFIX starts
+# with /eos, which it cannot know until it has already activated from /eos. With 1207
+# jobs doing that at once, 832 died with "Input/output error" (Errno 5) reading
+# .../envs/higgs-alp-ana/etc/conda/activate.d/*.sh, return value 1, zero held, queue
+# drained normally. A 4-job smoketest passes cleanly because 4 jobs do not overload EOS.
+# localize_conda_env_if_needed() sets CONDA_PREFIX/PATH/LD_LIBRARY_PATH/PY_BIN itself,
+# so skipping the EOS activation entirely is safe -- the env comes only from the xrdcp'd
+# tarball, and EOS is touched once per job for a single sequential 1.1 GB read.
+environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=1 SETUP_CONDA_ENV=0 CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh"
 
 # 用新的参数名（避开 INPUT/OUTPUT/IN/OUT）
 arguments       = $(ARG_IN) $(ARG_OUT) $(ARG_CORR) $(ARG_SPLIT)
 
 # 从 TSV 读取（按顺序匹配，无表头）
+# Each job xrdcp's a 1.1 GB conda tarball from EOS before it starts. Unthrottled, 1207
+# of those at once is ~1.4 TB of simultaneous reads; cap how many exist at a time.
+max_materialize = 200
+
 queue ARG_IN, ARG_OUT, ARG_CORR, ARG_SPLIT from joblist.tsv

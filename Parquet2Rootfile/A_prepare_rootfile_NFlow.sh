@@ -199,8 +199,8 @@ prepare_all_bkg() {
 # Add run3.root all background
 #########################################################################
 # 依賴檢查：需要前兩個模組已產生 run3.root
-if [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsToLL/run3.root ] || \
-   [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG/run3.root ]; then
+if [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix/DYJetsToLL/run3.root ] || \
+   [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix/DYGto2LG/run3.root ]; then
   echo "ERROR: 需要先完成模組 'dyjets' 與 'dygto2lg'，才可執行 'all-bkg'."
   exit 1
 fi

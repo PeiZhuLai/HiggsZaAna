@@ -3,9 +3,17 @@
 import os
 
 # ===== Base paths =====
-# INPUT_BASE  = "/eos/home-p/pelai/HZa/parquet_DNA"
-INPUT_BASE  = "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA"
-OUTPUT_BASE = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_nominal"
+# 2026-09-21, FSR-fix production. Like 1_run_P2Root.sh, the inputs live in two
+# directories and one single base path cannot address them:
+#   Bkg_MC, Data -> parquet_DNA_tmp_fsrfix_fpo1   (re-run at fpo=1)
+#   Sig_MC       -> parquet_DNA_tmp_fsrfix        (complete and reconciled, not re-run)
+# Leaving one shared base path here silently scored the wrong (May) production.
+INPUT_SIG     = os.environ.get("HZA_PARQUET_SIG",
+                "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix")
+INPUT_BKGDATA = os.environ.get("HZA_PARQUET_BKGDATA",
+                "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix_fpo1")
+OUTPUT_BASE   = os.environ.get("HZA_BDT_SCORED_BASE",
+                "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix")
 
 # 先 False，稳定后再 True
 # ===== Switches =====
@@ -44,7 +52,9 @@ name_sig_2022 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8"
 name_sig_2023 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
 name_sig_2024 = ["mA_M1","mA_M2","mA_M3","mA_M4","mA_M5","mA_M6","mA_M7","mA_M8","mA_M9","mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]
 # Name of Bkg Sample
-name_DYG_2022 = ["DYGto2LG_10to50", "DYGto2LG_50to100"]
+# 2026-09-21: 2022 now uses the official inclusive PTG-10to100 sample, not the
+# two PTG slices -- that is what the FSR-fix production contains. See 1_run_P2Root.sh.
+name_DYG_2022 = ["DYGto2LG_10to100"]
 name_DYG_2023 = ["DYGto2LG_10to100"]
 name_DYG_2024 = ["DYGto2LG_10to100"]
 name_DYJet_2022 = ["DYJetsToLL"]
@@ -106,7 +116,7 @@ with open("joblist.tsv", "w") as f:
     if DO_SIGNAL_NOMINAL:
         for y, s in iter_year_sample(SIGNAL_BY_YEAR):
             s_ma = mass_from_sig(s)
-            inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_SIG, "Sig_MC", f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
@@ -119,7 +129,7 @@ with open("joblist.tsv", "w") as f:
             for ud in updown:
                 for syst in systs:
                     corr = f"{syst}_{ud}"
-                    inp = os.path.join(INPUT_BASE, "Sig_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    inp = os.path.join(INPUT_SIG, "Sig_MC", f"{s}_{y}", f"merged_{corr}.parquet")
                     out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
                     os.makedirs(out_dir, exist_ok=True)
                     out = os.path.join(out_dir, f"{y}.root")
@@ -129,7 +139,7 @@ with open("joblist.tsv", "w") as f:
     if DO_BKG_NOMINAL:
         # DYG
         for y, s in iter_year_sample(DYG_BY_YEAR):
-            inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BKGDATA, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
@@ -137,7 +147,7 @@ with open("joblist.tsv", "w") as f:
 
         # DYJets
         for y, s in iter_year_sample(DYJET_BY_YEAR):
-            inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BKGDATA, "Bkg_MC", f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")
@@ -150,7 +160,7 @@ with open("joblist.tsv", "w") as f:
             for ud in updown:
                 for syst in systs:
                     corr = f"{syst}_{ud}"
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    inp = os.path.join(INPUT_BKGDATA, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
                     out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
                     os.makedirs(out_dir, exist_ok=True)
                     out = os.path.join(out_dir, f"{y}.root")
@@ -161,7 +171,7 @@ with open("joblist.tsv", "w") as f:
             for ud in updown:
                 for syst in systs:
                     corr = f"{syst}_{ud}"
-                    inp = os.path.join(INPUT_BASE, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
+                    inp = os.path.join(INPUT_BKGDATA, "Bkg_MC", f"{s}_{y}", f"merged_{corr}.parquet")
                     out_dir = os.path.join(OUTPUT_BASE, f"{s}_{syst}_{ud}")
                     os.makedirs(out_dir, exist_ok=True)
                     out = os.path.join(out_dir, f"{y}.root")
@@ -171,7 +181,7 @@ with open("joblist.tsv", "w") as f:
     if DO_DATA_NOMINAL:
         # 你目前資料樣本名其實都叫 Data，但仍保留 mapping 以便未來擴充
         for y, s in iter_year_sample(DATA_BY_YEAR):
-            inp = os.path.join(INPUT_BASE, "Data", f"{s}_{y}", "merged_nominal.parquet")
+            inp = os.path.join(INPUT_BKGDATA, "Data", f"{s}_{y}", "merged_nominal.parquet")
             out_dir = os.path.join(OUTPUT_BASE, s)
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{y}.root")

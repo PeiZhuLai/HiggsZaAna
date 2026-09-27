@@ -6,6 +6,11 @@ strip_cr() { printf '%s' "$1" | tr -d $'\r'; }
 
 # 新增：模組清單與使用說明、參數解析
 AVAILABLE_MODULES=( dygto2lg dyjets all-bkg data sig )
+
+# 2026-09-21: the input directory was hardcoded 16 times as run3_bdt_inputs_nominal.
+# The FSR-fix production writes to run3_bdt_inputs_fsrfix, so it is a single variable
+# now. Override with HZA_P2ROOT_BASE to go back to the pre-FSR-fix ROOT files.
+BASE="${HZA_P2ROOT_BASE:-/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix}"
 # AVAILABLE_MODULES=( sig )
 
 print_usage() {
@@ -62,15 +67,11 @@ prepare_dygto2lg() {
 #########################################################################
 # # Prepare annoying DYGto2LG
 #########################################################################
-DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG
-DYGto2LG_10to50_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG_10to50
-DYGto2LG_50to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG_50to100
-DYGto2LG_10to100_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG_10to100
+DYGto2LG_path=$BASE/DYGto2LG
+DYGto2LG_10to100_path=$BASE/DYGto2LG_10to100
 
 # 正規化路徑（移除 \r）
 DYGto2LG_path="$(strip_cr "$DYGto2LG_path")"
-DYGto2LG_10to50_path="$(strip_cr "$DYGto2LG_10to50_path")"
-DYGto2LG_50to100_path="$(strip_cr "$DYGto2LG_50to100_path")"
 DYGto2LG_10to100_path="$(strip_cr "$DYGto2LG_10to100_path")"
 
 # hadd total.root file1.root file2.root
@@ -82,13 +83,18 @@ else
 fi
 mkdir -p "$DYGto2LG_path"
 
-echo "hadd $DYGto2LG_path/2022preEE.root $DYGto2LG_10to50_path/2022preEE.root $DYGto2LG_50to100_path/2022preEE.root"
-hadd "$DYGto2LG_path/2022preEE.root" "$DYGto2LG_10to50_path/2022preEE.root" "$DYGto2LG_50to100_path/2022preEE.root"
+# 2026-09-21: 2022 used to be hadd'ed from the two PTG slices (10to50 + 50to100).
+# The FSR-fix production takes 2022 from the official inclusive PTG-10to100 sample
+# instead -- same as 2023/2024, xs 126.6 vs 124+2.088, and 24-31% more MC statistics.
+# So 2022 is a plain copy now, like every other era. This also removes the hadd
+# schema hazard: hadd takes its branch list from the FIRST input and silently drops
+# any tree whose branches do not match, exiting 0 with only a Warning.
+echo "cp $DYGto2LG_10to100_path/2022preEE.root $DYGto2LG_path/2022preEE.root"
+cp "$DYGto2LG_10to100_path/2022preEE.root" "$DYGto2LG_path/2022preEE.root"
 
-echo "hadd $DYGto2LG_path/2022postEE.root $DYGto2LG_10to50_path/2022postEE.root $DYGto2LG_50to100_path/2022postEE.root"
-hadd "$DYGto2LG_path/2022postEE.root" "$DYGto2LG_10to50_path/2022postEE.root" "$DYGto2LG_50to100_path/2022postEE.root"
+echo "cp $DYGto2LG_10to100_path/2022postEE.root $DYGto2LG_path/2022postEE.root"
+cp "$DYGto2LG_10to100_path/2022postEE.root" "$DYGto2LG_path/2022postEE.root"
 
-# cp from.root to.root
 echo "cp $DYGto2LG_10to100_path/2023preBPix.root $DYGto2LG_path/2023preBPix.root"
 cp "$DYGto2LG_10to100_path/2023preBPix.root" "$DYGto2LG_path/2023preBPix.root"
 
@@ -136,10 +142,10 @@ prepare_dyjets() {
 #########################################################################
 # # Prepare DYJetsToLL
 #########################################################################
-DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsToLL
-DYJetsTo2E_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsTo2E
-DYJetsTo2Mu_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsTo2Mu
-DYJetsTo2Tau_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsTo2Tau
+DYJetsToLL_path=$BASE/DYJetsToLL
+DYJetsTo2E_path=$BASE/DYJetsTo2E
+DYJetsTo2Mu_path=$BASE/DYJetsTo2Mu
+DYJetsTo2Tau_path=$BASE/DYJetsTo2Tau
 
 DYJetsToLL_path="$(strip_cr "$DYJetsToLL_path")"
 DYJetsTo2E_path="$(strip_cr "$DYJetsTo2E_path")"
@@ -199,15 +205,15 @@ prepare_all_bkg() {
 # Add run3.root all background
 #########################################################################
 # 依賴檢查：需要前兩個模組已產生 run3.root
-if [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsToLL/run3.root ] || \
-   [ ! -s /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG/run3.root ]; then
+if [ ! -s $BASE/DYJetsToLL/run3.root ] || \
+   [ ! -s $BASE/DYGto2LG/run3.root ]; then
   echo "ERROR: 需要先完成模組 'dyjets' 與 'dygto2lg'，才可執行 'all-bkg'."
   exit 1
 fi
 
-DYJetsToLL_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYJetsToLL
-DYGto2LG_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/DYGto2LG
-Bkg_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/All_Bkg
+DYJetsToLL_path=$BASE/DYJetsToLL
+DYGto2LG_path=$BASE/DYGto2LG
+Bkg_MC_path=$BASE/All_Bkg
 if [ -d "$Bkg_MC_path" ]; then
     echo "Directory exists: $Bkg_MC_path — removing it."
     rm -rf "$Bkg_MC_path"
@@ -224,7 +230,7 @@ prepare_data() {
 #########################################################################
 # # Prepare Data
 #########################################################################
-Data_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/Data
+Data_path=$BASE/Data
 Data_path="$(strip_cr "$Data_path")"
 
 years=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
@@ -264,7 +270,7 @@ prepare_sig() {
 #########################################################################
 # # Prepare Sig
 #########################################################################
-base_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal
+base_path=$BASE
 massList=( M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M15 M20 M25 M30 )
 years=( 2022preEE 2022postEE 2023preBPix 2023postBPix 2024 )
 
@@ -288,7 +294,7 @@ for mass in "${massList[@]}"; do
 done
 
 # Add run3.root in all ALP mass points
-Sig_MC_path=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_nominal/All_Sig
+Sig_MC_path=$BASE/All_Sig
 if [ -d "$Sig_MC_path" ]; then
     echo "Directory exists: $Sig_MC_path — removing it."
     rm -rf "$Sig_MC_path"

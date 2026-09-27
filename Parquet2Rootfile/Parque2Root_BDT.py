@@ -872,6 +872,24 @@ def decorate(data):
     if present_int_cols:
         data[present_int_cols] = data[present_int_cols].fillna(0).astype("int64")
 
+    # 2026-09-21: drop columns that are STRINGS in the parquet. pd.to_numeric(coerce)
+    # above turns them into numbers whose dtype depends on the CONTENT, so the same
+    # column lands with a different type per era:
+    #     year = "2022preEE" -> NaN   (double)
+    #     year = "2024"      -> 2024  (int64)
+    # hadd then fixes the schema from its FIRST input and silently drops every tree
+    # whose branches do not match, emitting one Warning and exiting 0. That is exactly
+    # what happened to the signal run3.root files: the 2024 tree vanished from all 14
+    # of them, -23% of the signal statistics, with no error anywhere.
+    #     Warning in <TTree::CopyEntries>: the export leaf and the import leaf
+    #     (year.year) do not have the same data type (Long64_t vs Double_t)
+    # Only signal parquet carries these (bkg/data have none), and nothing downstream
+    # reads `year` -- the ROOT files from before this production did not even have it.
+    drop_string_cols = [c for c in ("year",) if c in data.columns]
+    if drop_string_cols:
+        data = data.drop(columns=drop_string_cols)
+        print("Dropped non-numeric parquet columns: %s" % ", ".join(drop_string_cols))
+
     return data
 
 def main():

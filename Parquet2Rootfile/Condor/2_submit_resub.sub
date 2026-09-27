@@ -2,7 +2,9 @@
 # 与 2_submit.sub 相同，但：(a) queue 从 joblist_resub.tsv；(b) max_materialize 限并行。
 # 23:39 farm 一次给 ~190 个 slot，全部同时读 AFS 1.1GB tarball + EOS conda env →
 # env-setup I/O 被打爆 → job 卡在 setup 近 2h → 撞 MaxRuntime 被驱逐空转。
-# max_materialize=40 把同时存活的 job 压到 <=40，避免再打爆 EOS/AFS。
+# max_materialize 把同时存活的 job 压到上限，避免再打爆 EOS/AFS。
+# 2026-09-22: 40 -> 150。修好 SETUP_CONDA_ENV=0 后，每个 job 只用 xrdcp 顺序读一次
+# 1.1 GB tarball，不再逐档 FUSE 读 EOS 上的 conda env，并发可以拉高。
 initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor
 executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/run_parquet2root.sh
 
@@ -27,9 +29,19 @@ request_disk    = 5000MB
 +JobBatchName   = "p2root_MVAScore_resub"
 
 # 关键：限制同时存活(idle+running)的 job 数，避免 env-setup I/O 风暴。
-max_materialize = 40
+max_materialize = 150
 
-environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=auto SETUP_CONDA_ENV=auto CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh CONDA_TARBALL=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/Condor/env_cache/higgs-alp-ana.tar.gz"
+# 2026-09-22: SETUP_CONDA_ENV=0 + LOCALIZE_CONDA_ENV=1, not auto/auto.
+# With auto/auto the job FIRST activates the conda env straight off EOS, and only then
+# decides to localize -- because the "auto" localize test is whether CONDA_PREFIX starts
+# with /eos, which it cannot know until it has already activated from /eos. With 1207
+# jobs doing that at once, 832 died with "Input/output error" (Errno 5) reading
+# .../envs/higgs-alp-ana/etc/conda/activate.d/*.sh, return value 1, zero held, queue
+# drained normally. A 4-job smoketest passes cleanly because 4 jobs do not overload EOS.
+# localize_conda_env_if_needed() sets CONDA_PREFIX/PATH/LD_LIBRARY_PATH/PY_BIN itself,
+# so skipping the EOS activation entirely is safe -- the env comes only from the xrdcp'd
+# tarball, and EOS is touched once per job for a single sequential 1.1 GB read.
+environment     = "PROJECT_DIR=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna LOCALIZE_CONDA_ENV=1 SETUP_CONDA_ENV=0 CONDA_ENV_NAME=higgs-alp-ana ANACONDA_SETUP=/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh"
 
 arguments       = $(ARG_IN) $(ARG_OUT) $(ARG_CORR) $(ARG_SPLIT)
 

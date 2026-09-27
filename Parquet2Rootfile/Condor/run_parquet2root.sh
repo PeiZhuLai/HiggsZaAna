@@ -25,7 +25,13 @@ CONDA_ENV_NAME="${CONDA_ENV_NAME:-higgs-alp-ana}"
 ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
 LOCALIZE_CONDA_ENV="${LOCALIZE_CONDA_ENV:-auto}"
 LOCAL_CONDA_DIR="${LOCAL_CONDA_DIR:-${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/higgs-alp-ana-conda}"
-CONDA_TARBALL="${CONDA_TARBALL:-${PROJECT_DIR}/Plot/Condor/env_cache/higgs-alp-ana.tar.gz}"
+# 2026-09-22: the packed env lives on EOS, not in Plot/Condor/env_cache -- the packer
+# deletes the local copy after uploading. Defaulting CONDA_TARBALL to that AFS path made
+# every job exit 2 before running anything ("tarball is missing"). Empty now means
+# "xrdcp it from EOS", exactly like Plot/Condor/run_dataVmc_condor_job.sh does; set
+# CONDA_TARBALL explicitly only for an offline/debug local copy.
+CONDA_TARBALL_URL="${CONDA_TARBALL_URL:-root://eosproject-h.cern.ch//eos/project/h/htozg-dy-privatemc/pelai/App/higgs-alp-ana.tar.gz}"
+CONDA_TARBALL="${CONDA_TARBALL:-}"
 
 sanitize_python_env_for_conda() {
   if [[ -n "${PYTHONPATH:-}" ]]; then
@@ -106,26 +112,53 @@ localize_conda_env_if_needed() {
     return 0
   fi
 
-  if [[ ! -s "$CONDA_TARBALL" ]]; then
-    echo "[ERROR] Conda localization requested, but tarball is missing: $CONDA_TARBALL" >&2
-    echo "[ERROR] Run Plot/Condor/pack_conda_env_for_condor.sh once before condor_submit." >&2
-    exit 2
-  fi
-
-  echo "[ENV] Extract conda tarball from $CONDA_TARBALL to $LOCAL_CONDA_DIR"
   rm -rf "$LOCAL_CONDA_DIR"
   mkdir -p "$LOCAL_CONDA_DIR"
-  tar -xzf "$CONDA_TARBALL" -C "$LOCAL_CONDA_DIR"
+
+  local _pack
+  if [[ -n "$CONDA_TARBALL" ]]; then
+    if [[ ! -s "$CONDA_TARBALL" ]]; then
+      echo "[ERROR] CONDA_TARBALL set but missing: $CONDA_TARBALL" >&2
+      exit 2
+    fi
+    _pack="$CONDA_TARBALL"
+    echo "[ENV] Extract conda tarball from $_pack to $LOCAL_CONDA_DIR"
+  else
+    _pack="${LOCAL_CONDA_DIR}.tar.gz"
+    echo "[ENV] Fetch conda tarball: $CONDA_TARBALL_URL"
+    local _t
+    for _t in 1 2 3; do
+      xrdcp -f -s "$CONDA_TARBALL_URL" "$_pack" && break
+      echo "[ENV] xrdcp attempt $_t failed, retrying in 15s" >&2
+      sleep 15
+    done
+    if [[ ! -s "$_pack" ]]; then
+      echo "[ERROR] Could not fetch conda tarball: $CONDA_TARBALL_URL" >&2
+      echo "[ERROR] Run Plot/Condor/pack_conda_env_for_condor.sh and upload it, or set CONDA_TARBALL to a local copy." >&2
+      exit 2
+    fi
+  fi
+
+  tar -xzf "$_pack" -C "$LOCAL_CONDA_DIR"
+  # only remove the copy we fetched ourselves, never a user-supplied local file
+  [[ -z "$CONDA_TARBALL" ]] && rm -f "$_pack"
+
+  # 2026-09-22: export PATH BEFORE conda-unpack, not after. conda-pack writes
+  # conda-unpack with a `#!/usr/bin/env python` shebang, so it needs a `python` on PATH
+  # to run at all. This used to work by accident: with SETUP_CONDA_ENV=auto the job had
+  # already activated the EOS env, which put a python on PATH. With the EOS activation
+  # removed there is none, and conda-unpack died with
+  #     /usr/bin/env: 'python': No such file or directory
+  # taking the whole job down with return value 127 under `set -e`.
+  export CONDA_PREFIX="$LOCAL_CONDA_DIR"
+  export PATH="$LOCAL_CONDA_DIR/bin:$PATH"
+  export LD_LIBRARY_PATH="$LOCAL_CONDA_DIR/lib:${LD_LIBRARY_PATH:-}"
+  PY_BIN="$LOCAL_CONDA_DIR/bin/python3"
 
   if [[ -x "$LOCAL_CONDA_DIR/bin/conda-unpack" ]]; then
     echo "[ENV] Run conda-unpack"
     "$LOCAL_CONDA_DIR/bin/conda-unpack"
   fi
-
-  export CONDA_PREFIX="$LOCAL_CONDA_DIR"
-  export PATH="$LOCAL_CONDA_DIR/bin:$PATH"
-  export LD_LIBRARY_PATH="$LOCAL_CONDA_DIR/lib:${LD_LIBRARY_PATH:-}"
-  PY_BIN="$LOCAL_CONDA_DIR/bin/python3"
 }
 
 echo "[ENV] initial PY_BIN=${PY_BIN}"
