@@ -93,3 +93,38 @@ FNUF_2018 = {
         }
     ]
 }
+
+# Updated FNUF for Run 3, converted from the official early-Run3 Hgg JSON:
+# /eos/cms/store/group/phys_higgs/cmshgg/earlyRun3Hgg/JSONs/FNUF_2022.json
+# ("FNUF for 2022, taking the numbers from 2018 provided by Badder, slightly
+#  increasing the uncertainty. Mainly relevant for HIG-23-014.")
+# Note: the r9 boundary is 0.975 here (vs 0.94 in the Run 2 flashgg derivations).
+FNUF_2022 = {
+    "variables" : ["photon_eta", "photon_r9"],
+    "bins" : [
+        {
+            "photon_eta" : [0.0, 1.5],
+            "photon_r9" : [0.0, 0.975],
+            "value" : 1.0,
+            "uncertainty" : 0.0
+        },
+        {
+            "photon_eta" : [0.0, 1.5],
+            "photon_r9" : [0.975, 999.],
+            "value" : 1.0,
+            "uncertainty" : 0.0013875
+        },
+        {
+            "photon_eta" : [1.5, 6.0],
+            "photon_r9" : [0.0, 0.975],
+            "value" : 1.0,
+            "uncertainty" : 0.0
+        },
+        {
+            "photon_eta" : [1.5, 6.0],
+            "photon_r9" : [0.975, 999.],
+            "value" : 1.0,
+            "uncertainty" : 0.0031
+        }
+    ]
+}
