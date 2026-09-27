@@ -30,10 +30,137 @@ from higgs_dna.utils.metis_utils import do_cmd
 from higgs_dna.taggers.duplicated_samples_tagger import DuplicatedSamplesTagger
 from higgs_dna.taggers.mc_overlap_tagger import MCOverlapTagger
 from higgs_dna.systematics.photon_systematics import photon_scale_smear_run3
+from higgs_dna.systematics.egm_zeezmmg_systematics import (
+    photon_scale_smear_zeezmmg_run3,
+    zeezmmg_supported,
+)
 from higgs_dna.systematics.lepton_systematics import electron_scale_smear_run3, muon_scale_smear_run3
 from higgs_dna.systematics.jet_systematics import pt_correction_data, pt_correction_mc
 
 condor=False
+
+# NanoAOD stores the LHE scale and PDF variations as variable-length arrays
+# (LHEScaleWeight, LHEPdfWeight), but higgs_dna.systematics.theory_systematics
+# expects flat per-event fields (LHEScaleWeight_Zero ... _Eight,
+# LHEPdfWeight_Unit/_Up/_Down). Those flat names do not exist in NanoAOD, and
+# load_events silently drops any requested branch that is not in the tree, so
+# the theory systematics could never see their inputs. Unroll the arrays here.
+#
+# LHEScaleWeight ordering (NanoAOD branch title):
+#   [0] muF=0.5 muR=0.5   [1] muF=1.0 muR=0.5   [2] muF=2.0 muR=0.5
+#   [3] muF=0.5 muR=1.0   [4] muF=1.0 muR=1.0   [5] muF=2.0 muR=1.0
+#   [6] muF=0.5 muR=2.0   [7] muF=1.0 muR=2.0   [8] muF=2.0 muR=2.0
+# Index 4 is the nominal; the 7-point envelope drops the [2] and [6] corners.
+LHE_SCALE_INDEX_NAMES = ["Zero", "One", "Two", "Three", "Four",
+                         "Five", "Six", "Seven", "Eight"]
+
+
+def _local_scratch_dir():
+    """Node-local scratch for staged NanoAOD copies."""
+    for var in ("_CONDOR_SCRATCH_DIR", "TMPDIR"):
+        d = os.environ.get(var)
+        if d and os.path.isdir(d):
+            return d
+    d = "/tmp/hza_stage_%d" % os.getpid()
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def stage_and_open(path, label = "input"):
+    """Copy a remote file to node-local scratch, then open it from disk.
+
+    Streaming NanoAOD over xrootd goes through fsspec_xrootd's VECTOR read --
+    one request carrying many non-contiguous ranges -- and against a
+    high-latency site that request times out as a whole:
+        OSError: File did not vector_read properly: [ERROR] Operation expired
+    On 2026-09-15 that was 237 of 250 sampled job failures, and the shortfall
+    tracked job size exactly (DYGto2LG 770/776 chunks complete, Data_2024 only
+    1556/2550). A sequential whole-file copy does not have that failure mode.
+
+    Measured on worker nodes the same day, same file, same branches:
+        DYJetsToLL_2022postEE  STREAM  FAIL after 122.3 s (vector_read expired)
+                               XRDCP   ok in 6.5 s (37.5 MB/s), local read 1.6 s
+    Copying is not generally FASTER -- for healthy files the two are comparable
+    -- it is that copying either works or fails fast, where streaming can hang
+    for the whole walltime. Node-local scratch had ~3 TB free, so staging fpo=4
+    files costs nothing.
+
+    The pre-existing xrdcp path only ran when uproot.open() raised; these
+    failures happen mid-read, long after a successful open, so it never fired.
+
+    Returns (file_handle, local_path_or_None). The caller must delete
+    local_path when done. Set HZA_STAGE_INPUTS=0 to go back to streaming.
+    """
+    if os.environ.get("HZA_STAGE_INPUTS", "1") != "1" or not path.startswith("root://"):
+        return uproot.open(path, timeout = 300, num_workers = 1), None
+
+    local = os.path.join(_local_scratch_dir(), "stage_%d_%s" % (os.getpid(), os.path.basename(path)))
+    t0 = time.time()
+    rc = os.system("xrdcp -f --nopbar --retry 2 '%s' '%s' >/dev/null 2>&1" % (path, local))
+    if rc != 0 or not os.path.exists(local):
+        # Genuinely unavailable inputs exist (12 of 250 sampled failures were
+        # [3010] Unable to open, and xrdcp fails on those too). Fail loudly with
+        # the path so the reconciliation can account for it, rather than falling
+        # back to a stream that will fail slowly.
+        if os.path.exists(local):
+            os.remove(local)
+        raise RuntimeError("xrdcp failed (rc=%s) staging %s: %s" % (rc, label, path))
+    logger.debug("[AnalysisManager : stage_and_open] staged %s in %.1f s (%.2f GB)"
+                 % (os.path.basename(path), time.time() - t0, os.path.getsize(local) / 1e9))
+    return uproot.open(local, timeout = 300, num_workers = 1), local
+
+
+def attach_lhe_weights(events_file, tree, event_cut):
+    """Add flat LHE scale/PDF weight fields to ``events_file``.
+
+    Missing or unexpectedly sized branches fall back to 1.0 so that downstream
+    code always finds the fields and the nominal result is unchanged.
+    """
+    n_events = len(events_file)
+    keys = tree.keys()
+
+    scale = None
+    if "LHEScaleWeight" in keys:
+        try:
+            scale = tree["LHEScaleWeight"].array(library="ak")[event_cut]
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[attach_lhe_weights] Could not read LHEScaleWeight: %s", exc)
+            scale = None
+    if scale is not None:
+        padded = awkward.fill_none(
+            awkward.pad_none(scale, len(LHE_SCALE_INDEX_NAMES), clip=True), 1.0)
+        for i, name in enumerate(LHE_SCALE_INDEX_NAMES):
+            events_file["LHEScaleWeight_%s" % name] = awkward.to_numpy(padded[:, i])
+    else:
+        for name in LHE_SCALE_INDEX_NAMES:
+            events_file["LHEScaleWeight_%s" % name] = numpy.ones(n_events)
+
+    pdf = None
+    if "LHEPdfWeight" in keys:
+        try:
+            pdf = tree["LHEPdfWeight"].array(library="ak")[event_cut]
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[attach_lhe_weights] Could not read LHEPdfWeight: %s", exc)
+            pdf = None
+    if pdf is not None and awkward.any(awkward.num(pdf, axis=1) > 1):
+        # Member 0 is the central value; the remaining members are MC replicas,
+        # so the symmetric uncertainty is their standard deviation.
+        central = awkward.to_numpy(awkward.fill_none(
+            awkward.pad_none(pdf, 1, clip=True), 1.0)[:, 0])
+        replicas = pdf[:, 1:]
+        rms = awkward.to_numpy(awkward.fill_none(awkward.std(replicas, axis=1), 0.0))
+        rms = numpy.nan_to_num(rms, nan=0.0)
+        events_file["LHEPdfWeight_Unit"] = central
+        events_file["LHEPdfWeight_Up"] = central + rms
+        events_file["LHEPdfWeight_Down"] = central - rms
+    else:
+        events_file["LHEPdfWeight_Unit"] = numpy.ones(n_events)
+        events_file["LHEPdfWeight_Up"] = numpy.ones(n_events)
+        events_file["LHEPdfWeight_Down"] = numpy.ones(n_events)
+
+    return events_file
+
+
 def run_analysis(config):
     """
     Function that gets run for each individual job. Performs the following:
@@ -555,6 +682,38 @@ class AnalysisManager():
         return {}
 
     @staticmethod
+    def photon_scale_smear_method(config, year):
+        """
+        Pick the photon scale and smearing method for this era.
+
+        "egm" is the central EGM calibration (Z->ee only, the historical
+        default). "zeezmmg" is the two-stage Z->ee + Z->mumu+gamma calibration
+        of ``egm_zeezmmg_systematics``. The analysis config wins, otherwise the
+        HZA_PHOTON_SAS environment variable, otherwise "egm".
+        """
+        method = config.get("photon_scale_smear_method") or os.environ.get(
+            "HZA_PHOTON_SAS", "egm"
+        )
+        method = str(method).lower()
+
+        if method not in ("egm", "zeezmmg"):
+            logger.warning(
+                "[AnalysisManager] Unknown photon scale/smear method '%s', falling back to 'egm'.",
+                method,
+            )
+            return "egm"
+
+        if method == "zeezmmg" and not zeezmmg_supported(year):
+            # Refuse to silently fall back: an era without a payload would then
+            # be calibrated differently from the rest of the analysis.
+            raise ValueError(
+                "photon scale/smear method 'zeezmmg' requested for year %s, "
+                "but no two-stage payload is shipped for it" % year
+            )
+
+        return method
+
+    @staticmethod
     def skip_photon_scale_smear(config):
         for tag_config in config.get("tag_sequence", []):
             if tag_config.get("tagger") == "TnPZmmgTagger":
@@ -585,6 +744,7 @@ class AnalysisManager():
         is_data = config["sample"]["is_data"]
         year = config["sample"]["year"]
         skip_photon_scale_smear = AnalysisManager.skip_photon_scale_smear(config)
+        photon_sas_method = AnalysisManager.photon_scale_smear_method(config, year)
 
         with_skimmed = config.get("with_skimmed", False)
         skimmed_files_paths = config.get("skimmed_files", []) # Get paths, default to empty list
@@ -610,12 +770,7 @@ class AnalysisManager():
 
         for file_idx, file in enumerate(files):
             # Process the main file first
-            try:
-                f = uproot.open(file, timeout = 300, num_workers=1)
-            except Exception:
-                if (os.system(f"xrdcp '{file}' '/tmp/{os.getpid()}/{os.path.basename(file)}'")):
-                    raise RuntimeError("xrdcp failed")
-                f = uproot.open(f'/tmp/{os.getpid()}/{os.path.basename(file)}',timeout = 300, num_workers=1)
+            f, _staged_main = stage_and_open(file, label = "nanoaod")
 
             runs = f["Runs"]
             tree = f["Events"]
@@ -644,6 +799,7 @@ class AnalysisManager():
                 trimmed_branches = [x for x in branches if x in tree.keys()]
                 events_file = tree.arrays(trimmed_branches, library = "ak", how = "zip")
                 events_file = events_file[overlap_cut]
+                events_file = attach_lhe_weights(events_file, tree, overlap_cut)
 
             if int(year[:4]) > 2020:
                 if skip_photon_scale_smear:
@@ -651,7 +807,12 @@ class AnalysisManager():
                         "[AnalysisManager : LoadEvents] Skipping photon scale/smear for zmmg tag-and-probe."
                     )
                 else:
-                    events_file = photon_scale_smear_run3(events_file, year, is_data)
+                    if photon_sas_method == "zeezmmg":
+                        events_file = photon_scale_smear_zeezmmg_run3(events_file, year, is_data)
+                    else:
+                        events_file = photon_scale_smear_run3(events_file, year, is_data)
+                    # The Z->mumu+gamma stage is photon-only: electrons keep the
+                    # central EGM calibration in both methods.
                     events_file = electron_scale_smear_run3(events_file, year, is_data)
                 events_file = muon_scale_smear_run3(events_file, year, is_data)
 
@@ -670,6 +831,15 @@ class AnalysisManager():
                 #     events_file = pt_correction_mc(events_file, year)
 
             f.close()
+            # Drop the staged copies as soon as the file is closed: with fpo=4
+            # keeping them all would hold several GB of scratch for no reason.
+            for _p in (locals().get("_staged_main"), locals().get("_staged_skim")):
+                if _p and os.path.exists(_p):
+                    try:
+                        os.remove(_p)
+                    except OSError:
+                        pass
+            _staged_main = _staged_skim = None
 
             # MLPhoton friend-tree attach (event-ID JOIN). Happens BEFORE the
             # legacy with_skimmed merge so the tagger sees events.MLPhoton.
@@ -684,12 +854,7 @@ class AnalysisManager():
                 skimmed_file = skimmed_files_paths[file_idx]
                 logger.debug("[AnalysisManager : Load skimmed file] Processing skimmed file for %s: %s" % (file, skimmed_file))
                 
-                try:
-                    f_skimmed = uproot.open(skimmed_file, timeout = 300, num_workers=1)
-                except Exception:
-                    if (os.system(f"xrdcp '{skimmed_file}' '/tmp/{os.getpid()}/{os.path.basename(skimmed_file)}'")):
-                        raise RuntimeError("xrdcp failed")
-                    f_skimmed = uproot.open(f'/tmp/{os.getpid()}/{os.path.basename(skimmed_file)}',timeout = 300, num_workers=1)
+                f_skimmed, _staged_skim = stage_and_open(skimmed_file, label = "skimmed")
                 
                 tree_skimmed = f_skimmed["Events"]
                 

@@ -536,18 +536,32 @@ def select_resolved_fsr_photons(FSRphotons, electrons, muons, photons, options, 
     FSR_iso_cut = FSRphotons.relIso03 < options["iso"]
     FSR_dROverEt2_cut = FSRphotons.dROverEt2 < options["dROverEt2"]
 
+    # The selected-electron collection arrives here as an option type
+    # (option[var * ...]), so delta_R against it returns ?bool. Left as is, those
+    # None entries propagate into FSR_all_cuts, FsrPhoton[mask] becomes an option
+    # array, ak.num counts the None placeholders as if they were photons, and the
+    # assignment downstream then finds no photon to add to any muon -- the FSR
+    # recovery silently stops working. Fill with True ("nothing to be separated
+    # from"), the convention already used for the other delta_R masks in
+    # za_tagger_resolved.
+    def _separated(objects, others, min_dr):
+        return ak.fill_none(object_selections.delta_R(objects, others, min_dr), True)
+
     # Clean FSR photons by checking dR with electrons
-    FSRphoton_clean_electrons = object_selections.delta_R(FSRphotons, electrons, 0.001)
+    FSRphoton_clean_electrons = _separated(FSRphotons, electrons, 0.001)
 
     # Discard FSRphoton if dR(FSRphoton, lep) > 0.5
-    dR0p5_FSRphoton_lep = object_selections.delta_R(FSRphotons, electrons, 0.5) & object_selections.delta_R(FSRphotons, muons, 0.5)
+    dR0p5_FSRphoton_lep = _separated(FSRphotons, electrons, 0.5) & _separated(FSRphotons, muons, 0.5)
     FSRphoton_lep_indR0p5 = ~dR0p5_FSRphoton_lep
 
-    photons_sorted = photons[ak.argsort(photons.pt, ascending=False)]
-
-    lead_photons = photons_sorted[:, :1]
-
-    FSRphoton_clean_photons = object_selections.delta_R(FSRphotons, lead_photons, 0.2)
+    # Separate the FSR candidate from EVERY photon passing the signal criteria,
+    # not only the leading one. The Higgs candidate here is reconstructed from two
+    # photons, so vetoing against photons_sorted[:, :1] alone leaves the
+    # sub-leading ALP photon unprotected: it is then picked up as an "FSR photon"
+    # and added to a muon, which corrupts both m(ll) and m(llgg). Measured at
+    # m_a = 30 GeV, 72% of the dressed candidates were the sub-leading ALP photon
+    # itself (dR < 0.05) and sigma_eff(m_llgg) degraded by 16%.
+    FSRphoton_clean_photons = _separated(FSRphotons, photons, 0.2)
 
     FSR_all_cuts = FSR_pt_cut & FSR_eta_cut & FSR_iso_cut & FSR_dROverEt2_cut & FSRphoton_clean_electrons & FSRphoton_lep_indR0p5 & FSRphoton_clean_photons
 

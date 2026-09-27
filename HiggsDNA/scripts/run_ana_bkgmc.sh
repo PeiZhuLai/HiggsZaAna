@@ -10,7 +10,14 @@ config="${CONFIG:-metadata/za_bkgmc_run3.json}"
 log_level="${LOG_LEVEL:-INFO}" # DEBUG # INFO
 n_cores="${N_CORES:-10}"
 batch_system="${BATCH_SYSTEM:-condor}" # local # condor
-sample_list="${SAMPLE_LIST:-DYGto2LG_10to50,DYGto2LG_50to100,DYJetsToLL,DYGto2LG_10to100,DYJetsTo2E,DYJetsTo2Mu,DYJetsTo2Tau}"
+# DYGto2LG_10to50 and DYGto2LG_50to100 were dropped on 2026-09-12: CMS has
+# invalidated every 2022 version of both (v11/v12/v13, preEE and postEE). DAS
+# hides INVALID datasets, so the sample manager reports "No files with
+# instance=prod/global", builds a Task with zero jobs, and the driver dies on
+# ZeroDivisionError in progress_bar.py. Their phase space is covered by the
+# single-range DYGto2LG_10to100 (xs 126.6 = 124 + 2.088), VALID for 2022 and
+# already used by 2023+. See ref_hza_bmode_pack.
+sample_list="${SAMPLE_LIST:-DYGto2LG_10to100,DYJetsToLL,DYJetsTo2E,DYJetsTo2Mu,DYJetsTo2Tau}"
 years="${YEARS:-2022preEE,2022postEE,2023preBPix,2023postBPix,2024}"
 # sample_list="${SAMPLE_LIST:-DYGto2LG_10to50,DYGto2LG_50to100,DYJetsToLL,DYGto2LG_10to100,DYJetsTo2E,DYJetsTo2Mu,DYJetsTo2Tau}"
 # years="${YEARS:-2024}"
@@ -22,7 +29,7 @@ merge_outputs="${MERGE_OUTPUTS:-1}" # 1 merge # 0 no merge
 short="${SHORT:-0}" # 1 short # 0 full
 dry_run="${DRY_RUN:-0}"
 reconfigure_jobs="${RECONFIGURE_JOBS:-0}" # 1 rewrite job configs/scripts/condor submit files
-condor_req_memory="${CONDOR_REQ_MEMORY:-20000}" # MB, passed to Condor RequestMemory
+condor_req_memory="${CONDOR_REQ_MEMORY:-3000}" # MB, passed to Condor RequestMemory
 parquet_read_retries="${HIGGSDNA_PARQUET_READ_RETRIES:-6}"
 parquet_read_retry_delay="${HIGGSDNA_PARQUET_READ_RETRY_DELAY:-10}"
 condor_submit_chunk_size="${CONDOR_SUBMIT_CHUNK_SIZE:-500}"

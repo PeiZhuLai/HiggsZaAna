@@ -678,18 +678,19 @@ def trigger_sf(events, central_only, year):
 ### FNUF ###
 ############
 
-from higgs_dna.systematics.data.fnuf import FNUF_2016, FNUF_2017, FNUF_2018
+from higgs_dna.systematics.data.fnuf import FNUF_2016, FNUF_2017, FNUF_2018, FNUF_2022
 fnuf_bins = {
     "2016" : FNUF_2016,
     "2016preVFP" : FNUF_2016,
     "2016postVFP" : FNUF_2016,
     "2017" : FNUF_2017,
     "2018" : FNUF_2018,
-    "2022preEE" : FNUF_2018,
-    "2022postEE" : FNUF_2018,
-    "2023preBPix" : FNUF_2018,
-    "2023postBPix" : FNUF_2018,
-    "2024" : FNUF_2018,
+    # Run 3: use the updated FNUF_2022 derivation (see higgs_dna/systematics/data/fnuf.py)
+    "2022preEE" : FNUF_2022,
+    "2022postEE" : FNUF_2022,
+    "2023preBPix" : FNUF_2022,
+    "2023postBPix" : FNUF_2022,
+    "2024" : FNUF_2022,
 }
 
 def fnuf_unc(events, year, nominal_only, modify_nominal):

@@ -1412,6 +1412,34 @@ class ZaTaggerRun3(Tagger):
         dr_mid_bin = ak.fill_none((_alp_dr >= 0.1) & (_alp_dr < 0.3), False)
         dr_gt_bin  = ak.fill_none(_alp_dr >= 0.3, False)
 
+        # gen-level dR(gamma,gamma) from a(9000005) -> gamma gamma.
+        # The reco bins above use alp_cand, which only exists once a diphoton
+        # pair has been built (has_2g_cand), so they cannot split any of the
+        # photon-ID steps that precede pairing. The gen-level dR is defined for
+        # every signal event regardless of reconstruction, so it CAN split the
+        # full cutflow. Signal only: background/data have no ALP.
+        _gen_dr = None
+        if hasattr(events, "GenPart"):
+            try:
+                _gen_agam = gen_selections.select_x_to_yz(events.GenPart, 9000005, 22, 22)
+                _gen_dr = ak.firsts(
+                    _gen_agam.LeadGenChild.deltaR(_gen_agam.SubleadGenChild)
+                )
+            except Exception as _e:
+                logger.warning("[gen dR] a->gg selection failed (%s); "
+                               "gen-dR cutflows will be skipped", _e)
+                _gen_dr = None
+        if _gen_dr is not None:
+            gendr_lt_bin   = ak.fill_none(_gen_dr < 0.1, False)
+            gendr_mid_bin  = ak.fill_none((_gen_dr >= 0.1) & (_gen_dr < 0.3), False)
+            gendr_gt_bin   = ak.fill_none(_gen_dr >= 0.3, False)
+            # catch-all so the bins are exhaustive: sum over the four must
+            # reproduce the nominal cutflow at EVERY step. Without it a gen
+            # matching inefficiency would silently look like a real deficit.
+            gendr_none_bin = ak.fill_none(ak.is_none(_gen_dr), True)
+        else:
+            gendr_lt_bin = gendr_mid_bin = gendr_gt_bin = gendr_none_bin = None
+
         # debug sanity: fine 分解重現 has_2gamma_cand；三 dR bin 於 has_2g 之和 == inclusive
         if logger.isEnabledFor(logging.DEBUG):
             _ph_full_ge2 = ak.sum(_m_full, axis=1) >= 2
@@ -1530,6 +1558,46 @@ class ZaTaggerRun3(Tagger):
                 ],
                 weighted=weighted,
             )
+
+        # gen-dR-binned cutflows: the bin mask is ANDed into EVERY step, so the
+        # split applies from the very first cut (unlike the reco-dR blocks
+        # above, which can only split from has_2g_cand onwards).
+        if gendr_lt_bin is not None:
+            _gendr_base_steps = _inclusive_leading + [
+                ("has_z_cand", has_z_cand),
+                ("ph_ge2", ph_ge2_cut),
+                ("ph_pt", ph_pt_cut2),
+                ("ph_eta", ph_eta_cut2),
+                ("ph_id_hoe", ph_hoe_cut),
+                ("ph_id_chiso", ph_chi_cut),
+                ("ph_id_hcaliso", ph_hcal_cut),
+                ("ph_eveto", ph_eveto_cut),
+                ("ph_lepovlp", ph_lepovlp_cut),
+                ("has_2g_cand", has_2gamma_cand),
+                ("sel_h", sel_h),
+            ]
+            _gendr_cutflows = [
+                ("zgammas_gendr_lt_0p1", gendr_lt_bin),
+                ("zgammas_gendr_0p1_0p3", gendr_mid_bin),
+                ("zgammas_gendr_gt_0p3", gendr_gt_bin),
+                ("zgammas_gendr_unmatched", gendr_none_bin),
+            ]
+            for _ct, _gmask in _gendr_cutflows:
+                for _weighted in (False, True):
+                    if _weighted and not hasattr(events, "Generator_weight"):
+                        continue
+                    self._register_sequential_event_cutflow(
+                        events=events,
+                        cut_type=(_ct + "_w") if _weighted else _ct,
+                        steps=[(_n, _m & _gmask) for _n, _m in _gendr_base_steps],
+                        weighted=_weighted,
+                    )
+            if logger.isEnabledFor(logging.DEBUG):
+                _tot = int(ak.sum(gendr_lt_bin) + ak.sum(gendr_mid_bin)
+                           + ak.sum(gendr_gt_bin) + ak.sum(gendr_none_bin))
+                logger.debug("[gen dR] bins exhaustive: sum=%d vs nevents=%d ; "
+                             "unmatched=%d", _tot, int(len(events)),
+                             int(ak.sum(gendr_none_bin)))
 
         # electron sip3d scenario cutflow
         if self.options.get("zgammas", {}).get("study_ele_ip3d_scenarios", False):

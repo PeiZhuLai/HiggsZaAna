@@ -10,7 +10,14 @@ RequestDisk = REQ_DISK
 RequestCpus = REQ_NCPUS
 
 JobBatchName = BATCH_NAME
-+JobFlavour = "longlunch"
+# workday = 8 h. Was longlunch (2 h), which removed 4515 jobs of the 2026-09-12
+# bkg+data production. Walltime is fixed at SUBMIT time -- MaxRuntime is derived
+# from JobFlavour then, and condor_qedit on a running job does nothing (it reports
+# success and the job still dies at the original limit). A job removed for wall
+# time returns NO stdout/stderr either, so it is invisible everywhere except the
+# condor event log. Opening the flavour wider costs nothing in matching, so the
+# asymmetry is entirely one-sided: too short is unrecoverable, too long is free.
++JobFlavour = "workday"
 +OnExitHold   = ExitStatus != 0
 getenv        = True
 queue 1

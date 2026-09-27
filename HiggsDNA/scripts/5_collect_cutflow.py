@@ -154,6 +154,23 @@ DR_BIN_CUTFLOW_TYPES = [
     "zgammas_dr_gt_0p3_w",
 ]
 
+# --- NEW: gen-level dR(gamma,gamma)-binned cutflows. Unlike the reco dR bins
+# above (which can only split from has_2g_cand onwards, because the reco pair
+# does not exist before that), the gen dR is defined for every signal event and
+# so splits the FULL cutflow, including the photon-ID steps. The "unmatched"
+# bin is the catch-all needed to verify closure: the four bins must reproduce
+# the nominal cutflow at every step.
+GENDR_BIN_CUTFLOW_TYPES = [
+    "zgammas_gendr_lt_0p1",
+    "zgammas_gendr_lt_0p1_w",
+    "zgammas_gendr_0p1_0p3",
+    "zgammas_gendr_0p1_0p3_w",
+    "zgammas_gendr_gt_0p3",
+    "zgammas_gendr_gt_0p3_w",
+    "zgammas_gendr_unmatched",
+    "zgammas_gendr_unmatched_w",
+]
+
 # --- CHANGED: include PHID *_w types in default list ---
 DEFAULT_CUTFLOW_TYPES = (
     BASE_CUTFLOW_TYPES
@@ -162,6 +179,7 @@ DEFAULT_CUTFLOW_TYPES = (
     + PH_EVETO_CUTFLOW_TYPES
     + PHID_CUTFLOW_TYPES
     + DR_BIN_CUTFLOW_TYPES
+    + GENDR_BIN_CUTFLOW_TYPES
 )
 
 # A minimal mapping for nicer printing
@@ -306,6 +324,27 @@ def _extract_braced(text: str, start: int) -> Tuple[Optional[str], int]:
     return None, start + 1
 
 
+# Cut names that legitimately contain a space. _dewrap_json cannot tell a
+# wrap-at-a-space (where the space must be restored) from a wrap-mid-token
+# (where nothing may be inserted) -- both occur in the same payload, e.g.
+#   '"cut_type\n":"zgammas_..."'   -> the break must be deleted
+#   '"sel_h":1.0,"all\ncuts":1.0'  -> the break must become a space
+# so it deletes unconditionally and mangles the latter into "allcuts". Restore
+# those keys here, using the known names. Without this the step is silently
+# absent and any closure check on it fails by exactly that branch's count.
+_SPACED_CUT_NAMES = ["all cuts"]
+_SQUASHED_TO_CUT_NAME = {n.replace(" ", ""): n for n in _SPACED_CUT_NAMES}
+
+
+def _restore_spaced_cut_names(payload: Dict) -> Dict:
+    cuts = payload.get("cuts")
+    if isinstance(cuts, dict):
+        for squashed, proper in _SQUASHED_TO_CUT_NAME.items():
+            if squashed in cuts and proper not in cuts:
+                cuts[proper] = cuts.pop(squashed)
+    return payload
+
+
 def iter_cutflow_payloads_from_text(text: str, syst: Optional[str] = None) -> Iterator[Dict]:
     """
     Yield dict payloads for each 'CutFlow JSON {..}' (or raw '{..}' with 'tagger' key).
@@ -332,7 +371,7 @@ def iter_cutflow_payloads_from_text(text: str, syst: Optional[str] = None) -> It
         try:
             payload = json.loads(cleaned)
             if (syst is None) or (payload.get("syst") == syst):
-                yield payload
+                yield _restore_spaced_cut_names(payload)
         except Exception:
             pass
         idx = end
@@ -351,7 +390,7 @@ def iter_cutflow_payloads_from_text(text: str, syst: Optional[str] = None) -> It
         try:
             payload = json.loads(cleaned)
             if (syst is None) or (payload.get("syst") == syst):
-                yield payload
+                yield _restore_spaced_cut_names(payload)
         except Exception:
             pass
         idx = end

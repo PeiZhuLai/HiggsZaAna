@@ -1,4 +1,5 @@
 import awkward as ak
+import os
 import time
 import numpy
 import numba
@@ -285,6 +286,29 @@ DEFAULT_OPTIONS = {
         "max_pt_diff" : 15.
     }  
 }
+
+
+# Minimum dR between an MLPhoton candidate and any selected lepton.
+#
+# The merged-ML branch had no photon-lepton cleaning at all, while the resolved
+# branch has always cleaned at 0.3 (see `clean_photon_mask` in
+# produce_and_select_zgammas). MLPhoton candidates are built from EB rechit
+# clusters, where an electron's shower is indistinguishable from a photon's, so
+# without this the electrons of the Z itself are reconstructed as merged
+# photons: in DYto2E 98.6% of events passing the merged selection had
+# dR(MLPhoton, nearest Z lepton) < 0.3 (median 0.024, about 1.4 EB crystals),
+# and those fakes outnumbered genuine candidates 69:1 on the sub-GeV signal
+# region, with an indistinguishable mass spectrum.
+#
+# 0.3 matches the resolved branch. The scan in
+# RegressMergedPhoton/training/scan_lepton_dr_cut.py shows S/sqrt(B) plateauing
+# above 0.15 (4.13 -> 4.23 out to 0.5) while signal efficiency falls only from
+# 94.7% to 94.4% between 0.15 and 0.3, so the resolved value costs essentially
+# nothing and keeps one definition across both branches.
+#
+# Override for a re-scan with HZA_MLPHOTON_LEPTON_MIN_DR; changing it requires
+# reproducing the friend parquet, since the flag is written at production time.
+MLPHOTON_LEPTON_MIN_DR = float(os.environ.get("HZA_MLPHOTON_LEPTON_MIN_DR", 0.3))
 
 
 # Diphoton preselection below synced with flashgg, see details in:
@@ -1510,7 +1534,21 @@ class ZaTaggerRun3(Tagger):
         # ---------------------------------------------------------------
         if "MLPhoton" in events.fields:
             ml = events.MLPhoton
+
+            # Lepton overlap removal -- mirrors the resolved branch's
+            # clean_photon_mask. Without it the Z's own electrons enter as
+            # merged photons; see MLPHOTON_LEPTON_MIN_DR above.
+            n_ml_preclean = ak.fill_none(ak.num(ml), 0)
+            ml_clean_mask = (
+                ak.fill_none(object_selections.delta_R(ml, muons, MLPHOTON_LEPTON_MIN_DR), True)
+                & ak.fill_none(object_selections.delta_R(ml, electrons, MLPHOTON_LEPTON_MIN_DR), True)
+            )
+            ml = ml[ml_clean_mask]
+
             n_ml = ak.fill_none(ak.num(ml), 0)
+            # Keep the pre-cleaning count so the size of the effect stays
+            # visible downstream instead of silently vanishing.
+            awkward_utils.add_field(events, "n_MLPhoton_preclean", n_ml_preclean, overwrite=True)
             awkward_utils.add_field(events, "n_MLPhoton", n_ml, overwrite=True)
 
             # Order by diphotonScore (descending) so the leading is the most

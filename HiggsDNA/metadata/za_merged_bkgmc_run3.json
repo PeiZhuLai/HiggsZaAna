@@ -150,8 +150,7 @@
                 ]
             }
         },
-        "independent_collections": {
-        }
+        "independent_collections": {}
     },
     "samples": {
         "catalog": "metadata/samples/zgamma_tutorial.json",
@@ -310,6 +309,7 @@
         "has_1merged_cand",
         "has_1merged_AN2020",
         "pass_allcuts_merged_AN2020",
+        "n_MLPhoton_preclean",
         "n_MLPhoton",
         "n_MLPhoton_diphoton",
         "has_1MLPhoton_diphoton",
@@ -396,6 +396,8 @@
         "Photon_y_calo",
         "Photon_z_calo",
         "Photon_seedGain",
+        "Photon_seediEtaOriX",
+        "Photon_seediPhiOriY",
         "MLPhoton_pt",
         "MLPhoton_eta",
         "MLPhoton_phi",
@@ -460,7 +462,7 @@
         "Electron_mvaFall17V2Iso_WP80",
         "Electron_mvaFall17V2Iso_WPL",
         "Electron_energyErr",
-        "Electron_r9",  
+        "Electron_r9",
         "Electron_genPartIdx",
         "GenPart_eta",
         "GenPart_genPartIdxMother",

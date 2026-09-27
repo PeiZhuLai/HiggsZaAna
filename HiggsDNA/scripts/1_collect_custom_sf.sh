@@ -8,9 +8,16 @@ scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scri
 
 photon_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 electron_eras=(2024 2025 2026)
-muon_id_eras=(2024 2025)
-muon_trigger_eras=(2024 2025)
-muon_iso_eras=(2024 2025)
+# 2026-08-29 加入 2026。前提是 muon TnP 的 2026 六個 JSON 都已產出:
+#   hza_muid_2026_scalefactors.json          <- prepare 必須帶 --exportMuidScaleFactors
+#   hzg_mu{8,17,24}leg_2026_efficiencies.json
+#   hzg_muiso{0p1,0p15}_2026_efficiencies.json
+# ⚠️ muid 那個檔只有在 `prepare --plotOverlayBinsOnly --exportMuidScaleFactors` 時才會寫出;
+#    2026 第一次跑 prepare 時漏了那個旗標,收集腳本會因為 rsync 找不到來源而
+#    在 set -euo pipefail 下整支中止(不是警告)。加 era 前請先確認檔案存在。
+muon_id_eras=(2024 2025 2026)
+muon_trigger_eras=(2024 2025 2026)
+muon_iso_eras=(2024 2025 2026)
 all_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024 2025 2026)
 
 era_dir() {
@@ -63,8 +70,9 @@ collect_muo_json() {
 mutrig_src_name() {
     local era="$1"
     local leg="$2"
+    # 2026-09-26：2024 也改讀 hzg_mu<leg>leg。舊名 hza_mutrig<leg>_2024 停在 2026-03-05（早於 08-08 的
+    # pT 合併與之後所有修正），而 prepare --plotOverlayBinsOnly 對 2024 寫出的也是 hzg_mu<leg>leg。
     case "$era" in
-        2024) echo "hza_mutrig${leg}_${era}_efficiencies.json" ;;
         *)    echo "hzg_mu${leg}leg_${era}_efficiencies.json" ;;
     esac
 }

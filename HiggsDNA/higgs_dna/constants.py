@@ -6,7 +6,6 @@ NOMINAL_TAG = "nominal" # name of the nominal events (relevant when we have mult
 #post-VFP runs: 278801-284044 lumi: 16755.0362868 /pb
 
 # 2024 without B
-# 22+23+24 = 171.2381 /fb
 LUMI = {
     "2016preVFP" : 19.51, 
     "2016postVFP" : 16.80,
@@ -23,11 +22,11 @@ LUMI = {
     "Run2pRun3_22_23" : 199.93,
     "2024": 109.82,
     "2025": 110.59,
-    "2025p2026": 138.01,
+    "2025p2026": 135.90,
     "Run2pRun3_22_23_24_25" : 420.34,
-    "2026": 27.42,
-    "Run3" : 310.14,
-    "Run2pRun3" : 447.76,
+    "2026": 25.31,
+    "Run3" : 308.03,
+    "Run2pRun3" : 445.65,
 }
 
 GOLDEN_JSON = {

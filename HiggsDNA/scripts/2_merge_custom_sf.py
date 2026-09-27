@@ -50,9 +50,9 @@ ELECTRON_ISO_SFS = (
     ("elminiIso0p1", "eliso0p1"),
     ("elminiIso0p15", "eliso0p15"),
 )
-MUON_ISO_ERAS = ("2024", "2025")
+MUON_ISO_ERAS = ("2024", "2025", "2026")
 MUON_ISO_EFFS = ("muiso0p1", "muiso0p15")
-MUON_TRIGGER_ERAS = ("2024", "2025")
+MUON_TRIGGER_ERAS = ("2024", "2025", "2026")
 MUON_TRIGGER_LEGS = ("8", "17", "24")
 
 
