@@ -57,14 +57,31 @@ fi
 echo "[closure] input : ${INFILE}"
 echo "[closure] output: ${OUT_ROOT}"
 
+# Write to node-local scratch, then copy. cmsRun's TFileService writing straight
+# to the EOS fuse mount segfaults inside TTree::Fill -> TStreamerInfo (it worked
+# in earlier rounds, so this is an eoshome-p state thing, not our code: the very
+# same job with a local outFile completes normally). Never let a long cmsRun
+# write its output directly to fuse.
+LOCAL_TMP="${LOCAL_TMP:-${TMPDIR:-/tmp/$USER}/closure_$$}"
+mkdir -p "${LOCAL_TMP}"
+LOCAL_ROOT="${LOCAL_TMP}/$(basename "${OUT_ROOT}")"
+
 # outFile (not outputFile): VarParsing rewrites outputFile to <stem>_numEvent<N>.root
 cmsRun "${CFG}" \
     inputFiles="${INFILE}" \
-    outFile="${OUT_ROOT}" \
-    maxEvents="${N_EVENTS}" || exit 1
+    outFile="${LOCAL_ROOT}" \
+    maxEvents="${N_EVENTS}" || { rm -rf "${LOCAL_TMP}"; exit 1; }
 
 echo "[closure] comparing offline vs online ..."
 "${PY}" "${TRAINDIR}/closure_test.py" \
-    --input "${OUT_ROOT}" \
+    --input "${LOCAL_ROOT}" \
     --max-events "${N_EVENTS}" \
     --json "${OUT_JSON}"
+rc=$?
+
+# keep the dump for later inspection; a copy failure must not fail the closure
+cp "${LOCAL_ROOT}" "${OUT_ROOT}" 2>/dev/null \
+    || xrdcp -f "${LOCAL_ROOT}" "root://eoshome-p.cern.ch/${OUT_ROOT}" 2>/dev/null \
+    || echo "[closure] warn: could not copy the dump to ${OUT_ROOT} (result still valid)"
+rm -rf "${LOCAL_TMP}"
+exit ${rc}

@@ -14,6 +14,9 @@ closure_test.py), truth-matches every cluster, and writes one npz per input:
     m_gen      (N,)        float32   matched gen mass; NaN if unmatched
     dr_match   (N,)        float32   dR to the matched gen object
     n_crystals (N,)        int32
+    r1, r2, r3 (N,)        float32   shower-shape moments, compute_En(n)/compute_En(0)
+                                     -- the same quantities MLPhoton already
+                                     stores but never feeds to the regressor
     ml_moe     (N,)        float32   the CURRENT model's prediction, kept so the
                                      retrained model can be compared per cluster
 
@@ -103,6 +106,7 @@ def process_file(path, args):
     images, etas, energies, labels = [], [], [], []
     moes, mgens, drs, nxtals, mlmoes, efracs = [], [], [], [], [], []
     mldiphos = []
+    r1s, r2s, r3s = [], [], []
     n_dropped = [0]   # geometric match without energy containment
 
     for iev in range(n_ev):
@@ -201,6 +205,11 @@ def process_file(path, args):
             mgens.append(np.float32(m_gen))
             drs.append(np.float32(dr_best))
             nxtals.append(np.int32(len(c.Es)))
+            # compute_en requires make_image() to have run (it fills xcoords/ycoords)
+            e0 = c.compute_en(0.0)
+            r1s.append(np.float32(c.compute_en(1.0) / e0 if e0 else np.nan))
+            r2s.append(np.float32(c.compute_en(2.0) / e0 if e0 else np.nan))
+            r3s.append(np.float32(c.compute_en(3.0) / e0 if e0 else np.nan))
             mlmoes.append(np.float32(ml_val))
             mldiphos.append(np.float32(ml_dip))
             efracs.append(np.float32(e_frac))
@@ -219,6 +228,9 @@ def process_file(path, args):
         "dr_match": np.asarray(drs, dtype=np.float32),
         "e_frac": np.asarray(efracs, dtype=np.float32),
         "n_crystals": np.asarray(nxtals, dtype=np.int32),
+        "r1": np.asarray(r1s, dtype=np.float32),
+        "r2": np.asarray(r2s, dtype=np.float32),
+        "r3": np.asarray(r3s, dtype=np.float32),
         "ml_moe": np.asarray(mlmoes, dtype=np.float32),
         "ml_diphotonScore": np.asarray(mldiphos, dtype=np.float32),
         "n_dropped": np.int64(n_dropped[0]),

@@ -189,6 +189,22 @@ def main() -> int:
                          "mass. Measured: the m/E>0.2 band has the photons 57 "
                          "crystals apart while the cluster spans 17 pixels. "
                          "Set to 0 to keep everything (not recommended).")
+    ap.add_argument("--reg-moe-min", type=float, default=0.0,
+                    help="regressor only: drop targets below this. The merged "
+                         "analysis uses mA 0.1-0.9, i.e. m/E ~0.002-0.03; "
+                         "training over 0.0001-0.075 spends capacity on regions "
+                         "the analysis never sees. Measured on v3: with log-flat "
+                         "sampling M0p1 alone was 38% of the training set and "
+                         "M0p6-M0p9 (m/E 0.015-0.022) regressed by 20-24%.")
+    ap.add_argument("--reg-moe-max", type=float, default=0.0,
+                    help="regressor only: upper target cut (0 = use --moe-max). "
+                         "Kept separate from --moe-max because the CLASSIFIER "
+                         "still needs the full merged regime: restricting its "
+                         "diphoton class would stop it learning the most "
+                         "collimated signals (M0p1 reaches m/E 0.0012).")
+    ap.add_argument("--skip-classifier", action="store_true",
+                    help="only rebuild the regressor set (reuse an existing "
+                         "classifier pack)")
     ap.add_argument("--energy-bins", type=int, default=20)
     ap.add_argument("--moe-bins", type=int, default=40)
     ap.add_argument("--val-frac", type=float, default=0.1)
@@ -223,25 +239,35 @@ def main() -> int:
               f"of the diphoton class); {int(np.sum(lab==LABEL_DI))} remain")
 
     # ---- classifier ----
-    print(f"\n[build] classifier: energy-balanced, target {args.per_class}/class")
-    sel = balance_in_energy(lab, ene, args.per_class, args.energy_bins, rng)
-    print(f"[build]   selected {len(sel)} rows "
-          + ", ".join(f"{NAMES[L]} {int(np.sum(lab[sel]==L))}"
-                      for L in (LABEL_MONO, LABEL_DI, LABEL_HAD)))
-    e_sel = ene[sel]
-    for L in (LABEL_MONO, LABEL_DI, LABEL_HAD):
-        m = lab[sel] == L
-        print(f"[build]   {NAMES[L]:>4s} energy med {np.median(e_sel[m]):7.2f} GeV")
-    img, _, sel = gather(files, fidx, ridx, sel)      # sel now in file order
-    split_and_save(args.out, "classifier",
-                   {"image": img, "label": lab[sel].astype(np.int64),
-                    "energy": ene[sel]},
-                   fidx[sel], args.val_frac, rng, strata=strata)
-    del img
+    if args.skip_classifier:
+        print("\n[build] classifier: skipped (--skip-classifier)")
+    else:
+     print(f"\n[build] classifier: energy-balanced, target {args.per_class}/class")
+     sel = balance_in_energy(lab, ene, args.per_class, args.energy_bins, rng)
+     print(f"[build]   selected {len(sel)} rows "
+           + ", ".join(f"{NAMES[L]} {int(np.sum(lab[sel]==L))}"
+                       for L in (LABEL_MONO, LABEL_DI, LABEL_HAD)))
+     e_sel = ene[sel]
+     for L in (LABEL_MONO, LABEL_DI, LABEL_HAD):
+         m = lab[sel] == L
+         print(f"[build]   {NAMES[L]:>4s} energy med {np.median(e_sel[m]):7.2f} GeV")
+     img, _, sel = gather(files, fidx, ridx, sel)      # sel now in file order
+     split_and_save(args.out, "classifier",
+                    {"image": img, "label": lab[sel].astype(np.int64),
+                     "energy": ene[sel]},
+                    fidx[sel], args.val_frac, rng, strata=strata)
+     del img
 
     # ---- regressor ----
     print(f"\n[build] regressor: diphoton, flat in log(m/E), target {args.n_regressor}")
     di = np.flatnonzero(lab == LABEL_DI)
+    lo = args.reg_moe_min
+    hi = args.reg_moe_max if args.reg_moe_max > 0 else args.moe_max
+    if lo > 0 or hi > 0:
+        keep = np.isfinite(moe[di]) & (moe[di] > lo) & (moe[di] < hi)
+        print(f"[build]   regressor window m/E in ({lo}, {hi}): "
+              f"{int(keep.sum())}/{len(di)} diphoton rows kept")
+        di = di[keep]
     sel_r = flatten_in_logmoe(di, moe, args.n_regressor, args.moe_bins, rng)
     print(f"[build]   selected {len(sel_r)} rows; m/E "
           f"[{moe[sel_r].min():.6f}, {moe[sel_r].max():.6f}], "

@@ -48,7 +48,20 @@ SEL_GE1 = os.environ.get("SEL_MERGED_GE1", "0") == "1"
 ROI_VAR = "MLPhoton_lead_mass"
 
 # Signal ML parquet (all 9 sub-GeV mass points; nominal + 16 syst per tag).
-SIG_ML = "/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all"
+#
+# 🔴 SIGNAL AND DATA MUST COME FROM THE SAME MLPhoton MODEL.
+# ROI_WINDOWS above is derived from the v4 signal, but DATA_ML_GLOB below still
+# points at friend parquet made with the ORIGINAL EXO-22-022 model. Mixing them
+# is not a small bias: the retrained regressor moves the whole
+# MLPhoton_lead_mass scale (M0p1 median 0.334 -> 0.201), so a v4-derived window
+# applied to old-model data selects the wrong slice of the spectrum entirely.
+#
+# Until the data friend parquet is re-produced with the new models (189,600
+# input files -- see RegressMergedPhoton/training/README.md 5d), keep BOTH on
+# the old production, or set MERGED_ML_VERSION=v4 once data has been redone.
+_ML_VER = os.environ.get("MERGED_ML_VERSION", "old")
+_SIG_BASE = {"old": "parquet_merged_DNA_tmp", "v4": "parquet_merged_DNA_v4"}[_ML_VER]
+SIG_ML = f"/eos/cms/store/group/phys_susy/pelai/HZa_merged/{_SIG_BASE}/Sig_MC_MLNANO_all"
 # Data ML friend parquet (per-dataset dirs from run_merged_data_ml_friend.sh).
 # Covers all Run-3 years: Data_2022*, Data_2023* (produced on IHEP, synced to
 # <tag>/merged/) and Data_2024_* — one glob picks up every per-dataset merged file.
@@ -59,10 +72,24 @@ DATA_ML_GLOB = ("/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend/
 # distribution (contains the central 68% of signal; tracks m_a). Derived
 # 2026-07-01 from Sig_MC_MLNANO_all (pass_allcuts_merged_ML).
 ROI_WINDOWS = {
-    "M0p1": (0.154, 0.947), "M0p2": (0.176, 0.887), "M0p3": (0.226, 0.917),
-    "M0p4": (0.326, 0.796), "M0p5": (0.413, 0.821), "M0p6": (0.489, 0.878),
-    "M0p7": (0.583, 0.925), "M0p8": (0.666, 0.996), "M0p9": (0.747, 1.079),
+    "M0p1": (0.132, 0.352), "M0p2": (0.168, 0.342), "M0p3": (0.222, 0.409),
+    "M0p4": (0.263, 0.493), "M0p5": (0.287, 0.581), "M0p6": (0.304, 0.672),
+    "M0p7": (0.311, 0.761), "M0p8": (0.325, 0.852), "M0p9": (0.330, 0.938),
 }
+# ^ Re-derived 2026-08-20 from the RETRAINED MLPhoton models (regressor v4 +
+# classifier v3), production parquet_merged_DNA_v4.
+#
+# These windows are a property of the REGRESSOR, not of the analysis: they are
+# the [q16, q84] of the reco MLPhoton_lead_mass, so they MUST be re-derived
+# (RegressMergedPhoton/training/derive_roi_windows.py) whenever the .onnx
+# changes. The previous values -- kept in merged_p2root.py.bak_preV4_* -- came
+# from the model shipped with EXO-22-022 and are only valid with that .onnx.
+#
+# Width vs the old model: M0p1 0.28x, M0p2 0.24x, M0p3 0.27x, M0p4 0.49x,
+# M0p5 0.72x, M0p6 0.94x, but M0p7-M0p9 are 1.31-1.83x, i.e. WIDER. The
+# retraining wins where merged is irreplaceable (sub-GeV) and loses in the range
+# where the resolved analysis is stronger anyway.
+# See RegressMergedPhoton/training/README.md sections 5c-5e.
 
 # merged_<key>.parquet  ->  flashgg tree-name suffix
 SYST_MAP = {
