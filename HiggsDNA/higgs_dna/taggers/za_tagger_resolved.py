@@ -188,6 +188,23 @@ DEFAULT_OPTIONS = {
         # bins: [low0, low1, ..., last_low, +inf)
         "ele_trigger_eff_ptbins": list(range(8, 102, 2)),
         "mu_trigger_eff_ptbins":  list(range(8, 102, 2)),
+
+        # V2 reviewer study (2026-09-27), OPT-IN, off by default so the production output is
+        # unchanged. The curves above use as denominator every event whose leading (subleading)
+        # selected lepton is in the pT bin, with no requirement on the other leg -- not even
+        # that a second selected lepton exists -- so the double-lepton efficiency is diluted by
+        # events in which the other leg could never have fired its HLT leg. When enabled, two
+        # more denominators are registered for each curve (same trigger keys, same pT bins):
+        #   ord "leadN2"/"subleadN2": >= 2 selected same-flavor leptons
+        #   ord "leadOL"/"subleadOL": >= 2 selected same-flavor leptons AND the other leg above
+        #                             its offline double-lepton threshold (analysis Table:
+        #                             e 25/15, mu 20/10 GeV, above the HLT legs Ele23_Ele12 and
+        #                             Mu17_Mu8).
+        # The ord names deliberately do not start with "lead_"/"sublead_" plus "_": the one-line
+        # JSON dump in tagger.py aggregates bins by startswith(prefix + "_"), so a trig-key
+        # suffix (e.g. "double_ele_OL") would be folded into the nominal curve.
+        "study_lep_trigger_eff_otherleg": False,
+        "trigger_eff_otherleg_thresholds": {"ele": [25.0, 15.0], "mu": [20.0, 10.0]},
     },
     "single_muon_trigger":{
         "2016":["HLT_IsoMu24", "HLT_IsoTkMu24"],
@@ -1002,6 +1019,31 @@ class ZaTaggerRun3(Tagger):
             _register_ptbins("mu", trigger_pt_info["lead_mu_pt"],    mu_bins, "OR_mu",     trig_defs["OR_mu"],     "lead")
             _register_ptbins("mu", trigger_pt_info["sublead_mu_pt"], mu_bins, "double_mu", trig_defs["double_mu"], "sublead")
             _register_ptbins("mu", trigger_pt_info["sublead_mu_pt"], mu_bins, "OR_mu",     trig_defs["OR_mu"],     "sublead")
+
+            # V2 study (opt-in): same curves with a denominator that requires the other leg.
+            if self.options.get("zgammas", {}).get("study_lep_trigger_eff_otherleg", False):
+                _thr = self.options["zgammas"].get(
+                    "trigger_eff_otherleg_thresholds", {"ele": [25.0, 15.0], "mu": [20.0, 10.0]}
+                )
+                for _lep, _coll, _bins, _keys in (
+                    ("ele", electrons, ele_bins, ("double_ele", "OR_ele")),
+                    ("mu", muons, mu_bins, ("double_mu", "OR_mu")),
+                ):
+                    _has2 = ak.fill_none(ak.num(_coll, axis=1), 0) >= 2
+                    _lead = trigger_pt_info[f"lead_{_lep}_pt"]
+                    _sub = trigger_pt_info[f"sublead_{_lep}_pt"]
+                    _thr_lead, _thr_sub = float(_thr[_lep][0]), float(_thr[_lep][1])
+                    _dens = (
+                        ("leadN2", _lead, _has2),
+                        ("subleadN2", _sub, _has2),
+                        ("leadOL", _lead, _has2 & (_sub > _thr_sub)),
+                        ("subleadOL", _sub, _has2 & (_lead > _thr_lead)),
+                    )
+                    for _ord, _ptv, _den in _dens:
+                        # events outside the denominator get pT = -1 -> in no bin
+                        _ptv_den = ak.where(_den, _ptv, -1.0)
+                        for _tk in _keys:
+                            _register_ptbins(_lep, _ptv_den, _bins, _tk, trig_defs[_tk], _ord)
 
         z_mumu = z_mumu_cut 
         z_ee = z_ee_cut

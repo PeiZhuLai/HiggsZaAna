@@ -42,6 +42,24 @@ TRIG_GROUPS = {
     "mu_sublead": ("trigeff_mu_sublead_OR_mu", "trigeff_mu_sublead_double_mu", "Muon sublead"),
 }
 
+# V2 study: denominator annotations per (flavor, leg); empty = production figures (no note).
+DENOM_NOTE: Dict[str, str] = {}
+DENOM_NOTES = {
+    "N2": {"ele_lead": "N_{e} #geq 2", "ele_sublead": "N_{e} #geq 2",
+           "mu_lead": "N_{#mu} #geq 2", "mu_sublead": "N_{#mu} #geq 2"},
+    "OL": {"ele_lead": "N_{e} #geq 2, sublead e p_{T} > 15 GeV",
+           "ele_sublead": "N_{e} #geq 2, lead e p_{T} > 25 GeV",
+           "mu_lead": "N_{#mu} #geq 2, sublead #mu p_{T} > 10 GeV",
+           "mu_sublead": "N_{#mu} #geq 2, lead #mu p_{T} > 20 GeV"},
+}
+
+
+def _denom_key(title_right: str) -> str:
+    t = (title_right or "").lower()
+    fl = "ele" if "electron" in t else "mu"
+    return f"{fl}_{'sublead' if 'sublead' in t else 'lead'}"
+
+
 PT_BIN_ORDER = [
     "pt8to10","pt10to12","pt12to14","pt14to16","pt16to18","pt18to20","pt20to22","pt22to24",
     "pt24to26","pt26to28","pt28to30","pt30to32","pt32to34","pt34to36","pt36to38","pt38to40",
@@ -550,6 +568,16 @@ def _plot_or_vs_double(
 
     keep: List[object] = [pad1, g_or, g_db, leg, lat2]
 
+    # V2 study (2026-09-27): optional note on the denominator definition (off by default).
+    _note = DENOM_NOTE.get(_denom_key(title_right)) if DENOM_NOTE else None
+    if _note:
+        lat_den = ROOT.TLatex()
+        lat_den.SetNDC()
+        lat_den.SetTextFont(42)
+        lat_den.SetTextSize(0.038)
+        lat_den.DrawLatex(0.255, 0.645, _note)
+        keep.append(lat_den)
+
     # --- right-axis overlay for pass_trigger counts ---
     if has_pass:
         c.cd()
@@ -917,7 +945,27 @@ def main() -> None:
     # --- NEW: y-axis controls ---
     parser.add_argument("--ymax-left", type=float, default=160, help="Left y-axis maximum (e.g. 105).")
     parser.add_argument("--ymax-right", type=float, default=0.2, help="Right y-axis maximum (pass_trigger axis).")
+    # V2 study (2026-09-27): read an alternative cutflow directory and plot the curves with a
+    # different denominator. The tagger's opt-in study_lep_trigger_eff_otherleg writes ord labels
+    # "leadN2"/"subleadN2" (>= 2 same-flavor selected leptons) and "leadOL"/"subleadOL" (also the
+    # other leg above its double-lepton threshold). Defaults reproduce the production figures.
+    parser.add_argument("--in-dir", default=None, help="cutflow JSON directory (default: baseDir).")
+    parser.add_argument("--ord-suffix", default="", choices=["", "N2", "OL"],
+                        help="denominator variant: '' = production, N2 = >=2 leptons, OL = other leg above threshold.")
     args = parser.parse_args()
+
+    global baseDir, TRIG_GROUPS, DENOM_NOTE
+    if args.in_dir:
+        baseDir = args.in_dir
+    if args.ord_suffix:
+        _suf = args.ord_suffix
+        TRIG_GROUPS = {
+            k: (v[0].replace("_lead_", f"_lead{_suf}_").replace("_sublead_", f"_sublead{_suf}_"),
+                v[1].replace("_lead_", f"_lead{_suf}_").replace("_sublead_", f"_sublead{_suf}_"),
+                v[2])
+            for k, v in TRIG_GROUPS.items()
+        }
+        DENOM_NOTE = DENOM_NOTES[_suf]
 
     ROOT.gROOT.SetBatch(True)
     ROOT.gStyle.SetEndErrorSize(6)
