@@ -110,11 +110,36 @@ def stage_and_open(path, label = "input"):
     return uproot.open(local, timeout = 300, num_workers = 1), local
 
 
+# Hessian PDF sets seen in the NanoAOD LHEPdfWeight doc string ("LHA IDs <first> - <last>"):
+# first LHA ID -> number of eigenvector members after the central member. Members beyond
+# these (the alpha_s variations of the *_pdfas sets) are not part of the PDF uncertainty.
+HESSIAN_PDF_SETS = {
+    325500: 100,  # NNPDF31_nnlo_as_0118_nf_4_mc_hessian (HZa signal)
+    325300: 100,  # NNPDF31_nnlo_as_0118_mc_hessian_pdfas
+    306000: 100,  # NNPDF31_nnlo_hessian_pdfas
+    331500: 50,   # NNPDF40_nnlo_hessian_pdfas
+}
+
+
+def _first_lhaid(title):
+    m = re.search(r"LHA IDs\s+(\d+)", title or "")
+    return int(m.group(1)) if m else None
+
+
 def attach_lhe_weights(events_file, tree, event_cut):
     """Add flat LHE scale/PDF weight fields to ``events_file``.
 
-    Missing or unexpectedly sized branches fall back to 1.0 so that downstream
-    code always finds the fields and the nominal result is unchanged.
+    A sample without the LHE branches (data, or MC produced without them) gets 1.0 so that
+    downstream code always finds the fields. If the branch exists but cannot be read, the job
+    fails: falling back to 1.0 there silently removed the scale and PDF variations of a whole
+    input file (mA_M7_2024, 42% of the sample), which went unnoticed until the acceptance
+    study (largest QCD-scale acceptance deviation 2.92% instead of 0.39%).
+
+    PDF band: for a symmetric-Hessian set (identified from the LHA IDs in the branch doc
+    string) the per-event uncertainty is sqrt(sum_i (w_i - w_0)^2) over the eigenvector
+    members; for MC-replica sets it is the standard deviation of the replicas. The signal
+    set (NNPDF31 mc_hessian) used to be treated as replicas, which underestimated the band
+    by about a factor of 10.
     """
     n_events = len(events_file)
     keys = tree.keys()
@@ -124,8 +149,7 @@ def attach_lhe_weights(events_file, tree, event_cut):
         try:
             scale = tree["LHEScaleWeight"].array(library="ak")[event_cut]
         except Exception as exc:  # noqa: BLE001
-            logger.warning("[attach_lhe_weights] Could not read LHEScaleWeight: %s", exc)
-            scale = None
+            raise RuntimeError("[attach_lhe_weights] LHEScaleWeight present but unreadable: %s" % exc) from exc
     if scale is not None:
         padded = awkward.fill_none(
             awkward.pad_none(scale, len(LHE_SCALE_INDEX_NAMES), clip=True), 1.0)
@@ -140,19 +164,25 @@ def attach_lhe_weights(events_file, tree, event_cut):
         try:
             pdf = tree["LHEPdfWeight"].array(library="ak")[event_cut]
         except Exception as exc:  # noqa: BLE001
-            logger.warning("[attach_lhe_weights] Could not read LHEPdfWeight: %s", exc)
-            pdf = None
+            raise RuntimeError("[attach_lhe_weights] LHEPdfWeight present but unreadable: %s" % exc) from exc
     if pdf is not None and awkward.any(awkward.num(pdf, axis=1) > 1):
-        # Member 0 is the central value; the remaining members are MC replicas,
-        # so the symmetric uncertainty is their standard deviation.
         central = awkward.to_numpy(awkward.fill_none(
             awkward.pad_none(pdf, 1, clip=True), 1.0)[:, 0])
-        replicas = pdf[:, 1:]
-        rms = awkward.to_numpy(awkward.fill_none(awkward.std(replicas, axis=1), 0.0))
-        rms = numpy.nan_to_num(rms, nan=0.0)
+        lhaid = _first_lhaid(tree["LHEPdfWeight"].title)
+        if lhaid in HESSIAN_PDF_SETS:
+            n_eig = HESSIAN_PDF_SETS[lhaid]
+            eig = pdf[:, 1:1 + n_eig]
+            unc = numpy.sqrt(awkward.to_numpy(awkward.fill_none(
+                awkward.sum((eig - pdf[:, 0]) ** 2, axis=1), 0.0)))
+        else:
+            if lhaid is None or lhaid not in (303600, 320900, 331100, 331300):
+                logger.warning("[attach_lhe_weights] PDF set with first LHA ID %s not in the Hessian list; "
+                               "treating members as MC replicas (std).", lhaid)
+            unc = awkward.to_numpy(awkward.fill_none(awkward.std(pdf[:, 1:], axis=1), 0.0))
+        unc = numpy.nan_to_num(unc, nan=0.0)
         events_file["LHEPdfWeight_Unit"] = central
-        events_file["LHEPdfWeight_Up"] = central + rms
-        events_file["LHEPdfWeight_Down"] = central - rms
+        events_file["LHEPdfWeight_Up"] = central + unc
+        events_file["LHEPdfWeight_Down"] = central - unc
     else:
         events_file["LHEPdfWeight_Unit"] = numpy.ones(n_events)
         events_file["LHEPdfWeight_Up"] = numpy.ones(n_events)
