@@ -172,32 +172,53 @@ def list_json_float(values: Sequence[float]) -> List[float | None]:
 #          the full size of the correction as its own uncertainty.
 #   z_m_narrow : a tighter window straddling the Z peak, to test how much the
 #          answer depends on where the control region sits.
+_H_M_SIDEBAND = ("H_m", [(95.0, 115.0), (135.0, 180.0)])
 SIDEBAND_DEFINITIONS = {
-    "h_m": ("H_m", [(95.0, 115.0), (135.0, 180.0)]),
+    "h_m": _H_M_SIDEBAND,
     "z_m": ("Z_m", [(50.0, 80.0), (100.0, 120.0)]),
     "z_m_narrow": ("Z_m", [(80.0, 86.0), (96.0, 102.0)]),
+    # 2026-09-27 (L3 review S1): the Z_m windows alone do not exclude the Higgs
+    # window 115 < m(llgg) < 135, and the Data input is not blinded there. These
+    # variants AND the Z_m window with the nominal m(llgg) sideband, so that no
+    # data from the signal window enters the derivation. A definition is either
+    # one (column, windows) constraint or a list of constraints that are ANDed.
+    "z_m_hsb": [("Z_m", [(50.0, 80.0), (100.0, 120.0)]), _H_M_SIDEBAND],
+    "z_m_narrow_hsb": [("Z_m", [(80.0, 86.0), (96.0, 102.0)]), _H_M_SIDEBAND],
 }
 DEFAULT_SIDEBAND = "h_m"
 
 
-def sideband_mask(frame: pd.DataFrame, definition: str = DEFAULT_SIDEBAND) -> np.ndarray:
+def _constraints(definition: str):
     try:
-        column, windows = SIDEBAND_DEFINITIONS[definition]
+        spec = SIDEBAND_DEFINITIONS[definition]
     except KeyError:
         raise ValueError(
             "Unknown sideband definition '%s'; choose one of %s"
             % (definition, ", ".join(sorted(SIDEBAND_DEFINITIONS)))
         )
-    values = pd.to_numeric(frame[column], errors="coerce").to_numpy(dtype=float)
-    mask = np.zeros(len(values), dtype=bool)
-    for low, high in windows:
-        mask |= (values > low) & (values < high)
+    return spec if isinstance(spec, list) else [spec]
+
+
+def sideband_mask(frame: pd.DataFrame, definition: str = DEFAULT_SIDEBAND) -> np.ndarray:
+    mask = np.ones(len(frame), dtype=bool)
+    for column, windows in _constraints(definition):
+        values = pd.to_numeric(frame[column], errors="coerce").to_numpy(dtype=float)
+        in_any = np.zeros(len(values), dtype=bool)
+        for low, high in windows:
+            in_any |= (values > low) & (values < high)
+        mask &= in_any
     return mask
 
 
 def sideband_description(definition: str) -> str:
-    column, windows = SIDEBAND_DEFINITIONS[definition]
-    return " or ".join("(%g < %s < %g)" % (low, column, high) for low, high in windows)
+    parts = []
+    for column, windows in _constraints(definition):
+        parts.append("(" + " or ".join("(%g < %s < %g)" % (low, column, high) for low, high in windows) + ")")
+    return " and ".join(parts) if len(parts) > 1 else parts[0][1:-1]
+
+
+def excludes_higgs_window(definition: str) -> bool:
+    return any(column == "H_m" for column, _ in _constraints(definition))
 
 
 def pick_existing_branch(
@@ -581,7 +602,7 @@ def make_payload(
             "sideband_definition": args.sideband,
             "sideband": sideband_description(args.sideband),
             "signal_window_excluded": ("115 < H_m < 135"
-                                       if args.sideband == "h_m" else "n/a"),
+                                       if excludes_higgs_window(args.sideband) else "n/a"),
         },
         "settings": {
             "reweight_vars": list(REWEIGHT_VARS),

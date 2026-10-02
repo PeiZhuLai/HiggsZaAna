@@ -92,6 +92,38 @@ def _R_direct(bk, cut):
     peak = (H > PEAK[0]) & (H < PEAK[1]); frac = w[peak].sum() / w.sum()
     pB = s > cut; denom = w[pB].sum()
     return float(w[pB & peak].sum() / denom / frac) if denom > 0 and frac > 0 else float("nan")
+
+def _Z_direct(bk, sg, cut):
+    """Asimov Z at a fixed cut, computed directly (NOT interpolated from the scan grid), with the
+    same S/B definition as scan(): S = clipped signal weights, B = raw bkg weights, both in 120-130.
+    Used only by the opt-in --high-masses panels (adopted high-mass cuts can exceed SCORE_RANGE)."""
+    pkB = (bk["H_mass"] > PEAK[0]) & (bk["H_mass"] < PEAK[1]) & (bk["s"] > cut)
+    pkS = (sg["H_mass"] > PEAK[0]) & (sg["H_mass"] < PEAK[1]) & (sg["s"] > cut)
+    return _significance_asimov_like(float(np.clip(sg["factor"][pkS], 0, None).sum()),
+                                     float(bk["factor"][pkB].sum()))
+
+HIGH_EXTRA_STEP = 0.0025   # plotting-only extension beyond SCORE_RANGE[1] up to the adopted cut
+
+def scan_high_stored(mA):
+    """Opt-in (--high-masses) high-mass panel on the STORED scores, identical definition to the
+    low-mass panels and to the AN sculpt-R table (make_sculpt_R_table_from_wp.py): the SCORE_RANGE
+    grid from scan(), plus plotting-only points evaluated DIRECTLY above SCORE_RANGE[1] up to the
+    adopted cut, and the red star (R and Z computed directly at the JSON MVAcut).
+    Does NOT touch SCORE_RANGE, FIXED_WP or --write-json. Returns (pts_grid, pts_extra, wp, bk, sg)."""
+    pts, bk = scan(mA)
+    sg = load_scored_sig(mA)
+    doc = json.load(open(JSON_PATH))
+    cut = next(float(e["MVAcut"]) for e in doc["results"] if int(e["mA"]) == mA)
+    extra = []
+    thr = SCORE_RANGE[1] + HIGH_EXTRA_STEP
+    while thr <= cut + 1e-9:
+        pkB = (bk["H_mass"] > PEAK[0]) & (bk["H_mass"] < PEAK[1]) & (bk["s"] > thr)
+        if pkB.sum() >= 20:   # same raw-count reliability requirement as the grid
+            extra.append((thr, _R_direct(bk, thr), _Z_direct(bk, sg, thr)))
+        thr += HIGH_EXTRA_STEP
+    wp = (cut, _R_direct(bk, cut), _Z_direct(bk, sg, cut))
+    return pts, np.array(extra).reshape(-1, 3), wp, bk, sg
+
 LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 
 # ---------------------------------------------------------------------------------------------
@@ -106,7 +138,9 @@ LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 #   These are pinned HERE so that re-running this script -- in particular with --write-json --
 #   can NOT silently revert mA2/mA3 back to the R=1 crossing. mA1 is NOT fixed: it keeps its
 #   natural R=1 crossing (~0.963). See memory ref_hza_unblind_procedure / project_hza_lowma_pow1_R1cuts.
-FIXED_WP = {2: 0.975, 3: 0.992}   # mA -> chosen BDT score cut (used for the red star AND --write-json)
+FIXED_WP = {2: 0.975, 3: 0.988}   # mA3 0.992 -> 0.988 (2026-10-01): after the 2024 DY+jets overlap-veto
+                                  # retrain the closure at 0.992 was Z = 1.59 (bootstrap 1.62 +- 1.17); 0.988 is
+                                  # the most stable cut (bootstrap Z 1.03 +- 1.07, data GOF >= 0.92). Earlier:   # mA -> chosen BDT score cut (used for the red star AND --write-json)
                                   # mA3 0.988 -> 0.992 (2026-09-27): after the FSR-fix retraining the
                                   # MC pseudo-data closure at 0.988 faked Z = 2.3; 0.992 is the only cut with
                                   # closure Z < 1.5 and data-envelope GOF > 0.2 (pseudodata_closure/reopt_mA3)
@@ -213,11 +247,16 @@ def chosen_wp(mA, pts, bk=None):
 
 keep = []   # keep ROOT objects alive
 
-def draw_one(mA, pts, r1, wp, big):
-    """Draw one mA panel on the current pad. big=True -> larger axis/label/text for stand-alone."""
-    Rlo, Rhi = pts[:, 1].min(), pts[:, 1].max(); pad = (Rhi - Rlo) * 0.12 + 1e-3
+def draw_one(mA, pts, r1, wp, big, xmax=None, wp_pos_override=None):
+    """Draw one mA panel on the current pad. big=True -> larger axis/label/text for stand-alone.
+    xmax (opt-in, high-mass panels only): extend the x-frame beyond SCORE_RANGE[1] so an adopted
+    cut above the grid edge (and the plotting-only points up to it) stays on-plot."""
+    Rlo, Rhi = pts[:, 1].min(), pts[:, 1].max()
+    if xmax is not None:   # opt-in high-mass path: keep the directly-evaluated star inside the frame
+        Rlo, Rhi = min(Rlo, wp[1], 1.0), max(Rhi, wp[1], 1.0)   # and keep the R=1 reference on-frame
+    pad = (Rhi - Rlo) * 0.12 + 1e-3
     xpad = (SCORE_RANGE[1] - SCORE_RANGE[0]) * 0.04   # small x-margin so edge points don't touch the frame
-    xlo, xhi = SCORE_RANGE[0] - xpad, SCORE_RANGE[1] + xpad
+    xlo, xhi = SCORE_RANGE[0] - xpad, max(SCORE_RANGE[1], xmax or SCORE_RANGE[1]) + xpad
     h = ROOT.TH2D(f"h{mA}_{int(big)}", ";BDT score cut;R (125-peak sculpting)",
                   45, xlo, xhi, 60, Rlo - pad, Rhi + pad)
     for bx in range(1, h.GetNbinsX() + 1):
@@ -254,7 +293,7 @@ def draw_one(mA, pts, r1, wp, big):
     #   mA30: R is always >1.2 (no R=1 crossing); the point band fills the top, so the label goes
     #   bottom-left where the panel is empty.
     wp_pos = {1: (0.20, 0.22, 11), 2: (0.78, 0.22, 31), 3: (0.20, 0.83, 13), 30: (0.20, 0.24, 11)}
-    wx, wy, wa = wp_pos.get(mA, (0.20, 0.22, 11))
+    wx, wy, wa = wp_pos_override or wp_pos.get(mA, (0.20, 0.22, 11))
     tl.SetTextAlign(wa)
     tl.DrawLatex(wx, wy, f"#splitline{{Working point: cut>{wp[0]:.3f},}}{{R={wp[1]:.2f}, Z={wp[2]:.1f}}}")
 
@@ -342,9 +381,21 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--write-json", action="store_true",
                     help=f"overwrite mA1,2,3 MVAcut (R=1 working point) in {JSON_PATH}")
+    ap.add_argument("--high-masses", default=None,
+                    help="OPT-IN: comma list of high-mass mA (e.g. 4,5,...,30). Produce ONLY the "
+                         "high-mass R-significance panels on the stored scores (red star = JSON "
+                         "MVAcut, R and Z computed directly at it), skipping the low-mass panels. "
+                         "Cannot be combined with --write-json.")
+    ap.add_argument("--dump-points", default=None,
+                    help="with --high-masses: write the per-mA scan points and WP numbers to this JSON")
     args = ap.parse_args()
 
     os.makedirs(OUTDIR, exist_ok=True)
+    if args.high_masses:
+        if args.write_json:
+            raise SystemExit("--high-masses is plotting-only; do not combine with --write-json")
+        run_high_panels([int(x) for x in args.high_masses.split(",") if x.strip()], args.dump_points)
+        return
     # NB: the AN sculpt-R table (tab:sculpt_R) is now produced by make_sculpt_R_table_from_wp.py
     # from the STORED scores; write_sculpt_R_json() (which re-scores with the .pkl) is no longer
     # used for the table and is left disabled to avoid writing inconsistent values.
@@ -389,6 +440,57 @@ def main():
     cc = ROOT.TCanvas("c30", "", 820, 740); cc.cd(); draw_one(mA, pts30, r1_30, wp30, big=True)
     o = f"{OUTDIR}/highmass_score_R_significance_mA{mA}.pdf"
     cc.SaveAs(o); cc.SaveAs(o.replace(".pdf", ".png")); print("saved", o)
+
+def run_high_panels(masses, dump_path=None):
+    """Opt-in (--high-masses) driver: one stand-alone panel per high-mass mA plus a combined
+    overview, all on the stored scores. Grid points are the SCORE_RANGE scan; open circles are the
+    plotting-only direct evaluations above SCORE_RANGE[1]; the red star is the adopted cut."""
+    ROOT.gROOT.SetBatch(True); ROOT.gStyle.SetOptStat(0); ROOT.gStyle.SetPalette(ROOT.kBird)
+    res, dump = {}, {}
+    print(f"{'mA':>3}  {'WP cut':>7} {'R@WP':>6} {'Z@WP':>6} {'nPk@WP':>6}   {'Zmax cut':>8} {'Zmax':>6} {'R@Zmax':>6}   {'R range |cut-WP|<=0.01':>24}")
+    for mA in masses:
+        pts, extra, wp, bk, sg = scan_high_stored(mA)
+        allp = np.vstack([pts, extra]) if len(extra) else pts
+        j = int(np.argmax(allp[:, 2]))
+        near = allp[np.abs(allp[:, 0] - wp[0]) <= 0.01 + 1e-9]
+        npk = int(((bk["H_mass"] > PEAK[0]) & (bk["H_mass"] < PEAK[1]) & (bk["s"] > wp[0])).sum())
+        print(f"{mA:>3}  {wp[0]:>7.3f} {wp[1]:>6.2f} {wp[2]:>6.2f} {npk:>6d}   {allp[j,0]:>8.4f} {allp[j,2]:>6.2f} {allp[j,1]:>6.2f}   "
+              f"{near[:,1].min():>10.2f} - {near[:,1].max():<10.2f}" if len(near) else "")
+        res[mA] = (allp, extra, wp)
+        dump[mA] = {"wp_cut": wp[0], "R_wp": wp[1], "Z_wp": wp[2], "nPeakRaw_wp": npk,
+                    "grid": pts.tolist(), "extra": extra.tolist()}
+    if dump_path:
+        with open(dump_path, "w") as f:
+            json.dump(dump, f, indent=1)
+        print("[dump-points] wrote", dump_path)
+
+    def _panel(mA, big):
+        allp, extra, wp = res[mA]
+        xmax = max(wp[0], allp[:, 0].max())
+        # label corner: put it where the points are sparse (bottom-left unless the low-score
+        # end of the scan sits low in R, then top-left)
+        lo_half = allp[allp[:, 0] < 0.8, 1]
+        Rlo, Rhi = min(allp[:, 1].min(), wp[1]), max(allp[:, 1].max(), wp[1])
+        frac_lo = (np.median(lo_half) - Rlo) / (Rhi - Rlo + 1e-9) if len(lo_half) else 1.0
+        pos = (0.20, 0.29, 11) if frac_lo > 0.45 else (0.20, 0.80, 13)
+        draw_one(mA, allp, None, wp, big=big, xmax=xmax, wp_pos_override=pos)
+        ov = []
+        for thr, R, Z in extra:   # plotting-only direct points above the scan grid: open circles
+            m = ROOT.TMarker(thr, R, 24); m.SetMarkerColor(ROOT.kBlack); m.SetMarkerSize(2.0 if big else 1.3); m.Draw(); ov.append(m)
+        star = ROOT.TMarker(wp[0], wp[1], 29); star.SetMarkerColor(ROOT.kRed); star.SetMarkerSize(3.3 if big else 2.6); star.Draw(); ov.append(star)
+        keep.append(ov)
+
+    for mA in masses:
+        cc = ROOT.TCanvas(f"ch{mA}", "", 820, 740); cc.cd(); _panel(mA, True)
+        o = f"{OUTDIR}/highmass_score_R_significance_mA{mA}.pdf"
+        cc.SaveAs(o); cc.SaveAs(o.replace(".pdf", ".png")); print("saved", o)
+    ncol = 4; nrow = (len(masses) + ncol - 1) // ncol
+    c = ROOT.TCanvas("chall", "", 500 * ncol, 520 * nrow); c.Divide(ncol, nrow)
+    for i, mA in enumerate(masses):
+        c.cd(i + 1); _panel(mA, False)
+    out = f"{OUTDIR}/highmass_score_R_significance.pdf"
+    c.SaveAs(out); c.SaveAs(out.replace(".pdf", ".png")); print("saved", out)
+
 
 if __name__ == "__main__":
     main()
