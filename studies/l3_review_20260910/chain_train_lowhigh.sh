@@ -44,9 +44,9 @@ for m in lowmass highmass; do
   src="$S/model_Za_BDT_${m}_run3.pkl"
   if [ ! -s "$src" ]; then echo "MISSING $src -- refusing to install"; exit 1; fi
   if [ "$(stat -c %Y "$src")" -lt "$START" ]; then echo "STALE $src -- refusing to install"; exit 1; fi
-  cp -f "$src" "$U/model_Za_BDT_${m}_run3.pkl"
-  echo "installed $U/model_Za_BDT_${m}_run3.pkl"
 done
+# 2026-10-01: install pkl + json + meta.json together (only the pkl used to be copied)
+bash "$S/install_lowhigh_models.sh" "bak_install_$(date +%Y%m%d_%H%M)" || { echo "model install failed"; exit 1; }
 
 echo; echo "=============== [4/4] verify all THREE models ==============="
 python - <<PY
