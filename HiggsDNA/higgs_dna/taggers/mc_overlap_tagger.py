@@ -12,6 +12,9 @@ from higgs_dna.selections import object_selections
 
 INPUT = ["GenPart_eta", "GenPart_genPartIdxMother", "GenPart_mass", "GenPart_pdgId", "GenPart_phi", "GenPart_pt", "GenPart_status","GenPart_statusFlags"]
 
+from higgs_dna.taggers.mc_overlap_roles import classify_overlap_role  # noqa: E402
+
+
 class MCOverlapTagger(Tagger):
     """
     Tagger to remove those duplicated samples in different NanoAOD files
@@ -39,11 +42,12 @@ class MCOverlapTagger(Tagger):
 
         # Only use specific events in different MC NanoAOD
         logger.debug("MC_overlap_samples:  file: %s" % file)
-        if "DYto2L" in file or "DYJetsToLL" in file or "EWKZ2Jets" in file or "TTTo2L2Nu" in file or "WJets" in file or "WZ_" in file or "WW_" in file or "ZZ_" in file:
+        role = classify_overlap_role(file)
+        logger.info("MC_overlap_samples: role=%s for %s" % (role, file))
+        if role == "veto":
             cut = self.get_n_iso_photon(data, file) == 0
-        elif "DYGto2LG" in file or "ZGToLLG" in file or "ZGamma2J" in file or "ZG2J" in file or "TTGJets" in file or "WGTo" in file or "WZG_" in file or "WWG_" in file or "ZZG_" in file:
+        elif role == "keep":
             cut = self.get_n_iso_photon(data, file) > 0
-        
 
         logger.debug("MC_overlap_samples: selected samples: %s(%s)" % (sum(cut), len(cut)))
         return cut
