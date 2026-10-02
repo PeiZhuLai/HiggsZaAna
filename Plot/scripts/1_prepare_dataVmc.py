@@ -25,7 +25,7 @@ from Analyzer_ALP import PIso2D
 
 import CMS_lumi, tdrstyle
 
-from xgboost import XGBClassifier
+# from xgboost import XGBClassifier  # 2026-09-29: unused (scores are read from MVA_Score_* branches)
 import pickle
 import copy 
 import random
@@ -239,6 +239,35 @@ def _sideband_reweight_for_object(reweighter, ntup, row_index=None, varied_var=N
             weight *= step_weight
     return weight if np.isfinite(weight) else 1.0
 
+class _TrueMassParam:
+    """Signal event view that exposes param = (ALP_m - m_true)/H_m to the sideband reweighter.
+
+    2026-09-29 (user decision): signal histograms used by ALP_Optimization must be reweighted with
+    the TRUE ALP mass hypothesis, as in the BDT training (hza_features.signal_weight) and the S1
+    evaluation. The scored signal ntuples have no 'param' branch, so SidebandReweighter fell back to
+    an event-hash random mass hypothesis (the background MC convention)."""
+    def __init__(self, ntup, param):
+        self._ntup = ntup
+        self.param = param
+
+    def __getattr__(self, name):
+        return getattr(self._ntup, name)
+
+
+def _signal_true_mass(sample):
+    # sig_names are 'M1'...'M30' (Analyzer_Configs)
+    return float(str(sample)[1:].replace('p', '.'))
+
+
+def _with_true_mass_param(ntup, sample, analyzer_cfg):
+    if SIDEBAND_REWEIGHTER is None or sample not in analyzer_cfg.sig_names:
+        return ntup
+    h_m = SIDEBAND_REWEIGHTER._object_value(ntup, "H_m")
+    alp_m = SIDEBAND_REWEIGHTER._object_value(ntup, "ALP_m")
+    param = (alp_m - _signal_true_mass(sample)) / h_m if h_m else float("nan")
+    return _TrueMassParam(ntup, param)
+
+
 def get_sideband_reweight_uncertainty_weights(ntup, sample, analyzer_cfg, central_weight, row_index=None):
     if (
         not args.use_sideband_reweight
@@ -248,6 +277,7 @@ def get_sideband_reweight_uncertainty_weights(ntup, sample, analyzer_cfg, centra
     ):
         return {}
 
+    ntup = _with_true_mass_param(ntup, sample, analyzer_cfg)
     nominal = _sideband_reweight_for_object(SIDEBAND_REWEIGHTER, ntup, row_index=row_index)
     if nominal == 0.0 or not np.isfinite(nominal):
         return {
@@ -294,7 +324,8 @@ def get_event_weight(ntup, sample, analyzer_cfg, row_index=None):
         pass
 
     if SIDEBAND_REWEIGHTER is not None:
-        return weight * SIDEBAND_REWEIGHTER.weight_for_object(ntup, row_index=row_index)
+        return weight * SIDEBAND_REWEIGHTER.weight_for_object(
+            _with_true_mass_param(ntup, sample, analyzer_cfg), row_index=row_index)
 
     return weight
 
@@ -1157,7 +1188,10 @@ def main():
                     histos_sys[var_name][sample][sys] = histos[var_name][sample].Clone(var_name+'_'+sample+'_'+sys)
                     histos_sys[var_name][sample][sys].SetDirectory(0)
                 plot_cfg.SetHistStyles(histos_sys[var_name][sample][sys], sample)
-                histos_sys[var_name][sample][sys].Write()
+                # 2026-09-29: Data/signal sys entries are nominal clones; kept in memory for the
+                # drawing below, not written (2_plot_dataVmc.py clones nominal for them)
+                if is_background_sample(sample, analyzer_cfg):
+                    histos_sys[var_name][sample][sys].Write()
 
     if args.hist_only:
         _validate_and_publish_output(out_file, tmp_output_path, final_output_path)

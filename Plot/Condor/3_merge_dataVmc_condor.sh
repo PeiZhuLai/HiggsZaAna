@@ -364,8 +364,11 @@ merge_plot_output() {
         inputs+=("$input")
     done
 
-    echo "[hadd] $target"
-    hadd -f "$target" "${inputs[@]}"
+    # 2026-09-29: hadd took ~52 min per tag (61761 TH1F, super-linear in the number of keys).
+    # merge_dataVmc_hists.py sums by name in the same input order: bin-by-bin identical to hadd
+    # (contents and errors; checked on the 2026-09-26 nominal SR partials), ~1 min.
+    echo "[merge] $target"
+    "$PYTHON_BIN" "$SCRIPTS_DIR/merge_dataVmc_hists.py" "$target" "${inputs[@]}"
     if ! root_has_keys "$target"; then
         echo "[ERROR] Merged ROOT file has no keys or is unreadable: $target" >&2
         return 1
@@ -461,11 +464,22 @@ else
 fi
 
 if [[ "$RUN_DATAVMC_PLOTS" == "1" ]]; then
+    # 2026-09-29: the three regions are independent -> draw them in parallel (3 processes)
+    draw_status=0
     for final_tag in "${final_tags[@]}"; do
+        draw_pids=()
         for region_key in SR CR mva; do
-            draw_plot_output "$region_key" "$final_tag"
+            draw_plot_output "$region_key" "$final_tag" &
+            draw_pids+=("$!")
+        done
+        for pid in "${draw_pids[@]}"; do
+            wait "$pid" || draw_status=1
         done
     done
+    if [[ "$draw_status" != "0" ]]; then
+        echo "[ERROR] at least one 2_plot_dataVmc.py draw failed (see ${LOG_DIR}/draw_*.log)" >&2
+        exit 1
+    fi
 else
     echo "[Info] RUN_DATAVMC_PLOTS=$RUN_DATAVMC_PLOTS; skip 2_plot_dataVmc.py"
 fi

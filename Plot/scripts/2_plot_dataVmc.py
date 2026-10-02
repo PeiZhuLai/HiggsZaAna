@@ -338,6 +338,11 @@ def _load_histo_maps(root_file, var_names, analyzer_cfg, plot_cfg):
                 if hist_sys_obj:
                     hist_sys = hist_sys_obj.Clone(hist_sys_name)
                     hist_sys.SetDirectory(0)
+                elif sample not in analyzer_cfg.bkg_names:
+                    # 2026-09-29: Data/signal systematics are no longer written (they were
+                    # clones of nominal); rebuild the same clone here
+                    hist_sys = hist.Clone(hist_sys_name)
+                    hist_sys.SetDirectory(0)
                 elif sys_name in SIDEBAND_REWEIGHT_UNC_SYS_NAMES:
                     hist_sys = hist.Clone(hist_sys_name)
                     hist_sys.SetDirectory(0)

@@ -703,10 +703,16 @@ def run_fast_prepare(args, parse_sample_filter: Callable, format_source_selector
         for sample in analyzer_cfg.samp_names:
             histos[var_name][sample].Write()
 
+    # 2026-09-29: only background samples carry real systematic variations; Data/signal sys
+    # entries were clones of nominal (88% of the merged file, read by nobody -- 2_plot_dataVmc.py
+    # now clones nominal itself for non-background samples). Not writing them makes the files
+    # ~6x smaller and the merge much faster; every histogram that is written is unchanged.
     sys_dir = out_file.mkdir("sys_dir")
     sys_dir.cd()
     for var_name in var_names:
         for sample in analyzer_cfg.samp_names:
+            if sample not in analyzer_cfg.bkg_names:
+                continue
             for sys_name in analyzer_cfg.sys_names:
                 histos_sys[var_name][sample][sys_name].Write()
 
