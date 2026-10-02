@@ -93,7 +93,11 @@ def should_apply_sideband_reweight(args):
 
     input_parts = set(Path(os.path.normpath(str(args.input))).parts)
     output_parts = set(Path(os.path.normpath(str(args.output))).parts)
-    if "Bkg_MC" in input_parts or "All_Bkg" in input_parts or "All_Bkg" in output_parts:
+    # 2026-09-29: also Bkg_MC_<tag> production dirs (e.g. Bkg_MC_dyveto2024). With an exact
+    # "Bkg_MC" match the vetoed 2024 DY+jets were scored WITHOUT weight_sideband_rwgt, and dataVmc
+    # silently fell back to its ~40 ms/event Python loop for them (same weights, ~1 h per job).
+    if (any(p == "Bkg_MC" or p.startswith("Bkg_MC_") for p in input_parts)
+            or "All_Bkg" in input_parts or "All_Bkg" in output_parts):
         return True
     return False
 
