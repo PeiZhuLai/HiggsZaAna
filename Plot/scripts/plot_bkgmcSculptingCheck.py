@@ -243,22 +243,15 @@ def _complete_mva_cuts(cuts: Dict[int, float], target_masses: List[int]) -> Dict
         if mass in completed:
             continue
 
-        if mass <= points[0][0]:
-            completed[mass] = points[0][1]
-        elif mass >= points[-1][0]:
-            completed[mass] = points[-1][1]
-        else:
-            for (m1, c1), (m2, c2) in zip(points[:-1], points[1:]):
-                if m1 <= mass <= m2:
-                    fraction = (mass - m1) / float(m2 - m1) if m2 > m1 else 0.0
-                    completed[mass] = c1 + fraction * (c2 - c1)
-                    break
+        # Nearest simulated mass, as the analysis does (apply_bdt_data.py::find_nearest_cut);
+        # a linear interpolation drew some panels 0.001-0.004 away from the adopted cut (2026-09-27).
+        completed[mass] = min(points, key=lambda p: abs(p[0] - mass))[1]
 
         interpolated.append((mass, completed[mass]))
 
     if interpolated:
         msg = ", ".join(f"{mass}:{cut:.4f}" for mass, cut in interpolated)
-        print(f"[Info] Interpolated MVA cuts for missing masses -> {msg}")
+        print(f"[Info] Nearest-anchor MVA cuts for missing masses -> {msg}")
 
     return completed
 
