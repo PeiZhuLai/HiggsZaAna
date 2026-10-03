@@ -1,0 +1,16 @@
+ERROR in cling::CIFactory::createCI(): cannot extract standard library include paths!
+Invoking:
+  LC_ALL=C x86_64-conda-linux-gnu-c++   -DNDEBUG -xc++ -E -v /dev/null 2>&1 | sed -n -e '/^.include/,${' -e '/^ \/.*++/p' -e '}'
+Results was:
+With exit code 0
+core dR<0.05 0.2571 matched 0.9616 medresp 1.0132
+tail dR<0.05 0.9415 matched 0.9500 medresp 1.4280
+mainpk dR<0.05 0.1247 matched 0.9808 medresp 1.0089
+2ndpk dR<0.05 0.9468 matched 0.9556 medresp 1.5886
+m_gg quantile 0.16 1.2945529051506646
+m_gg quantile 0.5 1.5357965191364065
+m_gg quantile 0.84 1.7469153531276462
+resp quantile dR<0.05 0.25 1.4082053344484022
+resp quantile dR<0.05 0.5 1.5755488163807565
+resp quantile dR<0.05 0.75 1.705089617682504
+raw ok 12131 w ok 71.73246270374906 w all 71.73246270374906
