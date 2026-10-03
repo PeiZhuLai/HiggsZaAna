@@ -8,7 +8,7 @@ of m_a = 1 GeV) by the generator-level opening angle of the two ALP photons and 
 photon-pair energy response, to test whether the second peak comes from overlapping showers of
 correctly matched photons.
 
-Input : run3_bdt_scored_fsrfix/mA_M1/<era>.root (tree inclusive), weight = factor
+Input : run3_bdt_scored_fsrfix/mA_M1/<era>.root (tree inclusive), weight = factor x normalized signal reweight
         working point from Plot/output/MVAcut_points_run3.json
 Output: Plot/plots/mA1_doublepeak/{mgg_by_gendR,mllgg_by_gendR,response_vs_gendR}.pdf/.png
         and summary.txt (fractions and medians quoted in the AN / review answer)
@@ -57,10 +57,49 @@ def dr(eta1, phi1, eta2, phi2):
     return np.hypot(eta1 - eta2, dphi)
 
 
+# [PZ 2026-10-03] The signal is reweighted with the nominal sideband reweight, as in apply_bdt_sig.py and
+# signal_eff_sumw.py: true-mass param (ALP_m - m_a)/H_m, normalized per (era, channel) so that the
+# preselected yield is unchanged. HZA_SIGNAL_REWEIGHT=0 restores the unreweighted signal.
+SIGNAL_RW_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json"
+_RW = None
+
+
+def signal_rw(path, tree, ma):
+    """Normalized per-event signal reweight, aligned with the entries of <tree> in <path>."""
+    global _RW
+    if os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0":
+        return None
+    if _RW is None:
+        import sys
+        sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
+        from sideband_reweight import SidebandReweighter
+        _RW = SidebandReweighter.from_json(SIGNAL_RW_JSON)
+    fr = uproot.open(path)[tree].arrays(library="pd")
+    for logical, cands in (("pho1ECALIso", ("pho1PIso_noCorr",)), ("pho2ECALIso", ("pho2PIso_noCorr",)),
+                           ("H_m", ("H_mass",)), ("ALP_m", ("ALP_mass",))):
+        if logical not in fr.columns:
+            for c in cands:
+                if c in fr.columns:
+                    fr[logical] = fr[c]; break
+    fr["param"] = (fr["ALP_m"].to_numpy(dtype=float) - float(ma)) / fr["H_m"].to_numpy(dtype=float)
+    r = np.asarray(_RW.weights_for_dataframe(fr), dtype=float)
+    w = fr["factor"].to_numpy(dtype=float)
+    out = np.ones(len(fr), dtype=float)
+    for col in ("n_electrons", "n_muons"):
+        sel = fr[col].to_numpy() == 2
+        den = float(np.sum(w[sel] * r[sel]))
+        out[sel] = r[sel] * (float(np.sum(w[sel])) / den if den > 0 else 1.0)
+    return out
+
+
 def load(cut):
     parts = []
     for era in ERAS:
-        a = uproot.open("%s/%s.root" % (BASE, era))["inclusive"].arrays(BR, library="np")
+        path = "%s/%s.root" % (BASE, era)
+        a = uproot.open(path)["inclusive"].arrays(BR, library="np")
+        rw = signal_rw(path, "inclusive", 1)
+        if rw is not None:
+            a["factor"] = a["factor"] * rw
         sel = (a["MVA_Score_mA_M1"] > cut) & (a["H_mass"] > 95) & (a["H_mass"] < 180)
         parts.append({k: v[sel] for k, v in a.items()})
     return {k: np.concatenate([p[k] for p in parts]) for k in BR}

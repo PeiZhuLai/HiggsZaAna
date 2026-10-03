@@ -248,6 +248,58 @@ def _true_ma_from_dir(ma_tag: str) -> Optional[int]:
     m = re.match(r"mA_M(\d+)$", str(ma_tag))
     return int(m.group(1)) if m else None
 
+
+# [PZ 2026-10-03] Signal reweight: the nominal sideband reweight with the true-mass param (ALP_m - m_a)/H_m,
+# normalized per (m_a, era, channel) over the tree that is read, as in apply_bdt_sig.py and
+# signal_eff_sumw.py. HZA_SIGNAL_REWEIGHT=0 restores the unreweighted signal.
+_SIGNAL_RW_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json"
+_SIGNAL_RW_OBJ = None
+_SIGNAL_RW_CACHE = {}
+
+def _signal_rw_weights(w, fp, tname, true_ma, t, wname):
+    """Return w multiplied by the per-event normalized signal reweight (w must cover the whole tree).
+    The callers swallow exceptions per file, so any failure is also printed as [SIGRW-ERROR]."""
+    try:
+        return _signal_rw_weights_impl(w, fp, tname, true_ma, t, wname)
+    except Exception as exc:
+        import sys as _sys
+        print("[SIGRW-ERROR] %s %s: %r" % (fp, tname, exc), file=_sys.stderr, flush=True)
+        raise
+
+
+def _signal_rw_weights_impl(w, fp, tname, true_ma, t, wname):
+    import os as _os
+    if _os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0" or true_ma is None or not wname:
+        return w
+    global _SIGNAL_RW_OBJ
+    key = (str(fp), str(tname))
+    if key not in _SIGNAL_RW_CACHE:
+        if _SIGNAL_RW_OBJ is None:
+            import sys as _sys
+            _sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
+            from sideband_reweight import SidebandReweighter
+            _SIGNAL_RW_OBJ = SidebandReweighter.from_json(_SIGNAL_RW_JSON)
+        fr = t.arrays(library="pd")
+        for logical, cands in (("pho1ECALIso", ("pho1PIso_noCorr",)), ("pho2ECALIso", ("pho2PIso_noCorr",)),
+                               ("H_m", ("H_mass",)), ("ALP_m", ("ALP_mass",))):
+            if logical not in fr.columns:
+                for c in cands:
+                    if c in fr.columns:
+                        fr[logical] = fr[c]; break
+        fr["param"] = (fr["ALP_m"].to_numpy(dtype=float) - float(true_ma)) / fr["H_m"].to_numpy(dtype=float)
+        r = np.asarray(_SIGNAL_RW_OBJ.weights_for_dataframe(fr), dtype=float)
+        ww = fr[wname].to_numpy(dtype=float)
+        out = np.ones(len(fr), dtype=float)
+        for col in ("n_electrons", "n_muons"):
+            sel = fr[col].to_numpy() == 2
+            den = float(np.sum(ww[sel] * r[sel]))
+            out[sel] = r[sel] * (float(np.sum(ww[sel])) / den if den > 0 else 1.0)
+        _SIGNAL_RW_CACHE[key] = out
+    rw = _SIGNAL_RW_CACHE[key]
+    if len(w) != len(rw):
+        raise RuntimeError("signal reweight needs the whole tree in one chunk: %d vs %d (%s)" % (len(w), len(rw), fp))
+    return w * rw
+
 def _accumulate_pred_pass_sumw_by_year(
     base_dir: Path,
     *,
@@ -343,7 +395,7 @@ def _accumulate_pred_pass_sumw_by_year(
 
                     any_positive = False
                     for arrs in t.iterate(need, library="ak", step_size="200 MB"):
-                        w = ak.values_astype(arrs[wname], np.float64) if wname else ak.ones_like(arrs[need[0]], dtype=np.float64)
+                        w = _signal_rw_weights(ak.values_astype(arrs[wname], np.float64), fp, tname, true_ma, t, wname) if wname else ak.ones_like(arrs[need[0]], dtype=np.float64)
 
                         for p in pred_here:
                             b = f"{score_prefix}{p}"
@@ -901,7 +953,7 @@ def _accumulate_alp_m_hists_by_year(
 
                     for arrs in t.iterate(need, library="ak", step_size="200 MB"):
                         alp = arrs[alp_m_branch]
-                        w = ak.values_astype(arrs[wname], np.float64) if wname else ak.ones_like(alp, dtype=np.float64)
+                        w = _signal_rw_weights(ak.values_astype(arrs[wname], np.float64), fp, tname, true_ma, t, wname) if wname else ak.ones_like(alp, dtype=np.float64)
 
                         # pred: OR over available predictions
                         if pred_here:
@@ -1212,7 +1264,7 @@ def _accumulate_alp_m_hists_by_true_ma_year(
 
                 for arrs in t.iterate(need, library="ak", step_size="200 MB"):
                     alp = arrs[alp_m_branch]
-                    w = ak.values_astype(arrs[wname], np.float64) if wname else ak.ones_like(alp, dtype=np.float64)
+                    w = _signal_rw_weights(ak.values_astype(arrs[wname], np.float64), fp, tname, true_ma, t, wname) if wname else ak.ones_like(alp, dtype=np.float64)
                     mask = arrs[score_branch] >= cut
                     alp_sel = alp[mask]
                     w_sel = w[mask]
@@ -1313,7 +1365,7 @@ def _accumulate_alp_m_by_pred_ma_year(
 
                 for arrs in t.iterate(need, library="ak", step_size="200 MB"):
                     alp = arrs[alp_m_branch]
-                    w = ak.values_astype(arrs[wname], np.float64) if wname else ak.ones_like(alp, dtype=np.float64)
+                    w = _signal_rw_weights(ak.values_astype(arrs[wname], np.float64), fp, tname, true_ma, t, wname) if wname else ak.ones_like(alp, dtype=np.float64)
                     for p in pred_here:
                         cut = float(mva_cuts[p])
                         mask = arrs[f"{score_prefix}{p}"] >= cut
@@ -1455,7 +1507,7 @@ def _accumulate_alp_m_hists_predtrue_by_true_ma_year(
 
                 for arrs in t.iterate(need, library="ak", step_size="200 MB"):
                     alp = arrs[alp_m_branch]
-                    w = ak.values_astype(arrs[wname], np.float64) if wname else ak.ones_like(alp, dtype=np.float64)
+                    w = _signal_rw_weights(ak.values_astype(arrs[wname], np.float64), fp, tname, true_ma, t, wname) if wname else ak.ones_like(alp, dtype=np.float64)
 
                     # pred: OR over all available pred branches
                     if pred_here:

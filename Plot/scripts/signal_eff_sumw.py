@@ -39,6 +39,43 @@ SYS_Mu = []  # will be filled by _discover_sys_branches() in main()
 SYS_Mu_central = []  # will be filled by _discover_sys_branches() in main()
 
 INPUT_BASE_TREE_NAME = "test"
+# [PZ 2026-10-02] The signal is reweighted with the nominal sideband reweight, as in apply_bdt_sig.py:
+# training implementation, true-mass param (ALP_m - m_a)/H_m, normalized per (m_a, era, channel) so that
+# the preselected test-sample yield is unchanged. The interpolated efficiency curves must use the same
+# signal weights as the datacard anchors. HZA_SIGNAL_REWEIGHT=0 disables it (pre-2026-10-02 behavior).
+SIGNAL_RW_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json"
+_SIGNAL_RW = None
+_SIGNAL_RW_CACHE: Dict[str, np.ndarray] = {}
+
+def _signal_rw(fp: str, ma: int) -> Optional[np.ndarray]:
+    """Per-event normalized signal reweight for the test tree of file fp (aligned with its entries)."""
+    global _SIGNAL_RW
+    if os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0":
+        return None
+    if fp in _SIGNAL_RW_CACHE:
+        return _SIGNAL_RW_CACHE[fp]
+    if _SIGNAL_RW is None:
+        sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
+        from sideband_reweight import SidebandReweighter
+        _SIGNAL_RW = SidebandReweighter.from_json(SIGNAL_RW_JSON)
+    with uproot.open(fp) as f:
+        fr = f[INPUT_BASE_TREE_NAME].arrays(library="pd")
+    for logical, cands in (("pho1ECALIso", ("pho1PIso_noCorr",)), ("pho2ECALIso", ("pho2PIso_noCorr",)),
+                           ("H_m", ("H_mass",)), ("ALP_m", ("ALP_mass",))):
+        if logical not in fr.columns:
+            for c in cands:
+                if c in fr.columns:
+                    fr[logical] = fr[c]; break
+    fr["param"] = (fr["ALP_m"].to_numpy(dtype=float) - float(ma)) / fr["H_m"].to_numpy(dtype=float)
+    r = np.asarray(_SIGNAL_RW.weights_for_dataframe(fr), dtype=float)
+    w = fr["weight"].to_numpy(dtype=float)
+    out = np.ones(len(fr), dtype=float)
+    for col in ("n_electrons", "n_muons"):
+        sel = fr[col].to_numpy() == 2
+        den = float(np.sum(w[sel] * r[sel]))
+        out[sel] = r[sel] * (float(np.sum(w[sel])) / den if den > 0 else 1.0)
+    _SIGNAL_RW_CACHE[fp] = out
+    return out
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95, 
@@ -369,6 +406,7 @@ def _accumulate_pass_weights(ma: int,
     w2_pass_mu = 0.0
     w2_pass_ele = 0.0
     for fp in files:
+        rwn = _signal_rw(fp, ma)   # outside the try: a reweight failure must not skip the file silently
         try:
             with uproot.open(fp) as f:
                 if INPUT_BASE_TREE_NAME not in f: continue
@@ -382,13 +420,15 @@ def _accumulate_pass_weights(ma: int,
                 has_ele = _branch_exists(t,"z_ee")
                 if has_mu: branches.append("z_mumu")
                 if has_ele: branches.append("z_ee")
-                for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
+                for arrs in [t.arrays(branches, library="ak")]:
                     mva = arrs[mva_branch]
                     mask = mva >= cut
                     if wname:
                         w = ak.values_astype(arrs[wname], np.float64)
                     else:
                         w = ak.ones_like(mva, dtype=np.float64)
+                    if rwn is not None:
+                        w = w * rwn
 
                     # 統計誤差：同時累積 sumw2
                     w2 = w * w
@@ -434,6 +474,7 @@ def _accumulate_pass_sumw_systs(ma: int,
             base_to_central[base] = c
 
     for fp in files:
+        rwn = _signal_rw(fp, ma)   # outside the try: a reweight failure must not skip the file silently
         try:
             with uproot.open(fp) as f:
                 if INPUT_BASE_TREE_NAME not in f:
@@ -469,7 +510,7 @@ def _accumulate_pass_sumw_systs(ma: int,
                 if has_ele:
                     branches.append("z_ee")
 
-                for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
+                for arrs in [t.arrays(branches, library="ak")]:
                     mva = arrs[mva_branch]
                     mask = mva >= cut
 
@@ -520,6 +561,8 @@ def _accumulate_pass_sumw_systs(ma: int,
 
                             w_eff = (w_nom * w_sys_raw) if is_ratio else w_sys_raw
 
+                        if rwn is not None:
+                            w_eff = w_eff * rwn
                         w_eff2 = w_eff * w_eff
 
                         mu_sum, ele_sum, mu_sum2, ele_sum2 = out.get(s, (0.0, 0.0, 0.0, 0.0))

@@ -39,6 +39,16 @@ SYS_Mu = []  # will be filled by _discover_sys_branches() in main()
 SYS_Mu_central = []  # will be filled by _discover_sys_branches() in main()
 
 INPUT_BASE_TREE_NAME = "test"
+# [PZ 2026-10-03] The nominal efficiency uses the same normalized signal reweight as apply_bdt_sig.py and
+# signal_eff_sumw.py (true-mass param, normalized per (m_a, era, channel) on the preselected test sample),
+# taken from signal_eff_sumw._signal_rw. HZA_SIGNAL_REWEIGHT=0 restores the unreweighted signal.
+# The systematic-variation curves are left unreweighted.
+def _signal_rw(fp, ma):
+    if os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0":
+        return None
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import signal_eff_sumw as _SES
+    return _SES._signal_rw(fp, ma)
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
             '2022preEE':7.98,'2022postEE':26.70,'2023preBPix':17.79,'2023postBPix':9.45, '2024':108.95, 
@@ -418,6 +428,11 @@ def _accumulate_pass_weights(ma: int,
     w2_tot_mu = w2_tot_ele = 0.0
 
     for fp in files:
+        rwn = _signal_rw(fp, ma)   # outside the try: a reweight failure must not skip the file silently
+        if rwn is not None:
+            with uproot.open(fp) as _f:
+                if _pick_tree_name(_f) != "test":
+                    raise RuntimeError(f"signal reweight is aligned with the test tree, not {_pick_tree_name(_f)} ({fp})")
         try:
             with uproot.open(fp) as f:
                 tname = _pick_tree_name(f)
@@ -441,6 +456,7 @@ def _accumulate_pass_weights(ma: int,
                 if has_ele:
                     branches.append("z_ee")
 
+                offset = 0
                 for arrs in t.iterate(branches, library="ak", step_size="200 MB"):
                     mva = arrs[mva_branch]
                     pass_mask = mva >= cut
@@ -449,6 +465,10 @@ def _accumulate_pass_weights(ma: int,
                         w = ak.values_astype(arrs[wname], np.float64)
                     else:
                         w = ak.ones_like(mva, dtype=np.float64)
+                    if rwn is not None:
+                        n = len(mva)
+                        w = w * rwn[offset:offset + n]
+                        offset += n
                     w2 = w * w
 
                     if has_mu:
