@@ -64,16 +64,76 @@ _BKG_BY_YEAR = {
 }
 _ERAS = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024"]
 
-def _load_scored(paths, mA):
+# --- signal weights: factor * R * N, as in the datacard (apply_bdt_sig.py) and the optimization
+# histograms (1_prepare_dataVmc.py). R is the nominal sideband reweight with the true-mass param
+# (ALP_m - m_a)/H_m; N (per mass, era, lepton channel) keeps the preselected yield and is read from the
+# table apply_bdt_sig.py produced. Events in neither channel get 0, as they are in no signal tree.
+# HZA_SIGNAL_REWEIGHT=0 restores the unreweighted signal. ---------------------------------------------
+SIGNAL_RW_JSON  = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json"
+SIGNAL_RW_NORMS = ("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/"
+                   "an_update_sigrw_20261003/signal_rw_norms.txt")
+_SIG_RW = {}
+
+def _signal_reweighter():
+    if "rw" not in _SIG_RW:
+        import sys
+        sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
+        from sideband_reweight import SidebandReweighter
+        _SIG_RW["rw"] = SidebandReweighter.from_json(SIGNAL_RW_JSON)
+        norms = {}
+        with open(SIGNAL_RW_NORMS) as f:
+            for line in f:
+                tok = line.split()
+                if len(tok) >= 5:   # sample era lep <R> N n_events
+                    norms[(tok[0], tok[1], tok[2])] = float(tok[4])
+        _SIG_RW["norms"] = norms
+    return _SIG_RW["rw"], _SIG_RW["norms"]
+
+def _signal_rw_factor(tree, path, mA):
+    """Per-event R * N for one scored signal file (whole tree)."""
+    from sideband_reweight import VAR_ALIASES, DERIVED_VARS
+    rw, norms = _signal_reweighter()
+    keys = set(tree.keys())
+    need = {"n_electrons", "n_muons"}
+    for var in list(rw.reweight_vars) + ["H_m", "ALP_m"]:
+        if var == "param":
+            continue
+        names = ("pho1Pt_oHm", "pho2Pt_oHm") if var in DERIVED_VARS else (VAR_ALIASES.get(var, (var,)),)
+        for cands in names:
+            cands = (cands,) if isinstance(cands, str) else cands
+            hit = [c for c in cands if c in keys]
+            if not hit:
+                raise KeyError(f"signal reweight variable {var} not found in {path}")
+            need.add(hit[0])
+    fr = tree.arrays(sorted(need), library="pd")
+    h_col = "H_m" if "H_m" in fr.columns else "H_mass"
+    a_col = "ALP_m" if "ALP_m" in fr.columns else "ALP_mass"
+    fr["param"] = (fr[a_col].to_numpy(dtype=float) - float(mA)) / fr[h_col].to_numpy(dtype=float)
+    r = np.asarray(rw.weights_for_dataframe(fr), dtype=float)
+    era = os.path.basename(path)[:-len(".root")]
+    out = np.zeros(len(fr))
+    for col, lep in (("n_electrons", "ele"), ("n_muons", "mu")):
+        key = (f"mA_M{mA}", era, lep)
+        if key not in norms:
+            raise KeyError(f"no signal reweight normalization for {key} in {SIGNAL_RW_NORMS}")
+        sel = fr[col].to_numpy() == 2
+        out[sel] += r[sel] * norms[key]
+    return out
+
+def _load_scored(paths, mA, signal=False):
     """Concatenate H_mass, factor and the stored score MVA_Score_mA_M{mA} over the given scored
-    files; apply the 95<m<180 window. Uses the analysis's own BDT score (no re-scoring)."""
+    files; apply the 95<m<180 window. Uses the analysis's own BDT score (no re-scoring).
+    signal=True: the weights are factor * R * N (see _signal_rw_factor)."""
     sbr = f"MVA_Score_mA_M{mA}"
+    reweight = signal and os.environ.get("HZA_SIGNAL_REWEIGHT", "1") != "0"
     H, W, Sc = [], [], []
     for p in paths:
         if not os.path.exists(p):
             continue
-        a = uproot.open(p)["inclusive"].arrays(["H_mass", "factor", sbr], library="np")
-        H.append(a["H_mass"]); W.append(a["factor"]); Sc.append(a[sbr])
+        t = uproot.open(p)["inclusive"]
+        a = t.arrays(["H_mass", "factor", sbr], library="np")
+        w = a["factor"] * _signal_rw_factor(t, p, mA) if reweight else a["factor"]
+        H.append(a["H_mass"]); W.append(w); Sc.append(a[sbr])
     H = np.concatenate(H); W = np.concatenate(W); Sc = np.concatenate(Sc)
     m = (H > 95) & (H < 180) & np.isfinite(W) & np.isfinite(Sc)
     return {"H_mass": H[m], "factor": W[m], "s": Sc[m]}
@@ -83,7 +143,7 @@ def load_scored_bkg(mA):
     return _load_scored(paths, mA)
 
 def load_scored_sig(mA):
-    return _load_scored([f"{SCORED_BASE}/mA_M{mA}/{y}.root" for y in _ERAS], mA)
+    return _load_scored([f"{SCORED_BASE}/mA_M{mA}/{y}.root" for y in _ERAS], mA, signal=True)
 
 def _R_direct(bk, cut):
     """R at a fixed cut on the stored-score background (identical definition to the AN table:
@@ -224,12 +284,12 @@ def r_equals_one(pts):
         j = int(np.argmin(np.abs(R - 1))); best = (thr[j], R[j], Z[j])
     return best
 
-def chosen_wp(mA, pts, bk=None):
+def chosen_wp(mA, pts, bk=None, sg=None):
     """Final working point for this mA (red star). Priority for the cut: FIXED_WP (pinned
     mA2/mA3) > MVAcut in JSON_PATH > R=1 crossing. If a stored-score background `bk` is given
     (low-mass path) R is computed DIRECTLY at that cut so the red star equals the AN sculpt-R
     table value; otherwise (high-mass mA30 panel) R is interpolated from the scan curve. Z is
-    always interpolated from the scan curve."""
+    computed directly at the cut when the stored-score signal `sg` is also given, else interpolated."""
     cut = None
     if mA in FIXED_WP:
         cut = float(FIXED_WP[mA])               # hardcoded: never reverts to the R=1 crossing
@@ -242,7 +302,10 @@ def chosen_wp(mA, pts, bk=None):
         except Exception:
             return r_equals_one(pts)
     R = _R_direct(bk, cut) if bk is not None else float(np.interp(cut, pts[:, 0], pts[:, 1]))
-    Z = float(np.interp(cut, pts[:, 0], pts[:, 2]))
+    # Z directly at the cut when the stored-score samples are given: np.interp clamps at the end of
+    # the scan grid, which made every cut above SCORE_RANGE[1] read the last grid value.
+    Z = (_Z_direct(bk, sg, cut) if bk is not None and sg is not None
+         else float(np.interp(cut, pts[:, 0], pts[:, 2])))
     return (cut, R, Z)
 
 keep = []   # keep ROOT objects alive
@@ -406,8 +469,9 @@ def main():
     print(f"{'mA':>3}  {'R=1 cut':>9}  {'Z@R=1':>7}   {'R-min cut':>9}  {'R-min':>6}  {'Z@Rmin':>7}   {'WP cut':>8}  {'R@WP':>6}  {'Z@WP':>6}")
     for mA in LOWM:
         pts, bk = scan(mA)   # low-mass scan on the STORED BDT scores (matches the AN table)
+        sg = load_scored_sig(mA)
         r1 = r_equals_one(pts); j = int(np.argmin(pts[:, 1]))
-        wp = chosen_wp(mA, pts, bk)   # red star = R directly at the JSON MVAcut (matches the AN table)
+        wp = chosen_wp(mA, pts, bk, sg)   # red star = R directly at the JSON MVAcut (matches the AN table)
         print(f"{mA:>3}  {r1[0]:>9.3f}  {r1[2]:>7.2f}   {pts[j,0]:>9.3f}  {pts[j,1]:>6.2f}  {pts[j,2]:>7.2f}   {wp[0]:>8.3f}  {wp[1]:>6.2f}  {wp[2]:>6.1f}")
         results[mA] = (pts, r1, wp)
 
