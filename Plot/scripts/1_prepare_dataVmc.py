@@ -45,6 +45,7 @@ parser.add_argument('--ele', dest='ele', action='store_true', default=False, hel
 parser.add_argument('--mu', dest='mu', action='store_true', default=False, help='muon channel?')
 parser.add_argument('--useSidebandReweight', dest='use_sideband_reweight', action='store_true', default=False, help='use sideband-reweighted background weights')
 parser.add_argument('--sidebandReweightJson', dest='sideband_reweight_json', default=None, help='sideband reweight JSON path; defaults to HZA_SIDEBAND_REWEIGHT_JSON or HZaMVA/reweights/sideband_run3_iterative.json')
+parser.add_argument('--signalRwNormFile', dest='signal_rw_norm_file', default=None, help='per-(mass, era, lepton channel) normalization N of the signal sideband reweight (columns: sample era lep <R> N n_events); defaults to DEFAULT_SIGNAL_RW_NORM_FILE. Used for signal samples with --useSidebandReweight.')
 parser.add_argument('--sidebandReweightUnc', dest='sideband_reweight_unc', action='store_true', default=False, help='add sideband reweight uncertainty to the MC error band')
 parser.add_argument('--noSidebandReweightUnc', dest='sideband_reweight_unc', action='store_false', help=argparse.SUPPRESS)
 parser.add_argument('--outputTag', dest='output_tag', default=None, help='append a tag to the output ROOT file and plot directory')
@@ -205,6 +206,121 @@ if args.use_sideband_reweight:
     if not args.sideband_reweight_unc:
         print("[SidebandReweight] Reweight uncertainty is disabled. Use --sidebandReweightUnc to enable it.")
 
+# ---------------------------------------------------------------------------------------------
+# Signal sideband-reweight normalization N (2026-10-03).
+# The statistical model (flashggFinalFit MVAcut/run3_ReReco_Sys/scripts/apply_bdt_sig.py) weights
+# the signal with w * R * N, where R is the sideband reweight at the true ALP mass and
+# N = sum(w) / sum(w R) over the preselected nominal test events, computed per (mass point, era,
+# lepton channel). That keeps the preselected signal yield unchanged. These histograms used w * R
+# only, so the absolute signal yields fed to ALP_Optimization were inflated by 1/N.
+# Lepton channel: same definition as apply_bdt_sig.py -- ele if n_electrons == 2, mu if
+# n_muons == 2. An event enters the statistical model once per channel it belongs to, so it gets
+# the sum of N over its channels: events in neither channel get 0 (they are in no signal tree),
+# events in both get N_ele + N_mu (they are in both trees). A missing (mass, era, channel) key
+# raises; it never falls back to 1.
+DEFAULT_SIGNAL_RW_NORM_FILE = (
+    "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/"
+    "an_update_sigrw_20261003/signal_rw_norms.txt"
+)
+SIGNAL_RW_NORM_LEPS = ("ele", "mu")
+
+
+def load_signal_rw_norms(path):
+    """Read 'sample era lep <R> N n_events' rows -> {(mass_name, era, lep): N}, mass_name like 'M5'."""
+    norms = {}
+    with open(path) as f_norm:
+        for line_no, line in enumerate(f_norm, 1):
+            text = line.strip()
+            if not text or text.startswith("#"):
+                continue
+            parts = text.split()
+            if len(parts) < 5:
+                raise ValueError("%s:%d: expected 'sample era lep <R> N [n_events]', got %r" % (path, line_no, text))
+            sample, era, lep, norm = parts[0], parts[1], parts[2], parts[4]
+            if not sample.startswith("mA_"):
+                raise ValueError("%s:%d: sample %r does not start with 'mA_'" % (path, line_no, sample))
+            if lep not in SIGNAL_RW_NORM_LEPS:
+                raise ValueError("%s:%d: unknown lepton channel %r" % (path, line_no, lep))
+            value = float(norm)
+            if not np.isfinite(value) or value <= 0.0:
+                raise ValueError("%s:%d: normalization %r is not a positive finite number" % (path, line_no, norm))
+            key = (sample[len("mA_"):], era, lep)
+            if key in norms:
+                raise ValueError("%s:%d: duplicate key %s" % (path, line_no, key))
+            norms[key] = value
+    if not norms:
+        raise ValueError("no normalization rows in %s" % path)
+    return norms
+
+
+SIGNAL_RW_NORMS = None
+SIGNAL_RW_NORM_PATH = None
+if args.use_sideband_reweight:
+    SIGNAL_RW_NORM_PATH = os.path.abspath(args.signal_rw_norm_file or DEFAULT_SIGNAL_RW_NORM_FILE)
+    SIGNAL_RW_NORMS = load_signal_rw_norms(SIGNAL_RW_NORM_PATH)
+    print("[SignalRwNorm] Loaded %d (mass, era, channel) normalizations from %s"
+          % (len(SIGNAL_RW_NORMS), SIGNAL_RW_NORM_PATH))
+
+_SIGNAL_CHAIN_ERAS = {}      # id(TChain) -> [era of tree 0, era of tree 1, ...]
+_SIGNAL_RW_NORM_CHECKED = set()
+SIGNAL_RW_NORM_TALLY = {}    # (sample, era, category) -> [n_events, sum(w R), sum(w R N)]
+
+
+def _chain_current_era(ntup):
+    """Era of the file the chain is currently reading (file name '<era>.root')."""
+    key = id(ntup)
+    eras = _SIGNAL_CHAIN_ERAS.get(key)
+    if eras is None:
+        files = ntup.GetListOfFiles() if hasattr(ntup, "GetListOfFiles") else None
+        if files is not None:
+            eras = [os.path.splitext(os.path.basename(str(files.At(i).GetTitle())))[0]
+                    for i in range(files.GetEntries())]
+        else:
+            current = ntup.GetCurrentFile()
+            eras = [os.path.splitext(os.path.basename(str(current.GetName())))[0]] if current else []
+        _SIGNAL_CHAIN_ERAS[key] = eras
+    tree_number = ntup.GetTreeNumber() if hasattr(ntup, "GetTreeNumber") else 0
+    if tree_number < 0 or tree_number >= len(eras):
+        raise RuntimeError("[SignalRwNorm] cannot determine the era: tree number %d, files %s" % (tree_number, eras))
+    return eras[tree_number]
+
+
+def get_signal_rw_norm(ntup, sample, weight_r):
+    """Sum of N(mass, era, channel) over the channels this event belongs to (see block comment)."""
+    if SIGNAL_RW_NORMS is None:
+        raise RuntimeError("[SignalRwNorm] normalizations not loaded (needs --useSidebandReweight)")
+    era = _chain_current_era(ntup)
+    if (sample, era) not in _SIGNAL_RW_NORM_CHECKED:
+        missing = [(sample, era, lep) for lep in SIGNAL_RW_NORM_LEPS if (sample, era, lep) not in SIGNAL_RW_NORMS]
+        if missing:
+            raise KeyError("[SignalRwNorm] no normalization for %s in %s" % (missing, SIGNAL_RW_NORM_PATH))
+        print("[SignalRwNorm] sample=%s era=%s N_ele=%.5f N_mu=%.5f"
+              % (sample, era, SIGNAL_RW_NORMS[(sample, era, "ele")], SIGNAL_RW_NORMS[(sample, era, "mu")]))
+        _SIGNAL_RW_NORM_CHECKED.add((sample, era))
+    in_ele = int(ntup.n_electrons) == 2
+    in_mu = int(ntup.n_muons) == 2
+    norm = 0.0
+    if in_ele:
+        norm += SIGNAL_RW_NORMS[(sample, era, "ele")]
+    if in_mu:
+        norm += SIGNAL_RW_NORMS[(sample, era, "mu")]
+    category = "both" if (in_ele and in_mu) else ("ele" if in_ele else ("mu" if in_mu else "neither"))
+    tally = SIGNAL_RW_NORM_TALLY.setdefault((sample, era, category), [0, 0.0, 0.0])
+    tally[0] += 1
+    tally[1] += weight_r
+    tally[2] += weight_r * norm
+    return norm
+
+
+def print_signal_rw_norm_tally():
+    if not SIGNAL_RW_NORM_TALLY:
+        return
+    print("\n[SignalRwNorm] filled events per (sample, era, channel), after the H_m/region selection:")
+    print("  %-5s %-13s %-8s %8s %14s %14s %9s" % ("mass", "era", "channel", "events", "sum(w R)", "sum(w R N)", "ratio"))
+    for (sample, era, category), (n_evt, s_wr, s_wrn) in sorted(SIGNAL_RW_NORM_TALLY.items()):
+        ratio = s_wrn / s_wr if s_wr else float("nan")
+        print("  %-5s %-13s %-8s %8d %14.6f %14.6f %9.5f" % (sample, era, category, n_evt, s_wr, s_wrn, ratio))
+
 def _lookup_sideband_factor(value, edges, factors):
     try:
         value = float(value)
@@ -317,6 +433,16 @@ def get_event_weight(ntup, sample, analyzer_cfg, row_index=None):
     weight = ntup.weight
     if not args.use_sideband_reweight or not is_mc_sample(sample, analyzer_cfg):
         return weight
+
+    if sample in analyzer_cfg.sig_names:
+        # 2026-10-03: signal = w * R(true mass) * N(mass, era, channel), as in apply_bdt_sig.py.
+        # Always from the JSON (the scored signal ntuples carry no weight_sideband_rwgt), and
+        # never silently unweighted.
+        if SIDEBAND_REWEIGHTER is None:
+            raise RuntimeError("[SignalRwNorm] --useSidebandReweight needs the sideband reweight JSON for signal")
+        weight_r = weight * SIDEBAND_REWEIGHTER.weight_for_object(
+            _with_true_mass_param(ntup, sample, analyzer_cfg), row_index=row_index)
+        return weight_r * get_signal_rw_norm(ntup, sample, weight_r)
 
     try:
         return ntup.weight_sideband_rwgt
@@ -702,6 +828,8 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
         needed.add("z_ee")
     if args.mva:
         needed.update(branch for branch in mva_branches if branch)
+    if args.use_sideband_reweight and sample in analyzer_cfg.sig_names:
+        needed.update(("n_electrons", "n_muons"))   # lepton channel of the signal normalization N
     if args.use_sideband_reweight and is_mc_sample(sample, analyzer_cfg):
         needed.update((
             "weight_sideband_rwgt",
@@ -714,6 +842,10 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
             "pho2ECALIso",
             "pho2PIso_noCorr",
         ))
+        # 2026-10-03: every variable the sideband reweighter reads in the event loop. Until now
+        # pho1R9, pho2R9, pho1IetaIeta55, pho2IetaIeta55 and Z_m were not in this list, so with
+        # --optimizeBranches the loop read them as 0 and the signal R (loop path) was wrong.
+        needed.update(_sideband_reweight_branch_candidates())
     if not args.skip_systematics and is_background_sample(sample, analyzer_cfg):
         needed.update(_systematic_branch_names(analyzer_cfg.sys_names))
 
@@ -726,10 +858,82 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
             enabled += 1
 
     print("[Branches] sample=%s enabled %d/%d requested branches" % (sample, enabled, len(needed)))
+    if (args.use_sideband_reweight and SIDEBAND_REWEIGHTER is not None and is_mc_sample(sample, analyzer_cfg)
+            and (sample in analyzer_cfg.sig_names or not (branch_list and branch_list.FindObject("weight_sideband_rwgt")))):
+        _check_sideband_reweight_branches(chain, sample, analyzer_cfg)   # only where R is computed in the loop
+
+
+def _sideband_reweight_step_vars():
+    out = set(getattr(SIDEBAND_REWEIGHTER, "reweight_vars", []) or [])
+    for iteration in getattr(SIDEBAND_REWEIGHTER, "iterations", []):
+        for step in iteration.get("steps", []):
+            out.add(step["var"])
+    return out
+
+
+def _sideband_reweight_base_vars(var):
+    """Logical branch(es) behind one reweight variable (param and derived variables expanded)."""
+    if var == "param":
+        return ("param", "H_m", "ALP_m", "event")
+    if var == "pho_pt_asym":
+        return ("pho1Pt_oHm", "pho2Pt_oHm")
+    return (var,)
+
+
+def _sideband_reweight_branch_candidates():
+    if SIDEBAND_REWEIGHTER is None:
+        return set()
+    from sideband_reweight import VAR_ALIASES
+    names = set()
+    for var in _sideband_reweight_step_vars():
+        for base in _sideband_reweight_base_vars(var):
+            names.update(VAR_ALIASES.get(base, (base,)))
+    return names
+
+
+def _check_sideband_reweight_branches(chain, sample, analyzer_cfg):
+    """Fail if a reweight variable resolves (first present alias, as SidebandReweighter does) to a
+    disabled branch: a disabled branch reads as 0 in the loop and silently changes R."""
+    from sideband_reweight import VAR_ALIASES
+    branch_list = chain.GetListOfBranches()
+    bad = []
+    for var in sorted(_sideband_reweight_step_vars()):
+        if var == "param":
+            if sample in analyzer_cfg.sig_names:
+                bases = ("H_m", "ALP_m")              # signal: true-mass param from H_m, ALP_m
+            elif branch_list.FindObject("param"):
+                bases = ("param",)
+            else:
+                bases = ("H_m", "ALP_m", "event")
+        else:
+            bases = _sideband_reweight_base_vars(var)
+        for base in bases:
+            present = [c for c in VAR_ALIASES.get(base, (base,)) if branch_list.FindObject(c)]
+            if not present:
+                bad.append("%s (%s): no branch" % (var, base))
+            elif not chain.GetBranchStatus(present[0]):
+                bad.append("%s (%s): branch %s disabled" % (var, base, present[0]))
+    if bad:
+        raise RuntimeError("[Branches] sample=%s: sideband reweight inputs unavailable: %s" % (sample, "; ".join(bad)))
+    print("[Branches] sample=%s: all %d sideband reweight variables read from enabled branches"
+          % (sample, len(_sideband_reweight_step_vars())))
 
 
 def main():
     start_time = time.time()  # NEW
+
+    if args.use_sideband_reweight and args.backend in ('auto', 'fast'):
+        # 2026-10-03: the signal normalization N lives only in the event loop
+        # (get_event_weight); the fast backend would weight signal without it.
+        _cfg = AC.Analyzer_Config('inclusive', args.year, args.region, args.mva)
+        _selected, _ = _parse_sample_filter(args.samples, _cfg)
+        _selected = list(_cfg.samp_names) if _selected is None else _selected
+        if any(s in _cfg.sig_names for s in _selected):
+            if args.backend == 'fast':
+                print("[FastBackend][ERROR] signal with --useSidebandReweight needs the loop backend (signal normalization N)")
+                sys.exit(2)
+            print("[FastBackend] signal samples with --useSidebandReweight -> event loop (signal normalization N).")
+            args.backend = 'loop'
 
     if args.backend in ('auto', 'fast'):
         from data_vmc_fast import FastBackendUnsupported, run_fast_prepare
@@ -1151,6 +1355,7 @@ def main():
 
         ## End of for iEvt in range( ntup.GetEntries() )
     ## End of for sample in analyzer_cfg.samp_names
+    print_signal_rw_norm_tally()
 
     # 新增：MVA 直方圖摘要（每個 mA x 每個樣本）
     if args.mva:

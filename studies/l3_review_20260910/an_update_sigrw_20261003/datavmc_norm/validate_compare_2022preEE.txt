@@ -1,0 +1,23 @@
+mA5 2022preEE SR: N_ele=0.83716 N_mu=0.84387
+[1] new      vs emulated w*R*N : max rel bin diff 6.6e-07  totals 9.520380 / 9.520377
+[1] oldnoopt vs emulated w*R   : max rel bin diff 4.6e-07  totals 11.330115 / 11.330118
+[1] old(09-29 setup) vs emulated w*R(5 vars=0): max rel bin diff 7.9e-07  totals 14.438126 / 14.438126
+[2] total yield ratio new/oldnoopt = 0.8402721; expected N mix = 0.8402716  (diff +4.8e-07; neither-channel share 5.88e-04, both 0)
+[3] efficiency above threshold, new vs oldnoopt (both correct R):
+      score > 0.500: 0.9706329 0.9706584  +2.5e-05
+      score > 0.900: 0.9537532 0.9537762  +2.3e-05
+      score > 0.950: 0.9410705 0.9410808  +1.0e-05
+      score > 0.975: 0.9136876 0.9136824  -5.2e-06
+      score > 0.990: 0.8237497 0.8237125  -3.7e-05
+      score > 0.995: 0.7010115 0.7009428  -6.9e-05
+    inclusive: max |delta eff| over 240 thresholds 6.9e-05
+    per channel ele: max |delta eff| 1.3e-15
+    per channel mu: max |delta eff| 1.0e-15
+[5] effect of the --optimizeBranches bug on the 09-29 signal histograms (old vs oldnoopt, same N=1):
+    total yield old/oldnoopt = 1.2743
+      score > 0.500: eff old 0.97074  correct 0.97063  diff +0.0001
+      score > 0.900: eff old 0.95409  correct 0.95375  diff +0.0003
+      score > 0.950: eff old 0.94174  correct 0.94107  diff +0.0007
+      score > 0.975: eff old 0.91536  correct 0.91369  diff +0.0017
+      score > 0.990: eff old 0.82972  correct 0.82375  diff +0.0060
+      score > 0.995: eff old 0.71203  correct 0.70101  diff +0.0110
