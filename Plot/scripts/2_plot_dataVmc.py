@@ -41,6 +41,8 @@ parser.add_argument("--region", dest="region", type=int, default=0, help="0 for 
 parser.add_argument("-m", "--mva", dest="mva", action="store_true", default=False, help="use mva variables")
 parser.add_argument("--cut", dest="cut", action="store_true", default=False, help="apply mva cut style")
 parser.add_argument("--mA", dest="mA", default="M5", help="ALP mass used for cut-style drawing")
+parser.add_argument("--noSRMCinCR", dest="no_sr_mc_in_cr", action="store_true", default=False,
+                    help="sideband region (--region 2): do not fill the m_llgg plot inside 115-135 GeV with the SR simulation")
 parser.add_argument("-b", "--blind", dest="blind", action="store_true", default=False, help="kept for command compatibility; histograms are already blinded if needed")
 parser.add_argument("-ln", "--ln", dest="ln", action="store_true", default=False, help="draw log-y plots")
 parser.add_argument("--inputTag", dest="input_tag", default=None, help="tag appended to the input ROOT file name")
@@ -361,6 +363,31 @@ def _load_histo_maps(root_file, var_names, analyzer_cfg, plot_cfg):
     return histos, histos_sys
 
 
+def _add_sr_mc_to_cr_mass(histos, histos_sys, cr_root_path, analyzer_cfg, plot_cfg):
+    """Plot only: in the sideband-region m_llgg plot, add the simulation of the signal region
+    (115-135 GeV) from the SR file of the same tag, so the background and signal shapes are shown
+    across the blinded window. Data are not added (the window stays blind). The SR simulation is
+    zero outside 115-135 GeV, so the sideband normalization of SideBandScaleBkgToData is unchanged.
+    Nothing is written back to the input histograms or used by the analysis."""
+    sr_root_path = os.path.join(os.path.dirname(cr_root_path),
+                                os.path.basename(cr_root_path).replace("_UL_CR", "_UL_SR", 1))
+    if sr_root_path == cr_root_path or not os.path.exists(sr_root_path):
+        print(f"[SRMCinCR] SR file not found ({sr_root_path}); m_llgg drawn without the SR simulation.")
+        return
+    sr_file = _open_root(sr_root_path)
+    sr_histos, sr_histos_sys = _load_histo_maps(sr_file, ["H_m"], analyzer_cfg, plot_cfg)
+    sr_file.Close()
+    n = 0
+    for sample in analyzer_cfg.samp_names:
+        if sample.lower() == "data":
+            continue
+        histos["H_m"][sample].Add(sr_histos["H_m"][sample])
+        for sys_name in analyzer_cfg.sys_names:
+            histos_sys["H_m"][sample][sys_name].Add(sr_histos_sys["H_m"][sample][sys_name])
+        n += 1
+    print(f"[SRMCinCR] added the SR simulation of {n} samples to the m_llgg plot (data stay blind): {sr_root_path}")
+
+
 def _draw_all(histos, histos_sys, var_names, target_masses, analyzer_cfg, plot_cfg, output_root):
     lumi_label = MakeLumiLabel(plot_cfg.lumi)
     cms_label = MakeCMSDASLabel()
@@ -531,6 +558,8 @@ def main():
     var_names = _build_var_names(plot_cfg, analyzer_cfg, target_masses)
     histos, histos_sys = _load_histo_maps(input_file, var_names, analyzer_cfg, plot_cfg)
     input_file.Close()
+    if args.region == 2 and not args.no_sr_mc_in_cr and "H_m" in histos:
+        _add_sr_mc_to_cr_mass(histos, histos_sys, input_root_path, analyzer_cfg, plot_cfg)
 
     output_root = TFile(output_root_path, "RECREATE")
     _draw_all(histos, histos_sys, var_names, target_masses, analyzer_cfg, plot_cfg, output_root)
