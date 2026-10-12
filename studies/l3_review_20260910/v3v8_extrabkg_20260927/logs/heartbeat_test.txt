@@ -1,0 +1,36 @@
+2026-09-27 14:54:44 chain_post start MODE=test
+2026-09-27 14:54:44 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 14:59:44 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:04:45 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:09:45 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:14:45 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:19:45 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:24:46 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:29:46 [0] waiting for driver; condor JobStatus counts:       8 1 
+2026-09-27 15:34:46 [0] waiting for driver; condor JobStatus counts:       8 2 
+2026-09-27 15:39:46 [0] waiting for driver; condor JobStatus counts:       1 2 
+2026-09-27 15:44:46 [0] driver done: DRIVER_DONE rc=0
+2026-09-27 15:44:47 [1-2] completeness + chunk==merged rc=0 -> logs/reconcile_test.txt
+TTto2L2Nu        jobs=   2 ran=   2 chunks=   1 chunk_rows=      30 merged_rows=      30 late_chunks=0 OK
+TTG              jobs=   2 ran=   2 chunks=   2 chunk_rows=      42 merged_rows=      42 late_chunks=0 OK
+TTGG_Run3        jobs=   2 ran=   2 chunks=   2 chunk_rows=     182 merged_rows=     182 late_chunks=0 OK
+ZGG              jobs=   2 ran=   2 chunks=   2 chunk_rows=      63 merged_rows=      63 late_chunks=0 OK
+2026-09-27 15:46:02 [3] p2root(--split) TTto2L2Nu rc=0
+2026-09-27 15:46:22 [3] scoring TTto2L2Nu rc=0
+2026-09-27 15:46:41 [3] p2root(--split) TTG rc=0
+2026-09-27 15:46:57 [3] scoring TTG rc=0
+2026-09-27 15:47:14 [3] p2root(--split) TTGG_Run3 rc=0
+2026-09-27 15:47:29 [3] scoring TTGG_Run3 rc=0
+2026-09-27 15:47:45 [3] p2root(--split) ZGG rc=0
+2026-09-27 15:48:00 [3] scoring ZGG rc=0
+2026-09-27 15:48:05 [4] stage-3 root==merged rc=0 -> logs/stage3_test.txt
+TTto2L2Nu  inputs  merged=      30 root_inclusive=      30 fresh=True nanfrac(M5)=0.000 OK
+TTto2L2Nu  scored  merged=      30 root_inclusive=      30 fresh=True nanfrac(M5)=0.000 OK
+TTG        inputs  merged=      42 root_inclusive=      42 fresh=True nanfrac(M5)=0.000 OK
+TTG        scored  merged=      42 root_inclusive=      42 fresh=True nanfrac(M5)=0.000 OK
+TTGG_Run3  inputs  merged=     182 root_inclusive=     182 fresh=True nanfrac(M5)=0.000 OK
+TTGG_Run3  scored  merged=     182 root_inclusive=     182 fresh=True nanfrac(M5)=0.000 OK
+ZGG        inputs  merged=      63 root_inclusive=      63 fresh=True nanfrac(M5)=0.000 OK
+ZGG        scored  merged=      63 root_inclusive=      63 fresh=True nanfrac(M5)=0.000 OK
+2026-09-27 15:48:25 [5] yields rc=0
+2026-09-27 15:48:25 chain_post done

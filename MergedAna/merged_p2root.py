@@ -49,16 +49,13 @@ ROI_VAR = "MLPhoton_lead_mass"
 
 # Signal ML parquet (all 9 sub-GeV mass points; nominal + 16 syst per tag).
 #
-# 🔴 SIGNAL AND DATA MUST COME FROM THE SAME MLPhoton MODEL.
-# ROI_WINDOWS above is derived from the v4 signal, but DATA_ML_GLOB below still
-# points at friend parquet made with the ORIGINAL EXO-22-022 model. Mixing them
-# is not a small bias: the retrained regressor moves the whole
-# MLPhoton_lead_mass scale (M0p1 median 0.334 -> 0.201), so a v4-derived window
-# applied to old-model data selects the wrong slice of the spectrum entirely.
-#
-# Until the data friend parquet is re-produced with the new models (189,600
-# input files -- see RegressMergedPhoton/training/README.md 5d), keep BOTH on
-# the old production, or set MERGED_ML_VERSION=v4 once data has been redone.
+# 🔴 SIGNAL, DATA AND ROI WINDOWS MUST COME FROM THE SAME MLPhoton MODEL.
+# The retrained regressor moves the whole MLPhoton_lead_mass scale (M0p1 median
+# 0.334 -> 0.201), so a window from one model applied to parquet from the other
+# selects the wrong slice of the spectrum entirely. MERGED_ML_VERSION switches
+# the signal input AND the ROI windows together; DATA_ML_GLOB below is still the
+# ORIGINAL EXO-22-022 model production, so keep "old" until data is redone with
+# the new models (see RegressMergedPhoton/training/README.md 5d).
 _ML_VER = os.environ.get("MERGED_ML_VERSION", "old")
 _SIG_BASE = {"old": "parquet_merged_DNA_tmp", "v4": "parquet_merged_DNA_v4"}[_ML_VER]
 SIG_ML = f"/eos/cms/store/group/phys_susy/pelai/HZa_merged/{_SIG_BASE}/Sig_MC_MLNANO_all"
@@ -69,27 +66,44 @@ DATA_ML_GLOB = ("/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend/
                 "Data_202*_*/*/merged_nominal.parquet")
 
 # Per-mA ROI window on MLPhoton_lead_mass = [q16, q84] of the signal reco
-# distribution (contains the central 68% of signal; tracks m_a). Derived
-# 2026-07-01 from Sig_MC_MLNANO_all (pass_allcuts_merged_ML).
-ROI_WINDOWS = {
-    "M0p1": (0.132, 0.352), "M0p2": (0.168, 0.342), "M0p3": (0.222, 0.409),
-    "M0p4": (0.263, 0.493), "M0p5": (0.287, 0.581), "M0p6": (0.304, 0.672),
-    "M0p7": (0.311, 0.761), "M0p8": (0.325, 0.852), "M0p9": (0.330, 0.938),
-}
-# ^ Re-derived 2026-08-20 from the RETRAINED MLPhoton models (regressor v4 +
-# classifier v3), production parquet_merged_DNA_v4.
+# distribution (contains the central 68% of signal; tracks m_a).
 #
-# These windows are a property of the REGRESSOR, not of the analysis: they are
-# the [q16, q84] of the reco MLPhoton_lead_mass, so they MUST be re-derived
-# (RegressMergedPhoton/training/derive_roi_windows.py) whenever the .onnx
-# changes. The previous values -- kept in merged_p2root.py.bak_preV4_* -- came
-# from the model shipped with EXO-22-022 and are only valid with that .onnx.
-#
-# Width vs the old model: M0p1 0.28x, M0p2 0.24x, M0p3 0.27x, M0p4 0.49x,
-# M0p5 0.72x, M0p6 0.94x, but M0p7-M0p9 are 1.31-1.83x, i.e. WIDER. The
-# retraining wins where merged is irreplaceable (sub-GeV) and loses in the range
-# where the resolved analysis is stronger anyway.
+# These windows are a property of the REGRESSOR, not of the analysis, so they
+# MUST be re-derived (RegressMergedPhoton/training/derive_roi_windows.py)
+# whenever the .onnx changes.
+#   old : model shipped with EXO-22-022, from Sig_MC_MLNANO_all (parquet_merged_DNA_tmp)
+#   v4  : retrained regressor v4 + classifier v3, from parquet_merged_DNA_v4
+# Width v4 vs old: M0p1 0.28x, M0p2 0.24x, M0p3 0.27x, M0p4 0.49x, M0p5 0.72x,
+# M0p6 0.94x, but M0p7-M0p9 are 1.31-1.83x, i.e. WIDER. The retraining wins
+# where merged is irreplaceable (sub-GeV) and loses in the range where the
+# resolved analysis is stronger anyway.
 # See RegressMergedPhoton/training/README.md sections 5c-5e.
+_ROI_WINDOWS_BY_VER = {
+    "old": {
+        "M0p1": (0.154, 0.947), "M0p2": (0.176, 0.887), "M0p3": (0.226, 0.917),
+        "M0p4": (0.326, 0.796), "M0p5": (0.413, 0.821), "M0p6": (0.489, 0.878),
+        "M0p7": (0.583, 0.925), "M0p8": (0.666, 0.996), "M0p9": (0.747, 1.079),
+    },
+    "v4": {
+        "M0p1": (0.132, 0.352), "M0p2": (0.168, 0.342), "M0p3": (0.222, 0.409),
+        "M0p4": (0.263, 0.493), "M0p5": (0.287, 0.581), "M0p6": (0.304, 0.672),
+        "M0p7": (0.311, 0.761), "M0p8": (0.325, 0.852), "M0p9": (0.330, 0.938),
+    },
+}
+ROI_WINDOWS = _ROI_WINDOWS_BY_VER[_ML_VER]
+
+# Offline photon-lepton overlap removal, same radius as the tagger's
+# MLPHOTON_LEPTON_MIN_DR. Parquet produced before that tagger fix let a Z
+# electron be picked as the merged photon; m(Z + e) = m_Z*sqrt(1+f) with f the
+# electron's energy fraction carried by the "photon", so these fakes pile up at
+# ~129 GeV, on top of the signal. Only the LEAD candidate can be vetoed here
+# (the tagger instead drops it and picks the next one), so this keeps slightly
+# fewer events than a re-production would. On re-produced parquet it removes
+# nothing. Set MERGED_LEPCLEAN_DR=0 to disable.
+LEPCLEAN_DR = float(os.environ.get("MERGED_LEPCLEAN_DR", "0.3"))
+_LEP_ANG = ["Z_lead_lepton_eta", "Z_lead_lepton_phi",
+            "Z_sublead_lepton_eta", "Z_sublead_lepton_phi"]
+_lepclean_stats = {"before": 0, "removed": 0}
 
 # merged_<key>.parquet  ->  flashgg tree-name suffix
 SYST_MAP = {
@@ -105,7 +119,7 @@ SYST_MAP = {
 
 _Z = ["Z_pt", "Z_eta", "Z_phi", "Z_mass"]
 _ML = ["MLPhoton_lead_pt", "MLPhoton_lead_eta", "MLPhoton_lead_phi", "MLPhoton_lead_mass"]
-_COLS = _Z + _ML + [SEL, "n_MLPhoton_diphoton", "weight_central", "Z_lead_lepton_id",
+_COLS = _Z + _ML + _LEP_ANG + [SEL, "n_MLPhoton_diphoton", "weight_central", "Z_lead_lepton_id",
                     "run", "luminosityBlock", "event"]  # run/lumi/event for data event-dedup
 
 
@@ -125,6 +139,16 @@ def _h_merged_ml_mass(d):
     return np.sqrt(np.clip(E * E - px * px - py * py - pz * pz, 0.0, None))
 
 
+def _min_dr_to_z_leptons(d):
+    eta = d["MLPhoton_lead_eta"].to_numpy(); phi = d["MLPhoton_lead_phi"].to_numpy()
+    out = np.full(len(d), np.inf)
+    for lep in ("Z_lead_lepton", "Z_sublead_lepton"):
+        dphi = np.abs(phi - d[f"{lep}_phi"].to_numpy())
+        dphi = np.where(dphi > np.pi, 2 * np.pi - dphi, dphi)
+        out = np.minimum(out, np.hypot(eta - d[f"{lep}_eta"].to_numpy(), dphi))
+    return out
+
+
 def load(path, tag, mlo, mhi, use_weight=True):
     """Read one parquet -> pass_ML + per-mA ROI + recomputed observable."""
     fs = glob.glob(path)
@@ -139,6 +163,15 @@ def load(path, tag, mlo, mhi, use_weight=True):
         if SEL not in d.columns:
             return None
         d = d[d[SEL] == 1]
+    if LEPCLEAN_DR > 0:
+        missing = [c for c in _LEP_ANG if c not in d.columns]
+        if missing:
+            raise RuntimeError(f"{fs[0]}: lepton cleaning needs {missing}; "
+                               "set MERGED_LEPCLEAN_DR=0 to run without it")
+        keep = _min_dr_to_z_leptons(d) > LEPCLEAN_DR
+        _lepclean_stats["before"] += len(d)
+        _lepclean_stats["removed"] += int((~keep).sum())
+        d = d[keep]
     if ROI_VAR not in d.columns:
         return None
     lo, hi = ROI_WINDOWS[tag]
@@ -172,7 +205,15 @@ def split_lep(arrs, lep):
     return {k: v[m] for k, v in arrs.items() if k != "_lepid"}
 
 
+def _report_lepclean(label):
+    b, r = _lepclean_stats["before"], _lepclean_stats["removed"]
+    if LEPCLEAN_DR > 0 and b:
+        print(f"{label} lepton cleaning dR>{LEPCLEAN_DR}: removed {r}/{b} ({r / b:.1%})")
+    _lepclean_stats["before"] = _lepclean_stats["removed"] = 0
+
+
 def build_signal(tag, indir, mlo, mhi):
+    _report_lepclean("")
     base = f"{indir}/mA_MLNANO_{tag}_2024"
     if not os.path.isdir(base):
         print(f"[{tag}] no signal ML dir {base}")
@@ -195,11 +236,13 @@ def build_signal(tag, indir, mlo, mhi):
     n_m = len(trees[f"DiphotonTree/ggh_125_Za_mu_{SQRTS}_cat0"]["CMS_hza_mass"])
     print(f"[{tag}] ROI={ROI_WINDOWS[tag]} nominal ele={n_e} mu={n_m}; "
           f"{len([k for k in trees if 'sigma' in k])} syst trees")
+    _report_lepclean(f"[{tag}]")
     return trees
 
 
 def build_data(tag, data_glob, mlo, mhi):
     """Single combined Data_13p6TeV tree for this m_a (ele+mu, weight=1)."""
+    _report_lepclean("")
     fs = sorted(set(glob.glob(data_glob)))
     if not fs:
         print(f"[data {tag}] no DATA ML parquet found ({data_glob})")
@@ -226,6 +269,7 @@ def build_data(tag, data_glob, mlo, mhi):
     n_dup = n_raw - len(keep)
     print(f"[data {tag}] ROI={ROI_WINDOWS[tag]} Data_{SQRTS} events in [{mlo},{mhi}] = "
           f"{len(cat['CMS_hza_mass'])} (raw {n_raw}, deduped {n_dup} overlapping)")
+    _report_lepclean(f"[data {tag}]")
     return {f"DiphotonTree/Data_{SQRTS}": cat}
 
 

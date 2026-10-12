@@ -76,7 +76,7 @@ def main():
                 c = ROOT.TCanvas("c", "", 800, 600)
                 c.SetMargin(0.13, 0.04, 0.15, 0.08)
                 c.SetTicks(1, 1)
-                fr = c.DrawFrame(8, 0, 102, 125)
+                fr = c.DrawFrame(8, 0, 102, 170)
                 FL, sym = fl_name[lep]
                 fr.GetXaxis().SetTitle(f"{'Lead' if leg == 'lead' else 'Sublead'} {FL} p_{{T}} [GeV]")
                 fr.GetYaxis().SetTitle("Trigger Efficiency (%)")

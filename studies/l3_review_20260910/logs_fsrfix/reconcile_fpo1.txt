@@ -1,0 +1,58 @@
+=== fpo=1 reconciliation  2026-09-19 10:54:42 ===
+
+############ Bkg_MC : A. completeness (job dirs vs chunks) ############
+  DYGto2LG_10to100_2022postEE        jobs=   872 ran=   872 parquet=   866
+  DYGto2LG_10to100_2022preEE         jobs=   341 ran=   341 parquet=   338
+  DYGto2LG_10to100_2023postBPix      jobs=   119 ran=   119 parquet=   119
+  DYGto2LG_10to100_2023preBPix       jobs=   237 ran=   237 parquet=   237
+  DYGto2LG_10to100_2024              jobs=  1527 ran=  1527 parquet=  1525
+  DYJetsTo2E_2024                    jobs=  2990 ran=  2990 parquet=  2958
+  DYJetsTo2Mu_2024                   jobs=  2975 ran=  2975 parquet=  2942
+  DYJetsTo2Tau_2024                  jobs=  1837 ran=  1837 parquet=   346
+  DYJetsToLL_2022postEE              jobs=  1682 ran=  1682 parquet=  1657
+  DYJetsToLL_2022preEE               jobs=   525 ran=   525 parquet=   504
+  DYJetsToLL_2023postBPix            jobs=   312 ran=   312 parquet=   301
+  DYJetsToLL_2023preBPix             jobs=   506 ran=   506 parquet=   491
+  TOTAL jobs=13923 ran=13923 not-run=0
+
+############ Bkg_MC : B. chunk==merged + mtime guard ############
+sample                        chunks    merged rows    mtime       vs ref
+------                        ------    ------ -----   -----       ------
+DYGto2LG_10to100_2022postEE    318135    318135 OK      OK               -
+DYGto2LG_10to100_2022preEE     97663     97663 OK      OK               -
+DYGto2LG_10to100_2023postBPix     71900     71900 OK      OK               -
+DYGto2LG_10to100_2023preBPix    148829    148829 OK      OK               -
+DYGto2LG_10to100_2024         611536    611536 OK      OK               -
+DYJetsTo2E_2024               113108    113108 OK      OK               -
+DYJetsTo2Mu_2024              146958    146958 OK      OK               -
+DYJetsTo2Tau_2024                400       400 OK      OK               -
+DYJetsToLL_2022postEE          31991     31991 OK      OK               -
+DYJetsToLL_2022preEE            9679      9679 OK      OK               -
+DYJetsToLL_2023postBPix         7551      7551 OK      OK               -
+DYJetsToLL_2023preBPix         16024     16024 OK      OK               -
+
+[OK] chunk == merged and no stale merge for all 12 samples
+
+############ Data : A. completeness (job dirs vs chunks) ############
+  Data_2022postEE                    jobs=  1359 ran=  1359 parquet=  1316
+  Data_2022preEE                     jobs=   663 ran=   663 parquet=   607
+  Data_2023postBPix                  jobs=   578 ran=   578 parquet=   558
+  Data_2023preBPix                   jobs=  1175 ran=  1175 parquet=  1113
+  Data_2024                          jobs= 10200 ran= 10200 parquet=  9731
+  TOTAL jobs=13975 ran=13975 not-run=0
+
+############ Data : B. chunk==merged + mtime guard ############
+sample                        chunks    merged rows    mtime       vs ref
+------                        ------    ------ -----   -----       ------
+Data_2022postEE                16488     16488 OK      OK          +0.01%
+Data_2022preEE                  5665      5665 OK      OK          -3.39%
+Data_2023postBPix              10143     10143 OK      OK          +0.10%
+Data_2023preBPix               18543     18543 OK      OK          +0.41%
+Data_2024                     102762    102762 OK      OK          +2.15%
+
+[FAIL] 2 problem(s):
+   - Data_2022preEE: -3.39% vs previous production (5864 -> 5665)
+   - Data_2024: +2.15% vs previous production (100596 -> 102762)
+  [FAIL] Data pipeline reconciliation failed
+
+=== overall rc=2 (0 clean, 1 incomplete production, 2 pipeline loss) ===

@@ -1,0 +1,128 @@
+2026-09-27 14:11:57 orchestrator start (pid 2072903, host lxplus971.cern.ch)
+2026-09-27 14:11:58 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:16:58 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:21:58 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:26:59 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:31:59 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:37:00 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:42:00 [test-chain] chain_test.done: CHAIN_DONE rc=12
+2026-09-27 14:42:00 [gate] test chain: CHAIN_DONE rc=12; job .err files with errors: 0; gate_ok=0
+2026-09-27 14:42:00 STOP: small-batch test gate failed -- full production NOT submitted
+2026-09-27 14:54:44 --- restart after test-driver crash (EOS FUSE pkl save), driver now resumes/retries; see logs/attempt1_driver_crash
+2026-09-27 14:54:44 orchestrator start (pid 2314628, host lxplus971.cern.ch)
+2026-09-27 14:54:44 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 14:59:45 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:04:46 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:09:46 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:14:47 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:19:47 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:24:48 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:29:48 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 
+2026-09-27 15:34:49 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:8 
+2026-09-27 15:39:50 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:1 
+2026-09-27 15:44:50 [test-chain] waiting for chain_test.done; my jobs by JobStatus(1=idle,2=run,5=held): none
+2026-09-27 15:49:50 [test-chain] chain_test.done: CHAIN_DONE rc12=0 rc4=0 rc5=0
+2026-09-27 15:49:50 [gate] test chain: CHAIN_DONE rc12=0 rc4=0 rc5=0; job .err files with errors: 0; gate_ok=1
+2026-09-27 15:49:50 [full] launching driver: 381 jobs expected (TTto2L2Nu 147, TTG 143, TTGG_Run3 62, ZGG 29)
+2026-09-27 15:49:51 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): none
+2026-09-27 15:54:58 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:380 2:1 
+2026-09-27 16:00:00 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:343 2:23 
+2026-09-27 16:05:00 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:174 2:166 
+2026-09-27 16:10:03 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:8 2:25 
+2026-09-27 16:15:04 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:1 2:14 
+2026-09-27 16:20:05 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:3 2:6 
+2026-09-27 16:25:06 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:2 2:5 
+2026-09-27 16:30:08 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:6 
+2026-09-27 16:35:08 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:5 
+2026-09-27 16:40:09 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:4 
+2026-09-27 16:45:09 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:4 
+2026-09-27 16:50:10 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:4 
+2026-09-27 16:55:10 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:4 
+2026-09-27 17:00:11 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:4 
+2026-09-27 17:05:12 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:4 
+2026-09-27 17:10:13 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 1:1 2:3 
+2026-09-27 17:15:13 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:20:14 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:25:14 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:30:15 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:35:15 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:40:16 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:45:16 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:50:17 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 17:55:17 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:00:17 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:05:18 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:10:18 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:15:19 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:20:19 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:25:20 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:30:20 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:35:21 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:40:21 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:45:22 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:50:22 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 18:55:23 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:00:23 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:05:24 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:10:24 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:15:24 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:20:25 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:25:25 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:30:26 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:35:26 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:40:27 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:45:27 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:50:28 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 19:55:28 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:00:28 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:05:29 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:10:29 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:15:30 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:20:31 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:25:32 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:30:32 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:35:33 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:40:33 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:45:34 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:50:34 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 20:55:35 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:00:40 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:05:41 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:10:41 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:15:42 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:20:42 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:25:43 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:30:43 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:35:44 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:40:44 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:45:45 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:50:45 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 21:55:46 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:00:46 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:05:47 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:10:47 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:15:48 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:20:48 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:25:48 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:30:49 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:35:49 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:40:52 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:45:52 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:50:55 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 22:55:55 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:00:55 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:05:56 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:10:56 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:15:57 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:20:57 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:25:58 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:30:58 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:35:59 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:40:59 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:46:00 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:51:01 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-27 23:56:02 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-28 00:01:02 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:3 
+2026-09-28 00:06:03 [full-chain] waiting for chain_full.done; my jobs by JobStatus(1=idle,2=run,5=held): 2:2 
+2026-09-28 00:11:03 [full-chain] chain_full.done: CHAIN_DONE rc=12
+2026-09-28 00:11:03 orchestrator done: DONE CHAIN_DONE rc=12

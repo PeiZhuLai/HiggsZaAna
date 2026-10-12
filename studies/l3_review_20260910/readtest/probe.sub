@@ -1,0 +1,22 @@
+executable   = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/readtest/probe_wrapper.sh
+should_transfer_files = Yes
+transfer_input_files  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/x509up_u175325
+output       = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/readtest/probe_$(ProcId).out
+error        = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/readtest/probe_$(ProcId).err
+log          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/readtest/probe.log
+RequestMemory = 4000
+RequestDisk   = 30000000
+RequestCpus   = 1
+JobBatchName  = HZaReadProbe
++JobFlavour   = "workday"
+getenv        = True
+arguments = /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Data/Data_2024/job_5/Data_2024_config_job5.json
+queue 1
+arguments = /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Data/Data_2023preBPix/job_5/Data_2023preBPix_config_job5.json
+queue 1
+arguments = /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Bkg_MC/DYJetsTo2Tau_2024/job_5/DYJetsTo2Tau_2024_config_job5.json
+queue 1
+arguments = /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Bkg_MC/DYJetsToLL_2022postEE/job_5/DYJetsToLL_2022postEE_config_job5.json
+queue 1
+arguments = /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Bkg_MC/DYGto2LG_10to100_2024/job_5/DYGto2LG_10to100_2024_config_job5.json
+queue 1

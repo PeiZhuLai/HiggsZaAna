@@ -1,0 +1,19 @@
+2026-10-01 23:34:43 [1] backups (before_mA3_bern1_20261001_2334), fTest bestBernOrder(3) 3 -> 1, rebuild
+2026-10-01 23:37:06 [2] background refit mA3
+    category : 0 , pdf : Exp1 , gof : 0.980000, isTruth : 1
+     category : 0 , pdf : Pow3 , gof : 0.970000, isTruth : 1
+     category : 0 , pdf : Lau1 , gof : 0.970000, isTruth : 1
+     category : 0 , pdf : Bern1 , gof : 0.170000, isTruth : 0
+     2026-10-01 23:44:15 [3] t2w + limits (all 30)
+  limit moved mA3 0.03404 0.04603 0.06602 0.09575 0.13676 -> 0.03404 0.04603 0.06602 0.09575 0.13430
+  limit comparison done
+2026-10-01 23:59:15 [4] condor: bias + impact mA3
+2026-10-01 23:59:17   clusters 12804262 12804263 
+2026-10-01 23:59:17   idle=11 running=0 held=0
+2026-10-02 00:29:17   idle=0 running=11 held=0
+2026-10-02 00:59:19   idle=0 running=10 held=0
+2026-10-02 01:29:19   idle=0 running=9 held=0
+2026-10-02 01:59:20   idle=0 running=0 held=0
+  mA3 bias Bern1:-0.106+-0.010 Exp1:-0.060+-0.010 Pow3:+0.021+-0.010 Lau1:-0.001+-0.010
+  mA3 impact r=1.000, 77 parameters
+VERDICT: PASSED

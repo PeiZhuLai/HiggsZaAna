@@ -1,0 +1,20 @@
+2026-09-29 10:21:57 driver start (pid 1363340), waiting for hza-dyveto-retrain
+2026-09-29 14:00:21 STOPPING: retrain A-E did not pass (dyveto_retrain.log)
+2026-09-29 20:30:14 driver start (pid 3030495), waiting for hza-dyveto-retrain
+2026-09-29 20:30:14 retrain A-E passed
+2026-09-29 20:30:14 dataVmc sideband_rwgt start
+2026-09-30 00:35:42 planB: stop driver, replace the 3 slow dyll_2024 dataVmc jobs
+2026-09-30 00:36:28 planB: DY 2024 swapped (entries 188313, sideband branches present)
+2026-09-30 00:36:28 planB: 3 dyll_2024 jobs resubmitted, cluster 12781355
+2026-09-30 00:47:12 dataVmc sideband_rwgt passed (planB; merge+draw 160 s)
+2026-09-30 00:47:12 flashgg start
+2026-09-30 01:36:03 STOPPING: flashgg (dyveto_flashgg.log)
+2026-09-30 01:54:43 regen MVA-cut data mA2 mA28
+2026-09-30 02:01:24 audit after regen: checked 250 bad 0
+2026-09-30 02:01:24 flashgg resume at stage 4
+2026-09-30 05:29:56 flashgg passed
+2026-09-30 05:29:56 dataVmc nominal start
+2026-09-30 05:31:02 redo-aw: symmetrized-lnN limits kept in /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/snapshot_dyveto_symS1lnN_20260930; rerunning stages 7-9 with a_w
+2026-09-30 05:53:17 redo-aw: stages 7-9 PASSED
+2026-09-30 05:57:10 dataVmc nominal passed
+2026-09-30 05:57:10 DRIVER DONE

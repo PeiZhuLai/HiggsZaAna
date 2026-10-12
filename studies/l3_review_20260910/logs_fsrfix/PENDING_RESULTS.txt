@@ -1,0 +1,201 @@
+2026-09-15 22:04 DONE  staging-validation  -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/validation_result.txt
+2026-09-16 14:56 STALLED  fpo1-production  chunks=25498 for 2h
+2026-09-16 18:05 STALLED  fpo1-production  chunks=25498 for 2h
+2026-09-16 21:59 STALLED  fpo1-production  chunks=25498 for 2h
+2026-09-17 00:35 STALLED  fpo1-production  chunks=25498 for 2h
+2026-09-17 03:08 STALLED  fpo1-production  chunks=25498 for 2h
+2026-09-17 06:46 STALLED  fpo1-production  chunks=25499 for 2h
+2026-09-17 09:53 STALLED  fpo1-production  chunks=25500 for 2h
+2026-09-17 12:16 STOPPED  fpo1-production  chunks=25500/27898 drivers=0 queue=0
+2026-09-19 11:17 RECONCILE fpo1 rc=2 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/reconcile_fpo1.txt
+2026-09-19 22:01 ACCEPTED fpo1-data-drift  2 gaps accepted by user, production declared final:
+    Data_2024      +2.15%  = 93 extra input files (data collected after the May production) + FSR fix
+    Data_2022preEE -3.39%  = 12 DoubleMuon/Run2022C files present in parquet_DNA but not read by
+                             this production (675 -> 663); electron channel exactly 0.00%, muon -6.10%
+                             -- consistent with a DoubleMuon-only input gap, not a pipeline loss.
+    chunk==merged and merged-mtime guards PASSED for all 17 samples; completeness 27898/27898.
+
+2026-09-24 05:46 CLOSED hza-datavmc2 PASSED (75/75, 3x187 fresh pdfs).  dataVmc rerun (75 jobs, cluster 12729803; smoketest 12729682 PASSED 3/3 product+mechanism)
+    first attempt 00:42 was void: generator rewrote dataVmc.submit (auto/auto + dead AFS tarball,
+    no JobBatchName) -> 81/81 exit 2, wait loop saw 0 jobs, merge ate 192 partials from 2026-05-28.
+    fixed in make_dataVmc_condor_jobs.py (LOCALIZE=1, SETUP=0, no tarball, +JobBatchName HZa_dataVmc,
+    2022 DYG -> 10to100). stale partials parked in variables_dataVmc/stale_preFSRfix_20260924/.
+    verdict line: "VERDICT:" in logs_fsrfix/datavmc2.log   heartbeat: datavmc2_heartbeat.txt
+2026-09-24 04:05 OPEN hza-flashgg   waits for datavmc2 PASS, then WP -> MVA cut -> Tree2WS -> bkg (local -P6)
+    -> signal -> datacards -> blind limits -> plots. snapshot of pre-FSR-fix results in
+    snapshot_preFSRfix_20260924/. stops BEFORE Update AN (push needs user go-ahead).
+    verdict line: "VERDICT:" in logs_fsrfix/flashgg.log      heartbeat: flashgg_heartbeat.txt
+2026-09-24 12:02 hza-flashgg run 1 STOPPED at [5/9]: mA17 multipdf 663 B. Root cause upstream: 5 MVA-cut
+    DATA files persistently corrupt (full-read audit): mA17 run3+output_2024, mA2/18/21 output_2022postEE.
+    mA2/18/21 run3.root read fine because hadd silently skipped the bad 2022postEE file -> their fits
+    had lost 10.6/12.9/16.9% of the data with no error anywhere. Regenerated 2 17 18 21 via
+    regen_mvacut_data.sh (scratch -> full read -> EOS -> full read), rebuilt their data ws.
+2026-09-24 12:02 OPEN hza-flashgg run 2 (START_STAGE=5): refitting 2 17 18 21, then signal/datacard/limits.
+2026-09-24 14:50 hza-flashgg run 2 finished VERDICT PASSED, but SUPERSEDED: datacards scaled the 16 interpolated
+    mass points with sigEfficiencyVmA_*_quadratic_interp_ma_points.json from 2026-06-17 (input_base
+    run3_bdt_scored_nominal). The chain's stage 2 ran only the scan half of Plot/1_runPlot.sh and skipped
+    signal_eff_sumw.py. Run-2 limits/datacards kept in snapshot_run2_staleEffJSON_20260924/.
+    Old JSONs kept as *.json.bak_preFSRfix_20260924. chain_flashgg.sh gained stage 2b + a datacard-stage gate.
+2026-09-24 21:40 OPEN hza-flashgg run 3 (START_STAGE=7): signal_eff_sumw.py -> datacards -> blind limits -> plots.
+    verdict line: "VERDICT:" in logs_fsrfix/flashgg.log   heartbeat: flashgg_heartbeat.txt
+2026-09-24 22:02 hza-flashgg run 3 PASSED but limits identical to run 2, even at interpolated points. Root cause:
+    Datacard/makeDatacard.py parses --mass_ALP as a string and tested `opt.mass_ALP in interploate_ma_list`
+    (ints) -> always False -> no interpolation rateParam was EVER written (pre-FSR-fix limits too). AN Sec 8.2
+    says the yield is interpolated with the quadratic efficiency fit, so the code did not do what the AN says.
+    Fixed (int(round(float()))), backup makeDatacard.py.bak_strmass_20260924; chain gate: 16x10 / 14x0 rateParams.
+    run-3 results kept in snapshot_run3_noRateParam_20260924/.
+2026-09-24 22:15 OPEN hza-flashgg run 4 (START_STAGE=7) with the rateParam fix.
+2026-09-24 22:27 CLOSED hza-flashgg run 4 PASSED. Anchors identical to run 3; 16 interpolated points shifted by exactly
+    1/<eff ratio> (e.g. mA28 ratio 0.860 -> limit x1.171). run 3 kept in snapshot_run3_noRateParam_20260924/.
+2026-09-24 22:35 OPEN hza-postscan: Plot/_postscan_runner.sh (== post-scan half of 1_runPlot.sh; its cutflow step
+    points at HiggsDNA/scripts/4_collect_cutflow.py, 5_merge_cutflow.py which no longer exist -> skipped).
+    log logs_fsrfix/postscan.log, start time logs_fsrfix/postscan.t0
+2026-09-24 23:35 CLOSED hza-postscan RC=0 (1h05). Fresh output verified per script: MVA diagnostics (lowmass 12, highmass 22),
+    sigEff/MVASigEff JSON+pdf, bkg interpolated yields + latex tables, BDT_ma_2D, sigGenInfo, cutflowVmA, phid/SIP3D/dREff,
+    mAmigrated*, bkgmcSculptingCheck (7x30), trigEffCompareVlepPt, SF_validation, fast_plot_UL_mva (169).
+    NOT regenerated: plot_mH_mZ_2D.py / plot_mH_phopT_2D.py (scripts no longer exist); preselectSigEffVmA (reads
+    Plot/output/cutflow_list, last collected 2026-08-11 = pre-FSR-fix). 1_runPlot.sh calls 4_collect_cutflow.py /
+    5_merge_cutflow.py which were renamed 5_/6_. Signal per-cut cutflow for the FSR-fix production cannot be collected:
+    eos_logs/Sig_MC job dirs hold no .out/.err/.log (dirs touched 2026-09-16 07:43); the summary jsons in
+    parquet_DNA_tmp_fsrfix/Sig_MC only carry final n_events_selected. -> OPEN item for the user.
+2026-09-25 04:40 OPEN impacts + high-stat bias (user asked "送impacts/bias condor").
+    inputs: datacards/limits of flashgg run 4 (rateParam fix). bias reads a FROZEN copy
+    Combine/root_t2w_fsrfix_20260925 (ROOT_DATACARD_PATH via getenv) because each impact job re-runs
+    RunText2Workspace into Combine/root_t2w/<mA> while bias would be reading it.
+    backups: Checks/Bias_nominal/bias_outputs_highstat_preFSRfix_20260925 (moved), Combine/output_impacts_preFSRfix_20260925 (copy).
+    canary mA5 OK (r_hat 0.9996 Asimov; 2x500 toys per chunk): impact 12747408, bias 12747409. rest: impact 12747410 (29), bias 12747411 (290).
+    done-markers: impacts = Combine/output_impacts/<mA>_impacts.json newer than logs_fsrfix/impbias.t0;
+                  bias = bias_outputs_highstat/mA_<m>/chunk<c>/BiasFits/*_split*_fits.root, then merge_bias_highstat.sh + collect_bias_results.sh
+    chain: chain_impbias.sh (unit hza-impbias), heartbeat impbias_heartbeat.txt, verdict "VERDICT:" in impbias.log
+2026-09-25 10:30 CLOSED hza-impbias VERDICT PASSED (pipeline). impacts 30/30 (r_hat within 0.02 of Asimov 1);
+    bias 300/300 chunks, 30/30 merged (9730-10000 toys per truth function), 120 plot files in plots_bias
+    (pre-FSR-fix bias_outputs + plots_bias moved to *_preFSRfix_20260925).
+    PHYSICS FLAG: 2 points above the AN 0.2 mean-pull threshold (AN says all 110 within 0.2):
+      mA8  Pow1 -0.223, Lau1 -0.204 (no Bernstein; envelope already lowest orders Exp1/Lau1/Pow1; old worst -0.192)
+      mA11 Bern3 -0.288 (old -0.167; AN Sec 7.4 restriction allows Bernstein up to 3rd order at mA11)
+    -> needs user decision on envelope changes (would need bkg refit + t2w + limits + bias for those points).
+2026-09-25 20:01 OPEN hza-env11 (user: "mA11跟mA8都照AN程序調"). mA11 STEP=cap2: Bernstein capped at order 2
+    (envMaxOrder), rebuild, refit mA11, t2w, limit, then bias 10x1000 + impact on condor. If Bern2 still >0.2 or
+    fails GOF -> STEP=drop (bestBernOrder(11)=0). backups tagged *_before_cap2_20260925_2001.
+    log env11_cap2.log. mA8: AN rule covers only Bernstein members; Pow1/Lau1 already lowest order -> asked user.
+2026-09-25 20:30 OPEN hza-env8 (user chose: remove Pow1 first at mA8). chain_env_mA8.sh STEP=nopow, log env8_nopow.log. If Lau1 still >0.2 -> report, do not remove.
+2026-09-25 20:35 OPEN hza-envbias: waits for mA8/mA11 bias+impact (12748267/68, 12748411/12), merges, verdict in envbias.log
+2026-09-26 15:50 user: "照這四項做" (all mA bias < 0.2):
+    (1) RunBiasStudy.py pull = error facing the truth (backup RunBiasStudy.py.bak_symunc_20260926); hza-remerge re-merges 29 mA (not 20), log remerge.log
+    (2) mA8 restored to Exp1/Pow1/Lau1 (fit, limit 0.02305, t2w identical, bias dir); Exp1+Lau1 variant kept as *_nopow_20260925; mA8 impact resubmitted
+    (3) mA11 keeps Bern<=2 (toward worst -0.138)
+    (4) hza-env20: bestBernOrder(20) 6->5, refit/t2w/limit + bias 10x1000 + impact, log env20_cap5.log
+2026-09-26 16:30 remerge 29/29 done (toward-truth pulls): 106 truth functions, none above 0.2, worst mA8 Pow1 -0.180.
+    FIX: collect_bias_results.sh globbed backup dirs inside bias_outputs_highstat -> stale mA8/mA11 plots had
+    overwritten the official ones in plots_bias. Backups moved to bias_outputs_highstat_variants/, plots_bias
+    re-collected (116 files, mA8/mA11 = official merged; contaminated copy kept as plots_bias_contaminated_20260926).
+    mA20 Bern<=5: envelope Pow1/Exp1/Lau1/Bern5, limit 0.0426; bias 12748704 + impact 12748705; watcher hza-env20bias (env20bias.log)
+2026-09-26 19:24 CLOSED four-item bias fix. mA20 Bern<=5: Bern5 +0.085, worst -0.097, impact r 1.000 [0.899,1.128].
+    ALL 30 mA: 110 truth functions, none above 0.2 (toward-truth pulls), worst mA8 Pow1 -0.180, mA12 Exp3 -0.179,
+    mA3 Bern3 -0.169; min toys per function 9812; plots_bias 30 r_vs_bias pdfs, all json newer than RunBiasStudy.py.
+    Envelope changes vs AN: mA11 Bern3->Bern2, mA20 Bern6->Bern5 (mA8 unchanged). AN not yet updated.
+2026-09-26 20:40 AN-25-172 updated and pushed: commit 10291692a -> mygithub/master (GitHub). origin (gitlab tdr) untouched.
+    185 pp, 0 errors, 0 undefined refs. 12547 files. Limit figs now from plot_limits/2_runLimitsPlot.
+    OPEN for user: App F nominal ("before") dataVmc panels still pre-FSR-fix (needs condor run); mA3 WP hard-coded
+    FIXED_WP in scan_score_R_significance.py (R@WP 1.21 vs text "R~1"); tab:inter_boundary ~2x change to verify;
+    pseudo-data closure (Sec 6.4) not rerun; Eqn 33 inputs (preselection cutflow) pre-FSR-fix; tab:uncertainty_summary
+    not recomputed; mA24-29 poor GOF unexplained; Sec 7.0 "observed" 2-10 fb wording; Run3 worse than Run2 at mA1-3.
+2026-09-26 21:3x OPEN hza-dvmcnom: nominal dataVmc (App F before panels), chain_datavmc_nominal.sh, log datavmc_nominal.log, verdict "VERDICT:"
+2026-09-26 21:4x OPEN hza-wp3: mA3 WP 0.988->0.940 (R<=1.10), chain_wp_mA3.sh, log wp3.log; ends with bias+impact submission for masses whose limit moved
+2026-09-26 22:10 hza-wp3 run1 stopped at Tree2WS: Trees2WS/run_tree2ws.sh had its final wait_batch commented out -> last data batch left in background. Fixed (backup run_tree2ws.sh.bak_nowait_20260926); resumed via chain_wp_mA3_from4.sh (log wp3.log).
+2026-09-26 23:5x user: revert mA3 to 0.988 (0.940 -> bkg GOF~0, envelope all fallback); revert_wp_mA3.sh (unit hza-wp3revert, log wp3_revert.log). Then redo pseudo-data closure for mA3.
+2026-09-26 23:59 OPEN hza-closure3: mA3 pseudo-data closure (fsrfix) at 0.988/0.975/0.960/0.940 after revert; pseudodata_closure/scripts/scan_mA3_wp_fsrfix.sh, log closure_mA3.log, summary pseudodata_closure/scan_mA3_fsrfix/scan_summary.txt
+2026-09-27 00:40 mA3 closure (fsrfix) at 0.988: Z 2.30, r_hat +0.063 (-0.029/+0.033) vs expected limit 0.0695; pre-FSR closure Z 0.28, r_hat +0.008.
+    looser cuts worse (0.975 Z 4.2, 0.960 3.1, 0.940 3.1; pseudo-data envelope GOF ~0). User: re-optimize the mA3 MVA cut.
+2026-09-27 00:5x OPEN hza-reopt3: pseudodata_closure/scripts/scan_mA3_reopt.sh (cuts 0.980-0.996): R, Asimov Z, data N + data
+    envelope GOF, closure Z + r_hat per cut. log reopt_mA3.log, summary pseudodata_closure/reopt_mA3/summary.txt
+[2026-09-27 01:41] mA3 closure MC bootstrap: unit hza-boot3, 0.988/0.992 x 40 replicas, log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/boot_mA3.log, summary pseudodata_closure/reopt_mA3/boot/boot_summary.txt. reopt scan done: pseudodata_closure/reopt_mA3/summary.txt
+[2026-09-27 02:22] mA3 reopt DONE. Nominal closure Z / data GOF-min: 0.980 2.34/0.019, 0.984 3.32/fallback(GOF~0), 0.986 4.05/fallback, 0.988 2.30/0.47 (reproduces official), 0.990 2.16/0.36, 0.992 0.83/0.21, 0.994 1.35/0.28, 0.996 2.08/0.18.
+  Exact Asimov Z (scan clamps >0.99): 0.988 29.34, 0.990 28.59, 0.992 28.73, 0.994 27.72, 0.996 22.14. MC n_eff(120-130): 0.988 35.9, 0.992 20.5.
+  Bootstrap (40 rep, MC stat): 0.988 rhat +0.063+-0.034 Z 2.21+-1.13; 0.992 rhat +0.027+-0.027 Z 1.19+-1.08 (rhat in 0.988 signal units; 0.992 signal = 0.806x).
+  -> recommend 0.992 pending user OK; then rerun mA3 chain (chain_wp_mA3.sh pattern) + bias/impacts + AN.
+[2026-09-27 02:35] mA3 WP 0.988->0.992 (user OK): unit hza-wp3-0992, log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/wp3_0992.log, script chain_wp_mA3_0992.sh; ends with condor bias+impact for changed masses
+[2026-09-27 03:58] mA3@0.992 condor bias 12756506 (10) + impact 12756507; merge/verdict unit hza-bias3-0992, log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/bias3_0992.log, heartbeat /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/bias3_0992_heartbeat.txt. mA3 limit 0.06953->0.06680, others unchanged
+[2026-09-27 06:55] mA3@0.992 DONE: bias PASS (worst Bern3 -0.128), impact r=1.000, limit 6.95->6.68 fb. AN afa22acae pushed mygithub/master. doc ~/doc/HZa/hza_mA3_wp_reopt_2026-09-27.md
+[2026-09-27 11:18] mA24-30 open ranges + toy GOF: unit hza-open2429, log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/open2429.log (test mA24 GOF 0.66-0.86). Then condor bias+impact.
+[2026-09-27 11:40] 30-pt closure FSR-fix: unit hza-closure30 (waits for hza-open2429), log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/closure30.log
+[2026-09-27 11:45] Subtask A (uncertainty summary / Eqn 33) DONE: pileup 2-4%/mean 3, reweight 1-3%, FNUF <0.6 GeV, L=172.13/138=1.25. Work dir studies/.../uncsummary_20260927.
+  NEEDS USER DECISION: (1) CSEV nuisance absent from all 30 datacards (AN says 0-2%; recomputed 2.2-3.0% total, per-era up to 11%); verified grep 5_pruned_datacard: no csev lnN.
+  (2) shape param nuisances FNUF/Material/PhotonScale rate consts railed at 5% cap (113/130 etc.) -> ~5% effective yield nuisance, test-tree stat noise.
+  (3) Sec-05-01 cutflowVmA fig from 07-04 input w/o object SFs (~5.1% vs caption 4%).
+  (4) twiki line 101 still quotes 1.24 / 1.57.
+[2026-09-27 12:10] open2429 DONE: GOF 0.54-0.95 all; limits 24 -5.7%, 26 +9.3%, 28 +11%, 29 +7.6%; mA29 Exp1 status -1 (interior) best fit; mA28 Exp3 fallback railed width/slope. condor bias 12757164 (70) impact 12757165 (7)
+[2026-09-27 12:12] bias merge unit hza-bias2430, log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/bias2430.log
+[2026-09-27 13:45] CSEV+mA28/29 init: unit hza-csev2829 log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/csev2829.log; bias2430 merge restarted as hza-bias2430b (24-27,30)
+[2026-09-27 13:55] FINDING: signal syst Up/Down datasets in ws_Tree2WS hold only 20-50% of nominal yield (mA5 ele 2024 FNUF up/nom 0.34; mA20 mu 2022preEE ElectronScale down 0.65 in MUON channel) -> calcPhotonSyst rate = |up-down|/(up+down) capped 5%. Diagnosis subagent running (read-only), scratch syst_trees_diag_20260927.
+  Other running: subagents V9/V10, S1 alt-sideband, V3/V8 extra bkg production; units hza-closure30c (panels), hza-csev2829, hza-bias2430b.
+  User decisions 13:13: CSEV add (done in systematics_HToZa.py, chain running); cutflow (b) App-E note done; mA1 explain only; mA28/29 init adjusted (tests OK); ask again later in detail about interp-table (5) & scan>0.99 (6).
+[2026-09-27 14:00] V9/V10 done: plots Plot/plots/scan_score_R/highmass_*.pdf, bkgmcScupltingCheck/srAdjacentSlices/; note studies/.../v9v10_20260927/V9_V10_results_note.md. TODO AN: add fig:scan_score_R_high + srAdjacent fig; fix plot_bkgmcSculptingCheck interp cuts (linear->nearest anchor) and rerun Figs 33-35.
+[2026-09-27 14:10] S1 done: alt sidebands (zm&hsb, zmnarrow&hsb) shift signal yield 1-7% (mA1 11.5%) > current nuisance 1.2-2.8%. Scheme 1 (envelope vs nominal) vs scheme 2 (envelope vs un-reweighted = current central). Code vs AN text mismatch (current up/dn = renormalized after WP). Results studies/.../s1_altsideband_20260927/results/. NEEDS USER DECISION.
+  plot_bkgmcSculptingCheck: interp cuts linear->nearest anchor (backup .bak_nearestcut); rerun Figs 33-35 pending.
+[2026-09-27 14:25] syst split fix: apply_bdt_sig.py patched (.bak_systsplit_20260927), test OK (+-0.6%). Chain hza-systsplit (waits for hza-csev2829), log /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/systsplit.log
+[2026-09-27 14:23] V3/V8 extra-bkg (TTto2L2Nu 10%, TTG, TTGG_Run3, ZGG; 2024) RUNNING: unit hza-xbkg-orch (orchestrate.sh) + hza-xbkg-test; test clusters 12757199-12757206 (8 jobs, idle on fair-share); full 381 jobs auto-submitted only if test gate passes. Heartbeat studies/l3_review_20260910/v3v8_extrabkg_20260927/logs/heartbeat_orch.txt; done marker logs/orch.done; result yields_extrabkg.md. Side finding: 2024 DY+jets (DYto2E/2Mu/2Tau) not photon-overlap-removed (MCOverlapTagger name match misses 'DYto2E'), >=21% of DY+jets 2024 presel has gen-iso photon.
+[2026-09-27 14:32] csev2829 DONE: limits unchanged except mA1 +0.3%. bias 28/29 cluster 12757241 merge unit hza-bias2829. impact cluster 12757242 to be removed by systsplit chain.
+[2026-09-27 15:20] V3/V8: chain set up (units hza-xbkg-orch, hza-xbkg-test2; heartbeat studies/.../v3v8_extrabkg_20260927/logs/heartbeat_orch.txt; done marker logs/orch.done; results yields_extrabkg.md). Test jobs idle (fair-share), 381 full jobs auto after test gate.
+  FINDING (verified): 2024 DYJetsTo2E/2Mu MC overlap removal NOT applied: n_iso_photons>0 weight fraction 0.209/0.225 (2022/2023 DYJetsToLL: 0.000). mc_overlap_tagger.py matches "DYto2L"/"DYJetsToLL" only; 2024 names DYto2E/2Mu/2Tau. Affects MC-based: BDT training, R table, closure pseudo-data, sculpt plots, dataVmc; not data-driven fit. NEEDS USER DECISION. Twiki reply (Si Hyun DY overlap "2024 DY+jets removed 2.8%") must be checked.
+[2026-09-27 16:18] V2 trig denom: tagger opt-in zgammas.study_lep_trigger_eff_otherleg (.bak_trigdenom); full 60 jobs clusters 12757246-12757305 (mem held risk: monitor re-releases once at 6000; if held again -> condor_qedit RequestMemory 8000; condor_release). Unit hza-v2trig-mon, heartbeat studies/.../v2_trigdenom_20260927/logs/heartbeat.txt, done marker logs/MONITOR_DONE -> plateau_table.txt. Prelim: e lead double 65%->83%, mu lead 79%->94%, sublead unchanged. Also: official cutflow_list JSONs double-count (CutFlow JSON printed twice per .out) -> errors underestimated by sqrt2.
+[2026-09-27 16:40] DY overlap diag DONE: 2024 DY+jets veto NOT applied (tagger name match); DY+gamma OK (30% = branch definition mismatch pT>15,|eta|<2.6 vs tagger pT>10). Fix needs tagger + friend/reprod + BDT retrain + full downstream. NEEDS USER DECISION. memory ref_hza_2024_dyjets_overlap_not_applied
+[2026-09-27 23:40] USER DECISIONS: (1) re-produce 2024 DY+jets + retrain full chain; (2) S1 scheme 2. Plan doc/HZa/plan_dy2024_overlap_rerun_20260927.md.
+  mc_overlap_tagger.py fixed (DYto2E/2Mu/2Tau, TTto2L2Nu, TTG-1Jets; .bak_run3names_20260927). Reprod subagent launched (study dy2024_reprod_20260927).
+  systsplit chain DONE 17:32: limits -0..-3.2% (mA10 -3.2%); impacts cluster 12757727.
+  bias (current chain, will be superseded by retrain): mA24 Lau1 -0.218, mA25 Bern6 +0.245, mA29 Bern5 -0.235 ABOVE 0.2; others pass.
+[2026-09-29 05:30] Resumed after weekly rate limit. DY2024 reprod subagent had done nothing -> relaunched (study dy2024_reprod_20260927).
+  V2: job 12759674.0 held (11.9GB vs 6000) -> qedit 16000 + release (v2trig monitor unit gone; driver hza-v2trig-full alive). Check MONITOR_DONE / plateau_table.txt.
+  V3V8: chain stopped rc=12 (TTGG job_23 retired: INFN redirector xrdcp fail). Accepted 61/62 (merge scale1fb uses completed jobs only); relaunched post chain as hza-xbkg-post2 (chain_post_allow.sh, ALLOW_NOTRUN=TTGG_Run3/job_23), log v3v8.../logs/chain_full_post2.log. NOTE: V3 samples produced before TT overlap tagger fix -> ttbar/ttG overlap not removed in parquet.
+  impacts cluster 12757727 completed (post systsplit).
+[2026-09-29 06:35] DY2024 reprod: test PASS (0/198 iso-photon survivors; tagger sees original URL). Full 7802 jobs clusters 12764199-12772105. Monitor unit hza-dyveto-orch, heartbeat studies/.../dy2024_reprod_20260927/logs/heartbeat_orch.txt, done marker logs/orch.done (DONE/STOP), NEEDS_DECISION_left_held.txt. Output parquet .../parquet_DNA_tmp_fsrfix_fpo1_dyveto/Bkg_MC_dyveto2024, p2root root_P2Root/run3_bdt_inputs_fsrfix_dyveto. If unit dies: use orchestrate_resume.sh (NOT orchestrate.sh -> would resubmit all).
+  NOTE for user: (1) photon smear RNG reshuffled by veto -> per-event pT differs 1-2%, ~2% threshold migration (statistically equivalent). (2) 2024_UL SF JSONs updated 09-26/27 after old production -> new DY may carry different SF version than signal/DYG (decide whether to harmonize before retrain).
+[2026-09-29 09:15] V2 DONE (finalized manually): all 5 eras complete. Plateau lead e double 64-69% -> OL 81-86% (OR 91-93 -> 95-96); mu lead double 78-79 -> 93-94 (OR ~99); sublead unchanged. Plots Plot/plots/trigEffCompareVlepPt_trigdenomV2/{denomOL,denomN2,denomOld_sameRun,denomCompare}; table studies/.../v2_trigdenom_20260927/plateau_table.txt. TODO: AN Fig 6 + App B -> denomOL, text/caption; twiki V2 + Eiko Fig5.
+  V3V8 DONE: yields_extrabkg.md (tt-like/DY ~1-3%, noisy; ZGG ~1e-4). Recompute ratio with new DY after reprod.
+  DY reprod: 7791/7802 at 08:28; 12 resubmitted running at 08:59.
+[2026-09-29 09:15] USER: SF version mismatch -> (b) keep as is, no AN note, proceed.
+2026-09-29 10:10 OPEN dyveto-retrain A-E: unit hza-dyveto-retrain, script chain_dyveto_retrain.sh, log logs_fsrfix/dyveto_retrain.log, heartbeat logs_fsrfix/dyveto_retrain_heartbeat.txt, verdict 'VERDICT:'. DY reprod DONE 10:07 (2E 0.738, 2Mu 0.711, 2Tau 0.850 of old; 3-stage OK).
+2026-09-29 10:13 dyveto-retrain [A] PASSED (All_Bkg 1573774->1501621). S1 scheme-2 code ready: apply_bdt_sig --mva-reweight-lnn-json + make_s1_lnn_json.py (see plan doc).
+2026-09-29 10:21 OPEN dyveto-driver: unit hza-dyveto-driver (chain_dyveto_driver.sh) waits for retrain PASS -> dataVmc sideband_rwgt -> chain_dyveto_flashgg.sh -> dataVmc nominal. heartbeat logs_fsrfix/dyveto_driver_heartbeat.txt. Cleanup 10:20: dyveto chunk parquets + eos_logs/Bkg_MC_dyveto2024 deleted (user OK), merged kept.
+2026-09-29 10:51 OPEN cleanup (user: delete old files, categories 1-4 approved): unit hza-cleanup-apply, cleanup_old_20260929.sh + cleanup_chunks.py; dry run: cat1 ~231G, cat2 ~211G, cat3 91 dirs all chunk==merged, 44743 chunks; log logs_fsrfix/cleanup_apply.out
+2026-09-29 11:25 CLOSED cleanup: cat1 11/11 + cat2 5/5 + cat4 5/5 EOS dirs removed (eos stat verified); AFS eos_logs of finished HZa productions removed (kept Sig_MC_MLNANO_all, zee_zmmg logs); cat3 91 sample dirs chunk==merged + mtime OK, 44743/44743 chunks deleted, merged kept (Sig_MC 51.0->27.5G, fpo1 7.4->2.9G). ~470 GB freed.
+2026-09-29 12:19 OVERLAP FIX (user: 固化): tagger fail-closed (higgs_dna/taggers/mc_overlap_roles.py, .bak_failclosed_20260929; 780 HZa MC strings identical roles, 0 raise) + HiggsDNA/scripts/check_mc_overlap_veto.py (run after every merge). Old productions: 2024 DY 2E/2Mu/2Tau FAIL 18853/27562/35, V3V8 TTto2L2Nu FAIL 730/3047 (tt+gamma overlap not removed -> V3/V8 tt numbers need this caveat), 2022-23 DYJetsToLL PASS, new dyveto DY PASS.
+2026-09-29 13:59 STOPPED dyveto-retrain: resub submit failed: Submitting job(s)
+ERROR: on Line 48 of /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/Condor/2_submit_resub.sub: can't open file joblist_resub.tsv: No such file or directory
+
+ERROR: Failed to parse command file (line 48).
+2026-09-29 14:00 STOPPED dyveto-driver: retrain A-E did not pass (dyveto_retrain.log)
+2026-09-29 19:46 dyveto-retrain STOPPED 13:59 at D: 2/1207 scoring jobs failed (DYG 2024 held 6.1GB>3GB; Data 2024 > longlunch 2h) and the retry condor_submit ran outside Condor/ (relative joblist). Fixed chain (cd + 8GB/workday retries + SKIP_FULL_SCORING). DYG qedit 8000+release, Data resub 12778383 (8GB, workday). Unit hza-dyveto-resume resumes D-E, then starts driver once logs_fsrfix/dyveto_datavmc_code_ready exists. User decisions 19:44: dataVmc optimizations (1)(2)(5)(7) + signal sideband param = true mass.
+2026-09-29 20:06 dataVmc code ready (user 19:44): (1) merge_dataVmc_hists.py replaces hadd (SR nominal 41 s vs 52 min, 61761/61761 identical in jobs-file order); (2) Data/signal sys clones not written (draw outputs 473/473 identical; SR file 103->17 MB); (5) parallel draw; (7) xgboost import removed; signal sideband param = true mass (loop == dataframe, max diff 0.0; param effect 1-3%, JSON change 7-14%). Backups *.bak_dvmcopt_20260929. Flag logs_fsrfix/dyveto_datavmc_code_ready set.
+2026-09-29 20:30 DONE dyveto-retrain A-E (heartbeat /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/logs_fsrfix/dyveto_retrain_heartbeat.txt). Next: dataVmc -> WP -> flashgg
+2026-09-29 21:58 FINDING: scored DY 2024 (input Bkg_MC_dyveto2024) has no weight_sideband_rwgt -> Parque2Root_BDT.should_apply_sideband_reweight matched only exact 'Bkg_MC'. Only dataVmc affected (falls back to loop: same JSON/event-hash weights, slow: dyll_2024 jobs >70 min). Fixed for future (prefix Bkg_MC_, .bak_bkgmcprefix_20260929); current run left to finish.
+2026-09-30 00:04 dataVmc sideband_rwgt: 3 dyll_2024 jobs (12778398.5/30/55) at 11300 s CPU (loop path, no sideband branch). Insurance: rescoring DY 2024 with fixed p2root into run3_bdt_scored_fsrfix_dyrescore_tmp (cluster 12780227, 8GB workday). If the 3 jobs hit the 8 h limit (04:49), swap in rescored files + hadd DYJetsToLL/2024 and resubmit those 3 dataVmc jobs.
+2026-09-30 00:35 PLAN B: unit hza-dyveto-planb (finish_dyveto_datavmc_planb.sh): stop driver, rm 3 slow dyll_2024 jobs, swap rescored DY 2024 (verified 280 common branches identical; old kept *.nobranch_20260930), rerun 3 jobs, merge+draw, then flashgg + dataVmc nominal.
+2026-09-30 01:54 flashgg STOPPED 01:36 at MVA-cut audit (audit script segfaulted). Per-file audit: 2/250 corrupt, both data: mA2 output_2023preBPix (segfault), mA28 output_2023postBPix (read fails 1/49), persistent. Unit hza-dyveto-flashgg-resume: regen 2+28 -> per-file audit -> flashgg START_STAGE=4 -> dataVmc nominal.
+2026-09-30 05:27 FINDING: datacard mva_reweight + photon_csev typed a_h (hist pair) -> kappa normalized to midpoint = symmetrized (mA1 S1 0.910/1.036 written as 0.935/1.065). Forced a_w in calcSystematics.py (.bak_awforce_20260930). Unit hza-dyveto-redo-aw reruns stages 7-9 after current flashgg passes.
+2026-09-30 05:29 DONE dyveto-flashgg (logs dyveto_flashgg.log + dyveto_flashgg_s4.log). Next: mA3 closure WP scan, impacts/bias, closure/plots, AN.
+2026-09-30 05:53 DONE redo datacards/limits with a_w for mva_reweight + csev (log dyveto_flashgg_s7_aw.log; symmetrized reference in snapshot_dyveto_symS1lnN_20260930)
+2026-09-30 06:01 OPEN dyveto impacts/bias: unit hza-dyveto-impbias (chain_dyveto_impbias.sh), clusters 12785950 12785952 (330 jobs), frozen ws Combine/root_t2w_dyveto_20260930, heartbeat dyveto_impbias_heartbeat.txt. OPEN mA3 WP reopt scan: unit hza-dyveto-reopt3, log dyveto_reopt_mA3.log, summary pseudodata_closure/reopt_mA3/summary.txt (09-27 kept in reopt_mA3_preDYveto_20260930). Limits (a_w) new/preDYveto 0.877-1.213 (mA6 1.213, mA26 1.187, mA30 1.103; mA15 0.877).
+2026-09-30 07:01 mA3 reopt (dyveto) DONE: closureZ 0.980 1.76 | 0.984 0.46 (Z 31.13, R 1.18, GOF>=0.45) | 0.986 1.66 | 0.988 0.95 (R 1.16, GOF>=0.92) | 0.990 2.23 | 0.992 1.59 (current) | 0.994 2.15 | 0.996 2.17. Bootstrap 0.984/0.988/0.992 x40: unit hza-dyveto-boot3, log dyveto_boot_mA3.log. Needs user decision on mA3 WP.
+2026-09-30 14:49 DONE dyveto impacts/bias (heartbeat dyveto_impbias_heartbeat.txt, summary dyveto_bias_summary.txt)
+2026-10-01 13:30 USER 2026-10-01: mA3 WP 0.992->0.988 (bootstrap: 0.984 Z 1.06+-1.23 23%>2; 0.988 1.03+-1.07 15%; 0.992 1.62+-1.17 42%); bias >0.2 (mA24 Lau1 -0.232, mA25 Bern6 +0.212 Lau1 -0.215): mA25 Bern cap 5, Lau1 removed at 24/25. Unit hza-dyveto-wp3env (chain_dyveto_wp3_env2425.sh), log dyveto_wp3_env2425.log, heartbeat dyveto_wp3_env2425_heartbeat.txt. Impacts all 30 r 0.997-1.014.
+2026-10-01 15:03 wp3env: mA3 limit 0.06289->0.06602 (x1.050); mA24/25 limits unchanged (best-fit Exp1/Pow1 unchanged; ws verified Exp1/Pow1/Bern5 and Pow1/Exp1/Bern5). Chain stopped at an over-strict check; resumed via resume_dyveto_wp3env_bias.sh (unit hza-dyveto-wp3env-bias), bias+impact 3 24 25 clusters 12793290 12793291.
+2026-10-01 15:34 OPEN 30-pt closure (dyveto): unit hza-dyveto-closure30 (chain_closure30_dyveto.sh; 09-27 results moved to pseudodata_closure/preDYveto_20261001), log dyveto_closure30.log
+2026-10-01 16:09 V3/V8 redone with retrained BDT + vetoed DY (v3v8_extrabkg_20260927/yields_extrabkg.md; old *.preDYveto_20261001): presel (tt+ttG+ttGG)/DY 1.1% (was 0.8%), mA3@0.988 21% (8 raw tt events), mA10 19% (2 raw), others 0-8%; ZGG/DY <=1e-3. tt has no overlap veto (24% iso-photon) -> conservative. Statistically noisy after WP.
+2026-10-01 17:09 30-pt closure (dyveto) DONE: in +-1sigma 20/30 (below band = deficits at 5,7,9,12,22,23; above: 25 Z1.39, 28 Z1.92, 29 Z1.37, 30 Z1.50), max Z 1.92 (mA28); mA3@0.988 Z 0.96 rhat +0.027; 60/60 bkg panels copied to AN.
+2026-10-01 17:09 OPEN post-scan plots (dyveto): unit hza-dyveto-postscan (Plot/_postscan_runner_throttled.sh, <=6 parallel), log dyveto_postscan.log
+2026-10-01 18:34 DONE dyveto mA3 0.988 + env mA24/25 (log dyveto_wp3_env2425.log, heartbeat dyveto_wp3_env2425_heartbeat.txt)
+2026-10-01 18:40 wp3env bias DONE: mA3 worst Bern2 -0.181, mA24 Exp1 -0.129, mA25 Exp1 -0.113 (all < 0.2), impacts r=1.000. Post-scan plots DONE (1h16, throttled).
+2026-10-01 18:45 V9/V10 redone (dyveto): highmass_score_R_significance_mA*.pdf + srAdjacentSlices pdfs; WP JSON md5 unchanged. Summary doc doc/HZa/hza_dyveto_retrain_results_2026-10-01.md. Remaining: AN update, twiki, commits (ask user).
+2026-10-01 20:00 FINDING (AN agent): mA3 datacard lacked S1 scheme-2 lnN (wp3 chain ran apply_bdt_sig without HZA_MVA_REWEIGHT_LNN_JSON; JSON mA3 derived at 0.992). Fix unit hza-dyveto-mA3s1fix (chain_dyveto_mA3_s1fix.sh): S1 eval mA3@0.988 -> apply_bdt_sig -> Tree2WS -> datacards/limits -> bias+impact mA3, impact mA29 (json had 51 params). Also: HZaMVA/using meta.json/json were stale (09-24) -> copied fresh from scripts/ (.bak_preDYveto_20261001), MVA diagnostics rerun.
+2026-10-01 23:02 DONE mA3 S1 fix + mA29 impact (heartbeat dyveto_mA3_s1fix_heartbeat.txt)
+2026-10-01 23:34 mA3 S1 fix done: limit median unchanged 0.06602 (+1sig 0.09549->0.09575), impacts mA3/mA29 r=1.000 (78/50 params), but bias Bern2 -0.211+-0.011 (>0.2). Per AN 7.4 -> Bern1 (GOF 0.17). Unit hza-dyveto-mA3bern1 (chain_dyveto_mA3_bern1.sh).
+2026-10-02 02:00 DONE mA3 Bern2 -> Bern1 (heartbeat dyveto_mA3_bern1_heartbeat.txt)
+2026-10-02 02:17 mA3 Bern1 PASSED (Bern1 -0.106, impact r=1.000 77 params). AN 7.4/7.5 updated + compiled. mA29 impacts 50/81 params (refits Migrad -1, r_lo=-5) and mA24 74/75 -> runjob_expectedImpact.sh gained fallback algos + completeness check (.bak_fallback_20261002); resubmitted impacts 24 29.
+2026-10-02 03:47 impacts complete: mA24 75/75, mA29 81/81 (local run, strategy-1 second pass). AN synced + compiled 190 pp, 0 errors, 0 undefined.
+[2026-10-02 06:10] V11/Sec 8.1 refreshed with post-retrain BDT: plot_mA1_doublepeak.py rerun (inputs run3_bdt_scored_fsrfix 09-29, verified score==current lowmass pkl), 92%->94%, 1.42->1.43, 22%->26%; sigfit 09-30: in-window 30.5-49.0->27.8-47.3%, chi2/ndf 0.17-1.10->0.22-0.67, effSigma 2.09-3.85->1.87-3.82; tail paragraph now 2023preBPix ele (n=2, 4.9% vs 23.8%, 4.1% yield), old 2023postBPix ele single-G case no longer exists. AN Sec-08-01 edited (.bak_newbdt_20261002), figs synced. Provenance studies/l3_review_20260910/v11_mA1_newbdt_20261002/
+2026-10-02 06:33 V2 App B trigger denominator m_a>=2 (user approved 10-02 06:33): full rerun 1044 condor jobs, unit hza-v2trig-mAge2-full + monitor hza-v2trig-mAge2-mon; out /eos/home-p/pelai/HZa/trigdenom_V2_mAge2_20261002/Sig_MC_trigdenomV2mAge2; logs /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/v2_trigdenom_mAge2_20261002/logs. After: App-B trigpanel->trigpanelOL, captions, twiki V2 GREEN.
+2026-10-02 09:13 DONE V2 App B m_a>=2: 1044/1044 (1 job re-run via cms-xrd-global), 65/65 plateau tables; App B all new denominator; PDF acceptance 0.53% (max 0.60%) in Sec 9.1; AN 5c00c0dba+4b44b757e pushed mygithub; HiggsZaAna 2bfeaac3, 811846a5 (not pushed).
+2026-10-03 00:03 START signal reweight (user decision 10-02: signal reweighted with nominal sideband reweight, presel yield kept; lnN option B vs nominal). Unit hza-sigrw (chain_sigrw.sh), heartbeat logs_fsrfix/sigrw_heartbeat.txt. Code: apply_bdt_sig.py (.bak_sigrw_20261002), signal_eff_sumw.py (.bak_sigrw_20261002), make_s1_lnn_json.py (.bak_refnominal_20261002); new JSON s1_lnn_scheme2_sigrw_dyveto.json.
+2026-10-03 01:57 RESUME hza-sigrw at stage 3: mA10 2022preEE and mA15 2023postBPix died on EOS I/O errors (partial outputs, 22/16 trees); apply_bdt_sig.py now writes .partial + rename (.bak_atomic_20261003), chain retries failed jobs (.bak_retry_20261003)
+2026-10-03 10:24 DONE chain_sigrw.sh (heartbeat sigrw_heartbeat.txt)

@@ -833,6 +833,7 @@ def _plot_combined_years_overlay(
     by_year_or_bins: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None,
     by_year_double_bins: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None,
     out_path: Path,
+    ymax_left: Optional[float] = None,
 ) -> None:
     """
     Overlay multiple years in one plot:
@@ -880,7 +881,7 @@ def _plot_combined_years_overlay(
             g_or.GetXaxis().SetTitle("p_{T} (GeV)")
             g_or.GetYaxis().SetTitle("Trigger efficiency (%)")
             g_or.SetMinimum(0.0)
-            g_or.SetMaximum(105.0)
+            g_or.SetMaximum(float(ymax_left) if ymax_left is not None else 105.0)
             g_or.GetXaxis().SetLimits(PT_XMIN, PT_XMAX)
 
             # --- NEW: axis font sizes ---
@@ -894,7 +895,7 @@ def _plot_combined_years_overlay(
         else:
             g_or.Draw("LP SAME")
 
-        leg.AddEntry(g_or, f"{y} Sigle- OR Double-Trigger", "lp")
+        leg.AddEntry(g_or, f"{y} Single- OR Double-Trigger", "lp")
 
         if y in by_year_double:
             g_db = _make_eff_graph(
@@ -911,8 +912,9 @@ def _plot_combined_years_overlay(
     lat.SetNDC()
     lat.SetTextFont(42)
     lat.SetTextSize(0.042)
-    lat.DrawLatex(0.16, 0.52, f"m_{{a}} = {ma} GeV")
-    lat.DrawLatex(0.16, 0.47, title_right)
+    # top right, next to the legend, so the labels stay clear of the efficiency plateau
+    lat.DrawLatex(0.66, 0.83, f"m_{{a}} = {ma} GeV")
+    lat.DrawLatex(0.66, 0.78, title_right)
     keep.append(lat)
 
     # use a generic CMS label for combined overlay
@@ -943,7 +945,7 @@ def main() -> None:
     parser.add_argument("--root-base", default=rootDir, help="Base dir containing mA_M*/{year}.root (default: rootDir).")
     parser.add_argument("--tree", default=treeName, help="TTree name (default: inclusive).")
     # --- NEW: y-axis controls ---
-    parser.add_argument("--ymax-left", type=float, default=160, help="Left y-axis maximum (e.g. 105).")
+    parser.add_argument("--ymax-left", type=float, default=200, help="Left y-axis maximum (e.g. 105).")
     parser.add_argument("--ymax-right", type=float, default=0.2, help="Right y-axis maximum (pass_trigger axis).")
     # V2 study (2026-09-27): read an alternative cutflow directory and plot the curves with a
     # different denominator. The tagger's opt-in study_lep_trigger_eff_otherleg writes ord labels
@@ -1230,6 +1232,7 @@ def main() -> None:
                     by_year_or_bins=by_year_or_bins if by_year_or_bins else None,
                     by_year_double_bins=by_year_db_bins if by_year_db_bins else None,
                     out_path=out_pdf,
+                    ymax_left=args.ymax_left,
                 )
 
 

@@ -1,0 +1,21 @@
+2026-10-01 20:00:29 [1] S1 evaluation mA3 at the current working point
+mA | nominal | zm&hsb | zmnarrow&hsb  (vs none, %) | kappa_down / kappa_up
+ 3 | +0.7 | +1.4 | -3.2 | 0.968 / 1.014
+wrote /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/s1_altsideband_20260927/results/s1_lnn_mA3_0988.json
+2026-10-01 20:00:44 [2] apply_bdt_sig mA3 with the lnN JSON
+2026-10-01 20:04:36 [3] Tree2WS mA3
+2026-10-01 20:05:21 [4] all datacards + t2w + limits
+2026-10-01 20:13:24   mA3 datacard: CMS_hza_mva_reweight lnN 0.968/1.014 0.968/1.014
+  limit comparison done
+2026-10-01 20:32:03 [5] condor: bias + impact mA3, impact mA29
+2026-10-01 20:32:05   clusters 12800528 12800529 
+2026-10-01 20:32:05   idle=12 running=0 held=0
+2026-10-01 21:02:06   idle=0 running=10 held=0
+2026-10-01 21:32:06   idle=0 running=10 held=0
+2026-10-01 22:02:06   idle=0 running=7 held=0
+2026-10-01 22:32:07   idle=0 running=4 held=0
+2026-10-01 23:02:07   idle=0 running=0 held=0
+  mA3 bias Bern2:-0.211 Pow3:+0.068 Lau1:+0.043 Exp1:+0.034
+  mA3 impact r=1.000, 78 parameters
+  mA29 impact r=1.000, 50 parameters
+VERDICT: CHECK

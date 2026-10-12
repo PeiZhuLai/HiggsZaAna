@@ -1,0 +1,13 @@
+TEST GATE 2026-09-29 (9 jobs, 3 files/sample, clusters 12764043-12764051, all summaries present, ~4-6 min wall each)
+(a) completion: 9/9 summary json, successful=true
+(b) tagger def recomputed from NanoAOD (pT>10, any eta, isPrompt|fromHardProcess, dR>0.05): 0 of 198 surviving
+    events has an isolated gen photon; MCOverlapTagger.overlap_selection called with the job's own global-redirector
+    URL gives exactly the recomputed cut on all 9 files; summary n_events == events kept by the cut; sum_weights
+    identical to the old production (normalization uses the pre-veto sum, as intended)
+(c) survival new/old on the same files: 198/259 = 0.764 (E 0.73-0.76, Mu 0.78-0.82, Tau 9/10)
+Strict set equality new == old&(n_tag==0) fails for 4 new-only + ~3 lost events (2%): the seeded (seed=123)
+    photon/electron smearing is drawn over the flattened per-file array AFTER the overlap cut, so removing events
+    shifts every surviving event's smear value (photon pT differs by ~1-2% on 100% of matched events, muon pT
+    identical); the 4 new-only events sit at photon pT~10 GeV / mvaID / m_llgg thresholds. Expected migration,
+    not a veto failure (check_smear_shuffle.py, diff_events_test.py).
+VERDICT: PASS -> full production launched (orchestrate.sh, unit hza-dyveto-orch)

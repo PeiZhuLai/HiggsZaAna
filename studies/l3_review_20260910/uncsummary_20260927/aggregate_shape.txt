@@ -1,0 +1,37 @@
+anchors [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30] entries 140
+
+[FNUF]
+  yield (after MVA cut, yield-weighted over procs): 0.095--0.271%  mean 0.185%   max single process 0.59%
+  yield (preselection only)                        : 0.063--0.105%  mean 0.088%
+  peak shift  mA>=2: median 0.030  max 0.045 GeV | mA=1: median 0.062 max 0.121 GeV
+  resolution  mA>=2: median 0.004  max 0.016 GeV | mA=1: median 0.019 max 0.037 GeV
+
+[Material]
+  yield (after MVA cut, yield-weighted over procs): 0.102--0.216%  mean 0.144%   max single process 0.36%
+  yield (preselection only)                        : 0.039--0.082%  mean 0.061%
+  peak shift  mA>=2: median 0.017  max 0.028 GeV | mA=1: median 0.030 max 0.060 GeV
+  resolution  mA>=2: median 0.003  max 0.019 GeV | mA=1: median 0.012 max 0.024 GeV
+
+[Electron scale/smear]
+  yield (after MVA cut, yield-weighted over procs): 0.012--0.056%  mean 0.023%   max single process 0.47%
+  yield (preselection only)                        : 0.004--0.010%  mean 0.007%
+  peak shift  mA>=2: median 0.003  max 0.076 GeV | mA=1: median 0.004 max 0.083 GeV
+  resolution  mA>=2: median 0.003  max 0.110 GeV | mA=1: median 0.006 max 0.097 GeV
+
+[Muon scale/smear]
+  yield (after MVA cut, yield-weighted over procs): 0.006--0.058%  mean 0.016%   max single process 0.13%
+  yield (preselection only)                        : 0.000--0.003%  mean 0.001%
+  peak shift  mA>=2: median 0.003  max 0.038 GeV | mA=1: median 0.007 max 0.042 GeV
+  resolution  mA>=2: median 0.001  max 0.015 GeV | mA=1: median 0.003 max 0.019 GeV
+
+[Photon scale/smear]
+  yield (after MVA cut, yield-weighted over procs): 0.131--0.665%  mean 0.328%   max single process 1.64%
+  yield (preselection only)                        : 0.078--0.126%  mean 0.097%
+  peak shift  mA>=2: median 0.017  max 0.041 GeV | mA=1: median 0.051 max 0.106 GeV
+  resolution  mA>=2: median 0.009  max 0.031 GeV | mA=1: median 0.024 max 0.058 GeV
+
+[All e/mu/gamma scale+smear]
+  yield (after MVA cut, yield-weighted over procs): 0.137--0.666%  mean 0.333%   max single process 1.64%
+  yield (preselection only)                        : 0.080--0.127%  mean 0.098%
+  peak shift  mA>=2: median 0.036  max 0.076 GeV | mA=1: median 0.056 max 0.106 GeV
+  resolution  mA>=2: median 0.016  max 0.110 GeV | mA=1: median 0.033 max 0.097 GeV

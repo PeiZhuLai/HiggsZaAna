@@ -1,0 +1,5888 @@
+{
+ "meta": {
+  "source": "V2 trigdenom study 2026-09-27",
+  "logs": "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024",
+  "n_job_dirs": 19,
+  "n_jobs_used": 19,
+  "status": "OK",
+  "out_files_used": [
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_1/12806694.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_10/12806703.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_11/12806704.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_12/12806705.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_13/12806706.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_14/12806707.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_15/12806708.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_16/12806709.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_17/12806710.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_18/12806711.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_19/12806712.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_2/12806695.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_3/12806696.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_4/12806697.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_5/12806698.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_6/12806699.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_7/12806700.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_8/12806701.0.out",
+   "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/eos_logs/Sig_MC_trigdenomV2mAge2/mA_M2_2024/job_9/12806702.0.out"
+  ]
+ },
+ "trigeff_nominal": {
+  "trigeff_ele_leadN2_OR_ele": {
+   "overall": {
+    "in_bin": 106403.0,
+    "pass_trigger": 96669.0,
+    "eff": 0.9085176169844835
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 31.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 52.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 78.0,
+     "pass_trigger": 1.0,
+     "eff": 0.01282051282051282
+    },
+    "pt14to16": {
+     "in_bin": 177.0,
+     "pass_trigger": 4.0,
+     "eff": 0.022598870056497175
+    },
+    "pt16to18": {
+     "in_bin": 215.0,
+     "pass_trigger": 4.0,
+     "eff": 0.018604651162790697
+    },
+    "pt18to20": {
+     "in_bin": 320.0,
+     "pass_trigger": 7.0,
+     "eff": 0.021875
+    },
+    "pt20to22": {
+     "in_bin": 462.0,
+     "pass_trigger": 14.0,
+     "eff": 0.030303030303030304
+    },
+    "pt22to24": {
+     "in_bin": 627.0,
+     "pass_trigger": 148.0,
+     "eff": 0.23604465709728867
+    },
+    "pt24to26": {
+     "in_bin": 771.0,
+     "pass_trigger": 385.0,
+     "eff": 0.4993514915693904
+    },
+    "pt26to28": {
+     "in_bin": 1044.0,
+     "pass_trigger": 625.0,
+     "eff": 0.5986590038314177
+    },
+    "pt28to30": {
+     "in_bin": 1297.0,
+     "pass_trigger": 837.0,
+     "eff": 0.6453353893600616
+    },
+    "pt30to32": {
+     "in_bin": 1631.0,
+     "pass_trigger": 1280.0,
+     "eff": 0.7847946045370938
+    },
+    "pt32to34": {
+     "in_bin": 1999.0,
+     "pass_trigger": 1657.0,
+     "eff": 0.8289144572286143
+    },
+    "pt34to36": {
+     "in_bin": 2374.0,
+     "pass_trigger": 2096.0,
+     "eff": 0.8828980623420387
+    },
+    "pt36to38": {
+     "in_bin": 2925.0,
+     "pass_trigger": 2570.0,
+     "eff": 0.8786324786324786
+    },
+    "pt38to40": {
+     "in_bin": 3547.0,
+     "pass_trigger": 3199.0,
+     "eff": 0.9018889202142656
+    },
+    "pt40to42": {
+     "in_bin": 4119.0,
+     "pass_trigger": 3778.0,
+     "eff": 0.9172129157562515
+    },
+    "pt42to44": {
+     "in_bin": 5135.0,
+     "pass_trigger": 4754.0,
+     "eff": 0.9258033106134372
+    },
+    "pt44to46": {
+     "in_bin": 6350.0,
+     "pass_trigger": 5962.0,
+     "eff": 0.9388976377952756
+    },
+    "pt46to48": {
+     "in_bin": 7226.0,
+     "pass_trigger": 6830.0,
+     "eff": 0.9451978964849156
+    },
+    "pt48to50": {
+     "in_bin": 7290.0,
+     "pass_trigger": 6906.0,
+     "eff": 0.9473251028806584
+    },
+    "pt50to52": {
+     "in_bin": 6743.0,
+     "pass_trigger": 6400.0,
+     "eff": 0.9491324336348806
+    },
+    "pt52to54": {
+     "in_bin": 6195.0,
+     "pass_trigger": 5890.0,
+     "eff": 0.9507667473769169
+    },
+    "pt54to56": {
+     "in_bin": 5406.0,
+     "pass_trigger": 5126.0,
+     "eff": 0.948205697373289
+    },
+    "pt56to58": {
+     "in_bin": 4570.0,
+     "pass_trigger": 4330.0,
+     "eff": 0.9474835886214442
+    },
+    "pt58to60": {
+     "in_bin": 3842.0,
+     "pass_trigger": 3634.0,
+     "eff": 0.9458615304528891
+    },
+    "pt60to62": {
+     "in_bin": 3276.0,
+     "pass_trigger": 3113.0,
+     "eff": 0.9502442002442002
+    },
+    "pt62to64": {
+     "in_bin": 2827.0,
+     "pass_trigger": 2677.0,
+     "eff": 0.9469402193137602
+    },
+    "pt64to66": {
+     "in_bin": 2358.0,
+     "pass_trigger": 2232.0,
+     "eff": 0.9465648854961832
+    },
+    "pt66to68": {
+     "in_bin": 2063.0,
+     "pass_trigger": 1932.0,
+     "eff": 0.9365002423654871
+    },
+    "pt68to70": {
+     "in_bin": 1778.0,
+     "pass_trigger": 1684.0,
+     "eff": 0.9471316085489314
+    },
+    "pt70to72": {
+     "in_bin": 1561.0,
+     "pass_trigger": 1452.0,
+     "eff": 0.9301729660474055
+    },
+    "pt72to74": {
+     "in_bin": 1330.0,
+     "pass_trigger": 1250.0,
+     "eff": 0.9398496240601504
+    },
+    "pt74to76": {
+     "in_bin": 1228.0,
+     "pass_trigger": 1144.0,
+     "eff": 0.9315960912052117
+    },
+    "pt76to78": {
+     "in_bin": 1050.0,
+     "pass_trigger": 997.0,
+     "eff": 0.9495238095238095
+    },
+    "pt78to80": {
+     "in_bin": 986.0,
+     "pass_trigger": 943.0,
+     "eff": 0.9563894523326572
+    },
+    "pt80to82": {
+     "in_bin": 896.0,
+     "pass_trigger": 851.0,
+     "eff": 0.9497767857142857
+    },
+    "pt82to84": {
+     "in_bin": 829.0,
+     "pass_trigger": 798.0,
+     "eff": 0.962605548854041
+    },
+    "pt84to86": {
+     "in_bin": 689.0,
+     "pass_trigger": 653.0,
+     "eff": 0.9477503628447025
+    },
+    "pt86to88": {
+     "in_bin": 655.0,
+     "pass_trigger": 625.0,
+     "eff": 0.9541984732824428
+    },
+    "pt88to90": {
+     "in_bin": 660.0,
+     "pass_trigger": 629.0,
+     "eff": 0.953030303030303
+    },
+    "pt90to92": {
+     "in_bin": 556.0,
+     "pass_trigger": 529.0,
+     "eff": 0.9514388489208633
+    },
+    "pt92to94": {
+     "in_bin": 502.0,
+     "pass_trigger": 469.0,
+     "eff": 0.9342629482071713
+    },
+    "pt94to96": {
+     "in_bin": 450.0,
+     "pass_trigger": 423.0,
+     "eff": 0.94
+    },
+    "pt96to98": {
+     "in_bin": 441.0,
+     "pass_trigger": 414.0,
+     "eff": 0.9387755102040817
+    },
+    "pt98to100": {
+     "in_bin": 426.0,
+     "pass_trigger": 406.0,
+     "eff": 0.9530516431924883
+    },
+    "pt100toInf": {
+     "in_bin": 7416.0,
+     "pass_trigger": 7011.0,
+     "eff": 0.9453883495145631
+    }
+   }
+  },
+  "trigeff_ele_leadN2_double_ele": {
+   "overall": {
+    "in_bin": 106403.0,
+    "pass_trigger": 81509.0,
+    "eff": 0.7660404311908499
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 31.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 52.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 78.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt14to16": {
+     "in_bin": 177.0,
+     "pass_trigger": 4.0,
+     "eff": 0.022598870056497175
+    },
+    "pt16to18": {
+     "in_bin": 215.0,
+     "pass_trigger": 4.0,
+     "eff": 0.018604651162790697
+    },
+    "pt18to20": {
+     "in_bin": 320.0,
+     "pass_trigger": 7.0,
+     "eff": 0.021875
+    },
+    "pt20to22": {
+     "in_bin": 462.0,
+     "pass_trigger": 14.0,
+     "eff": 0.030303030303030304
+    },
+    "pt22to24": {
+     "in_bin": 627.0,
+     "pass_trigger": 148.0,
+     "eff": 0.23604465709728867
+    },
+    "pt24to26": {
+     "in_bin": 771.0,
+     "pass_trigger": 384.0,
+     "eff": 0.4980544747081712
+    },
+    "pt26to28": {
+     "in_bin": 1044.0,
+     "pass_trigger": 622.0,
+     "eff": 0.5957854406130269
+    },
+    "pt28to30": {
+     "in_bin": 1297.0,
+     "pass_trigger": 799.0,
+     "eff": 0.6160370084811102
+    },
+    "pt30to32": {
+     "in_bin": 1631.0,
+     "pass_trigger": 1056.0,
+     "eff": 0.6474555487431024
+    },
+    "pt32to34": {
+     "in_bin": 1999.0,
+     "pass_trigger": 1349.0,
+     "eff": 0.6748374187093547
+    },
+    "pt34to36": {
+     "in_bin": 2374.0,
+     "pass_trigger": 1630.0,
+     "eff": 0.6866048862679023
+    },
+    "pt36to38": {
+     "in_bin": 2925.0,
+     "pass_trigger": 2111.0,
+     "eff": 0.7217094017094017
+    },
+    "pt38to40": {
+     "in_bin": 3547.0,
+     "pass_trigger": 2627.0,
+     "eff": 0.7406258810262193
+    },
+    "pt40to42": {
+     "in_bin": 4119.0,
+     "pass_trigger": 3145.0,
+     "eff": 0.7635348385530468
+    },
+    "pt42to44": {
+     "in_bin": 5135.0,
+     "pass_trigger": 3939.0,
+     "eff": 0.7670886075949367
+    },
+    "pt44to46": {
+     "in_bin": 6350.0,
+     "pass_trigger": 5038.0,
+     "eff": 0.7933858267716536
+    },
+    "pt46to48": {
+     "in_bin": 7226.0,
+     "pass_trigger": 5854.0,
+     "eff": 0.8101300858012732
+    },
+    "pt48to50": {
+     "in_bin": 7290.0,
+     "pass_trigger": 5957.0,
+     "eff": 0.8171467764060356
+    },
+    "pt50to52": {
+     "in_bin": 6743.0,
+     "pass_trigger": 5462.0,
+     "eff": 0.8100252113302684
+    },
+    "pt52to54": {
+     "in_bin": 6195.0,
+     "pass_trigger": 5040.0,
+     "eff": 0.8135593220338984
+    },
+    "pt54to56": {
+     "in_bin": 5406.0,
+     "pass_trigger": 4355.0,
+     "eff": 0.8055863854975953
+    },
+    "pt56to58": {
+     "in_bin": 4570.0,
+     "pass_trigger": 3685.0,
+     "eff": 0.8063457330415755
+    },
+    "pt58to60": {
+     "in_bin": 3842.0,
+     "pass_trigger": 3064.0,
+     "eff": 0.797501301405518
+    },
+    "pt60to62": {
+     "in_bin": 3276.0,
+     "pass_trigger": 2619.0,
+     "eff": 0.7994505494505495
+    },
+    "pt62to64": {
+     "in_bin": 2827.0,
+     "pass_trigger": 2276.0,
+     "eff": 0.805093738945879
+    },
+    "pt64to66": {
+     "in_bin": 2358.0,
+     "pass_trigger": 1874.0,
+     "eff": 0.7947413061916879
+    },
+    "pt66to68": {
+     "in_bin": 2063.0,
+     "pass_trigger": 1673.0,
+     "eff": 0.8109549200193893
+    },
+    "pt68to70": {
+     "in_bin": 1778.0,
+     "pass_trigger": 1413.0,
+     "eff": 0.7947131608548932
+    },
+    "pt70to72": {
+     "in_bin": 1561.0,
+     "pass_trigger": 1246.0,
+     "eff": 0.7982062780269058
+    },
+    "pt72to74": {
+     "in_bin": 1330.0,
+     "pass_trigger": 1048.0,
+     "eff": 0.7879699248120301
+    },
+    "pt74to76": {
+     "in_bin": 1228.0,
+     "pass_trigger": 958.0,
+     "eff": 0.7801302931596091
+    },
+    "pt76to78": {
+     "in_bin": 1050.0,
+     "pass_trigger": 840.0,
+     "eff": 0.8
+    },
+    "pt78to80": {
+     "in_bin": 986.0,
+     "pass_trigger": 794.0,
+     "eff": 0.8052738336713996
+    },
+    "pt80to82": {
+     "in_bin": 896.0,
+     "pass_trigger": 679.0,
+     "eff": 0.7578125
+    },
+    "pt82to84": {
+     "in_bin": 829.0,
+     "pass_trigger": 651.0,
+     "eff": 0.7852834740651388
+    },
+    "pt84to86": {
+     "in_bin": 689.0,
+     "pass_trigger": 535.0,
+     "eff": 0.7764876632801161
+    },
+    "pt86to88": {
+     "in_bin": 655.0,
+     "pass_trigger": 519.0,
+     "eff": 0.7923664122137405
+    },
+    "pt88to90": {
+     "in_bin": 660.0,
+     "pass_trigger": 535.0,
+     "eff": 0.8106060606060606
+    },
+    "pt90to92": {
+     "in_bin": 556.0,
+     "pass_trigger": 439.0,
+     "eff": 0.789568345323741
+    },
+    "pt92to94": {
+     "in_bin": 502.0,
+     "pass_trigger": 384.0,
+     "eff": 0.7649402390438247
+    },
+    "pt94to96": {
+     "in_bin": 450.0,
+     "pass_trigger": 346.0,
+     "eff": 0.7688888888888888
+    },
+    "pt96to98": {
+     "in_bin": 441.0,
+     "pass_trigger": 341.0,
+     "eff": 0.7732426303854876
+    },
+    "pt98to100": {
+     "in_bin": 426.0,
+     "pass_trigger": 346.0,
+     "eff": 0.812206572769953
+    },
+    "pt100toInf": {
+     "in_bin": 7416.0,
+     "pass_trigger": 5699.0,
+     "eff": 0.7684735706580367
+    }
+   }
+  },
+  "trigeff_ele_leadOL_OR_ele": {
+   "overall": {
+    "in_bin": 99651.0,
+    "pass_trigger": 92357.0,
+    "eff": 0.9268045478720736
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt14to16": {
+     "in_bin": 8.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt16to18": {
+     "in_bin": 63.0,
+     "pass_trigger": 1.0,
+     "eff": 0.015873015873015872
+    },
+    "pt18to20": {
+     "in_bin": 159.0,
+     "pass_trigger": 3.0,
+     "eff": 0.018867924528301886
+    },
+    "pt20to22": {
+     "in_bin": 262.0,
+     "pass_trigger": 8.0,
+     "eff": 0.030534351145038167
+    },
+    "pt22to24": {
+     "in_bin": 411.0,
+     "pass_trigger": 122.0,
+     "eff": 0.29683698296836986
+    },
+    "pt24to26": {
+     "in_bin": 554.0,
+     "pass_trigger": 334.0,
+     "eff": 0.6028880866425993
+    },
+    "pt26to28": {
+     "in_bin": 813.0,
+     "pass_trigger": 558.0,
+     "eff": 0.6863468634686347
+    },
+    "pt28to30": {
+     "in_bin": 1028.0,
+     "pass_trigger": 742.0,
+     "eff": 0.7217898832684825
+    },
+    "pt30to32": {
+     "in_bin": 1358.0,
+     "pass_trigger": 1112.0,
+     "eff": 0.8188512518409425
+    },
+    "pt32to34": {
+     "in_bin": 1751.0,
+     "pass_trigger": 1489.0,
+     "eff": 0.8503712164477442
+    },
+    "pt34to36": {
+     "in_bin": 2121.0,
+     "pass_trigger": 1893.0,
+     "eff": 0.8925035360678925
+    },
+    "pt36to38": {
+     "in_bin": 2680.0,
+     "pass_trigger": 2377.0,
+     "eff": 0.8869402985074627
+    },
+    "pt38to40": {
+     "in_bin": 3279.0,
+     "pass_trigger": 2990.0,
+     "eff": 0.911863372979567
+    },
+    "pt40to42": {
+     "in_bin": 3901.0,
+     "pass_trigger": 3602.0,
+     "eff": 0.9233529864137401
+    },
+    "pt42to44": {
+     "in_bin": 4932.0,
+     "pass_trigger": 4590.0,
+     "eff": 0.9306569343065694
+    },
+    "pt44to46": {
+     "in_bin": 6116.0,
+     "pass_trigger": 5775.0,
+     "eff": 0.9442446043165468
+    },
+    "pt46to48": {
+     "in_bin": 7041.0,
+     "pass_trigger": 6686.0,
+     "eff": 0.9495810254225252
+    },
+    "pt48to50": {
+     "in_bin": 7116.0,
+     "pass_trigger": 6772.0,
+     "eff": 0.9516582349634626
+    },
+    "pt50to52": {
+     "in_bin": 6570.0,
+     "pass_trigger": 6248.0,
+     "eff": 0.9509893455098934
+    },
+    "pt52to54": {
+     "in_bin": 6068.0,
+     "pass_trigger": 5792.0,
+     "eff": 0.954515491100857
+    },
+    "pt54to56": {
+     "in_bin": 5256.0,
+     "pass_trigger": 5009.0,
+     "eff": 0.9530060882800608
+    },
+    "pt56to58": {
+     "in_bin": 4435.0,
+     "pass_trigger": 4214.0,
+     "eff": 0.9501691093573844
+    },
+    "pt58to60": {
+     "in_bin": 3716.0,
+     "pass_trigger": 3528.0,
+     "eff": 0.9494079655543596
+    },
+    "pt60to62": {
+     "in_bin": 3173.0,
+     "pass_trigger": 3023.0,
+     "eff": 0.9527261266939805
+    },
+    "pt62to64": {
+     "in_bin": 2734.0,
+     "pass_trigger": 2597.0,
+     "eff": 0.9498902706656913
+    },
+    "pt64to66": {
+     "in_bin": 2262.0,
+     "pass_trigger": 2156.0,
+     "eff": 0.9531388152077808
+    },
+    "pt66to68": {
+     "in_bin": 1993.0,
+     "pass_trigger": 1876.0,
+     "eff": 0.941294530858003
+    },
+    "pt68to70": {
+     "in_bin": 1673.0,
+     "pass_trigger": 1595.0,
+     "eff": 0.9533771667662881
+    },
+    "pt70to72": {
+     "in_bin": 1494.0,
+     "pass_trigger": 1392.0,
+     "eff": 0.9317269076305221
+    },
+    "pt72to74": {
+     "in_bin": 1245.0,
+     "pass_trigger": 1182.0,
+     "eff": 0.9493975903614458
+    },
+    "pt74to76": {
+     "in_bin": 1164.0,
+     "pass_trigger": 1087.0,
+     "eff": 0.9338487972508591
+    },
+    "pt76to78": {
+     "in_bin": 1008.0,
+     "pass_trigger": 962.0,
+     "eff": 0.9543650793650794
+    },
+    "pt78to80": {
+     "in_bin": 937.0,
+     "pass_trigger": 901.0,
+     "eff": 0.9615795090715048
+    },
+    "pt80to82": {
+     "in_bin": 841.0,
+     "pass_trigger": 799.0,
+     "eff": 0.9500594530321046
+    },
+    "pt82to84": {
+     "in_bin": 778.0,
+     "pass_trigger": 753.0,
+     "eff": 0.967866323907455
+    },
+    "pt84to86": {
+     "in_bin": 644.0,
+     "pass_trigger": 609.0,
+     "eff": 0.9456521739130435
+    },
+    "pt86to88": {
+     "in_bin": 612.0,
+     "pass_trigger": 583.0,
+     "eff": 0.9526143790849673
+    },
+    "pt88to90": {
+     "in_bin": 619.0,
+     "pass_trigger": 589.0,
+     "eff": 0.9515347334410339
+    },
+    "pt90to92": {
+     "in_bin": 520.0,
+     "pass_trigger": 495.0,
+     "eff": 0.9519230769230769
+    },
+    "pt92to94": {
+     "in_bin": 475.0,
+     "pass_trigger": 448.0,
+     "eff": 0.9431578947368421
+    },
+    "pt94to96": {
+     "in_bin": 414.0,
+     "pass_trigger": 390.0,
+     "eff": 0.9420289855072463
+    },
+    "pt96to98": {
+     "in_bin": 406.0,
+     "pass_trigger": 383.0,
+     "eff": 0.9433497536945813
+    },
+    "pt98to100": {
+     "in_bin": 398.0,
+     "pass_trigger": 379.0,
+     "eff": 0.9522613065326633
+    },
+    "pt100toInf": {
+     "in_bin": 6623.0,
+     "pass_trigger": 6313.0,
+     "eff": 0.9531934168805677
+    }
+   }
+  },
+  "trigeff_ele_leadOL_double_ele": {
+   "overall": {
+    "in_bin": 99651.0,
+    "pass_trigger": 79673.0,
+    "eff": 0.799520325937522
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt14to16": {
+     "in_bin": 8.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt16to18": {
+     "in_bin": 63.0,
+     "pass_trigger": 1.0,
+     "eff": 0.015873015873015872
+    },
+    "pt18to20": {
+     "in_bin": 159.0,
+     "pass_trigger": 3.0,
+     "eff": 0.018867924528301886
+    },
+    "pt20to22": {
+     "in_bin": 262.0,
+     "pass_trigger": 8.0,
+     "eff": 0.030534351145038167
+    },
+    "pt22to24": {
+     "in_bin": 411.0,
+     "pass_trigger": 122.0,
+     "eff": 0.29683698296836986
+    },
+    "pt24to26": {
+     "in_bin": 554.0,
+     "pass_trigger": 334.0,
+     "eff": 0.6028880866425993
+    },
+    "pt26to28": {
+     "in_bin": 813.0,
+     "pass_trigger": 557.0,
+     "eff": 0.6851168511685117
+    },
+    "pt28to30": {
+     "in_bin": 1028.0,
+     "pass_trigger": 726.0,
+     "eff": 0.7062256809338522
+    },
+    "pt30to32": {
+     "in_bin": 1358.0,
+     "pass_trigger": 973.0,
+     "eff": 0.7164948453608248
+    },
+    "pt32to34": {
+     "in_bin": 1751.0,
+     "pass_trigger": 1283.0,
+     "eff": 0.7327241576242147
+    },
+    "pt34to36": {
+     "in_bin": 2121.0,
+     "pass_trigger": 1554.0,
+     "eff": 0.7326732673267327
+    },
+    "pt36to38": {
+     "in_bin": 2680.0,
+     "pass_trigger": 2042.0,
+     "eff": 0.7619402985074627
+    },
+    "pt38to40": {
+     "in_bin": 3279.0,
+     "pass_trigger": 2554.0,
+     "eff": 0.7788960048795365
+    },
+    "pt40to42": {
+     "in_bin": 3901.0,
+     "pass_trigger": 3067.0,
+     "eff": 0.7862086644450141
+    },
+    "pt42to44": {
+     "in_bin": 4932.0,
+     "pass_trigger": 3882.0,
+     "eff": 0.7871046228710462
+    },
+    "pt44to46": {
+     "in_bin": 6116.0,
+     "pass_trigger": 4966.0,
+     "eff": 0.8119686069326357
+    },
+    "pt46to48": {
+     "in_bin": 7041.0,
+     "pass_trigger": 5799.0,
+     "eff": 0.8236046016190882
+    },
+    "pt48to50": {
+     "in_bin": 7116.0,
+     "pass_trigger": 5894.0,
+     "eff": 0.828274311410905
+    },
+    "pt50to52": {
+     "in_bin": 6570.0,
+     "pass_trigger": 5423.0,
+     "eff": 0.8254185692541857
+    },
+    "pt52to54": {
+     "in_bin": 6068.0,
+     "pass_trigger": 4998.0,
+     "eff": 0.8236651285431773
+    },
+    "pt54to56": {
+     "in_bin": 5256.0,
+     "pass_trigger": 4306.0,
+     "eff": 0.8192541856925418
+    },
+    "pt56to58": {
+     "in_bin": 4435.0,
+     "pass_trigger": 3643.0,
+     "eff": 0.8214205186020294
+    },
+    "pt58to60": {
+     "in_bin": 3716.0,
+     "pass_trigger": 3020.0,
+     "eff": 0.8127018299246501
+    },
+    "pt60to62": {
+     "in_bin": 3173.0,
+     "pass_trigger": 2580.0,
+     "eff": 0.8131106208635361
+    },
+    "pt62to64": {
+     "in_bin": 2734.0,
+     "pass_trigger": 2243.0,
+     "eff": 0.8204096561814191
+    },
+    "pt64to66": {
+     "in_bin": 2262.0,
+     "pass_trigger": 1850.0,
+     "eff": 0.8178603006189213
+    },
+    "pt66to68": {
+     "in_bin": 1993.0,
+     "pass_trigger": 1639.0,
+     "eff": 0.8223783241344707
+    },
+    "pt68to70": {
+     "in_bin": 1673.0,
+     "pass_trigger": 1382.0,
+     "eff": 0.8260609683203826
+    },
+    "pt70to72": {
+     "in_bin": 1494.0,
+     "pass_trigger": 1222.0,
+     "eff": 0.8179384203480589
+    },
+    "pt72to74": {
+     "in_bin": 1245.0,
+     "pass_trigger": 1022.0,
+     "eff": 0.8208835341365461
+    },
+    "pt74to76": {
+     "in_bin": 1164.0,
+     "pass_trigger": 945.0,
+     "eff": 0.8118556701030928
+    },
+    "pt76to78": {
+     "in_bin": 1008.0,
+     "pass_trigger": 825.0,
+     "eff": 0.8184523809523809
+    },
+    "pt78to80": {
+     "in_bin": 937.0,
+     "pass_trigger": 776.0,
+     "eff": 0.8281750266808965
+    },
+    "pt80to82": {
+     "in_bin": 841.0,
+     "pass_trigger": 662.0,
+     "eff": 0.7871581450653984
+    },
+    "pt82to84": {
+     "in_bin": 778.0,
+     "pass_trigger": 637.0,
+     "eff": 0.8187660668380463
+    },
+    "pt84to86": {
+     "in_bin": 644.0,
+     "pass_trigger": 518.0,
+     "eff": 0.8043478260869565
+    },
+    "pt86to88": {
+     "in_bin": 612.0,
+     "pass_trigger": 506.0,
+     "eff": 0.826797385620915
+    },
+    "pt88to90": {
+     "in_bin": 619.0,
+     "pass_trigger": 521.0,
+     "eff": 0.8416801292407108
+    },
+    "pt90to92": {
+     "in_bin": 520.0,
+     "pass_trigger": 425.0,
+     "eff": 0.8173076923076923
+    },
+    "pt92to94": {
+     "in_bin": 475.0,
+     "pass_trigger": 374.0,
+     "eff": 0.7873684210526316
+    },
+    "pt94to96": {
+     "in_bin": 414.0,
+     "pass_trigger": 338.0,
+     "eff": 0.8164251207729468
+    },
+    "pt96to98": {
+     "in_bin": 406.0,
+     "pass_trigger": 328.0,
+     "eff": 0.8078817733990148
+    },
+    "pt98to100": {
+     "in_bin": 398.0,
+     "pass_trigger": 329.0,
+     "eff": 0.8266331658291457
+    },
+    "pt100toInf": {
+     "in_bin": 6623.0,
+     "pass_trigger": 5396.0,
+     "eff": 0.8147365242337309
+    }
+   }
+  },
+  "trigeff_ele_lead_OR_ele": {
+   "overall": {
+    "in_bin": 179479.0,
+    "pass_trigger": 128823.0,
+    "eff": 0.7177608522445523
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 3143.0,
+     "pass_trigger": 22.0,
+     "eff": 0.006999681832643971
+    },
+    "pt10to12": {
+     "in_bin": 2300.0,
+     "pass_trigger": 26.0,
+     "eff": 0.011304347826086957
+    },
+    "pt12to14": {
+     "in_bin": 2654.0,
+     "pass_trigger": 64.0,
+     "eff": 0.024114544084400905
+    },
+    "pt14to16": {
+     "in_bin": 3006.0,
+     "pass_trigger": 95.0,
+     "eff": 0.031603459747172324
+    },
+    "pt16to18": {
+     "in_bin": 3253.0,
+     "pass_trigger": 122.0,
+     "eff": 0.03750384260682447
+    },
+    "pt18to20": {
+     "in_bin": 3431.0,
+     "pass_trigger": 125.0,
+     "eff": 0.036432526960069954
+    },
+    "pt20to22": {
+     "in_bin": 3689.0,
+     "pass_trigger": 132.0,
+     "eff": 0.03578205475738683
+    },
+    "pt22to24": {
+     "in_bin": 3753.0,
+     "pass_trigger": 313.0,
+     "eff": 0.08339994670929923
+    },
+    "pt24to26": {
+     "in_bin": 3843.0,
+     "pass_trigger": 613.0,
+     "eff": 0.15951079885506114
+    },
+    "pt26to28": {
+     "in_bin": 4098.0,
+     "pass_trigger": 912.0,
+     "eff": 0.2225475841874085
+    },
+    "pt28to30": {
+     "in_bin": 4335.0,
+     "pass_trigger": 1333.0,
+     "eff": 0.3074971164936563
+    },
+    "pt30to32": {
+     "in_bin": 4598.0,
+     "pass_trigger": 2798.0,
+     "eff": 0.60852544584602
+    },
+    "pt32to34": {
+     "in_bin": 5027.0,
+     "pass_trigger": 3628.0,
+     "eff": 0.7217028048537896
+    },
+    "pt34to36": {
+     "in_bin": 5255.0,
+     "pass_trigger": 4194.0,
+     "eff": 0.7980970504281637
+    },
+    "pt36to38": {
+     "in_bin": 5603.0,
+     "pass_trigger": 4493.0,
+     "eff": 0.8018918436551847
+    },
+    "pt38to40": {
+     "in_bin": 6195.0,
+     "pass_trigger": 5156.0,
+     "eff": 0.8322841000807103
+    },
+    "pt40to42": {
+     "in_bin": 6600.0,
+     "pass_trigger": 5619.0,
+     "eff": 0.8513636363636363
+    },
+    "pt42to44": {
+     "in_bin": 7411.0,
+     "pass_trigger": 6466.0,
+     "eff": 0.8724868438807178
+    },
+    "pt44to46": {
+     "in_bin": 8550.0,
+     "pass_trigger": 7658.0,
+     "eff": 0.8956725146198831
+    },
+    "pt46to48": {
+     "in_bin": 9278.0,
+     "pass_trigger": 8428.0,
+     "eff": 0.9083854278939426
+    },
+    "pt48to50": {
+     "in_bin": 9034.0,
+     "pass_trigger": 8285.0,
+     "eff": 0.9170909895948638
+    },
+    "pt50to52": {
+     "in_bin": 8413.0,
+     "pass_trigger": 7704.0,
+     "eff": 0.9157256626649233
+    },
+    "pt52to54": {
+     "in_bin": 7676.0,
+     "pass_trigger": 7081.0,
+     "eff": 0.9224856696195936
+    },
+    "pt54to56": {
+     "in_bin": 6616.0,
+     "pass_trigger": 6092.0,
+     "eff": 0.9207980652962515
+    },
+    "pt56to58": {
+     "in_bin": 5684.0,
+     "pass_trigger": 5230.0,
+     "eff": 0.9201266713581985
+    },
+    "pt58to60": {
+     "in_bin": 4755.0,
+     "pass_trigger": 4374.0,
+     "eff": 0.9198738170347003
+    },
+    "pt60to62": {
+     "in_bin": 4156.0,
+     "pass_trigger": 3830.0,
+     "eff": 0.9215591915303176
+    },
+    "pt62to64": {
+     "in_bin": 3511.0,
+     "pass_trigger": 3230.0,
+     "eff": 0.9199658217032185
+    },
+    "pt64to66": {
+     "in_bin": 3010.0,
+     "pass_trigger": 2765.0,
+     "eff": 0.9186046511627907
+    },
+    "pt66to68": {
+     "in_bin": 2595.0,
+     "pass_trigger": 2364.0,
+     "eff": 0.9109826589595376
+    },
+    "pt68to70": {
+     "in_bin": 2272.0,
+     "pass_trigger": 2092.0,
+     "eff": 0.920774647887324
+    },
+    "pt70to72": {
+     "in_bin": 2044.0,
+     "pass_trigger": 1844.0,
+     "eff": 0.9021526418786693
+    },
+    "pt72to74": {
+     "in_bin": 1743.0,
+     "pass_trigger": 1598.0,
+     "eff": 0.9168100975329891
+    },
+    "pt74to76": {
+     "in_bin": 1611.0,
+     "pass_trigger": 1445.0,
+     "eff": 0.8969584109248914
+    },
+    "pt76to78": {
+     "in_bin": 1400.0,
+     "pass_trigger": 1290.0,
+     "eff": 0.9214285714285714
+    },
+    "pt78to80": {
+     "in_bin": 1267.0,
+     "pass_trigger": 1166.0,
+     "eff": 0.920284135753749
+    },
+    "pt80to82": {
+     "in_bin": 1182.0,
+     "pass_trigger": 1086.0,
+     "eff": 0.9187817258883249
+    },
+    "pt82to84": {
+     "in_bin": 1094.0,
+     "pass_trigger": 1006.0,
+     "eff": 0.9195612431444241
+    },
+    "pt84to86": {
+     "in_bin": 941.0,
+     "pass_trigger": 868.0,
+     "eff": 0.922422954303932
+    },
+    "pt86to88": {
+     "in_bin": 873.0,
+     "pass_trigger": 806.0,
+     "eff": 0.9232531500572738
+    },
+    "pt88to90": {
+     "in_bin": 852.0,
+     "pass_trigger": 788.0,
+     "eff": 0.9248826291079812
+    },
+    "pt90to92": {
+     "in_bin": 745.0,
+     "pass_trigger": 692.0,
+     "eff": 0.9288590604026845
+    },
+    "pt92to94": {
+     "in_bin": 676.0,
+     "pass_trigger": 614.0,
+     "eff": 0.908284023668639
+    },
+    "pt94to96": {
+     "in_bin": 595.0,
+     "pass_trigger": 544.0,
+     "eff": 0.9142857142857143
+    },
+    "pt96to98": {
+     "in_bin": 579.0,
+     "pass_trigger": 534.0,
+     "eff": 0.9222797927461139
+    },
+    "pt98to100": {
+     "in_bin": 549.0,
+     "pass_trigger": 499.0,
+     "eff": 0.9089253187613844
+    },
+    "pt100toInf": {
+     "in_bin": 9584.0,
+     "pass_trigger": 8799.0,
+     "eff": 0.9180926544240401
+    }
+   }
+  },
+  "trigeff_ele_lead_double_ele": {
+   "overall": {
+    "in_bin": 179479.0,
+    "pass_trigger": 88391.0,
+    "eff": 0.4924865861744271
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 3143.0,
+     "pass_trigger": 5.0,
+     "eff": 0.001590836780146357
+    },
+    "pt10to12": {
+     "in_bin": 2300.0,
+     "pass_trigger": 7.0,
+     "eff": 0.003043478260869565
+    },
+    "pt12to14": {
+     "in_bin": 2654.0,
+     "pass_trigger": 52.0,
+     "eff": 0.019593067068575734
+    },
+    "pt14to16": {
+     "in_bin": 3006.0,
+     "pass_trigger": 90.0,
+     "eff": 0.029940119760479042
+    },
+    "pt16to18": {
+     "in_bin": 3253.0,
+     "pass_trigger": 108.0,
+     "eff": 0.033200122963418385
+    },
+    "pt18to20": {
+     "in_bin": 3431.0,
+     "pass_trigger": 108.0,
+     "eff": 0.031477703293500435
+    },
+    "pt20to22": {
+     "in_bin": 3689.0,
+     "pass_trigger": 120.0,
+     "eff": 0.03252914068853348
+    },
+    "pt22to24": {
+     "in_bin": 3753.0,
+     "pass_trigger": 301.0,
+     "eff": 0.08020250466293631
+    },
+    "pt24to26": {
+     "in_bin": 3843.0,
+     "pass_trigger": 597.0,
+     "eff": 0.15534738485558158
+    },
+    "pt26to28": {
+     "in_bin": 4098.0,
+     "pass_trigger": 871.0,
+     "eff": 0.2125427037579307
+    },
+    "pt28to30": {
+     "in_bin": 4335.0,
+     "pass_trigger": 1049.0,
+     "eff": 0.2419838523644752
+    },
+    "pt30to32": {
+     "in_bin": 4598.0,
+     "pass_trigger": 1360.0,
+     "eff": 0.29578077424967375
+    },
+    "pt32to34": {
+     "in_bin": 5027.0,
+     "pass_trigger": 1649.0,
+     "eff": 0.3280286453152974
+    },
+    "pt34to36": {
+     "in_bin": 5255.0,
+     "pass_trigger": 1956.0,
+     "eff": 0.37221693625118935
+    },
+    "pt36to38": {
+     "in_bin": 5603.0,
+     "pass_trigger": 2421.0,
+     "eff": 0.43208995181152954
+    },
+    "pt38to40": {
+     "in_bin": 6195.0,
+     "pass_trigger": 2984.0,
+     "eff": 0.48167877320419694
+    },
+    "pt40to42": {
+     "in_bin": 6600.0,
+     "pass_trigger": 3483.0,
+     "eff": 0.5277272727272727
+    },
+    "pt42to44": {
+     "in_bin": 7411.0,
+     "pass_trigger": 4269.0,
+     "eff": 0.5760356227229794
+    },
+    "pt44to46": {
+     "in_bin": 8550.0,
+     "pass_trigger": 5375.0,
+     "eff": 0.6286549707602339
+    },
+    "pt46to48": {
+     "in_bin": 9278.0,
+     "pass_trigger": 6155.0,
+     "eff": 0.6633972838973917
+    },
+    "pt48to50": {
+     "in_bin": 9034.0,
+     "pass_trigger": 6198.0,
+     "eff": 0.6860748284259465
+    },
+    "pt50to52": {
+     "in_bin": 8413.0,
+     "pass_trigger": 5705.0,
+     "eff": 0.6781171995720908
+    },
+    "pt52to54": {
+     "in_bin": 7676.0,
+     "pass_trigger": 5254.0,
+     "eff": 0.684471078686816
+    },
+    "pt54to56": {
+     "in_bin": 6616.0,
+     "pass_trigger": 4575.0,
+     "eff": 0.6915054413542926
+    },
+    "pt56to58": {
+     "in_bin": 5684.0,
+     "pass_trigger": 3870.0,
+     "eff": 0.6808585503166784
+    },
+    "pt58to60": {
+     "in_bin": 4755.0,
+     "pass_trigger": 3209.0,
+     "eff": 0.6748685594111462
+    },
+    "pt60to62": {
+     "in_bin": 4156.0,
+     "pass_trigger": 2756.0,
+     "eff": 0.6631376323387873
+    },
+    "pt62to64": {
+     "in_bin": 3511.0,
+     "pass_trigger": 2394.0,
+     "eff": 0.6818570207917972
+    },
+    "pt64to66": {
+     "in_bin": 3010.0,
+     "pass_trigger": 1985.0,
+     "eff": 0.659468438538206
+    },
+    "pt66to68": {
+     "in_bin": 2595.0,
+     "pass_trigger": 1763.0,
+     "eff": 0.679383429672447
+    },
+    "pt68to70": {
+     "in_bin": 2272.0,
+     "pass_trigger": 1493.0,
+     "eff": 0.6571302816901409
+    },
+    "pt70to72": {
+     "in_bin": 2044.0,
+     "pass_trigger": 1320.0,
+     "eff": 0.6457925636007827
+    },
+    "pt72to74": {
+     "in_bin": 1743.0,
+     "pass_trigger": 1116.0,
+     "eff": 0.6402753872633391
+    },
+    "pt74to76": {
+     "in_bin": 1611.0,
+     "pass_trigger": 1012.0,
+     "eff": 0.6281812538795779
+    },
+    "pt76to78": {
+     "in_bin": 1400.0,
+     "pass_trigger": 900.0,
+     "eff": 0.6428571428571429
+    },
+    "pt78to80": {
+     "in_bin": 1267.0,
+     "pass_trigger": 827.0,
+     "eff": 0.6527229676400947
+    },
+    "pt80to82": {
+     "in_bin": 1182.0,
+     "pass_trigger": 715.0,
+     "eff": 0.6049069373942471
+    },
+    "pt82to84": {
+     "in_bin": 1094.0,
+     "pass_trigger": 686.0,
+     "eff": 0.6270566727605119
+    },
+    "pt84to86": {
+     "in_bin": 941.0,
+     "pass_trigger": 563.0,
+     "eff": 0.5982996811902231
+    },
+    "pt86to88": {
+     "in_bin": 873.0,
+     "pass_trigger": 541.0,
+     "eff": 0.6197021764032073
+    },
+    "pt88to90": {
+     "in_bin": 852.0,
+     "pass_trigger": 563.0,
+     "eff": 0.6607981220657277
+    },
+    "pt90to92": {
+     "in_bin": 745.0,
+     "pass_trigger": 467.0,
+     "eff": 0.6268456375838927
+    },
+    "pt92to94": {
+     "in_bin": 676.0,
+     "pass_trigger": 401.0,
+     "eff": 0.5931952662721893
+    },
+    "pt94to96": {
+     "in_bin": 595.0,
+     "pass_trigger": 369.0,
+     "eff": 0.6201680672268908
+    },
+    "pt96to98": {
+     "in_bin": 579.0,
+     "pass_trigger": 365.0,
+     "eff": 0.6303972366148531
+    },
+    "pt98to100": {
+     "in_bin": 549.0,
+     "pass_trigger": 366.0,
+     "eff": 0.6666666666666666
+    },
+    "pt100toInf": {
+     "in_bin": 9584.0,
+     "pass_trigger": 6018.0,
+     "eff": 0.6279215358931552
+    }
+   }
+  },
+  "trigeff_ele_subleadN2_OR_ele": {
+   "overall": {
+    "in_bin": 105815.0,
+    "pass_trigger": 96379.0,
+    "eff": 0.9108254973302462
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1439.0,
+     "pass_trigger": 759.0,
+     "eff": 0.527449617790132
+    },
+    "pt10to12": {
+     "in_bin": 1453.0,
+     "pass_trigger": 901.0,
+     "eff": 0.6200963523743978
+    },
+    "pt12to14": {
+     "in_bin": 2018.0,
+     "pass_trigger": 1409.0,
+     "eff": 0.6982160555004956
+    },
+    "pt14to16": {
+     "in_bin": 2619.0,
+     "pass_trigger": 2004.0,
+     "eff": 0.7651775486827033
+    },
+    "pt16to18": {
+     "in_bin": 3130.0,
+     "pass_trigger": 2434.0,
+     "eff": 0.7776357827476038
+    },
+    "pt18to20": {
+     "in_bin": 3687.0,
+     "pass_trigger": 3019.0,
+     "eff": 0.8188228912394901
+    },
+    "pt20to22": {
+     "in_bin": 4334.0,
+     "pass_trigger": 3643.0,
+     "eff": 0.8405629903091832
+    },
+    "pt22to24": {
+     "in_bin": 4906.0,
+     "pass_trigger": 4275.0,
+     "eff": 0.8713819812474521
+    },
+    "pt24to26": {
+     "in_bin": 5533.0,
+     "pass_trigger": 4889.0,
+     "eff": 0.8836074462317007
+    },
+    "pt26to28": {
+     "in_bin": 6152.0,
+     "pass_trigger": 5485.0,
+     "eff": 0.8915799739921977
+    },
+    "pt28to30": {
+     "in_bin": 6728.0,
+     "pass_trigger": 6055.0,
+     "eff": 0.8999702734839476
+    },
+    "pt30to32": {
+     "in_bin": 7282.0,
+     "pass_trigger": 6832.0,
+     "eff": 0.9382037901675364
+    },
+    "pt32to34": {
+     "in_bin": 7443.0,
+     "pass_trigger": 7113.0,
+     "eff": 0.9556630390971382
+    },
+    "pt34to36": {
+     "in_bin": 7907.0,
+     "pass_trigger": 7621.0,
+     "eff": 0.9638295181484761
+    },
+    "pt36to38": {
+     "in_bin": 7988.0,
+     "pass_trigger": 7696.0,
+     "eff": 0.9634451677516275
+    },
+    "pt38to40": {
+     "in_bin": 7298.0,
+     "pass_trigger": 7067.0,
+     "eff": 0.9683474924636887
+    },
+    "pt40to42": {
+     "in_bin": 6862.0,
+     "pass_trigger": 6677.0,
+     "eff": 0.9730399300495483
+    },
+    "pt42to44": {
+     "in_bin": 5449.0,
+     "pass_trigger": 5293.0,
+     "eff": 0.971370893741971
+    },
+    "pt44to46": {
+     "in_bin": 3771.0,
+     "pass_trigger": 3674.0,
+     "eff": 0.9742773800053036
+    },
+    "pt46to48": {
+     "in_bin": 2227.0,
+     "pass_trigger": 2168.0,
+     "eff": 0.9735069600359227
+    },
+    "pt48to50": {
+     "in_bin": 1337.0,
+     "pass_trigger": 1303.0,
+     "eff": 0.9745699326851159
+    },
+    "pt50to52": {
+     "in_bin": 918.0,
+     "pass_trigger": 891.0,
+     "eff": 0.9705882352941176
+    },
+    "pt52to54": {
+     "in_bin": 713.0,
+     "pass_trigger": 696.0,
+     "eff": 0.9761570827489481
+    },
+    "pt54to56": {
+     "in_bin": 536.0,
+     "pass_trigger": 525.0,
+     "eff": 0.9794776119402985
+    },
+    "pt56to58": {
+     "in_bin": 432.0,
+     "pass_trigger": 420.0,
+     "eff": 0.9722222222222222
+    },
+    "pt58to60": {
+     "in_bin": 355.0,
+     "pass_trigger": 349.0,
+     "eff": 0.9830985915492958
+    },
+    "pt60to62": {
+     "in_bin": 325.0,
+     "pass_trigger": 319.0,
+     "eff": 0.9815384615384616
+    },
+    "pt62to64": {
+     "in_bin": 258.0,
+     "pass_trigger": 249.0,
+     "eff": 0.9651162790697675
+    },
+    "pt64to66": {
+     "in_bin": 270.0,
+     "pass_trigger": 263.0,
+     "eff": 0.9740740740740741
+    },
+    "pt66to68": {
+     "in_bin": 215.0,
+     "pass_trigger": 209.0,
+     "eff": 0.9720930232558139
+    },
+    "pt68to70": {
+     "in_bin": 193.0,
+     "pass_trigger": 190.0,
+     "eff": 0.9844559585492227
+    },
+    "pt70to72": {
+     "in_bin": 173.0,
+     "pass_trigger": 170.0,
+     "eff": 0.9826589595375722
+    },
+    "pt72to74": {
+     "in_bin": 151.0,
+     "pass_trigger": 146.0,
+     "eff": 0.9668874172185431
+    },
+    "pt74to76": {
+     "in_bin": 140.0,
+     "pass_trigger": 135.0,
+     "eff": 0.9642857142857143
+    },
+    "pt76to78": {
+     "in_bin": 110.0,
+     "pass_trigger": 107.0,
+     "eff": 0.9727272727272728
+    },
+    "pt78to80": {
+     "in_bin": 102.0,
+     "pass_trigger": 100.0,
+     "eff": 0.9803921568627451
+    },
+    "pt80to82": {
+     "in_bin": 100.0,
+     "pass_trigger": 96.0,
+     "eff": 0.96
+    },
+    "pt82to84": {
+     "in_bin": 88.0,
+     "pass_trigger": 87.0,
+     "eff": 0.9886363636363636
+    },
+    "pt84to86": {
+     "in_bin": 84.0,
+     "pass_trigger": 83.0,
+     "eff": 0.9880952380952381
+    },
+    "pt86to88": {
+     "in_bin": 81.0,
+     "pass_trigger": 79.0,
+     "eff": 0.9753086419753086
+    },
+    "pt88to90": {
+     "in_bin": 63.0,
+     "pass_trigger": 61.0,
+     "eff": 0.9682539682539683
+    },
+    "pt90to92": {
+     "in_bin": 64.0,
+     "pass_trigger": 63.0,
+     "eff": 0.984375
+    },
+    "pt92to94": {
+     "in_bin": 59.0,
+     "pass_trigger": 59.0,
+     "eff": 1.0
+    },
+    "pt94to96": {
+     "in_bin": 56.0,
+     "pass_trigger": 54.0,
+     "eff": 0.9642857142857143
+    },
+    "pt96to98": {
+     "in_bin": 46.0,
+     "pass_trigger": 45.0,
+     "eff": 0.9782608695652174
+    },
+    "pt98to100": {
+     "in_bin": 39.0,
+     "pass_trigger": 39.0,
+     "eff": 1.0
+    },
+    "pt100toInf": {
+     "in_bin": 681.0,
+     "pass_trigger": 627.0,
+     "eff": 0.920704845814978
+    }
+   }
+  },
+  "trigeff_ele_subleadN2_double_ele": {
+   "overall": {
+    "in_bin": 105815.0,
+    "pass_trigger": 81488.0,
+    "eff": 0.7700987572650381
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1439.0,
+     "pass_trigger": 56.0,
+     "eff": 0.03891591382904795
+    },
+    "pt10to12": {
+     "in_bin": 1453.0,
+     "pass_trigger": 155.0,
+     "eff": 0.10667584308327598
+    },
+    "pt12to14": {
+     "in_bin": 2018.0,
+     "pass_trigger": 869.0,
+     "eff": 0.43062438057482655
+    },
+    "pt14to16": {
+     "in_bin": 2619.0,
+     "pass_trigger": 1556.0,
+     "eff": 0.5941198930889653
+    },
+    "pt16to18": {
+     "in_bin": 3130.0,
+     "pass_trigger": 1979.0,
+     "eff": 0.6322683706070288
+    },
+    "pt18to20": {
+     "in_bin": 3687.0,
+     "pass_trigger": 2543.0,
+     "eff": 0.6897206400867915
+    },
+    "pt20to22": {
+     "in_bin": 4334.0,
+     "pass_trigger": 3082.0,
+     "eff": 0.711121365943701
+    },
+    "pt22to24": {
+     "in_bin": 4906.0,
+     "pass_trigger": 3654.0,
+     "eff": 0.7448022829188748
+    },
+    "pt24to26": {
+     "in_bin": 5533.0,
+     "pass_trigger": 4209.0,
+     "eff": 0.7607084764142418
+    },
+    "pt26to28": {
+     "in_bin": 6152.0,
+     "pass_trigger": 4824.0,
+     "eff": 0.7841352405721717
+    },
+    "pt28to30": {
+     "in_bin": 6728.0,
+     "pass_trigger": 5317.0,
+     "eff": 0.7902794292508918
+    },
+    "pt30to32": {
+     "in_bin": 7282.0,
+     "pass_trigger": 5833.0,
+     "eff": 0.8010162043394672
+    },
+    "pt32to34": {
+     "in_bin": 7443.0,
+     "pass_trigger": 6081.0,
+     "eff": 0.8170092704554615
+    },
+    "pt34to36": {
+     "in_bin": 7907.0,
+     "pass_trigger": 6554.0,
+     "eff": 0.8288857973947136
+    },
+    "pt36to38": {
+     "in_bin": 7988.0,
+     "pass_trigger": 6651.0,
+     "eff": 0.8326239359038557
+    },
+    "pt38to40": {
+     "in_bin": 7298.0,
+     "pass_trigger": 6094.0,
+     "eff": 0.8350232940531652
+    },
+    "pt40to42": {
+     "in_bin": 6862.0,
+     "pass_trigger": 5827.0,
+     "eff": 0.8491693383853104
+    },
+    "pt42to44": {
+     "in_bin": 5449.0,
+     "pass_trigger": 4608.0,
+     "eff": 0.8456597540833181
+    },
+    "pt44to46": {
+     "in_bin": 3771.0,
+     "pass_trigger": 3201.0,
+     "eff": 0.8488464598249801
+    },
+    "pt46to48": {
+     "in_bin": 2227.0,
+     "pass_trigger": 1917.0,
+     "eff": 0.8607992815446789
+    },
+    "pt48to50": {
+     "in_bin": 1337.0,
+     "pass_trigger": 1141.0,
+     "eff": 0.8534031413612565
+    },
+    "pt50to52": {
+     "in_bin": 918.0,
+     "pass_trigger": 787.0,
+     "eff": 0.8572984749455338
+    },
+    "pt52to54": {
+     "in_bin": 713.0,
+     "pass_trigger": 622.0,
+     "eff": 0.8723702664796634
+    },
+    "pt54to56": {
+     "in_bin": 536.0,
+     "pass_trigger": 457.0,
+     "eff": 0.8526119402985075
+    },
+    "pt56to58": {
+     "in_bin": 432.0,
+     "pass_trigger": 373.0,
+     "eff": 0.8634259259259259
+    },
+    "pt58to60": {
+     "in_bin": 355.0,
+     "pass_trigger": 323.0,
+     "eff": 0.9098591549295775
+    },
+    "pt60to62": {
+     "in_bin": 325.0,
+     "pass_trigger": 270.0,
+     "eff": 0.8307692307692308
+    },
+    "pt62to64": {
+     "in_bin": 258.0,
+     "pass_trigger": 208.0,
+     "eff": 0.8062015503875969
+    },
+    "pt64to66": {
+     "in_bin": 270.0,
+     "pass_trigger": 232.0,
+     "eff": 0.8592592592592593
+    },
+    "pt66to68": {
+     "in_bin": 215.0,
+     "pass_trigger": 180.0,
+     "eff": 0.8372093023255814
+    },
+    "pt68to70": {
+     "in_bin": 193.0,
+     "pass_trigger": 174.0,
+     "eff": 0.9015544041450777
+    },
+    "pt70to72": {
+     "in_bin": 173.0,
+     "pass_trigger": 157.0,
+     "eff": 0.9075144508670521
+    },
+    "pt72to74": {
+     "in_bin": 151.0,
+     "pass_trigger": 131.0,
+     "eff": 0.8675496688741722
+    },
+    "pt74to76": {
+     "in_bin": 140.0,
+     "pass_trigger": 121.0,
+     "eff": 0.8642857142857143
+    },
+    "pt76to78": {
+     "in_bin": 110.0,
+     "pass_trigger": 96.0,
+     "eff": 0.8727272727272727
+    },
+    "pt78to80": {
+     "in_bin": 102.0,
+     "pass_trigger": 92.0,
+     "eff": 0.9019607843137255
+    },
+    "pt80to82": {
+     "in_bin": 100.0,
+     "pass_trigger": 87.0,
+     "eff": 0.87
+    },
+    "pt82to84": {
+     "in_bin": 88.0,
+     "pass_trigger": 74.0,
+     "eff": 0.8409090909090909
+    },
+    "pt84to86": {
+     "in_bin": 84.0,
+     "pass_trigger": 72.0,
+     "eff": 0.8571428571428571
+    },
+    "pt86to88": {
+     "in_bin": 81.0,
+     "pass_trigger": 74.0,
+     "eff": 0.9135802469135802
+    },
+    "pt88to90": {
+     "in_bin": 63.0,
+     "pass_trigger": 55.0,
+     "eff": 0.873015873015873
+    },
+    "pt90to92": {
+     "in_bin": 64.0,
+     "pass_trigger": 54.0,
+     "eff": 0.84375
+    },
+    "pt92to94": {
+     "in_bin": 59.0,
+     "pass_trigger": 56.0,
+     "eff": 0.9491525423728814
+    },
+    "pt94to96": {
+     "in_bin": 56.0,
+     "pass_trigger": 47.0,
+     "eff": 0.8392857142857143
+    },
+    "pt96to98": {
+     "in_bin": 46.0,
+     "pass_trigger": 36.0,
+     "eff": 0.782608695652174
+    },
+    "pt98to100": {
+     "in_bin": 39.0,
+     "pass_trigger": 35.0,
+     "eff": 0.8974358974358975
+    },
+    "pt100toInf": {
+     "in_bin": 681.0,
+     "pass_trigger": 524.0,
+     "eff": 0.7694566813509545
+    }
+   }
+  },
+  "trigeff_ele_subleadOL_OR_ele": {
+   "overall": {
+    "in_bin": 103623.0,
+    "pass_trigger": 96027.0,
+    "eff": 0.9266958107756
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1134.0,
+     "pass_trigger": 756.0,
+     "eff": 0.6666666666666666
+    },
+    "pt10to12": {
+     "in_bin": 1232.0,
+     "pass_trigger": 895.0,
+     "eff": 0.726461038961039
+    },
+    "pt12to14": {
+     "in_bin": 1702.0,
+     "pass_trigger": 1378.0,
+     "eff": 0.8096357226792009
+    },
+    "pt14to16": {
+     "in_bin": 2283.0,
+     "pass_trigger": 1954.0,
+     "eff": 0.8558913710030661
+    },
+    "pt16to18": {
+     "in_bin": 2749.0,
+     "pass_trigger": 2374.0,
+     "eff": 0.8635867588213896
+    },
+    "pt18to20": {
+     "in_bin": 3442.0,
+     "pass_trigger": 2980.0,
+     "eff": 0.8657757117954678
+    },
+    "pt20to22": {
+     "in_bin": 4114.0,
+     "pass_trigger": 3581.0,
+     "eff": 0.8704423918327662
+    },
+    "pt22to24": {
+     "in_bin": 4759.0,
+     "pass_trigger": 4188.0,
+     "eff": 0.880016810254255
+    },
+    "pt24to26": {
+     "in_bin": 5512.0,
+     "pass_trigger": 4875.0,
+     "eff": 0.8844339622641509
+    },
+    "pt26to28": {
+     "in_bin": 6152.0,
+     "pass_trigger": 5485.0,
+     "eff": 0.8915799739921977
+    },
+    "pt28to30": {
+     "in_bin": 6728.0,
+     "pass_trigger": 6055.0,
+     "eff": 0.8999702734839476
+    },
+    "pt30to32": {
+     "in_bin": 7282.0,
+     "pass_trigger": 6832.0,
+     "eff": 0.9382037901675364
+    },
+    "pt32to34": {
+     "in_bin": 7443.0,
+     "pass_trigger": 7113.0,
+     "eff": 0.9556630390971382
+    },
+    "pt34to36": {
+     "in_bin": 7907.0,
+     "pass_trigger": 7621.0,
+     "eff": 0.9638295181484761
+    },
+    "pt36to38": {
+     "in_bin": 7988.0,
+     "pass_trigger": 7696.0,
+     "eff": 0.9634451677516275
+    },
+    "pt38to40": {
+     "in_bin": 7298.0,
+     "pass_trigger": 7067.0,
+     "eff": 0.9683474924636887
+    },
+    "pt40to42": {
+     "in_bin": 6862.0,
+     "pass_trigger": 6677.0,
+     "eff": 0.9730399300495483
+    },
+    "pt42to44": {
+     "in_bin": 5449.0,
+     "pass_trigger": 5293.0,
+     "eff": 0.971370893741971
+    },
+    "pt44to46": {
+     "in_bin": 3771.0,
+     "pass_trigger": 3674.0,
+     "eff": 0.9742773800053036
+    },
+    "pt46to48": {
+     "in_bin": 2227.0,
+     "pass_trigger": 2168.0,
+     "eff": 0.9735069600359227
+    },
+    "pt48to50": {
+     "in_bin": 1337.0,
+     "pass_trigger": 1303.0,
+     "eff": 0.9745699326851159
+    },
+    "pt50to52": {
+     "in_bin": 918.0,
+     "pass_trigger": 891.0,
+     "eff": 0.9705882352941176
+    },
+    "pt52to54": {
+     "in_bin": 713.0,
+     "pass_trigger": 696.0,
+     "eff": 0.9761570827489481
+    },
+    "pt54to56": {
+     "in_bin": 536.0,
+     "pass_trigger": 525.0,
+     "eff": 0.9794776119402985
+    },
+    "pt56to58": {
+     "in_bin": 432.0,
+     "pass_trigger": 420.0,
+     "eff": 0.9722222222222222
+    },
+    "pt58to60": {
+     "in_bin": 355.0,
+     "pass_trigger": 349.0,
+     "eff": 0.9830985915492958
+    },
+    "pt60to62": {
+     "in_bin": 325.0,
+     "pass_trigger": 319.0,
+     "eff": 0.9815384615384616
+    },
+    "pt62to64": {
+     "in_bin": 258.0,
+     "pass_trigger": 249.0,
+     "eff": 0.9651162790697675
+    },
+    "pt64to66": {
+     "in_bin": 270.0,
+     "pass_trigger": 263.0,
+     "eff": 0.9740740740740741
+    },
+    "pt66to68": {
+     "in_bin": 215.0,
+     "pass_trigger": 209.0,
+     "eff": 0.9720930232558139
+    },
+    "pt68to70": {
+     "in_bin": 193.0,
+     "pass_trigger": 190.0,
+     "eff": 0.9844559585492227
+    },
+    "pt70to72": {
+     "in_bin": 173.0,
+     "pass_trigger": 170.0,
+     "eff": 0.9826589595375722
+    },
+    "pt72to74": {
+     "in_bin": 151.0,
+     "pass_trigger": 146.0,
+     "eff": 0.9668874172185431
+    },
+    "pt74to76": {
+     "in_bin": 140.0,
+     "pass_trigger": 135.0,
+     "eff": 0.9642857142857143
+    },
+    "pt76to78": {
+     "in_bin": 110.0,
+     "pass_trigger": 107.0,
+     "eff": 0.9727272727272728
+    },
+    "pt78to80": {
+     "in_bin": 102.0,
+     "pass_trigger": 100.0,
+     "eff": 0.9803921568627451
+    },
+    "pt80to82": {
+     "in_bin": 100.0,
+     "pass_trigger": 96.0,
+     "eff": 0.96
+    },
+    "pt82to84": {
+     "in_bin": 88.0,
+     "pass_trigger": 87.0,
+     "eff": 0.9886363636363636
+    },
+    "pt84to86": {
+     "in_bin": 84.0,
+     "pass_trigger": 83.0,
+     "eff": 0.9880952380952381
+    },
+    "pt86to88": {
+     "in_bin": 81.0,
+     "pass_trigger": 79.0,
+     "eff": 0.9753086419753086
+    },
+    "pt88to90": {
+     "in_bin": 63.0,
+     "pass_trigger": 61.0,
+     "eff": 0.9682539682539683
+    },
+    "pt90to92": {
+     "in_bin": 64.0,
+     "pass_trigger": 63.0,
+     "eff": 0.984375
+    },
+    "pt92to94": {
+     "in_bin": 59.0,
+     "pass_trigger": 59.0,
+     "eff": 1.0
+    },
+    "pt94to96": {
+     "in_bin": 56.0,
+     "pass_trigger": 54.0,
+     "eff": 0.9642857142857143
+    },
+    "pt96to98": {
+     "in_bin": 46.0,
+     "pass_trigger": 45.0,
+     "eff": 0.9782608695652174
+    },
+    "pt98to100": {
+     "in_bin": 39.0,
+     "pass_trigger": 39.0,
+     "eff": 1.0
+    },
+    "pt100toInf": {
+     "in_bin": 681.0,
+     "pass_trigger": 627.0,
+     "eff": 0.920704845814978
+    }
+   }
+  },
+  "trigeff_ele_subleadOL_double_ele": {
+   "overall": {
+    "in_bin": 103623.0,
+    "pass_trigger": 81137.0,
+    "eff": 0.7830018432201346
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1134.0,
+     "pass_trigger": 53.0,
+     "eff": 0.04673721340388007
+    },
+    "pt10to12": {
+     "in_bin": 1232.0,
+     "pass_trigger": 150.0,
+     "eff": 0.12175324675324675
+    },
+    "pt12to14": {
+     "in_bin": 1702.0,
+     "pass_trigger": 838.0,
+     "eff": 0.49236192714453586
+    },
+    "pt14to16": {
+     "in_bin": 2283.0,
+     "pass_trigger": 1506.0,
+     "eff": 0.6596583442838371
+    },
+    "pt16to18": {
+     "in_bin": 2749.0,
+     "pass_trigger": 1919.0,
+     "eff": 0.6980720261913423
+    },
+    "pt18to20": {
+     "in_bin": 3442.0,
+     "pass_trigger": 2504.0,
+     "eff": 0.7274840209180709
+    },
+    "pt20to22": {
+     "in_bin": 4114.0,
+     "pass_trigger": 3020.0,
+     "eff": 0.7340787554691298
+    },
+    "pt22to24": {
+     "in_bin": 4759.0,
+     "pass_trigger": 3567.0,
+     "eff": 0.7495272115990754
+    },
+    "pt24to26": {
+     "in_bin": 5512.0,
+     "pass_trigger": 4195.0,
+     "eff": 0.761066763425254
+    },
+    "pt26to28": {
+     "in_bin": 6152.0,
+     "pass_trigger": 4824.0,
+     "eff": 0.7841352405721717
+    },
+    "pt28to30": {
+     "in_bin": 6728.0,
+     "pass_trigger": 5317.0,
+     "eff": 0.7902794292508918
+    },
+    "pt30to32": {
+     "in_bin": 7282.0,
+     "pass_trigger": 5833.0,
+     "eff": 0.8010162043394672
+    },
+    "pt32to34": {
+     "in_bin": 7443.0,
+     "pass_trigger": 6081.0,
+     "eff": 0.8170092704554615
+    },
+    "pt34to36": {
+     "in_bin": 7907.0,
+     "pass_trigger": 6554.0,
+     "eff": 0.8288857973947136
+    },
+    "pt36to38": {
+     "in_bin": 7988.0,
+     "pass_trigger": 6651.0,
+     "eff": 0.8326239359038557
+    },
+    "pt38to40": {
+     "in_bin": 7298.0,
+     "pass_trigger": 6094.0,
+     "eff": 0.8350232940531652
+    },
+    "pt40to42": {
+     "in_bin": 6862.0,
+     "pass_trigger": 5827.0,
+     "eff": 0.8491693383853104
+    },
+    "pt42to44": {
+     "in_bin": 5449.0,
+     "pass_trigger": 4608.0,
+     "eff": 0.8456597540833181
+    },
+    "pt44to46": {
+     "in_bin": 3771.0,
+     "pass_trigger": 3201.0,
+     "eff": 0.8488464598249801
+    },
+    "pt46to48": {
+     "in_bin": 2227.0,
+     "pass_trigger": 1917.0,
+     "eff": 0.8607992815446789
+    },
+    "pt48to50": {
+     "in_bin": 1337.0,
+     "pass_trigger": 1141.0,
+     "eff": 0.8534031413612565
+    },
+    "pt50to52": {
+     "in_bin": 918.0,
+     "pass_trigger": 787.0,
+     "eff": 0.8572984749455338
+    },
+    "pt52to54": {
+     "in_bin": 713.0,
+     "pass_trigger": 622.0,
+     "eff": 0.8723702664796634
+    },
+    "pt54to56": {
+     "in_bin": 536.0,
+     "pass_trigger": 457.0,
+     "eff": 0.8526119402985075
+    },
+    "pt56to58": {
+     "in_bin": 432.0,
+     "pass_trigger": 373.0,
+     "eff": 0.8634259259259259
+    },
+    "pt58to60": {
+     "in_bin": 355.0,
+     "pass_trigger": 323.0,
+     "eff": 0.9098591549295775
+    },
+    "pt60to62": {
+     "in_bin": 325.0,
+     "pass_trigger": 270.0,
+     "eff": 0.8307692307692308
+    },
+    "pt62to64": {
+     "in_bin": 258.0,
+     "pass_trigger": 208.0,
+     "eff": 0.8062015503875969
+    },
+    "pt64to66": {
+     "in_bin": 270.0,
+     "pass_trigger": 232.0,
+     "eff": 0.8592592592592593
+    },
+    "pt66to68": {
+     "in_bin": 215.0,
+     "pass_trigger": 180.0,
+     "eff": 0.8372093023255814
+    },
+    "pt68to70": {
+     "in_bin": 193.0,
+     "pass_trigger": 174.0,
+     "eff": 0.9015544041450777
+    },
+    "pt70to72": {
+     "in_bin": 173.0,
+     "pass_trigger": 157.0,
+     "eff": 0.9075144508670521
+    },
+    "pt72to74": {
+     "in_bin": 151.0,
+     "pass_trigger": 131.0,
+     "eff": 0.8675496688741722
+    },
+    "pt74to76": {
+     "in_bin": 140.0,
+     "pass_trigger": 121.0,
+     "eff": 0.8642857142857143
+    },
+    "pt76to78": {
+     "in_bin": 110.0,
+     "pass_trigger": 96.0,
+     "eff": 0.8727272727272727
+    },
+    "pt78to80": {
+     "in_bin": 102.0,
+     "pass_trigger": 92.0,
+     "eff": 0.9019607843137255
+    },
+    "pt80to82": {
+     "in_bin": 100.0,
+     "pass_trigger": 87.0,
+     "eff": 0.87
+    },
+    "pt82to84": {
+     "in_bin": 88.0,
+     "pass_trigger": 74.0,
+     "eff": 0.8409090909090909
+    },
+    "pt84to86": {
+     "in_bin": 84.0,
+     "pass_trigger": 72.0,
+     "eff": 0.8571428571428571
+    },
+    "pt86to88": {
+     "in_bin": 81.0,
+     "pass_trigger": 74.0,
+     "eff": 0.9135802469135802
+    },
+    "pt88to90": {
+     "in_bin": 63.0,
+     "pass_trigger": 55.0,
+     "eff": 0.873015873015873
+    },
+    "pt90to92": {
+     "in_bin": 64.0,
+     "pass_trigger": 54.0,
+     "eff": 0.84375
+    },
+    "pt92to94": {
+     "in_bin": 59.0,
+     "pass_trigger": 56.0,
+     "eff": 0.9491525423728814
+    },
+    "pt94to96": {
+     "in_bin": 56.0,
+     "pass_trigger": 47.0,
+     "eff": 0.8392857142857143
+    },
+    "pt96to98": {
+     "in_bin": 46.0,
+     "pass_trigger": 36.0,
+     "eff": 0.782608695652174
+    },
+    "pt98to100": {
+     "in_bin": 39.0,
+     "pass_trigger": 35.0,
+     "eff": 0.8974358974358975
+    },
+    "pt100toInf": {
+     "in_bin": 681.0,
+     "pass_trigger": 524.0,
+     "eff": 0.7694566813509545
+    }
+   }
+  },
+  "trigeff_ele_sublead_OR_ele": {
+   "overall": {
+    "in_bin": 105815.0,
+    "pass_trigger": 96379.0,
+    "eff": 0.9108254973302462
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1439.0,
+     "pass_trigger": 759.0,
+     "eff": 0.527449617790132
+    },
+    "pt10to12": {
+     "in_bin": 1453.0,
+     "pass_trigger": 901.0,
+     "eff": 0.6200963523743978
+    },
+    "pt12to14": {
+     "in_bin": 2018.0,
+     "pass_trigger": 1409.0,
+     "eff": 0.6982160555004956
+    },
+    "pt14to16": {
+     "in_bin": 2619.0,
+     "pass_trigger": 2004.0,
+     "eff": 0.7651775486827033
+    },
+    "pt16to18": {
+     "in_bin": 3130.0,
+     "pass_trigger": 2434.0,
+     "eff": 0.7776357827476038
+    },
+    "pt18to20": {
+     "in_bin": 3687.0,
+     "pass_trigger": 3019.0,
+     "eff": 0.8188228912394901
+    },
+    "pt20to22": {
+     "in_bin": 4334.0,
+     "pass_trigger": 3643.0,
+     "eff": 0.8405629903091832
+    },
+    "pt22to24": {
+     "in_bin": 4906.0,
+     "pass_trigger": 4275.0,
+     "eff": 0.8713819812474521
+    },
+    "pt24to26": {
+     "in_bin": 5533.0,
+     "pass_trigger": 4889.0,
+     "eff": 0.8836074462317007
+    },
+    "pt26to28": {
+     "in_bin": 6152.0,
+     "pass_trigger": 5485.0,
+     "eff": 0.8915799739921977
+    },
+    "pt28to30": {
+     "in_bin": 6728.0,
+     "pass_trigger": 6055.0,
+     "eff": 0.8999702734839476
+    },
+    "pt30to32": {
+     "in_bin": 7282.0,
+     "pass_trigger": 6832.0,
+     "eff": 0.9382037901675364
+    },
+    "pt32to34": {
+     "in_bin": 7443.0,
+     "pass_trigger": 7113.0,
+     "eff": 0.9556630390971382
+    },
+    "pt34to36": {
+     "in_bin": 7907.0,
+     "pass_trigger": 7621.0,
+     "eff": 0.9638295181484761
+    },
+    "pt36to38": {
+     "in_bin": 7988.0,
+     "pass_trigger": 7696.0,
+     "eff": 0.9634451677516275
+    },
+    "pt38to40": {
+     "in_bin": 7298.0,
+     "pass_trigger": 7067.0,
+     "eff": 0.9683474924636887
+    },
+    "pt40to42": {
+     "in_bin": 6862.0,
+     "pass_trigger": 6677.0,
+     "eff": 0.9730399300495483
+    },
+    "pt42to44": {
+     "in_bin": 5449.0,
+     "pass_trigger": 5293.0,
+     "eff": 0.971370893741971
+    },
+    "pt44to46": {
+     "in_bin": 3771.0,
+     "pass_trigger": 3674.0,
+     "eff": 0.9742773800053036
+    },
+    "pt46to48": {
+     "in_bin": 2227.0,
+     "pass_trigger": 2168.0,
+     "eff": 0.9735069600359227
+    },
+    "pt48to50": {
+     "in_bin": 1337.0,
+     "pass_trigger": 1303.0,
+     "eff": 0.9745699326851159
+    },
+    "pt50to52": {
+     "in_bin": 918.0,
+     "pass_trigger": 891.0,
+     "eff": 0.9705882352941176
+    },
+    "pt52to54": {
+     "in_bin": 713.0,
+     "pass_trigger": 696.0,
+     "eff": 0.9761570827489481
+    },
+    "pt54to56": {
+     "in_bin": 536.0,
+     "pass_trigger": 525.0,
+     "eff": 0.9794776119402985
+    },
+    "pt56to58": {
+     "in_bin": 432.0,
+     "pass_trigger": 420.0,
+     "eff": 0.9722222222222222
+    },
+    "pt58to60": {
+     "in_bin": 355.0,
+     "pass_trigger": 349.0,
+     "eff": 0.9830985915492958
+    },
+    "pt60to62": {
+     "in_bin": 325.0,
+     "pass_trigger": 319.0,
+     "eff": 0.9815384615384616
+    },
+    "pt62to64": {
+     "in_bin": 258.0,
+     "pass_trigger": 249.0,
+     "eff": 0.9651162790697675
+    },
+    "pt64to66": {
+     "in_bin": 270.0,
+     "pass_trigger": 263.0,
+     "eff": 0.9740740740740741
+    },
+    "pt66to68": {
+     "in_bin": 215.0,
+     "pass_trigger": 209.0,
+     "eff": 0.9720930232558139
+    },
+    "pt68to70": {
+     "in_bin": 193.0,
+     "pass_trigger": 190.0,
+     "eff": 0.9844559585492227
+    },
+    "pt70to72": {
+     "in_bin": 173.0,
+     "pass_trigger": 170.0,
+     "eff": 0.9826589595375722
+    },
+    "pt72to74": {
+     "in_bin": 151.0,
+     "pass_trigger": 146.0,
+     "eff": 0.9668874172185431
+    },
+    "pt74to76": {
+     "in_bin": 140.0,
+     "pass_trigger": 135.0,
+     "eff": 0.9642857142857143
+    },
+    "pt76to78": {
+     "in_bin": 110.0,
+     "pass_trigger": 107.0,
+     "eff": 0.9727272727272728
+    },
+    "pt78to80": {
+     "in_bin": 102.0,
+     "pass_trigger": 100.0,
+     "eff": 0.9803921568627451
+    },
+    "pt80to82": {
+     "in_bin": 100.0,
+     "pass_trigger": 96.0,
+     "eff": 0.96
+    },
+    "pt82to84": {
+     "in_bin": 88.0,
+     "pass_trigger": 87.0,
+     "eff": 0.9886363636363636
+    },
+    "pt84to86": {
+     "in_bin": 84.0,
+     "pass_trigger": 83.0,
+     "eff": 0.9880952380952381
+    },
+    "pt86to88": {
+     "in_bin": 81.0,
+     "pass_trigger": 79.0,
+     "eff": 0.9753086419753086
+    },
+    "pt88to90": {
+     "in_bin": 63.0,
+     "pass_trigger": 61.0,
+     "eff": 0.9682539682539683
+    },
+    "pt90to92": {
+     "in_bin": 64.0,
+     "pass_trigger": 63.0,
+     "eff": 0.984375
+    },
+    "pt92to94": {
+     "in_bin": 59.0,
+     "pass_trigger": 59.0,
+     "eff": 1.0
+    },
+    "pt94to96": {
+     "in_bin": 56.0,
+     "pass_trigger": 54.0,
+     "eff": 0.9642857142857143
+    },
+    "pt96to98": {
+     "in_bin": 46.0,
+     "pass_trigger": 45.0,
+     "eff": 0.9782608695652174
+    },
+    "pt98to100": {
+     "in_bin": 39.0,
+     "pass_trigger": 39.0,
+     "eff": 1.0
+    },
+    "pt100toInf": {
+     "in_bin": 681.0,
+     "pass_trigger": 627.0,
+     "eff": 0.920704845814978
+    }
+   }
+  },
+  "trigeff_ele_sublead_double_ele": {
+   "overall": {
+    "in_bin": 105815.0,
+    "pass_trigger": 81488.0,
+    "eff": 0.7700987572650381
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1439.0,
+     "pass_trigger": 56.0,
+     "eff": 0.03891591382904795
+    },
+    "pt10to12": {
+     "in_bin": 1453.0,
+     "pass_trigger": 155.0,
+     "eff": 0.10667584308327598
+    },
+    "pt12to14": {
+     "in_bin": 2018.0,
+     "pass_trigger": 869.0,
+     "eff": 0.43062438057482655
+    },
+    "pt14to16": {
+     "in_bin": 2619.0,
+     "pass_trigger": 1556.0,
+     "eff": 0.5941198930889653
+    },
+    "pt16to18": {
+     "in_bin": 3130.0,
+     "pass_trigger": 1979.0,
+     "eff": 0.6322683706070288
+    },
+    "pt18to20": {
+     "in_bin": 3687.0,
+     "pass_trigger": 2543.0,
+     "eff": 0.6897206400867915
+    },
+    "pt20to22": {
+     "in_bin": 4334.0,
+     "pass_trigger": 3082.0,
+     "eff": 0.711121365943701
+    },
+    "pt22to24": {
+     "in_bin": 4906.0,
+     "pass_trigger": 3654.0,
+     "eff": 0.7448022829188748
+    },
+    "pt24to26": {
+     "in_bin": 5533.0,
+     "pass_trigger": 4209.0,
+     "eff": 0.7607084764142418
+    },
+    "pt26to28": {
+     "in_bin": 6152.0,
+     "pass_trigger": 4824.0,
+     "eff": 0.7841352405721717
+    },
+    "pt28to30": {
+     "in_bin": 6728.0,
+     "pass_trigger": 5317.0,
+     "eff": 0.7902794292508918
+    },
+    "pt30to32": {
+     "in_bin": 7282.0,
+     "pass_trigger": 5833.0,
+     "eff": 0.8010162043394672
+    },
+    "pt32to34": {
+     "in_bin": 7443.0,
+     "pass_trigger": 6081.0,
+     "eff": 0.8170092704554615
+    },
+    "pt34to36": {
+     "in_bin": 7907.0,
+     "pass_trigger": 6554.0,
+     "eff": 0.8288857973947136
+    },
+    "pt36to38": {
+     "in_bin": 7988.0,
+     "pass_trigger": 6651.0,
+     "eff": 0.8326239359038557
+    },
+    "pt38to40": {
+     "in_bin": 7298.0,
+     "pass_trigger": 6094.0,
+     "eff": 0.8350232940531652
+    },
+    "pt40to42": {
+     "in_bin": 6862.0,
+     "pass_trigger": 5827.0,
+     "eff": 0.8491693383853104
+    },
+    "pt42to44": {
+     "in_bin": 5449.0,
+     "pass_trigger": 4608.0,
+     "eff": 0.8456597540833181
+    },
+    "pt44to46": {
+     "in_bin": 3771.0,
+     "pass_trigger": 3201.0,
+     "eff": 0.8488464598249801
+    },
+    "pt46to48": {
+     "in_bin": 2227.0,
+     "pass_trigger": 1917.0,
+     "eff": 0.8607992815446789
+    },
+    "pt48to50": {
+     "in_bin": 1337.0,
+     "pass_trigger": 1141.0,
+     "eff": 0.8534031413612565
+    },
+    "pt50to52": {
+     "in_bin": 918.0,
+     "pass_trigger": 787.0,
+     "eff": 0.8572984749455338
+    },
+    "pt52to54": {
+     "in_bin": 713.0,
+     "pass_trigger": 622.0,
+     "eff": 0.8723702664796634
+    },
+    "pt54to56": {
+     "in_bin": 536.0,
+     "pass_trigger": 457.0,
+     "eff": 0.8526119402985075
+    },
+    "pt56to58": {
+     "in_bin": 432.0,
+     "pass_trigger": 373.0,
+     "eff": 0.8634259259259259
+    },
+    "pt58to60": {
+     "in_bin": 355.0,
+     "pass_trigger": 323.0,
+     "eff": 0.9098591549295775
+    },
+    "pt60to62": {
+     "in_bin": 325.0,
+     "pass_trigger": 270.0,
+     "eff": 0.8307692307692308
+    },
+    "pt62to64": {
+     "in_bin": 258.0,
+     "pass_trigger": 208.0,
+     "eff": 0.8062015503875969
+    },
+    "pt64to66": {
+     "in_bin": 270.0,
+     "pass_trigger": 232.0,
+     "eff": 0.8592592592592593
+    },
+    "pt66to68": {
+     "in_bin": 215.0,
+     "pass_trigger": 180.0,
+     "eff": 0.8372093023255814
+    },
+    "pt68to70": {
+     "in_bin": 193.0,
+     "pass_trigger": 174.0,
+     "eff": 0.9015544041450777
+    },
+    "pt70to72": {
+     "in_bin": 173.0,
+     "pass_trigger": 157.0,
+     "eff": 0.9075144508670521
+    },
+    "pt72to74": {
+     "in_bin": 151.0,
+     "pass_trigger": 131.0,
+     "eff": 0.8675496688741722
+    },
+    "pt74to76": {
+     "in_bin": 140.0,
+     "pass_trigger": 121.0,
+     "eff": 0.8642857142857143
+    },
+    "pt76to78": {
+     "in_bin": 110.0,
+     "pass_trigger": 96.0,
+     "eff": 0.8727272727272727
+    },
+    "pt78to80": {
+     "in_bin": 102.0,
+     "pass_trigger": 92.0,
+     "eff": 0.9019607843137255
+    },
+    "pt80to82": {
+     "in_bin": 100.0,
+     "pass_trigger": 87.0,
+     "eff": 0.87
+    },
+    "pt82to84": {
+     "in_bin": 88.0,
+     "pass_trigger": 74.0,
+     "eff": 0.8409090909090909
+    },
+    "pt84to86": {
+     "in_bin": 84.0,
+     "pass_trigger": 72.0,
+     "eff": 0.8571428571428571
+    },
+    "pt86to88": {
+     "in_bin": 81.0,
+     "pass_trigger": 74.0,
+     "eff": 0.9135802469135802
+    },
+    "pt88to90": {
+     "in_bin": 63.0,
+     "pass_trigger": 55.0,
+     "eff": 0.873015873015873
+    },
+    "pt90to92": {
+     "in_bin": 64.0,
+     "pass_trigger": 54.0,
+     "eff": 0.84375
+    },
+    "pt92to94": {
+     "in_bin": 59.0,
+     "pass_trigger": 56.0,
+     "eff": 0.9491525423728814
+    },
+    "pt94to96": {
+     "in_bin": 56.0,
+     "pass_trigger": 47.0,
+     "eff": 0.8392857142857143
+    },
+    "pt96to98": {
+     "in_bin": 46.0,
+     "pass_trigger": 36.0,
+     "eff": 0.782608695652174
+    },
+    "pt98to100": {
+     "in_bin": 39.0,
+     "pass_trigger": 35.0,
+     "eff": 0.8974358974358975
+    },
+    "pt100toInf": {
+     "in_bin": 681.0,
+     "pass_trigger": 524.0,
+     "eff": 0.7694566813509545
+    }
+   }
+  },
+  "trigeff_mu_leadN2_OR_mu": {
+   "overall": {
+    "in_bin": 113868.0,
+    "pass_trigger": 111821.0,
+    "eff": 0.9820230442266484
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 22.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 42.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 79.0,
+     "pass_trigger": 2.0,
+     "eff": 0.02531645569620253
+    },
+    "pt14to16": {
+     "in_bin": 143.0,
+     "pass_trigger": 1.0,
+     "eff": 0.006993006993006993
+    },
+    "pt16to18": {
+     "in_bin": 234.0,
+     "pass_trigger": 103.0,
+     "eff": 0.44017094017094016
+    },
+    "pt18to20": {
+     "in_bin": 347.0,
+     "pass_trigger": 290.0,
+     "eff": 0.8357348703170029
+    },
+    "pt20to22": {
+     "in_bin": 467.0,
+     "pass_trigger": 391.0,
+     "eff": 0.8372591006423983
+    },
+    "pt22to24": {
+     "in_bin": 636.0,
+     "pass_trigger": 553.0,
+     "eff": 0.8694968553459119
+    },
+    "pt24to26": {
+     "in_bin": 833.0,
+     "pass_trigger": 800.0,
+     "eff": 0.9603841536614646
+    },
+    "pt26to28": {
+     "in_bin": 1012.0,
+     "pass_trigger": 968.0,
+     "eff": 0.9565217391304348
+    },
+    "pt28to30": {
+     "in_bin": 1304.0,
+     "pass_trigger": 1260.0,
+     "eff": 0.9662576687116564
+    },
+    "pt30to32": {
+     "in_bin": 1667.0,
+     "pass_trigger": 1611.0,
+     "eff": 0.9664067186562687
+    },
+    "pt32to34": {
+     "in_bin": 2029.0,
+     "pass_trigger": 1975.0,
+     "eff": 0.9733859043863973
+    },
+    "pt34to36": {
+     "in_bin": 2474.0,
+     "pass_trigger": 2431.0,
+     "eff": 0.9826192400970089
+    },
+    "pt36to38": {
+     "in_bin": 2929.0,
+     "pass_trigger": 2874.0,
+     "eff": 0.9812222601570502
+    },
+    "pt38to40": {
+     "in_bin": 3631.0,
+     "pass_trigger": 3562.0,
+     "eff": 0.980996970531534
+    },
+    "pt40to42": {
+     "in_bin": 4382.0,
+     "pass_trigger": 4318.0,
+     "eff": 0.9853947968963943
+    },
+    "pt42to44": {
+     "in_bin": 5283.0,
+     "pass_trigger": 5221.0,
+     "eff": 0.9882642438008707
+    },
+    "pt44to46": {
+     "in_bin": 6610.0,
+     "pass_trigger": 6538.0,
+     "eff": 0.98910741301059
+    },
+    "pt46to48": {
+     "in_bin": 7915.0,
+     "pass_trigger": 7846.0,
+     "eff": 0.991282375236892
+    },
+    "pt48to50": {
+     "in_bin": 8037.0,
+     "pass_trigger": 7964.0,
+     "eff": 0.9909170088341421
+    },
+    "pt50to52": {
+     "in_bin": 7640.0,
+     "pass_trigger": 7585.0,
+     "eff": 0.9928010471204188
+    },
+    "pt52to54": {
+     "in_bin": 6758.0,
+     "pass_trigger": 6699.0,
+     "eff": 0.9912696063924238
+    },
+    "pt54to56": {
+     "in_bin": 5984.0,
+     "pass_trigger": 5934.0,
+     "eff": 0.991644385026738
+    },
+    "pt56to58": {
+     "in_bin": 5064.0,
+     "pass_trigger": 5010.0,
+     "eff": 0.9893364928909952
+    },
+    "pt58to60": {
+     "in_bin": 4230.0,
+     "pass_trigger": 4206.0,
+     "eff": 0.9943262411347518
+    },
+    "pt60to62": {
+     "in_bin": 3567.0,
+     "pass_trigger": 3534.0,
+     "eff": 0.990748528174937
+    },
+    "pt62to64": {
+     "in_bin": 3002.0,
+     "pass_trigger": 2982.0,
+     "eff": 0.9933377748167888
+    },
+    "pt64to66": {
+     "in_bin": 2484.0,
+     "pass_trigger": 2461.0,
+     "eff": 0.9907407407407407
+    },
+    "pt66to68": {
+     "in_bin": 2227.0,
+     "pass_trigger": 2206.0,
+     "eff": 0.9905702739110912
+    },
+    "pt68to70": {
+     "in_bin": 1973.0,
+     "pass_trigger": 1956.0,
+     "eff": 0.9913836796756209
+    },
+    "pt70to72": {
+     "in_bin": 1632.0,
+     "pass_trigger": 1612.0,
+     "eff": 0.9877450980392157
+    },
+    "pt72to74": {
+     "in_bin": 1540.0,
+     "pass_trigger": 1525.0,
+     "eff": 0.9902597402597403
+    },
+    "pt74to76": {
+     "in_bin": 1303.0,
+     "pass_trigger": 1283.0,
+     "eff": 0.9846508058326938
+    },
+    "pt76to78": {
+     "in_bin": 1168.0,
+     "pass_trigger": 1151.0,
+     "eff": 0.985445205479452
+    },
+    "pt78to80": {
+     "in_bin": 1055.0,
+     "pass_trigger": 1042.0,
+     "eff": 0.9876777251184834
+    },
+    "pt80to82": {
+     "in_bin": 922.0,
+     "pass_trigger": 912.0,
+     "eff": 0.9891540130151844
+    },
+    "pt82to84": {
+     "in_bin": 889.0,
+     "pass_trigger": 876.0,
+     "eff": 0.9853768278965129
+    },
+    "pt84to86": {
+     "in_bin": 772.0,
+     "pass_trigger": 763.0,
+     "eff": 0.9883419689119171
+    },
+    "pt86to88": {
+     "in_bin": 678.0,
+     "pass_trigger": 667.0,
+     "eff": 0.9837758112094396
+    },
+    "pt88to90": {
+     "in_bin": 681.0,
+     "pass_trigger": 670.0,
+     "eff": 0.9838472834067548
+    },
+    "pt90to92": {
+     "in_bin": 576.0,
+     "pass_trigger": 563.0,
+     "eff": 0.9774305555555556
+    },
+    "pt92to94": {
+     "in_bin": 561.0,
+     "pass_trigger": 554.0,
+     "eff": 0.9875222816399287
+    },
+    "pt94to96": {
+     "in_bin": 522.0,
+     "pass_trigger": 511.0,
+     "eff": 0.9789272030651341
+    },
+    "pt96to98": {
+     "in_bin": 468.0,
+     "pass_trigger": 459.0,
+     "eff": 0.9807692307692307
+    },
+    "pt98to100": {
+     "in_bin": 447.0,
+     "pass_trigger": 446.0,
+     "eff": 0.9977628635346756
+    },
+    "pt100toInf": {
+     "in_bin": 7649.0,
+     "pass_trigger": 7506.0,
+     "eff": 0.9813047457183945
+    }
+   }
+  },
+  "trigeff_mu_leadN2_double_mu": {
+   "overall": {
+    "in_bin": 113868.0,
+    "pass_trigger": 105104.0,
+    "eff": 0.9230336881301155
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 22.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 42.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 79.0,
+     "pass_trigger": 1.0,
+     "eff": 0.012658227848101266
+    },
+    "pt14to16": {
+     "in_bin": 143.0,
+     "pass_trigger": 1.0,
+     "eff": 0.006993006993006993
+    },
+    "pt16to18": {
+     "in_bin": 234.0,
+     "pass_trigger": 103.0,
+     "eff": 0.44017094017094016
+    },
+    "pt18to20": {
+     "in_bin": 347.0,
+     "pass_trigger": 290.0,
+     "eff": 0.8357348703170029
+    },
+    "pt20to22": {
+     "in_bin": 467.0,
+     "pass_trigger": 391.0,
+     "eff": 0.8372591006423983
+    },
+    "pt22to24": {
+     "in_bin": 636.0,
+     "pass_trigger": 553.0,
+     "eff": 0.8694968553459119
+    },
+    "pt24to26": {
+     "in_bin": 833.0,
+     "pass_trigger": 751.0,
+     "eff": 0.9015606242496998
+    },
+    "pt26to28": {
+     "in_bin": 1012.0,
+     "pass_trigger": 897.0,
+     "eff": 0.8863636363636364
+    },
+    "pt28to30": {
+     "in_bin": 1304.0,
+     "pass_trigger": 1154.0,
+     "eff": 0.8849693251533742
+    },
+    "pt30to32": {
+     "in_bin": 1667.0,
+     "pass_trigger": 1503.0,
+     "eff": 0.901619676064787
+    },
+    "pt32to34": {
+     "in_bin": 2029.0,
+     "pass_trigger": 1844.0,
+     "eff": 0.9088220798422868
+    },
+    "pt34to36": {
+     "in_bin": 2474.0,
+     "pass_trigger": 2277.0,
+     "eff": 0.9203718674211803
+    },
+    "pt36to38": {
+     "in_bin": 2929.0,
+     "pass_trigger": 2711.0,
+     "eff": 0.9255718675315807
+    },
+    "pt38to40": {
+     "in_bin": 3631.0,
+     "pass_trigger": 3347.0,
+     "eff": 0.9217846323326907
+    },
+    "pt40to42": {
+     "in_bin": 4382.0,
+     "pass_trigger": 4033.0,
+     "eff": 0.9203560018256504
+    },
+    "pt42to44": {
+     "in_bin": 5283.0,
+     "pass_trigger": 4921.0,
+     "eff": 0.9314783267083097
+    },
+    "pt44to46": {
+     "in_bin": 6610.0,
+     "pass_trigger": 6139.0,
+     "eff": 0.9287443267776097
+    },
+    "pt46to48": {
+     "in_bin": 7915.0,
+     "pass_trigger": 7368.0,
+     "eff": 0.9308907138344915
+    },
+    "pt48to50": {
+     "in_bin": 8037.0,
+     "pass_trigger": 7514.0,
+     "eff": 0.9349259674007714
+    },
+    "pt50to52": {
+     "in_bin": 7640.0,
+     "pass_trigger": 7127.0,
+     "eff": 0.9328534031413612
+    },
+    "pt52to54": {
+     "in_bin": 6758.0,
+     "pass_trigger": 6304.0,
+     "eff": 0.9328203610535661
+    },
+    "pt54to56": {
+     "in_bin": 5984.0,
+     "pass_trigger": 5609.0,
+     "eff": 0.9373328877005348
+    },
+    "pt56to58": {
+     "in_bin": 5064.0,
+     "pass_trigger": 4727.0,
+     "eff": 0.9334518167456556
+    },
+    "pt58to60": {
+     "in_bin": 4230.0,
+     "pass_trigger": 3970.0,
+     "eff": 0.9385342789598109
+    },
+    "pt60to62": {
+     "in_bin": 3567.0,
+     "pass_trigger": 3306.0,
+     "eff": 0.926829268292683
+    },
+    "pt62to64": {
+     "in_bin": 3002.0,
+     "pass_trigger": 2789.0,
+     "eff": 0.9290473017988008
+    },
+    "pt64to66": {
+     "in_bin": 2484.0,
+     "pass_trigger": 2314.0,
+     "eff": 0.9315619967793881
+    },
+    "pt66to68": {
+     "in_bin": 2227.0,
+     "pass_trigger": 2078.0,
+     "eff": 0.9330938482263135
+    },
+    "pt68to70": {
+     "in_bin": 1973.0,
+     "pass_trigger": 1853.0,
+     "eff": 0.9391789153573239
+    },
+    "pt70to72": {
+     "in_bin": 1632.0,
+     "pass_trigger": 1516.0,
+     "eff": 0.928921568627451
+    },
+    "pt72to74": {
+     "in_bin": 1540.0,
+     "pass_trigger": 1431.0,
+     "eff": 0.9292207792207792
+    },
+    "pt74to76": {
+     "in_bin": 1303.0,
+     "pass_trigger": 1192.0,
+     "eff": 0.9148119723714505
+    },
+    "pt76to78": {
+     "in_bin": 1168.0,
+     "pass_trigger": 1068.0,
+     "eff": 0.9143835616438356
+    },
+    "pt78to80": {
+     "in_bin": 1055.0,
+     "pass_trigger": 984.0,
+     "eff": 0.9327014218009478
+    },
+    "pt80to82": {
+     "in_bin": 922.0,
+     "pass_trigger": 855.0,
+     "eff": 0.9273318872017353
+    },
+    "pt82to84": {
+     "in_bin": 889.0,
+     "pass_trigger": 832.0,
+     "eff": 0.9358830146231721
+    },
+    "pt84to86": {
+     "in_bin": 772.0,
+     "pass_trigger": 721.0,
+     "eff": 0.9339378238341969
+    },
+    "pt86to88": {
+     "in_bin": 678.0,
+     "pass_trigger": 628.0,
+     "eff": 0.9262536873156342
+    },
+    "pt88to90": {
+     "in_bin": 681.0,
+     "pass_trigger": 627.0,
+     "eff": 0.920704845814978
+    },
+    "pt90to92": {
+     "in_bin": 576.0,
+     "pass_trigger": 545.0,
+     "eff": 0.9461805555555556
+    },
+    "pt92to94": {
+     "in_bin": 561.0,
+     "pass_trigger": 527.0,
+     "eff": 0.9393939393939394
+    },
+    "pt94to96": {
+     "in_bin": 522.0,
+     "pass_trigger": 481.0,
+     "eff": 0.921455938697318
+    },
+    "pt96to98": {
+     "in_bin": 468.0,
+     "pass_trigger": 421.0,
+     "eff": 0.8995726495726496
+    },
+    "pt98to100": {
+     "in_bin": 447.0,
+     "pass_trigger": 424.0,
+     "eff": 0.9485458612975392
+    },
+    "pt100toInf": {
+     "in_bin": 7649.0,
+     "pass_trigger": 6977.0,
+     "eff": 0.9121453784808472
+    }
+   }
+  },
+  "trigeff_mu_leadOL_OR_mu": {
+   "overall": {
+    "in_bin": 111485.0,
+    "pass_trigger": 109904.0,
+    "eff": 0.9858187200071759
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 14.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 40.0,
+     "pass_trigger": 1.0,
+     "eff": 0.025
+    },
+    "pt14to16": {
+     "in_bin": 80.0,
+     "pass_trigger": 1.0,
+     "eff": 0.0125
+    },
+    "pt16to18": {
+     "in_bin": 172.0,
+     "pass_trigger": 92.0,
+     "eff": 0.5348837209302325
+    },
+    "pt18to20": {
+     "in_bin": 280.0,
+     "pass_trigger": 261.0,
+     "eff": 0.9321428571428572
+    },
+    "pt20to22": {
+     "in_bin": 400.0,
+     "pass_trigger": 369.0,
+     "eff": 0.9225
+    },
+    "pt22to24": {
+     "in_bin": 569.0,
+     "pass_trigger": 521.0,
+     "eff": 0.9156414762741653
+    },
+    "pt24to26": {
+     "in_bin": 764.0,
+     "pass_trigger": 739.0,
+     "eff": 0.9672774869109948
+    },
+    "pt26to28": {
+     "in_bin": 927.0,
+     "pass_trigger": 900.0,
+     "eff": 0.970873786407767
+    },
+    "pt28to30": {
+     "in_bin": 1213.0,
+     "pass_trigger": 1179.0,
+     "eff": 0.9719703215169002
+    },
+    "pt30to32": {
+     "in_bin": 1570.0,
+     "pass_trigger": 1527.0,
+     "eff": 0.9726114649681529
+    },
+    "pt32to34": {
+     "in_bin": 1952.0,
+     "pass_trigger": 1904.0,
+     "eff": 0.9754098360655737
+    },
+    "pt34to36": {
+     "in_bin": 2370.0,
+     "pass_trigger": 2333.0,
+     "eff": 0.9843881856540084
+    },
+    "pt36to38": {
+     "in_bin": 2853.0,
+     "pass_trigger": 2804.0,
+     "eff": 0.9828250963897651
+    },
+    "pt38to40": {
+     "in_bin": 3545.0,
+     "pass_trigger": 3483.0,
+     "eff": 0.9825105782792666
+    },
+    "pt40to42": {
+     "in_bin": 4302.0,
+     "pass_trigger": 4245.0,
+     "eff": 0.9867503486750349
+    },
+    "pt42to44": {
+     "in_bin": 5214.0,
+     "pass_trigger": 5155.0,
+     "eff": 0.9886843114691216
+    },
+    "pt44to46": {
+     "in_bin": 6555.0,
+     "pass_trigger": 6492.0,
+     "eff": 0.9903890160183066
+    },
+    "pt46to48": {
+     "in_bin": 7845.0,
+     "pass_trigger": 7779.0,
+     "eff": 0.9915869980879541
+    },
+    "pt48to50": {
+     "in_bin": 7992.0,
+     "pass_trigger": 7921.0,
+     "eff": 0.9911161161161162
+    },
+    "pt50to52": {
+     "in_bin": 7593.0,
+     "pass_trigger": 7544.0,
+     "eff": 0.9935466877387067
+    },
+    "pt52to54": {
+     "in_bin": 6702.0,
+     "pass_trigger": 6645.0,
+     "eff": 0.9914950760966875
+    },
+    "pt54to56": {
+     "in_bin": 5936.0,
+     "pass_trigger": 5888.0,
+     "eff": 0.9919137466307277
+    },
+    "pt56to58": {
+     "in_bin": 5021.0,
+     "pass_trigger": 4968.0,
+     "eff": 0.9894443337980482
+    },
+    "pt58to60": {
+     "in_bin": 4187.0,
+     "pass_trigger": 4164.0,
+     "eff": 0.9945068067828995
+    },
+    "pt60to62": {
+     "in_bin": 3532.0,
+     "pass_trigger": 3499.0,
+     "eff": 0.9906568516421291
+    },
+    "pt62to64": {
+     "in_bin": 2968.0,
+     "pass_trigger": 2949.0,
+     "eff": 0.9935983827493261
+    },
+    "pt64to66": {
+     "in_bin": 2457.0,
+     "pass_trigger": 2436.0,
+     "eff": 0.9914529914529915
+    },
+    "pt66to68": {
+     "in_bin": 2195.0,
+     "pass_trigger": 2176.0,
+     "eff": 0.9913439635535307
+    },
+    "pt68to70": {
+     "in_bin": 1945.0,
+     "pass_trigger": 1928.0,
+     "eff": 0.9912596401028277
+    },
+    "pt70to72": {
+     "in_bin": 1608.0,
+     "pass_trigger": 1589.0,
+     "eff": 0.9881840796019901
+    },
+    "pt72to74": {
+     "in_bin": 1518.0,
+     "pass_trigger": 1503.0,
+     "eff": 0.9901185770750988
+    },
+    "pt74to76": {
+     "in_bin": 1285.0,
+     "pass_trigger": 1265.0,
+     "eff": 0.9844357976653697
+    },
+    "pt76to78": {
+     "in_bin": 1150.0,
+     "pass_trigger": 1134.0,
+     "eff": 0.9860869565217392
+    },
+    "pt78to80": {
+     "in_bin": 1039.0,
+     "pass_trigger": 1027.0,
+     "eff": 0.9884504331087585
+    },
+    "pt80to82": {
+     "in_bin": 901.0,
+     "pass_trigger": 892.0,
+     "eff": 0.9900110987791343
+    },
+    "pt82to84": {
+     "in_bin": 872.0,
+     "pass_trigger": 861.0,
+     "eff": 0.9873853211009175
+    },
+    "pt84to86": {
+     "in_bin": 757.0,
+     "pass_trigger": 748.0,
+     "eff": 0.988110964332893
+    },
+    "pt86to88": {
+     "in_bin": 665.0,
+     "pass_trigger": 656.0,
+     "eff": 0.9864661654135338
+    },
+    "pt88to90": {
+     "in_bin": 661.0,
+     "pass_trigger": 650.0,
+     "eff": 0.983358547655068
+    },
+    "pt90to92": {
+     "in_bin": 565.0,
+     "pass_trigger": 554.0,
+     "eff": 0.9805309734513274
+    },
+    "pt92to94": {
+     "in_bin": 551.0,
+     "pass_trigger": 544.0,
+     "eff": 0.9872958257713249
+    },
+    "pt94to96": {
+     "in_bin": 507.0,
+     "pass_trigger": 497.0,
+     "eff": 0.980276134122288
+    },
+    "pt96to98": {
+     "in_bin": 450.0,
+     "pass_trigger": 442.0,
+     "eff": 0.9822222222222222
+    },
+    "pt98to100": {
+     "in_bin": 438.0,
+     "pass_trigger": 437.0,
+     "eff": 0.997716894977169
+    },
+    "pt100toInf": {
+     "in_bin": 7325.0,
+     "pass_trigger": 7202.0,
+     "eff": 0.9832081911262799
+    }
+   }
+  },
+  "trigeff_mu_leadOL_double_mu": {
+   "overall": {
+    "in_bin": 111485.0,
+    "pass_trigger": 104017.0,
+    "eff": 0.9330134098757681
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 0.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt10to12": {
+     "in_bin": 14.0,
+     "pass_trigger": 0.0,
+     "eff": 0.0
+    },
+    "pt12to14": {
+     "in_bin": 40.0,
+     "pass_trigger": 1.0,
+     "eff": 0.025
+    },
+    "pt14to16": {
+     "in_bin": 80.0,
+     "pass_trigger": 1.0,
+     "eff": 0.0125
+    },
+    "pt16to18": {
+     "in_bin": 172.0,
+     "pass_trigger": 92.0,
+     "eff": 0.5348837209302325
+    },
+    "pt18to20": {
+     "in_bin": 280.0,
+     "pass_trigger": 261.0,
+     "eff": 0.9321428571428572
+    },
+    "pt20to22": {
+     "in_bin": 400.0,
+     "pass_trigger": 369.0,
+     "eff": 0.9225
+    },
+    "pt22to24": {
+     "in_bin": 569.0,
+     "pass_trigger": 521.0,
+     "eff": 0.9156414762741653
+    },
+    "pt24to26": {
+     "in_bin": 764.0,
+     "pass_trigger": 715.0,
+     "eff": 0.9358638743455497
+    },
+    "pt26to28": {
+     "in_bin": 927.0,
+     "pass_trigger": 854.0,
+     "eff": 0.9212513484358145
+    },
+    "pt28to30": {
+     "in_bin": 1213.0,
+     "pass_trigger": 1120.0,
+     "eff": 0.9233305853256389
+    },
+    "pt30to32": {
+     "in_bin": 1570.0,
+     "pass_trigger": 1463.0,
+     "eff": 0.9318471337579618
+    },
+    "pt32to34": {
+     "in_bin": 1952.0,
+     "pass_trigger": 1806.0,
+     "eff": 0.9252049180327869
+    },
+    "pt34to36": {
+     "in_bin": 2370.0,
+     "pass_trigger": 2218.0,
+     "eff": 0.9358649789029536
+    },
+    "pt36to38": {
+     "in_bin": 2853.0,
+     "pass_trigger": 2674.0,
+     "eff": 0.9372590255871013
+    },
+    "pt38to40": {
+     "in_bin": 3545.0,
+     "pass_trigger": 3310.0,
+     "eff": 0.9337094499294781
+    },
+    "pt40to42": {
+     "in_bin": 4302.0,
+     "pass_trigger": 3995.0,
+     "eff": 0.9286378428637843
+    },
+    "pt42to44": {
+     "in_bin": 5214.0,
+     "pass_trigger": 4890.0,
+     "eff": 0.9378596087456847
+    },
+    "pt44to46": {
+     "in_bin": 6555.0,
+     "pass_trigger": 6118.0,
+     "eff": 0.9333333333333333
+    },
+    "pt46to48": {
+     "in_bin": 7845.0,
+     "pass_trigger": 7328.0,
+     "eff": 0.9340981516889739
+    },
+    "pt48to50": {
+     "in_bin": 7992.0,
+     "pass_trigger": 7490.0,
+     "eff": 0.9371871871871872
+    },
+    "pt50to52": {
+     "in_bin": 7593.0,
+     "pass_trigger": 7107.0,
+     "eff": 0.935993678387989
+    },
+    "pt52to54": {
+     "in_bin": 6702.0,
+     "pass_trigger": 6271.0,
+     "eff": 0.935690838555655
+    },
+    "pt54to56": {
+     "in_bin": 5936.0,
+     "pass_trigger": 5587.0,
+     "eff": 0.9412061994609164
+    },
+    "pt56to58": {
+     "in_bin": 5021.0,
+     "pass_trigger": 4705.0,
+     "eff": 0.9370643298147779
+    },
+    "pt58to60": {
+     "in_bin": 4187.0,
+     "pass_trigger": 3942.0,
+     "eff": 0.9414855505134941
+    },
+    "pt60to62": {
+     "in_bin": 3532.0,
+     "pass_trigger": 3295.0,
+     "eff": 0.9328992072480181
+    },
+    "pt62to64": {
+     "in_bin": 2968.0,
+     "pass_trigger": 2777.0,
+     "eff": 0.9356469002695418
+    },
+    "pt64to66": {
+     "in_bin": 2457.0,
+     "pass_trigger": 2299.0,
+     "eff": 0.9356939356939357
+    },
+    "pt66to68": {
+     "in_bin": 2195.0,
+     "pass_trigger": 2060.0,
+     "eff": 0.9384965831435079
+    },
+    "pt68to70": {
+     "in_bin": 1945.0,
+     "pass_trigger": 1834.0,
+     "eff": 0.9429305912596401
+    },
+    "pt70to72": {
+     "in_bin": 1608.0,
+     "pass_trigger": 1500.0,
+     "eff": 0.9328358208955224
+    },
+    "pt72to74": {
+     "in_bin": 1518.0,
+     "pass_trigger": 1417.0,
+     "eff": 0.9334650856389987
+    },
+    "pt74to76": {
+     "in_bin": 1285.0,
+     "pass_trigger": 1185.0,
+     "eff": 0.9221789883268483
+    },
+    "pt76to78": {
+     "in_bin": 1150.0,
+     "pass_trigger": 1062.0,
+     "eff": 0.9234782608695652
+    },
+    "pt78to80": {
+     "in_bin": 1039.0,
+     "pass_trigger": 974.0,
+     "eff": 0.9374398460057748
+    },
+    "pt80to82": {
+     "in_bin": 901.0,
+     "pass_trigger": 846.0,
+     "eff": 0.9389567147613762
+    },
+    "pt82to84": {
+     "in_bin": 872.0,
+     "pass_trigger": 822.0,
+     "eff": 0.9426605504587156
+    },
+    "pt84to86": {
+     "in_bin": 757.0,
+     "pass_trigger": 713.0,
+     "eff": 0.9418758256274768
+    },
+    "pt86to88": {
+     "in_bin": 665.0,
+     "pass_trigger": 621.0,
+     "eff": 0.9338345864661655
+    },
+    "pt88to90": {
+     "in_bin": 661.0,
+     "pass_trigger": 616.0,
+     "eff": 0.9319213313161876
+    },
+    "pt90to92": {
+     "in_bin": 565.0,
+     "pass_trigger": 540.0,
+     "eff": 0.9557522123893806
+    },
+    "pt92to94": {
+     "in_bin": 551.0,
+     "pass_trigger": 519.0,
+     "eff": 0.941923774954628
+    },
+    "pt94to96": {
+     "in_bin": 507.0,
+     "pass_trigger": 474.0,
+     "eff": 0.9349112426035503
+    },
+    "pt96to98": {
+     "in_bin": 450.0,
+     "pass_trigger": 414.0,
+     "eff": 0.92
+    },
+    "pt98to100": {
+     "in_bin": 438.0,
+     "pass_trigger": 417.0,
+     "eff": 0.952054794520548
+    },
+    "pt100toInf": {
+     "in_bin": 7325.0,
+     "pass_trigger": 6794.0,
+     "eff": 0.9275085324232082
+    }
+   }
+  },
+  "trigeff_mu_lead_OR_mu": {
+   "overall": {
+    "in_bin": 174358.0,
+    "pass_trigger": 150112.0,
+    "eff": 0.8609412817306921
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1811.0,
+     "pass_trigger": 62.0,
+     "eff": 0.034235229155162895
+    },
+    "pt10to12": {
+     "in_bin": 2010.0,
+     "pass_trigger": 68.0,
+     "eff": 0.03383084577114428
+    },
+    "pt12to14": {
+     "in_bin": 2237.0,
+     "pass_trigger": 87.0,
+     "eff": 0.038891372373714796
+    },
+    "pt14to16": {
+     "in_bin": 2495.0,
+     "pass_trigger": 85.0,
+     "eff": 0.03406813627254509
+    },
+    "pt16to18": {
+     "in_bin": 2725.0,
+     "pass_trigger": 232.0,
+     "eff": 0.08513761467889908
+    },
+    "pt18to20": {
+     "in_bin": 2845.0,
+     "pass_trigger": 476.0,
+     "eff": 0.16731107205623902
+    },
+    "pt20to22": {
+     "in_bin": 3025.0,
+     "pass_trigger": 591.0,
+     "eff": 0.1953719008264463
+    },
+    "pt22to24": {
+     "in_bin": 3396.0,
+     "pass_trigger": 788.0,
+     "eff": 0.232037691401649
+    },
+    "pt24to26": {
+     "in_bin": 3536.0,
+     "pass_trigger": 3010.0,
+     "eff": 0.8512443438914027
+    },
+    "pt26to28": {
+     "in_bin": 3606.0,
+     "pass_trigger": 3165.0,
+     "eff": 0.8777038269550749
+    },
+    "pt28to30": {
+     "in_bin": 3933.0,
+     "pass_trigger": 3520.0,
+     "eff": 0.8949911009407577
+    },
+    "pt30to32": {
+     "in_bin": 4227.0,
+     "pass_trigger": 3838.0,
+     "eff": 0.9079725573692926
+    },
+    "pt32to34": {
+     "in_bin": 4587.0,
+     "pass_trigger": 4248.0,
+     "eff": 0.9260954872465664
+    },
+    "pt34to36": {
+     "in_bin": 4993.0,
+     "pass_trigger": 4650.0,
+     "eff": 0.9313038253554977
+    },
+    "pt36to38": {
+     "in_bin": 5401.0,
+     "pass_trigger": 5090.0,
+     "eff": 0.942418070727643
+    },
+    "pt38to40": {
+     "in_bin": 5963.0,
+     "pass_trigger": 5639.0,
+     "eff": 0.9456649337581754
+    },
+    "pt40to42": {
+     "in_bin": 6541.0,
+     "pass_trigger": 6252.0,
+     "eff": 0.9558171533404678
+    },
+    "pt42to44": {
+     "in_bin": 7319.0,
+     "pass_trigger": 7063.0,
+     "eff": 0.9650225440633966
+    },
+    "pt44to46": {
+     "in_bin": 8428.0,
+     "pass_trigger": 8169.0,
+     "eff": 0.9692691029900332
+    },
+    "pt46to48": {
+     "in_bin": 9597.0,
+     "pass_trigger": 9363.0,
+     "eff": 0.9756173804313848
+    },
+    "pt48to50": {
+     "in_bin": 9550.0,
+     "pass_trigger": 9353.0,
+     "eff": 0.9793717277486911
+    },
+    "pt50to52": {
+     "in_bin": 8951.0,
+     "pass_trigger": 8785.0,
+     "eff": 0.9814545860797677
+    },
+    "pt52to54": {
+     "in_bin": 7974.0,
+     "pass_trigger": 7816.0,
+     "eff": 0.9801856032104339
+    },
+    "pt54to56": {
+     "in_bin": 7058.0,
+     "pass_trigger": 6905.0,
+     "eff": 0.9783224709549447
+    },
+    "pt56to58": {
+     "in_bin": 5905.0,
+     "pass_trigger": 5788.0,
+     "eff": 0.9801862828111769
+    },
+    "pt58to60": {
+     "in_bin": 5029.0,
+     "pass_trigger": 4935.0,
+     "eff": 0.9813084112149533
+    },
+    "pt60to62": {
+     "in_bin": 4205.0,
+     "pass_trigger": 4118.0,
+     "eff": 0.9793103448275862
+    },
+    "pt62to64": {
+     "in_bin": 3539.0,
+     "pass_trigger": 3471.0,
+     "eff": 0.9807855326363379
+    },
+    "pt64to66": {
+     "in_bin": 2969.0,
+     "pass_trigger": 2900.0,
+     "eff": 0.9767598518019536
+    },
+    "pt66to68": {
+     "in_bin": 2717.0,
+     "pass_trigger": 2654.0,
+     "eff": 0.9768126610231873
+    },
+    "pt68to70": {
+     "in_bin": 2366.0,
+     "pass_trigger": 2310.0,
+     "eff": 0.9763313609467456
+    },
+    "pt70to72": {
+     "in_bin": 1989.0,
+     "pass_trigger": 1937.0,
+     "eff": 0.9738562091503268
+    },
+    "pt72to74": {
+     "in_bin": 1860.0,
+     "pass_trigger": 1821.0,
+     "eff": 0.9790322580645161
+    },
+    "pt74to76": {
+     "in_bin": 1576.0,
+     "pass_trigger": 1532.0,
+     "eff": 0.9720812182741116
+    },
+    "pt76to78": {
+     "in_bin": 1398.0,
+     "pass_trigger": 1357.0,
+     "eff": 0.9706723891273248
+    },
+    "pt78to80": {
+     "in_bin": 1292.0,
+     "pass_trigger": 1253.0,
+     "eff": 0.9698142414860681
+    },
+    "pt80to82": {
+     "in_bin": 1136.0,
+     "pass_trigger": 1104.0,
+     "eff": 0.971830985915493
+    },
+    "pt82to84": {
+     "in_bin": 1101.0,
+     "pass_trigger": 1065.0,
+     "eff": 0.9673024523160763
+    },
+    "pt84to86": {
+     "in_bin": 924.0,
+     "pass_trigger": 895.0,
+     "eff": 0.9686147186147186
+    },
+    "pt86to88": {
+     "in_bin": 847.0,
+     "pass_trigger": 827.0,
+     "eff": 0.9763872491145218
+    },
+    "pt88to90": {
+     "in_bin": 817.0,
+     "pass_trigger": 798.0,
+     "eff": 0.9767441860465116
+    },
+    "pt90to92": {
+     "in_bin": 729.0,
+     "pass_trigger": 698.0,
+     "eff": 0.9574759945130316
+    },
+    "pt92to94": {
+     "in_bin": 692.0,
+     "pass_trigger": 676.0,
+     "eff": 0.976878612716763
+    },
+    "pt94to96": {
+     "in_bin": 653.0,
+     "pass_trigger": 630.0,
+     "eff": 0.9647779479326187
+    },
+    "pt96to98": {
+     "in_bin": 569.0,
+     "pass_trigger": 555.0,
+     "eff": 0.9753954305799648
+    },
+    "pt98to100": {
+     "in_bin": 545.0,
+     "pass_trigger": 541.0,
+     "eff": 0.9926605504587156
+    },
+    "pt100toInf": {
+     "in_bin": 9292.0,
+     "pass_trigger": 8992.0,
+     "eff": 0.9677141627206199
+    }
+   }
+  },
+  "trigeff_mu_lead_double_mu": {
+   "overall": {
+    "in_bin": 174358.0,
+    "pass_trigger": 112243.0,
+    "eff": 0.6437502150747313
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1811.0,
+     "pass_trigger": 61.0,
+     "eff": 0.03368304803975704
+    },
+    "pt10to12": {
+     "in_bin": 2010.0,
+     "pass_trigger": 68.0,
+     "eff": 0.03383084577114428
+    },
+    "pt12to14": {
+     "in_bin": 2237.0,
+     "pass_trigger": 84.0,
+     "eff": 0.03755029056772463
+    },
+    "pt14to16": {
+     "in_bin": 2495.0,
+     "pass_trigger": 82.0,
+     "eff": 0.03286573146292585
+    },
+    "pt16to18": {
+     "in_bin": 2725.0,
+     "pass_trigger": 230.0,
+     "eff": 0.08440366972477065
+    },
+    "pt18to20": {
+     "in_bin": 2845.0,
+     "pass_trigger": 470.0,
+     "eff": 0.16520210896309315
+    },
+    "pt20to22": {
+     "in_bin": 3025.0,
+     "pass_trigger": 588.0,
+     "eff": 0.1943801652892562
+    },
+    "pt22to24": {
+     "in_bin": 3396.0,
+     "pass_trigger": 761.0,
+     "eff": 0.22408716136631332
+    },
+    "pt24to26": {
+     "in_bin": 3536.0,
+     "pass_trigger": 966.0,
+     "eff": 0.27319004524886875
+    },
+    "pt26to28": {
+     "in_bin": 3606.0,
+     "pass_trigger": 1137.0,
+     "eff": 0.31530782029950083
+    },
+    "pt28to30": {
+     "in_bin": 3933.0,
+     "pass_trigger": 1392.0,
+     "eff": 0.35392829900839057
+    },
+    "pt30to32": {
+     "in_bin": 4227.0,
+     "pass_trigger": 1762.0,
+     "eff": 0.4168440974686539
+    },
+    "pt32to34": {
+     "in_bin": 4587.0,
+     "pass_trigger": 2127.0,
+     "eff": 0.46370176586003925
+    },
+    "pt34to36": {
+     "in_bin": 4993.0,
+     "pass_trigger": 2577.0,
+     "eff": 0.5161225716002403
+    },
+    "pt36to38": {
+     "in_bin": 5401.0,
+     "pass_trigger": 3034.0,
+     "eff": 0.5617478244769487
+    },
+    "pt38to40": {
+     "in_bin": 5963.0,
+     "pass_trigger": 3669.0,
+     "eff": 0.6152943149421433
+    },
+    "pt40to42": {
+     "in_bin": 6541.0,
+     "pass_trigger": 4353.0,
+     "eff": 0.6654945726953065
+    },
+    "pt42to44": {
+     "in_bin": 7319.0,
+     "pass_trigger": 5236.0,
+     "eff": 0.7153982784533406
+    },
+    "pt44to46": {
+     "in_bin": 8428.0,
+     "pass_trigger": 6443.0,
+     "eff": 0.7644755576649265
+    },
+    "pt46to48": {
+     "in_bin": 9597.0,
+     "pass_trigger": 7647.0,
+     "eff": 0.7968115035948734
+    },
+    "pt48to50": {
+     "in_bin": 9550.0,
+     "pass_trigger": 7772.0,
+     "eff": 0.8138219895287958
+    },
+    "pt50to52": {
+     "in_bin": 8951.0,
+     "pass_trigger": 7354.0,
+     "eff": 0.8215841805384874
+    },
+    "pt52to54": {
+     "in_bin": 7974.0,
+     "pass_trigger": 6566.0,
+     "eff": 0.8234261349385503
+    },
+    "pt54to56": {
+     "in_bin": 7058.0,
+     "pass_trigger": 5790.0,
+     "eff": 0.8203457069991499
+    },
+    "pt56to58": {
+     "in_bin": 5905.0,
+     "pass_trigger": 4908.0,
+     "eff": 0.831160033869602
+    },
+    "pt58to60": {
+     "in_bin": 5029.0,
+     "pass_trigger": 4139.0,
+     "eff": 0.823026446609664
+    },
+    "pt60to62": {
+     "in_bin": 4205.0,
+     "pass_trigger": 3454.0,
+     "eff": 0.8214030915576694
+    },
+    "pt62to64": {
+     "in_bin": 3539.0,
+     "pass_trigger": 2893.0,
+     "eff": 0.8174625600452106
+    },
+    "pt64to66": {
+     "in_bin": 2969.0,
+     "pass_trigger": 2403.0,
+     "eff": 0.8093634220276187
+    },
+    "pt66to68": {
+     "in_bin": 2717.0,
+     "pass_trigger": 2165.0,
+     "eff": 0.7968347442031652
+    },
+    "pt68to70": {
+     "in_bin": 2366.0,
+     "pass_trigger": 1930.0,
+     "eff": 0.8157227387996618
+    },
+    "pt70to72": {
+     "in_bin": 1989.0,
+     "pass_trigger": 1581.0,
+     "eff": 0.7948717948717948
+    },
+    "pt72to74": {
+     "in_bin": 1860.0,
+     "pass_trigger": 1502.0,
+     "eff": 0.8075268817204301
+    },
+    "pt74to76": {
+     "in_bin": 1576.0,
+     "pass_trigger": 1236.0,
+     "eff": 0.7842639593908629
+    },
+    "pt76to78": {
+     "in_bin": 1398.0,
+     "pass_trigger": 1115.0,
+     "eff": 0.7975679542203148
+    },
+    "pt78to80": {
+     "in_bin": 1292.0,
+     "pass_trigger": 1021.0,
+     "eff": 0.7902476780185759
+    },
+    "pt80to82": {
+     "in_bin": 1136.0,
+     "pass_trigger": 895.0,
+     "eff": 0.7878521126760564
+    },
+    "pt82to84": {
+     "in_bin": 1101.0,
+     "pass_trigger": 869.0,
+     "eff": 0.7892824704813806
+    },
+    "pt84to86": {
+     "in_bin": 924.0,
+     "pass_trigger": 755.0,
+     "eff": 0.8170995670995671
+    },
+    "pt86to88": {
+     "in_bin": 847.0,
+     "pass_trigger": 660.0,
+     "eff": 0.7792207792207793
+    },
+    "pt88to90": {
+     "in_bin": 817.0,
+     "pass_trigger": 653.0,
+     "eff": 0.799265605875153
+    },
+    "pt90to92": {
+     "in_bin": 729.0,
+     "pass_trigger": 581.0,
+     "eff": 0.7969821673525377
+    },
+    "pt92to94": {
+     "in_bin": 692.0,
+     "pass_trigger": 553.0,
+     "eff": 0.7991329479768786
+    },
+    "pt94to96": {
+     "in_bin": 653.0,
+     "pass_trigger": 511.0,
+     "eff": 0.7825421133231241
+    },
+    "pt96to98": {
+     "in_bin": 569.0,
+     "pass_trigger": 441.0,
+     "eff": 0.7750439367311072
+    },
+    "pt98to100": {
+     "in_bin": 545.0,
+     "pass_trigger": 443.0,
+     "eff": 0.8128440366972477
+    },
+    "pt100toInf": {
+     "in_bin": 9292.0,
+     "pass_trigger": 7366.0,
+     "eff": 0.7927249246663797
+    }
+   }
+  },
+  "trigeff_mu_subleadN2_OR_mu": {
+   "overall": {
+    "in_bin": 112744.0,
+    "pass_trigger": 111024.0,
+    "eff": 0.9847441992478535
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1259.0,
+     "pass_trigger": 1120.0,
+     "eff": 0.8895949166004765
+    },
+    "pt10to12": {
+     "in_bin": 1678.0,
+     "pass_trigger": 1503.0,
+     "eff": 0.8957091775923719
+    },
+    "pt12to14": {
+     "in_bin": 2166.0,
+     "pass_trigger": 1994.0,
+     "eff": 0.9205909510618652
+    },
+    "pt14to16": {
+     "in_bin": 2704.0,
+     "pass_trigger": 2554.0,
+     "eff": 0.9445266272189349
+    },
+    "pt16to18": {
+     "in_bin": 3253.0,
+     "pass_trigger": 3122.0,
+     "eff": 0.9597294804795573
+    },
+    "pt18to20": {
+     "in_bin": 3768.0,
+     "pass_trigger": 3642.0,
+     "eff": 0.9665605095541401
+    },
+    "pt20to22": {
+     "in_bin": 4515.0,
+     "pass_trigger": 4364.0,
+     "eff": 0.9665559246954596
+    },
+    "pt22to24": {
+     "in_bin": 5043.0,
+     "pass_trigger": 4881.0,
+     "eff": 0.9678762641284949
+    },
+    "pt24to26": {
+     "in_bin": 5910.0,
+     "pass_trigger": 5849.0,
+     "eff": 0.989678510998308
+    },
+    "pt26to28": {
+     "in_bin": 6097.0,
+     "pass_trigger": 6052.0,
+     "eff": 0.9926193209775299
+    },
+    "pt28to30": {
+     "in_bin": 6915.0,
+     "pass_trigger": 6871.0,
+     "eff": 0.9936370209689082
+    },
+    "pt30to32": {
+     "in_bin": 7537.0,
+     "pass_trigger": 7482.0,
+     "eff": 0.9927026668435717
+    },
+    "pt32to34": {
+     "in_bin": 8217.0,
+     "pass_trigger": 8169.0,
+     "eff": 0.9941584519897773
+    },
+    "pt34to36": {
+     "in_bin": 8565.0,
+     "pass_trigger": 8530.0,
+     "eff": 0.9959136018680678
+    },
+    "pt36to38": {
+     "in_bin": 8481.0,
+     "pass_trigger": 8430.0,
+     "eff": 0.9939865581888928
+    },
+    "pt38to40": {
+     "in_bin": 8307.0,
+     "pass_trigger": 8258.0,
+     "eff": 0.9941013602985433
+    },
+    "pt40to42": {
+     "in_bin": 7479.0,
+     "pass_trigger": 7453.0,
+     "eff": 0.996523599411686
+    },
+    "pt42to44": {
+     "in_bin": 6296.0,
+     "pass_trigger": 6264.0,
+     "eff": 0.9949174078780177
+    },
+    "pt44to46": {
+     "in_bin": 4324.0,
+     "pass_trigger": 4306.0,
+     "eff": 0.9958371877890841
+    },
+    "pt46to48": {
+     "in_bin": 2492.0,
+     "pass_trigger": 2482.0,
+     "eff": 0.9959871589085072
+    },
+    "pt48to50": {
+     "in_bin": 1382.0,
+     "pass_trigger": 1374.0,
+     "eff": 0.9942112879884226
+    },
+    "pt50to52": {
+     "in_bin": 940.0,
+     "pass_trigger": 939.0,
+     "eff": 0.9989361702127659
+    },
+    "pt52to54": {
+     "in_bin": 735.0,
+     "pass_trigger": 731.0,
+     "eff": 0.9945578231292517
+    },
+    "pt54to56": {
+     "in_bin": 600.0,
+     "pass_trigger": 598.0,
+     "eff": 0.9966666666666667
+    },
+    "pt56to58": {
+     "in_bin": 433.0,
+     "pass_trigger": 432.0,
+     "eff": 0.9976905311778291
+    },
+    "pt58to60": {
+     "in_bin": 417.0,
+     "pass_trigger": 416.0,
+     "eff": 0.9976019184652278
+    },
+    "pt60to62": {
+     "in_bin": 335.0,
+     "pass_trigger": 335.0,
+     "eff": 1.0
+    },
+    "pt62to64": {
+     "in_bin": 294.0,
+     "pass_trigger": 292.0,
+     "eff": 0.9931972789115646
+    },
+    "pt64to66": {
+     "in_bin": 242.0,
+     "pass_trigger": 241.0,
+     "eff": 0.9958677685950413
+    },
+    "pt66to68": {
+     "in_bin": 201.0,
+     "pass_trigger": 201.0,
+     "eff": 1.0
+    },
+    "pt68to70": {
+     "in_bin": 190.0,
+     "pass_trigger": 189.0,
+     "eff": 0.9947368421052631
+    },
+    "pt70to72": {
+     "in_bin": 182.0,
+     "pass_trigger": 181.0,
+     "eff": 0.9945054945054945
+    },
+    "pt72to74": {
+     "in_bin": 153.0,
+     "pass_trigger": 152.0,
+     "eff": 0.9934640522875817
+    },
+    "pt74to76": {
+     "in_bin": 135.0,
+     "pass_trigger": 132.0,
+     "eff": 0.9777777777777777
+    },
+    "pt76to78": {
+     "in_bin": 124.0,
+     "pass_trigger": 124.0,
+     "eff": 1.0
+    },
+    "pt78to80": {
+     "in_bin": 117.0,
+     "pass_trigger": 117.0,
+     "eff": 1.0
+    },
+    "pt80to82": {
+     "in_bin": 89.0,
+     "pass_trigger": 88.0,
+     "eff": 0.9887640449438202
+    },
+    "pt82to84": {
+     "in_bin": 100.0,
+     "pass_trigger": 100.0,
+     "eff": 1.0
+    },
+    "pt84to86": {
+     "in_bin": 76.0,
+     "pass_trigger": 75.0,
+     "eff": 0.9868421052631579
+    },
+    "pt86to88": {
+     "in_bin": 76.0,
+     "pass_trigger": 75.0,
+     "eff": 0.9868421052631579
+    },
+    "pt88to90": {
+     "in_bin": 57.0,
+     "pass_trigger": 57.0,
+     "eff": 1.0
+    },
+    "pt90to92": {
+     "in_bin": 56.0,
+     "pass_trigger": 56.0,
+     "eff": 1.0
+    },
+    "pt92to94": {
+     "in_bin": 54.0,
+     "pass_trigger": 54.0,
+     "eff": 1.0
+    },
+    "pt94to96": {
+     "in_bin": 52.0,
+     "pass_trigger": 51.0,
+     "eff": 0.9807692307692307
+    },
+    "pt96to98": {
+     "in_bin": 52.0,
+     "pass_trigger": 52.0,
+     "eff": 1.0
+    },
+    "pt98to100": {
+     "in_bin": 40.0,
+     "pass_trigger": 38.0,
+     "eff": 0.95
+    },
+    "pt100toInf": {
+     "in_bin": 606.0,
+     "pass_trigger": 598.0,
+     "eff": 0.9867986798679867
+    }
+   }
+  },
+  "trigeff_mu_subleadN2_double_mu": {
+   "overall": {
+    "in_bin": 112744.0,
+    "pass_trigger": 105084.0,
+    "eff": 0.9320584687433477
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1259.0,
+     "pass_trigger": 1067.0,
+     "eff": 0.8474980142970612
+    },
+    "pt10to12": {
+     "in_bin": 1678.0,
+     "pass_trigger": 1449.0,
+     "eff": 0.863528009535161
+    },
+    "pt12to14": {
+     "in_bin": 2166.0,
+     "pass_trigger": 1934.0,
+     "eff": 0.8928901200369345
+    },
+    "pt14to16": {
+     "in_bin": 2704.0,
+     "pass_trigger": 2480.0,
+     "eff": 0.9171597633136095
+    },
+    "pt16to18": {
+     "in_bin": 3253.0,
+     "pass_trigger": 3009.0,
+     "eff": 0.924992314786351
+    },
+    "pt18to20": {
+     "in_bin": 3768.0,
+     "pass_trigger": 3527.0,
+     "eff": 0.9360403397027601
+    },
+    "pt20to22": {
+     "in_bin": 4515.0,
+     "pass_trigger": 4214.0,
+     "eff": 0.9333333333333333
+    },
+    "pt22to24": {
+     "in_bin": 5043.0,
+     "pass_trigger": 4726.0,
+     "eff": 0.9371405909181043
+    },
+    "pt24to26": {
+     "in_bin": 5910.0,
+     "pass_trigger": 5517.0,
+     "eff": 0.933502538071066
+    },
+    "pt26to28": {
+     "in_bin": 6097.0,
+     "pass_trigger": 5720.0,
+     "eff": 0.9381663113006397
+    },
+    "pt28to30": {
+     "in_bin": 6915.0,
+     "pass_trigger": 6461.0,
+     "eff": 0.9343456254519161
+    },
+    "pt30to32": {
+     "in_bin": 7537.0,
+     "pass_trigger": 7038.0,
+     "eff": 0.9337932864534961
+    },
+    "pt32to34": {
+     "in_bin": 8217.0,
+     "pass_trigger": 7702.0,
+     "eff": 0.9373250578069855
+    },
+    "pt34to36": {
+     "in_bin": 8565.0,
+     "pass_trigger": 8028.0,
+     "eff": 0.9373029772329247
+    },
+    "pt36to38": {
+     "in_bin": 8481.0,
+     "pass_trigger": 7958.0,
+     "eff": 0.9383327437802146
+    },
+    "pt38to40": {
+     "in_bin": 8307.0,
+     "pass_trigger": 7759.0,
+     "eff": 0.9340315396653425
+    },
+    "pt40to42": {
+     "in_bin": 7479.0,
+     "pass_trigger": 7029.0,
+     "eff": 0.9398315282791817
+    },
+    "pt42to44": {
+     "in_bin": 6296.0,
+     "pass_trigger": 5870.0,
+     "eff": 0.9323379923761118
+    },
+    "pt44to46": {
+     "in_bin": 4324.0,
+     "pass_trigger": 4045.0,
+     "eff": 0.9354764107308048
+    },
+    "pt46to48": {
+     "in_bin": 2492.0,
+     "pass_trigger": 2332.0,
+     "eff": 0.9357945425361156
+    },
+    "pt48to50": {
+     "in_bin": 1382.0,
+     "pass_trigger": 1292.0,
+     "eff": 0.934876989869754
+    },
+    "pt50to52": {
+     "in_bin": 940.0,
+     "pass_trigger": 883.0,
+     "eff": 0.9393617021276596
+    },
+    "pt52to54": {
+     "in_bin": 735.0,
+     "pass_trigger": 691.0,
+     "eff": 0.9401360544217687
+    },
+    "pt54to56": {
+     "in_bin": 600.0,
+     "pass_trigger": 568.0,
+     "eff": 0.9466666666666667
+    },
+    "pt56to58": {
+     "in_bin": 433.0,
+     "pass_trigger": 405.0,
+     "eff": 0.9353348729792148
+    },
+    "pt58to60": {
+     "in_bin": 417.0,
+     "pass_trigger": 380.0,
+     "eff": 0.9112709832134293
+    },
+    "pt60to62": {
+     "in_bin": 335.0,
+     "pass_trigger": 313.0,
+     "eff": 0.9343283582089552
+    },
+    "pt62to64": {
+     "in_bin": 294.0,
+     "pass_trigger": 275.0,
+     "eff": 0.935374149659864
+    },
+    "pt64to66": {
+     "in_bin": 242.0,
+     "pass_trigger": 228.0,
+     "eff": 0.9421487603305785
+    },
+    "pt66to68": {
+     "in_bin": 201.0,
+     "pass_trigger": 192.0,
+     "eff": 0.9552238805970149
+    },
+    "pt68to70": {
+     "in_bin": 190.0,
+     "pass_trigger": 178.0,
+     "eff": 0.9368421052631579
+    },
+    "pt70to72": {
+     "in_bin": 182.0,
+     "pass_trigger": 173.0,
+     "eff": 0.9505494505494505
+    },
+    "pt72to74": {
+     "in_bin": 153.0,
+     "pass_trigger": 141.0,
+     "eff": 0.9215686274509803
+    },
+    "pt74to76": {
+     "in_bin": 135.0,
+     "pass_trigger": 125.0,
+     "eff": 0.9259259259259259
+    },
+    "pt76to78": {
+     "in_bin": 124.0,
+     "pass_trigger": 114.0,
+     "eff": 0.9193548387096774
+    },
+    "pt78to80": {
+     "in_bin": 117.0,
+     "pass_trigger": 109.0,
+     "eff": 0.9316239316239316
+    },
+    "pt80to82": {
+     "in_bin": 89.0,
+     "pass_trigger": 83.0,
+     "eff": 0.9325842696629213
+    },
+    "pt82to84": {
+     "in_bin": 100.0,
+     "pass_trigger": 97.0,
+     "eff": 0.97
+    },
+    "pt84to86": {
+     "in_bin": 76.0,
+     "pass_trigger": 68.0,
+     "eff": 0.8947368421052632
+    },
+    "pt86to88": {
+     "in_bin": 76.0,
+     "pass_trigger": 72.0,
+     "eff": 0.9473684210526315
+    },
+    "pt88to90": {
+     "in_bin": 57.0,
+     "pass_trigger": 53.0,
+     "eff": 0.9298245614035088
+    },
+    "pt90to92": {
+     "in_bin": 56.0,
+     "pass_trigger": 52.0,
+     "eff": 0.9285714285714286
+    },
+    "pt92to94": {
+     "in_bin": 54.0,
+     "pass_trigger": 44.0,
+     "eff": 0.8148148148148148
+    },
+    "pt94to96": {
+     "in_bin": 52.0,
+     "pass_trigger": 49.0,
+     "eff": 0.9423076923076923
+    },
+    "pt96to98": {
+     "in_bin": 52.0,
+     "pass_trigger": 46.0,
+     "eff": 0.8846153846153846
+    },
+    "pt98to100": {
+     "in_bin": 40.0,
+     "pass_trigger": 33.0,
+     "eff": 0.825
+    },
+    "pt100toInf": {
+     "in_bin": 606.0,
+     "pass_trigger": 555.0,
+     "eff": 0.9158415841584159
+    }
+   }
+  },
+  "trigeff_mu_subleadOL_OR_mu": {
+   "overall": {
+    "in_bin": 112043.0,
+    "pass_trigger": 110630.0,
+    "eff": 0.9873887703827995
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1144.0,
+     "pass_trigger": 1081.0,
+     "eff": 0.9449300699300699
+    },
+    "pt10to12": {
+     "in_bin": 1526.0,
+     "pass_trigger": 1448.0,
+     "eff": 0.9488859764089121
+    },
+    "pt12to14": {
+     "in_bin": 2012.0,
+     "pass_trigger": 1916.0,
+     "eff": 0.952286282306163
+    },
+    "pt14to16": {
+     "in_bin": 2581.0,
+     "pass_trigger": 2473.0,
+     "eff": 0.9581557535838822
+    },
+    "pt16to18": {
+     "in_bin": 3135.0,
+     "pass_trigger": 3018.0,
+     "eff": 0.9626794258373206
+    },
+    "pt18to20": {
+     "in_bin": 3729.0,
+     "pass_trigger": 3605.0,
+     "eff": 0.966747117189595
+    },
+    "pt20to22": {
+     "in_bin": 4515.0,
+     "pass_trigger": 4364.0,
+     "eff": 0.9665559246954596
+    },
+    "pt22to24": {
+     "in_bin": 5043.0,
+     "pass_trigger": 4881.0,
+     "eff": 0.9678762641284949
+    },
+    "pt24to26": {
+     "in_bin": 5910.0,
+     "pass_trigger": 5849.0,
+     "eff": 0.989678510998308
+    },
+    "pt26to28": {
+     "in_bin": 6097.0,
+     "pass_trigger": 6052.0,
+     "eff": 0.9926193209775299
+    },
+    "pt28to30": {
+     "in_bin": 6915.0,
+     "pass_trigger": 6871.0,
+     "eff": 0.9936370209689082
+    },
+    "pt30to32": {
+     "in_bin": 7537.0,
+     "pass_trigger": 7482.0,
+     "eff": 0.9927026668435717
+    },
+    "pt32to34": {
+     "in_bin": 8217.0,
+     "pass_trigger": 8169.0,
+     "eff": 0.9941584519897773
+    },
+    "pt34to36": {
+     "in_bin": 8565.0,
+     "pass_trigger": 8530.0,
+     "eff": 0.9959136018680678
+    },
+    "pt36to38": {
+     "in_bin": 8481.0,
+     "pass_trigger": 8430.0,
+     "eff": 0.9939865581888928
+    },
+    "pt38to40": {
+     "in_bin": 8307.0,
+     "pass_trigger": 8258.0,
+     "eff": 0.9941013602985433
+    },
+    "pt40to42": {
+     "in_bin": 7479.0,
+     "pass_trigger": 7453.0,
+     "eff": 0.996523599411686
+    },
+    "pt42to44": {
+     "in_bin": 6296.0,
+     "pass_trigger": 6264.0,
+     "eff": 0.9949174078780177
+    },
+    "pt44to46": {
+     "in_bin": 4324.0,
+     "pass_trigger": 4306.0,
+     "eff": 0.9958371877890841
+    },
+    "pt46to48": {
+     "in_bin": 2492.0,
+     "pass_trigger": 2482.0,
+     "eff": 0.9959871589085072
+    },
+    "pt48to50": {
+     "in_bin": 1382.0,
+     "pass_trigger": 1374.0,
+     "eff": 0.9942112879884226
+    },
+    "pt50to52": {
+     "in_bin": 940.0,
+     "pass_trigger": 939.0,
+     "eff": 0.9989361702127659
+    },
+    "pt52to54": {
+     "in_bin": 735.0,
+     "pass_trigger": 731.0,
+     "eff": 0.9945578231292517
+    },
+    "pt54to56": {
+     "in_bin": 600.0,
+     "pass_trigger": 598.0,
+     "eff": 0.9966666666666667
+    },
+    "pt56to58": {
+     "in_bin": 433.0,
+     "pass_trigger": 432.0,
+     "eff": 0.9976905311778291
+    },
+    "pt58to60": {
+     "in_bin": 417.0,
+     "pass_trigger": 416.0,
+     "eff": 0.9976019184652278
+    },
+    "pt60to62": {
+     "in_bin": 335.0,
+     "pass_trigger": 335.0,
+     "eff": 1.0
+    },
+    "pt62to64": {
+     "in_bin": 294.0,
+     "pass_trigger": 292.0,
+     "eff": 0.9931972789115646
+    },
+    "pt64to66": {
+     "in_bin": 242.0,
+     "pass_trigger": 241.0,
+     "eff": 0.9958677685950413
+    },
+    "pt66to68": {
+     "in_bin": 201.0,
+     "pass_trigger": 201.0,
+     "eff": 1.0
+    },
+    "pt68to70": {
+     "in_bin": 190.0,
+     "pass_trigger": 189.0,
+     "eff": 0.9947368421052631
+    },
+    "pt70to72": {
+     "in_bin": 182.0,
+     "pass_trigger": 181.0,
+     "eff": 0.9945054945054945
+    },
+    "pt72to74": {
+     "in_bin": 153.0,
+     "pass_trigger": 152.0,
+     "eff": 0.9934640522875817
+    },
+    "pt74to76": {
+     "in_bin": 135.0,
+     "pass_trigger": 132.0,
+     "eff": 0.9777777777777777
+    },
+    "pt76to78": {
+     "in_bin": 124.0,
+     "pass_trigger": 124.0,
+     "eff": 1.0
+    },
+    "pt78to80": {
+     "in_bin": 117.0,
+     "pass_trigger": 117.0,
+     "eff": 1.0
+    },
+    "pt80to82": {
+     "in_bin": 89.0,
+     "pass_trigger": 88.0,
+     "eff": 0.9887640449438202
+    },
+    "pt82to84": {
+     "in_bin": 100.0,
+     "pass_trigger": 100.0,
+     "eff": 1.0
+    },
+    "pt84to86": {
+     "in_bin": 76.0,
+     "pass_trigger": 75.0,
+     "eff": 0.9868421052631579
+    },
+    "pt86to88": {
+     "in_bin": 76.0,
+     "pass_trigger": 75.0,
+     "eff": 0.9868421052631579
+    },
+    "pt88to90": {
+     "in_bin": 57.0,
+     "pass_trigger": 57.0,
+     "eff": 1.0
+    },
+    "pt90to92": {
+     "in_bin": 56.0,
+     "pass_trigger": 56.0,
+     "eff": 1.0
+    },
+    "pt92to94": {
+     "in_bin": 54.0,
+     "pass_trigger": 54.0,
+     "eff": 1.0
+    },
+    "pt94to96": {
+     "in_bin": 52.0,
+     "pass_trigger": 51.0,
+     "eff": 0.9807692307692307
+    },
+    "pt96to98": {
+     "in_bin": 52.0,
+     "pass_trigger": 52.0,
+     "eff": 1.0
+    },
+    "pt98to100": {
+     "in_bin": 40.0,
+     "pass_trigger": 38.0,
+     "eff": 0.95
+    },
+    "pt100toInf": {
+     "in_bin": 606.0,
+     "pass_trigger": 598.0,
+     "eff": 0.9867986798679867
+    }
+   }
+  },
+  "trigeff_mu_subleadOL_double_mu": {
+   "overall": {
+    "in_bin": 112043.0,
+    "pass_trigger": 104690.0,
+    "eff": 0.9343734102085807
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1144.0,
+     "pass_trigger": 1028.0,
+     "eff": 0.8986013986013986
+    },
+    "pt10to12": {
+     "in_bin": 1526.0,
+     "pass_trigger": 1394.0,
+     "eff": 0.9134993446920052
+    },
+    "pt12to14": {
+     "in_bin": 2012.0,
+     "pass_trigger": 1856.0,
+     "eff": 0.9224652087475149
+    },
+    "pt14to16": {
+     "in_bin": 2581.0,
+     "pass_trigger": 2399.0,
+     "eff": 0.92948469585432
+    },
+    "pt16to18": {
+     "in_bin": 3135.0,
+     "pass_trigger": 2905.0,
+     "eff": 0.9266347687400319
+    },
+    "pt18to20": {
+     "in_bin": 3729.0,
+     "pass_trigger": 3490.0,
+     "eff": 0.9359077500670421
+    },
+    "pt20to22": {
+     "in_bin": 4515.0,
+     "pass_trigger": 4214.0,
+     "eff": 0.9333333333333333
+    },
+    "pt22to24": {
+     "in_bin": 5043.0,
+     "pass_trigger": 4726.0,
+     "eff": 0.9371405909181043
+    },
+    "pt24to26": {
+     "in_bin": 5910.0,
+     "pass_trigger": 5517.0,
+     "eff": 0.933502538071066
+    },
+    "pt26to28": {
+     "in_bin": 6097.0,
+     "pass_trigger": 5720.0,
+     "eff": 0.9381663113006397
+    },
+    "pt28to30": {
+     "in_bin": 6915.0,
+     "pass_trigger": 6461.0,
+     "eff": 0.9343456254519161
+    },
+    "pt30to32": {
+     "in_bin": 7537.0,
+     "pass_trigger": 7038.0,
+     "eff": 0.9337932864534961
+    },
+    "pt32to34": {
+     "in_bin": 8217.0,
+     "pass_trigger": 7702.0,
+     "eff": 0.9373250578069855
+    },
+    "pt34to36": {
+     "in_bin": 8565.0,
+     "pass_trigger": 8028.0,
+     "eff": 0.9373029772329247
+    },
+    "pt36to38": {
+     "in_bin": 8481.0,
+     "pass_trigger": 7958.0,
+     "eff": 0.9383327437802146
+    },
+    "pt38to40": {
+     "in_bin": 8307.0,
+     "pass_trigger": 7759.0,
+     "eff": 0.9340315396653425
+    },
+    "pt40to42": {
+     "in_bin": 7479.0,
+     "pass_trigger": 7029.0,
+     "eff": 0.9398315282791817
+    },
+    "pt42to44": {
+     "in_bin": 6296.0,
+     "pass_trigger": 5870.0,
+     "eff": 0.9323379923761118
+    },
+    "pt44to46": {
+     "in_bin": 4324.0,
+     "pass_trigger": 4045.0,
+     "eff": 0.9354764107308048
+    },
+    "pt46to48": {
+     "in_bin": 2492.0,
+     "pass_trigger": 2332.0,
+     "eff": 0.9357945425361156
+    },
+    "pt48to50": {
+     "in_bin": 1382.0,
+     "pass_trigger": 1292.0,
+     "eff": 0.934876989869754
+    },
+    "pt50to52": {
+     "in_bin": 940.0,
+     "pass_trigger": 883.0,
+     "eff": 0.9393617021276596
+    },
+    "pt52to54": {
+     "in_bin": 735.0,
+     "pass_trigger": 691.0,
+     "eff": 0.9401360544217687
+    },
+    "pt54to56": {
+     "in_bin": 600.0,
+     "pass_trigger": 568.0,
+     "eff": 0.9466666666666667
+    },
+    "pt56to58": {
+     "in_bin": 433.0,
+     "pass_trigger": 405.0,
+     "eff": 0.9353348729792148
+    },
+    "pt58to60": {
+     "in_bin": 417.0,
+     "pass_trigger": 380.0,
+     "eff": 0.9112709832134293
+    },
+    "pt60to62": {
+     "in_bin": 335.0,
+     "pass_trigger": 313.0,
+     "eff": 0.9343283582089552
+    },
+    "pt62to64": {
+     "in_bin": 294.0,
+     "pass_trigger": 275.0,
+     "eff": 0.935374149659864
+    },
+    "pt64to66": {
+     "in_bin": 242.0,
+     "pass_trigger": 228.0,
+     "eff": 0.9421487603305785
+    },
+    "pt66to68": {
+     "in_bin": 201.0,
+     "pass_trigger": 192.0,
+     "eff": 0.9552238805970149
+    },
+    "pt68to70": {
+     "in_bin": 190.0,
+     "pass_trigger": 178.0,
+     "eff": 0.9368421052631579
+    },
+    "pt70to72": {
+     "in_bin": 182.0,
+     "pass_trigger": 173.0,
+     "eff": 0.9505494505494505
+    },
+    "pt72to74": {
+     "in_bin": 153.0,
+     "pass_trigger": 141.0,
+     "eff": 0.9215686274509803
+    },
+    "pt74to76": {
+     "in_bin": 135.0,
+     "pass_trigger": 125.0,
+     "eff": 0.9259259259259259
+    },
+    "pt76to78": {
+     "in_bin": 124.0,
+     "pass_trigger": 114.0,
+     "eff": 0.9193548387096774
+    },
+    "pt78to80": {
+     "in_bin": 117.0,
+     "pass_trigger": 109.0,
+     "eff": 0.9316239316239316
+    },
+    "pt80to82": {
+     "in_bin": 89.0,
+     "pass_trigger": 83.0,
+     "eff": 0.9325842696629213
+    },
+    "pt82to84": {
+     "in_bin": 100.0,
+     "pass_trigger": 97.0,
+     "eff": 0.97
+    },
+    "pt84to86": {
+     "in_bin": 76.0,
+     "pass_trigger": 68.0,
+     "eff": 0.8947368421052632
+    },
+    "pt86to88": {
+     "in_bin": 76.0,
+     "pass_trigger": 72.0,
+     "eff": 0.9473684210526315
+    },
+    "pt88to90": {
+     "in_bin": 57.0,
+     "pass_trigger": 53.0,
+     "eff": 0.9298245614035088
+    },
+    "pt90to92": {
+     "in_bin": 56.0,
+     "pass_trigger": 52.0,
+     "eff": 0.9285714285714286
+    },
+    "pt92to94": {
+     "in_bin": 54.0,
+     "pass_trigger": 44.0,
+     "eff": 0.8148148148148148
+    },
+    "pt94to96": {
+     "in_bin": 52.0,
+     "pass_trigger": 49.0,
+     "eff": 0.9423076923076923
+    },
+    "pt96to98": {
+     "in_bin": 52.0,
+     "pass_trigger": 46.0,
+     "eff": 0.8846153846153846
+    },
+    "pt98to100": {
+     "in_bin": 40.0,
+     "pass_trigger": 33.0,
+     "eff": 0.825
+    },
+    "pt100toInf": {
+     "in_bin": 606.0,
+     "pass_trigger": 555.0,
+     "eff": 0.9158415841584159
+    }
+   }
+  },
+  "trigeff_mu_sublead_OR_mu": {
+   "overall": {
+    "in_bin": 112744.0,
+    "pass_trigger": 111024.0,
+    "eff": 0.9847441992478535
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1259.0,
+     "pass_trigger": 1120.0,
+     "eff": 0.8895949166004765
+    },
+    "pt10to12": {
+     "in_bin": 1678.0,
+     "pass_trigger": 1503.0,
+     "eff": 0.8957091775923719
+    },
+    "pt12to14": {
+     "in_bin": 2166.0,
+     "pass_trigger": 1994.0,
+     "eff": 0.9205909510618652
+    },
+    "pt14to16": {
+     "in_bin": 2704.0,
+     "pass_trigger": 2554.0,
+     "eff": 0.9445266272189349
+    },
+    "pt16to18": {
+     "in_bin": 3253.0,
+     "pass_trigger": 3122.0,
+     "eff": 0.9597294804795573
+    },
+    "pt18to20": {
+     "in_bin": 3768.0,
+     "pass_trigger": 3642.0,
+     "eff": 0.9665605095541401
+    },
+    "pt20to22": {
+     "in_bin": 4515.0,
+     "pass_trigger": 4364.0,
+     "eff": 0.9665559246954596
+    },
+    "pt22to24": {
+     "in_bin": 5043.0,
+     "pass_trigger": 4881.0,
+     "eff": 0.9678762641284949
+    },
+    "pt24to26": {
+     "in_bin": 5910.0,
+     "pass_trigger": 5849.0,
+     "eff": 0.989678510998308
+    },
+    "pt26to28": {
+     "in_bin": 6097.0,
+     "pass_trigger": 6052.0,
+     "eff": 0.9926193209775299
+    },
+    "pt28to30": {
+     "in_bin": 6915.0,
+     "pass_trigger": 6871.0,
+     "eff": 0.9936370209689082
+    },
+    "pt30to32": {
+     "in_bin": 7537.0,
+     "pass_trigger": 7482.0,
+     "eff": 0.9927026668435717
+    },
+    "pt32to34": {
+     "in_bin": 8217.0,
+     "pass_trigger": 8169.0,
+     "eff": 0.9941584519897773
+    },
+    "pt34to36": {
+     "in_bin": 8565.0,
+     "pass_trigger": 8530.0,
+     "eff": 0.9959136018680678
+    },
+    "pt36to38": {
+     "in_bin": 8481.0,
+     "pass_trigger": 8430.0,
+     "eff": 0.9939865581888928
+    },
+    "pt38to40": {
+     "in_bin": 8307.0,
+     "pass_trigger": 8258.0,
+     "eff": 0.9941013602985433
+    },
+    "pt40to42": {
+     "in_bin": 7479.0,
+     "pass_trigger": 7453.0,
+     "eff": 0.996523599411686
+    },
+    "pt42to44": {
+     "in_bin": 6296.0,
+     "pass_trigger": 6264.0,
+     "eff": 0.9949174078780177
+    },
+    "pt44to46": {
+     "in_bin": 4324.0,
+     "pass_trigger": 4306.0,
+     "eff": 0.9958371877890841
+    },
+    "pt46to48": {
+     "in_bin": 2492.0,
+     "pass_trigger": 2482.0,
+     "eff": 0.9959871589085072
+    },
+    "pt48to50": {
+     "in_bin": 1382.0,
+     "pass_trigger": 1374.0,
+     "eff": 0.9942112879884226
+    },
+    "pt50to52": {
+     "in_bin": 940.0,
+     "pass_trigger": 939.0,
+     "eff": 0.9989361702127659
+    },
+    "pt52to54": {
+     "in_bin": 735.0,
+     "pass_trigger": 731.0,
+     "eff": 0.9945578231292517
+    },
+    "pt54to56": {
+     "in_bin": 600.0,
+     "pass_trigger": 598.0,
+     "eff": 0.9966666666666667
+    },
+    "pt56to58": {
+     "in_bin": 433.0,
+     "pass_trigger": 432.0,
+     "eff": 0.9976905311778291
+    },
+    "pt58to60": {
+     "in_bin": 417.0,
+     "pass_trigger": 416.0,
+     "eff": 0.9976019184652278
+    },
+    "pt60to62": {
+     "in_bin": 335.0,
+     "pass_trigger": 335.0,
+     "eff": 1.0
+    },
+    "pt62to64": {
+     "in_bin": 294.0,
+     "pass_trigger": 292.0,
+     "eff": 0.9931972789115646
+    },
+    "pt64to66": {
+     "in_bin": 242.0,
+     "pass_trigger": 241.0,
+     "eff": 0.9958677685950413
+    },
+    "pt66to68": {
+     "in_bin": 201.0,
+     "pass_trigger": 201.0,
+     "eff": 1.0
+    },
+    "pt68to70": {
+     "in_bin": 190.0,
+     "pass_trigger": 189.0,
+     "eff": 0.9947368421052631
+    },
+    "pt70to72": {
+     "in_bin": 182.0,
+     "pass_trigger": 181.0,
+     "eff": 0.9945054945054945
+    },
+    "pt72to74": {
+     "in_bin": 153.0,
+     "pass_trigger": 152.0,
+     "eff": 0.9934640522875817
+    },
+    "pt74to76": {
+     "in_bin": 135.0,
+     "pass_trigger": 132.0,
+     "eff": 0.9777777777777777
+    },
+    "pt76to78": {
+     "in_bin": 124.0,
+     "pass_trigger": 124.0,
+     "eff": 1.0
+    },
+    "pt78to80": {
+     "in_bin": 117.0,
+     "pass_trigger": 117.0,
+     "eff": 1.0
+    },
+    "pt80to82": {
+     "in_bin": 89.0,
+     "pass_trigger": 88.0,
+     "eff": 0.9887640449438202
+    },
+    "pt82to84": {
+     "in_bin": 100.0,
+     "pass_trigger": 100.0,
+     "eff": 1.0
+    },
+    "pt84to86": {
+     "in_bin": 76.0,
+     "pass_trigger": 75.0,
+     "eff": 0.9868421052631579
+    },
+    "pt86to88": {
+     "in_bin": 76.0,
+     "pass_trigger": 75.0,
+     "eff": 0.9868421052631579
+    },
+    "pt88to90": {
+     "in_bin": 57.0,
+     "pass_trigger": 57.0,
+     "eff": 1.0
+    },
+    "pt90to92": {
+     "in_bin": 56.0,
+     "pass_trigger": 56.0,
+     "eff": 1.0
+    },
+    "pt92to94": {
+     "in_bin": 54.0,
+     "pass_trigger": 54.0,
+     "eff": 1.0
+    },
+    "pt94to96": {
+     "in_bin": 52.0,
+     "pass_trigger": 51.0,
+     "eff": 0.9807692307692307
+    },
+    "pt96to98": {
+     "in_bin": 52.0,
+     "pass_trigger": 52.0,
+     "eff": 1.0
+    },
+    "pt98to100": {
+     "in_bin": 40.0,
+     "pass_trigger": 38.0,
+     "eff": 0.95
+    },
+    "pt100toInf": {
+     "in_bin": 606.0,
+     "pass_trigger": 598.0,
+     "eff": 0.9867986798679867
+    }
+   }
+  },
+  "trigeff_mu_sublead_double_mu": {
+   "overall": {
+    "in_bin": 112744.0,
+    "pass_trigger": 105084.0,
+    "eff": 0.9320584687433477
+   },
+   "bins": {
+    "pt8to10": {
+     "in_bin": 1259.0,
+     "pass_trigger": 1067.0,
+     "eff": 0.8474980142970612
+    },
+    "pt10to12": {
+     "in_bin": 1678.0,
+     "pass_trigger": 1449.0,
+     "eff": 0.863528009535161
+    },
+    "pt12to14": {
+     "in_bin": 2166.0,
+     "pass_trigger": 1934.0,
+     "eff": 0.8928901200369345
+    },
+    "pt14to16": {
+     "in_bin": 2704.0,
+     "pass_trigger": 2480.0,
+     "eff": 0.9171597633136095
+    },
+    "pt16to18": {
+     "in_bin": 3253.0,
+     "pass_trigger": 3009.0,
+     "eff": 0.924992314786351
+    },
+    "pt18to20": {
+     "in_bin": 3768.0,
+     "pass_trigger": 3527.0,
+     "eff": 0.9360403397027601
+    },
+    "pt20to22": {
+     "in_bin": 4515.0,
+     "pass_trigger": 4214.0,
+     "eff": 0.9333333333333333
+    },
+    "pt22to24": {
+     "in_bin": 5043.0,
+     "pass_trigger": 4726.0,
+     "eff": 0.9371405909181043
+    },
+    "pt24to26": {
+     "in_bin": 5910.0,
+     "pass_trigger": 5517.0,
+     "eff": 0.933502538071066
+    },
+    "pt26to28": {
+     "in_bin": 6097.0,
+     "pass_trigger": 5720.0,
+     "eff": 0.9381663113006397
+    },
+    "pt28to30": {
+     "in_bin": 6915.0,
+     "pass_trigger": 6461.0,
+     "eff": 0.9343456254519161
+    },
+    "pt30to32": {
+     "in_bin": 7537.0,
+     "pass_trigger": 7038.0,
+     "eff": 0.9337932864534961
+    },
+    "pt32to34": {
+     "in_bin": 8217.0,
+     "pass_trigger": 7702.0,
+     "eff": 0.9373250578069855
+    },
+    "pt34to36": {
+     "in_bin": 8565.0,
+     "pass_trigger": 8028.0,
+     "eff": 0.9373029772329247
+    },
+    "pt36to38": {
+     "in_bin": 8481.0,
+     "pass_trigger": 7958.0,
+     "eff": 0.9383327437802146
+    },
+    "pt38to40": {
+     "in_bin": 8307.0,
+     "pass_trigger": 7759.0,
+     "eff": 0.9340315396653425
+    },
+    "pt40to42": {
+     "in_bin": 7479.0,
+     "pass_trigger": 7029.0,
+     "eff": 0.9398315282791817
+    },
+    "pt42to44": {
+     "in_bin": 6296.0,
+     "pass_trigger": 5870.0,
+     "eff": 0.9323379923761118
+    },
+    "pt44to46": {
+     "in_bin": 4324.0,
+     "pass_trigger": 4045.0,
+     "eff": 0.9354764107308048
+    },
+    "pt46to48": {
+     "in_bin": 2492.0,
+     "pass_trigger": 2332.0,
+     "eff": 0.9357945425361156
+    },
+    "pt48to50": {
+     "in_bin": 1382.0,
+     "pass_trigger": 1292.0,
+     "eff": 0.934876989869754
+    },
+    "pt50to52": {
+     "in_bin": 940.0,
+     "pass_trigger": 883.0,
+     "eff": 0.9393617021276596
+    },
+    "pt52to54": {
+     "in_bin": 735.0,
+     "pass_trigger": 691.0,
+     "eff": 0.9401360544217687
+    },
+    "pt54to56": {
+     "in_bin": 600.0,
+     "pass_trigger": 568.0,
+     "eff": 0.9466666666666667
+    },
+    "pt56to58": {
+     "in_bin": 433.0,
+     "pass_trigger": 405.0,
+     "eff": 0.9353348729792148
+    },
+    "pt58to60": {
+     "in_bin": 417.0,
+     "pass_trigger": 380.0,
+     "eff": 0.9112709832134293
+    },
+    "pt60to62": {
+     "in_bin": 335.0,
+     "pass_trigger": 313.0,
+     "eff": 0.9343283582089552
+    },
+    "pt62to64": {
+     "in_bin": 294.0,
+     "pass_trigger": 275.0,
+     "eff": 0.935374149659864
+    },
+    "pt64to66": {
+     "in_bin": 242.0,
+     "pass_trigger": 228.0,
+     "eff": 0.9421487603305785
+    },
+    "pt66to68": {
+     "in_bin": 201.0,
+     "pass_trigger": 192.0,
+     "eff": 0.9552238805970149
+    },
+    "pt68to70": {
+     "in_bin": 190.0,
+     "pass_trigger": 178.0,
+     "eff": 0.9368421052631579
+    },
+    "pt70to72": {
+     "in_bin": 182.0,
+     "pass_trigger": 173.0,
+     "eff": 0.9505494505494505
+    },
+    "pt72to74": {
+     "in_bin": 153.0,
+     "pass_trigger": 141.0,
+     "eff": 0.9215686274509803
+    },
+    "pt74to76": {
+     "in_bin": 135.0,
+     "pass_trigger": 125.0,
+     "eff": 0.9259259259259259
+    },
+    "pt76to78": {
+     "in_bin": 124.0,
+     "pass_trigger": 114.0,
+     "eff": 0.9193548387096774
+    },
+    "pt78to80": {
+     "in_bin": 117.0,
+     "pass_trigger": 109.0,
+     "eff": 0.9316239316239316
+    },
+    "pt80to82": {
+     "in_bin": 89.0,
+     "pass_trigger": 83.0,
+     "eff": 0.9325842696629213
+    },
+    "pt82to84": {
+     "in_bin": 100.0,
+     "pass_trigger": 97.0,
+     "eff": 0.97
+    },
+    "pt84to86": {
+     "in_bin": 76.0,
+     "pass_trigger": 68.0,
+     "eff": 0.8947368421052632
+    },
+    "pt86to88": {
+     "in_bin": 76.0,
+     "pass_trigger": 72.0,
+     "eff": 0.9473684210526315
+    },
+    "pt88to90": {
+     "in_bin": 57.0,
+     "pass_trigger": 53.0,
+     "eff": 0.9298245614035088
+    },
+    "pt90to92": {
+     "in_bin": 56.0,
+     "pass_trigger": 52.0,
+     "eff": 0.9285714285714286
+    },
+    "pt92to94": {
+     "in_bin": 54.0,
+     "pass_trigger": 44.0,
+     "eff": 0.8148148148148148
+    },
+    "pt94to96": {
+     "in_bin": 52.0,
+     "pass_trigger": 49.0,
+     "eff": 0.9423076923076923
+    },
+    "pt96to98": {
+     "in_bin": 52.0,
+     "pass_trigger": 46.0,
+     "eff": 0.8846153846153846
+    },
+    "pt98to100": {
+     "in_bin": 40.0,
+     "pass_trigger": 33.0,
+     "eff": 0.825
+    },
+    "pt100toInf": {
+     "in_bin": 606.0,
+     "pass_trigger": 555.0,
+     "eff": 0.9158415841584159
+    }
+   }
+  }
+ }
+}

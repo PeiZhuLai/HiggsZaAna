@@ -15,7 +15,8 @@ Figures (all muon channel unless stated; Run 3 = 2022preEE..2024 combined):
   fsr_sig_seff_vs_ma               relative change of sigma_eff vs m_a, muon channel
                                    per era, electron channel as the null test
   fsr_sig_dressfrac_vs_ma          fraction of mumu signal events with an FSR photon
-  fsr_datamc_mll_{noFSR,FSR}       data vs Z+fake photon simulation, m_ll
+  fsr_datamc_mll_{noFSR,FSR}       data vs Z+jet and Z+gamma simulation (stacked, dataVmc
+                                   colors), m_ll
   fsr_datamc_fsrpt                 pT of the added FSR photon, data vs simulation
 
 Input : /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Sig_MC
@@ -92,12 +93,19 @@ def concat(dicts):
     return {c: np.concatenate([d[c] for d in dicts]) for c in COLS}
 
 
-def bkg_files(era):
+def zjet_files(era):
     if era == "2024":
-        dy = [f"{BKG24}/DYJetsTo2{f}_2024/merged_nominal.parquet" for f in ("E", "Mu", "Tau")]
-    else:
-        dy = [f"{BKG}/DYJetsToLL_{era}/merged_nominal.parquet"]
-    return dy + [f"{BKG}/DYGto2LG_10to100_{era}/merged_nominal.parquet"]
+        return [f"{BKG24}/DYJetsTo2{f}_2024/merged_nominal.parquet" for f in ("E", "Mu", "Tau")]
+    return [f"{BKG}/DYJetsToLL_{era}/merged_nominal.parquet"]
+
+
+def zg_files(era):
+    return [f"{BKG}/DYGto2LG_10to100_{era}/merged_nominal.parquet"]
+
+
+# Z+jet (DY+jets) and Z+gamma (DY+gamma) with the dataVmc colors of Plot/lib/Plot_Configs.py
+# (DYJetsToLL, DYGto2LG); stacked in the dataVmc order, Z+jet at the bottom.
+MC_COMPONENTS = [("zjet", "Z+jet", "#48BEFF"), ("zg", "Z+#gamma", "#ffa90e")]
 
 
 def dressed_mask(d):
@@ -257,23 +265,44 @@ def fig_seff_vs_ma(table, outdir, log):
 
 
 # ─────────────────────────────────────────────────────────────── data vs MC
-def fig_datamc(data, mc, key_before, key_after, name, xtitle, nbins, lo, hi, outdir,
+def fig_datamc(data, mcs, key_before, key_after, name, xtitle, nbins, lo, hi, outdir,
                log, sel_fn, note, logy=False):
-    sd, sm = sel_fn(data), sel_fn(mc)
+    """mcs: {component key: event dict} for the keys of MC_COMPONENTS. The components are
+    stacked and scaled by one common factor so that their sum matches the data yield."""
+    sd = sel_fn(data)
+    sms = {k: sel_fn(mcs[k]) for k, _, _ in MC_COMPONENTS}
+    mc_all = concat([mcs[k] for k, _, _ in MC_COMPONENTS])
+    sm = sel_fn(mc_all)
     for tagname, col in (("noFSR", key_before), ("FSR", key_after)):
         if col is None:
             continue
         hd = th1(f"hd_{name}_{tagname}", data[col][sd], np.ones(int(sd.sum())), nbins, lo, hi)
-        hm = th1(f"hm_{name}_{tagname}", mc[col][sm], mc["weight_central"][sm], nbins, lo, hi)
-        if hm.Integral() > 0:
-            hm.Scale(hd.Integral() / hm.Integral())
+        hcomp = []
+        for k, label, hexcol in MC_COMPONENTS:
+            d, s = mcs[k], sms[k]
+            h = th1(f"hm_{name}_{tagname}_{k}", d[col][s], d["weight_central"][s], nbins, lo, hi)
+            h.SetFillColor(ROOT.TColor.GetColor(hexcol))
+            h.SetLineColor(ROOT.TColor.GetColor(hexcol))
+            h.SetLineWidth(1)
+            hcomp.append((label, h))
+        hm = hcomp[0][1].Clone(f"hm_{name}_{tagname}")
+        for _, h in hcomp[1:]:
+            hm.Add(h)
+        scale = hd.Integral() / hm.Integral() if hm.Integral() > 0 else 1.0
+        hm.Scale(scale)
+        stack = ROOT.THStack(f"st_{name}_{tagname}", "")
+        for _, h in hcomp:
+            h.Scale(scale)
+            stack.Add(h)
+        _keep.extend([h for _, h in hcomp] + [stack])
         c, up, dn = canvas_ratio(f"c_{name}_{tagname}")
         up.cd()
         if logy:
             up.SetLogy()
-        hm.SetLineColor(ROOT.kAzure + 2)
-        hm.SetFillColor(color(PETROFF[0]))
-        hm.SetLineWidth(LINE_WIDTH)
+        # hm (sum) only sets up the axes; the stack draws the components on top of it.
+        hm.SetLineColor(ROOT.kBlack)
+        hm.SetFillStyle(0)
+        hm.SetLineWidth(1)
         hd.SetMarkerStyle(20)
         hd.SetMarkerSize(1.2)
         hd.SetLineColor(ROOT.kBlack)
@@ -288,15 +317,19 @@ def fig_datamc(data, mc, key_before, key_after, name, xtitle, nbins, lo, hi, out
         style_axes(hm, up, "", "Events / %.2g GeV" % binw)
         hm.GetXaxis().SetLabelSize(0.0)
         hm.Draw("hist")
+        stack.Draw("hist same")
+        hm.Draw("hist same")
         hd.Draw("E1 same")
-        sdat, smc = sigma_eff(data[col][sd]), sigma_eff(mc[col][sm])
+        up.RedrawAxis()
+        sdat, smc = sigma_eff(data[col][sd]), sigma_eff(mc_all[col][sm])
         lbl = "without FSR" if tagname == "noFSR" else "with FSR"
         if key_before is None:
             lbl = "added FSR photon"
-        texts = ["Data", "Z+fake #gamma sim."]
+        texts = ["Data"] + [label for label, _ in hcomp]
         leg = house_legend(up, texts, below_label=True)
         leg.AddEntry(hd, texts[0], "pe")
-        leg.AddEntry(hm, texts[1], "f")
+        for label, h in hcomp:
+            leg.AddEntry(h, label, "f")
         leg.Draw()
         cms_header(up, RUN3_LUMI, "13.6", extra="Preliminary")
         panel_label(up, "#mu#mu  %s" % lbl, [note])
@@ -349,7 +382,7 @@ def fig_datamc_shift(data, mc, outdir, log, lo=70.0, hi=110.0, nbins=40):
         h.SetMarkerColor(col)
         h.SetLineColor(col)
         h.Draw("E1 same")
-    texts = ["Data, without FSR", "Data, with FSR", "Sim., without FSR", "Sim., with FSR"]
+    texts = ["Data, without FSR", "Data, with FSR", "MC, without FSR", "MC, with FSR"]
     leg = house_legend(up, texts, ncols=1, size=0.038, below_label=True)
     leg.AddEntry(hs[("data", "noFSR")], texts[0], "pe")
     leg.AddEntry(hs[("data", "FSR")], texts[1], "pe")
@@ -420,13 +453,21 @@ def main():
 
     if not args.skip_datamc:
         data = concat([read(f"{DATA}/Data_{e}/merged_nominal.parquet") for e in ERAS])
-        mc = concat([read(bkg_files(e)) for e in ERAS])
+        mcs = {"zjet": concat([read(zjet_files(e)) for e in ERAS]),
+               "zg": concat([read(zg_files(e)) for e in ERAS])}
+        mc = concat([mcs[k] for k, _, _ in MC_COMPONENTS])
         mumu = lambda d: d["z_mumu"] == 1
-        fig_datamc(data, mc, "Z_noFSR_mass", "Z_mass", "mll", "m_{#mu#mu} [GeV]",
+        fig_datamc(data, mcs, "Z_noFSR_mass", "Z_mass", "mll", "m_{#mu#mu} [GeV]",
                    70, 50.0, 120.0, outdir, log, mumu, "preselection, sim. normalized to data",
                    logy=True)
-        fig_datamc(data, mc, None, "gamma_fsr_pt", "fsrpt", "p_{T}^{FSR #gamma} [GeV]",
+        fig_datamc(data, mcs, None, "gamma_fsr_pt", "fsrpt", "p_{T}^{FSR #gamma} [GeV]",
                    30, 0.0, 30.0, outdir, log, dressed_mask, "FSR-dressed events, sim. norm. to data")
+        for k, label, _ in MC_COMPONENTS:
+            d = mcs[k]
+            wk = d["weight_central"]
+            log.append("%-8s share of mumu sim. yield %.2f%%  dressed fraction %.2f%%"
+                       % (label, 100.0 * wk[mumu(d)].sum() / mc["weight_central"][mumu(mc)].sum(),
+                          100.0 * wk[dressed_mask(d)].sum() / wk[mumu(d)].sum()))
         fig_datamc_shift(data, mc, outdir, log)
         fd = 100.0 * dressed_mask(data).sum() / mumu(data).sum()
         w = mc["weight_central"]

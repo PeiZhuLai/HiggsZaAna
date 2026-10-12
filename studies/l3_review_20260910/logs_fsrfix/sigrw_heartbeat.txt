@@ -1,0 +1,72 @@
+2026-10-03 00:03:39 [1] snapshot (/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/snapshot_preSigRW_20261002) and park previous signal products
+2026-10-03 00:03:53     done
+2026-10-03 00:03:53 [2] interpolation efficiency JSON (signal_eff_sumw.py, reweighted signal)
+    ele efficiency new/old: 0.982 - 1.056
+2026-10-03 00:09:17 [3] MVA cut, signal (14 mA x 5 eras) with the signal reweight
+  mA10 2022preEE: 22 trees
+  mA15 2023postBPix: 16 trees
+    signal trees: 2 problems; mean selected-event reweight 0.979 - 1.067
+2026-10-03 01:32:12 STOPPING: signal trees lack the reweight or the new lnN
+2026-10-03 01:57:10 [3] MVA cut, signal (14 mA x 5 eras) with the signal reweight
+2026-10-03 01:57:10   rerun mA_M10 2022preEE (attempt 1)
+2026-10-03 02:00:48   rerun mA_M15 2023postBPix (attempt 1)
+    signal trees: 0 problems; mean selected-event reweight 0.979 - 1.067
+2026-10-03 02:26:45 [4] Tree2WS, signal only
+2026-10-03 02:33:24     signal workspaces fresh for 14 mass points
+2026-10-03 02:33:24 [5] signal model (fTest -> photon syst -> signalFit -> plotter -> effSigma)
+2026-10-03 02:33:24     1_runjob_sig_fTest
+2026-10-03 03:29:50     2_runjob_sig_calcPhotonSyst
+2026-10-03 03:44:50     3_runjob_sig_signalFit
+2026-10-03 04:20:56     4_runjob_sig_RunPlotter
+2026-10-03 04:41:48     5_runjob_sig_plotEffSigma
+2026-10-03 04:41:57     signal fits 140/140 fresh
+2026-10-03 04:41:57 [6] datacards, t2w, limits
+    mA  median_old  median_new  new/old
+     1     0.56094     0.55000    0.981
+     2     0.10508     0.10547    1.004
+     3     0.06602     0.06562    0.994
+     4     0.02383     0.02305    0.967
+     5     0.01836     0.01758    0.957
+     6     0.02227     0.02148    0.965
+     7     0.02305     0.02227    0.966
+     8     0.02305     0.02227    0.966
+     9     0.02070     0.02070    1.000
+    10     0.02227     0.02227    1.000
+    11     0.02539     0.02539    1.000
+    12     0.02773     0.02773    1.000
+    13     0.02773     0.02773    1.000
+    14     0.03398     0.03398    1.000
+    15     0.02500     0.02539    1.016
+    16     0.03086     0.03125    1.013
+    17     0.03008     0.03008    1.000
+    18     0.04102     0.04102    1.000
+    19     0.04492     0.04492    1.000
+    20     0.04336     0.04336    1.000
+    21     0.04414     0.04414    1.000
+    22     0.04648     0.04648    1.000
+    23     0.05508     0.05586    1.014
+    24     0.05195     0.05273    1.015
+    25     0.05039     0.05117    1.016
+    26     0.06445     0.06523    1.012
+    27     0.05273     0.05352    1.015
+    28     0.05977     0.06055    1.013
+    29     0.05117     0.05156    1.008
+    30     0.05039     0.05039    1.000
+2026-10-03 05:08:30 [7] condor bias (30 x 10 chunks) + impacts (30); pseudo-data closure locally
+2026-10-03 05:08:46     clusters 12809754 12809755 
+2026-10-03 05:08:46     idle=330 running=0 held=0 | impacts 0/30 | closure running
+2026-10-03 05:38:47     idle=0 running=312 held=1 | impacts 18/30 | closure running
+2026-10-03 06:08:48     idle=0 running=269 held=1 | impacts 30/30 | closure running
+2026-10-03 06:38:48     idle=0 running=185 held=1 | impacts 30/30 | closure done
+2026-10-03 07:08:49     idle=0 running=142 held=1 | impacts 30/30 | closure done
+2026-10-03 07:38:50     idle=0 running=85 held=1 | impacts 30/30 | closure done
+2026-10-03 08:08:50     idle=0 running=48 held=1 | impacts 30/30 | closure done
+2026-10-03 08:38:51     idle=0 running=32 held=1 | impacts 30/30 | closure done
+2026-10-03 09:08:51     idle=0 running=13 held=1 | impacts 30/30 | closure done
+2026-10-03 09:38:52     idle=0 running=1 held=1 | impacts 30/30 | closure done
+2026-10-03 10:08:52     idle=0 running=0 held=1 | impacts 30/30 | closure done
+2026-10-03 10:08:52     only held jobs left
+2026-10-03 10:08:52     closure exit 0
+    bias: 108 truth functions; largest mA10 Exp3 -0.182+-0.011, mA30 Lau1 -0.180+-0.010, mA9 Exp3 -0.178+-0.011, mA26 Lau1 -0.173+-0.010
+VERDICT: PASSED
+2026-10-03 10:24:27 [8] DONE signal-reweight chain
