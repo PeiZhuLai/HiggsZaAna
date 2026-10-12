@@ -65,6 +65,12 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("HiggsDNADir", str(DEFAULT_HIGGSDNA_DIR)),
         help="Directory containing <era>_UL SF data directories.",
     )
+    parser.add_argument(
+        "--electron-eras",
+        nargs="*",
+        default=list(ELECTRON_ERAS),
+        help="Electron eras to merge (default: all). Pass no values to skip electron (used while electron maps are re-binned).",
+    )
     return parser.parse_args()
 
 
@@ -491,14 +497,18 @@ def merge_electron_gap_nongap_efficiency(
     era: str,
     input_sf: str,
     output_sf: str,
+    with_highpt: bool = False,
 ) -> Path:
     raw = raw_dir(base_dir, era)
     sources = {
         "gap": correction_by_name(load_json(raw / f"hza_{input_sf}_gap_{era}_sf.json")),
         "nongap": correction_by_name(load_json(raw / f"hza_{input_sf}_nongap_{era}_sf.json")),
     }
+    # 2026-09-29: electron miniIso has a separate pT>100 map (|eta| barrel/gap/endcap), as for electron ID.
+    if with_highpt:
+        sources["highpt"] = correction_by_name(load_json(raw / f"hza_{input_sf}_nongap_highpT_{era}_sf.json"))
 
-    source_names = set(sources["gap"]) & set(sources["nongap"])
+    source_names = set.intersection(*(set(source) for source in sources.values()))
     if all(name in source_names for name in EFFICIENCY_NAMES):
         correction_names = EFFICIENCY_NAMES
         output_name = f"hza_{output_sf}_{era}_efficiencies.json"
@@ -513,15 +523,17 @@ def merge_electron_gap_nongap_efficiency(
 
     sample_name = correction_names[0]
     target_pt_edges = merged_edges(
-        edges_for_kind(sources["gap"][sample_name], "pt"),
-        edges_for_kind(sources["nongap"][sample_name], "pt"),
+        *(edges_for_kind(source[sample_name], "pt") for source in sources.values())
     )
     target_eta_edges = merged_edges(
-        edges_for_kind(sources["gap"][sample_name], "eta"),
-        edges_for_kind(sources["nongap"][sample_name], "eta"),
+        *(edges_for_kind(source[sample_name], "eta") for source in sources.values())
     )
 
+    # Priority (same as merge_electron_id): high-pT map covers Et >= 100 when present,
+    # ECAL gap overrides below that, nongap covers the rest.
     def selector(correction_name: str, pt: float, eta: float) -> dict:
+        if "highpt" in sources and pt >= 100.0:
+            return sources["highpt"][correction_name]
         if is_ecal_gap(eta):
             return sources["gap"][correction_name]
         return sources["nongap"][correction_name]
@@ -551,7 +563,7 @@ def merge_electron_trigger(base_dir: Path, era: str, trigger_sf: str) -> Path:
 
 
 def merge_electron_iso(base_dir: Path, era: str, input_sf: str, output_sf: str) -> Path:
-    return merge_electron_gap_nongap_efficiency(base_dir, era, input_sf, output_sf)
+    return merge_electron_gap_nongap_efficiency(base_dir, era, input_sf, output_sf, with_highpt=True)
 
 
 def muon_iso_efficiency(base_dir: Path, era: str, output_sf: str) -> Path:
@@ -613,7 +625,7 @@ def main() -> None:
             if csev_hole_output is not None:
                 outputs.append(csev_hole_output)
 
-    for era in ELECTRON_ERAS:
+    for era in args.electron_eras:
         outputs.append(merge_electron_id(base_dir, era))
         for trigger_sf in ELECTRON_TRIGGER_SFS:
             outputs.append(merge_electron_trigger(base_dir, era, trigger_sf))

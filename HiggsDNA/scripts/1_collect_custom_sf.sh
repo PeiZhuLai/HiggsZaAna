@@ -8,6 +8,15 @@ scriptsDir="${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scri
 
 photon_eras=(2022preEE 2022postEE 2023preBPix 2023postBPix 2024)
 electron_eras=(2024 2025 2026)
+# 2026-09-29: electron eras can be overridden (ELECTRON_ERAS="" skips electron entirely), and a visible
+# marker file $scriptsDir/SKIP_ELECTRON_COLLECT does the same for callers that do not set the variable.
+# Used while electron measurements are being re-binned (their TnP output dirs are empty until refit).
+if [ -n "${ELECTRON_ERAS+x}" ]; then
+    read -r -a electron_eras <<< "$ELECTRON_ERAS"
+elif [ -f "${scriptsDir:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts}/SKIP_ELECTRON_COLLECT" ]; then
+    electron_eras=()
+    echo "WARNING: SKIP_ELECTRON_COLLECT present -> electron SFs are NOT collected or merged (existing merged electron JSONs are left untouched)." >&2
+fi
 # 2026-08-29 加入 2026。前提是 muon TnP 的 2026 六個 JSON 都已產出:
 #   hza_muid_2026_scalefactors.json          <- prepare 必須帶 --exportMuidScaleFactors
 #   hzg_mu{8,17,24}leg_2026_efficiencies.json
@@ -153,6 +162,8 @@ for era in "${electron_eras[@]}"; do
     for iso_eff in "${electron_iso_effs[@]}"; do
         collect_egm_sf "$era" "hza_${iso_eff}_gap_${era}_sf"
         collect_egm_sf "$era" "hza_${iso_eff}_nongap_${era}_sf"
+        # 2026-09-29: pT>100 moved to a separate |eta| barrel/gap/endcap map, as for electron ID.
+        collect_egm_sf "$era" "hza_${iso_eff}_nongap_highpT_${era}_sf"
     done
 done
 
@@ -177,4 +188,4 @@ done
 ###------------------------
 ### ----- Convert ---------
 ###------------------------
-python3 "$scriptsDir/2_merge_custom_sf.py"
+python3 "$scriptsDir/2_merge_custom_sf.py" --electron-eras "${electron_eras[@]}"

@@ -1,0 +1,190 @@
+{
+  "schema_version": 2,
+  "description": "",
+  "corrections": [
+    {
+      "name": "effdata",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "el_sc_abseta",
+          "type": "real",
+          "description": "el_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data eff"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "el_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            100.0,
+            500.0
+          ]
+        ],
+        "content": [
+          0.9580038273405636,
+          0.9743138613783096,
+          0.9963551206258429
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "systdata",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "el_sc_abseta",
+          "type": "real",
+          "description": "el_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "data unc"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "el_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            100.0,
+            500.0
+          ]
+        ],
+        "content": [
+          0.0019324974944682465,
+          0.002285748136894,
+          0.001
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "effmc",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "el_sc_abseta",
+          "type": "real",
+          "description": "el_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "MC eff"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "el_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            100.0,
+            500.0
+          ]
+        ],
+        "content": [
+          0.9724067660167564,
+          0.9832839874981064,
+          0.9965386192892253
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "systmc",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "el_sc_abseta",
+          "type": "real",
+          "description": "el_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "MC unc"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "el_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            100.0,
+            500.0
+          ]
+        ],
+        "content": [
+          0.001,
+          0.004092636261510519,
+          0.001
+        ],
+        "flow": "clamp"
+      }
+    }
+  ]
+}
