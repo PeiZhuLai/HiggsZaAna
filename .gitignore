@@ -259,3 +259,32 @@ RegressMergedPhoton/condor/stage/mA_M0p*/args.txt
 # grid proxies
 .x509up*
 x509up_*
+
+# backups (keep on disk, never commit)
+*.bak
+*.bak_*
+*.bak_*/
+
+# analysis products, real-data results and scratch kept out of the repository
+Plot/plots_variants/
+*.npz
+*.done
+*.t0
+*.before_*
+*.wp0940
+*.log.*
+*_bak_*/
+**/snapshot_*/
+**/backup_mu*_nodz_*/
+git_status_*.txt
+studies/l3_review_20260910/inv_gof_24_29/
+studies/l3_review_20260910/an_update_sigrw_20261003/observed_limits_sigrw.txt
+studies/l3_review_20260910/an_update_sigrw_20261003/datavmc_norm/an_fig_backup/
+studies/l3_review_20260910/cutflow_20260927/cutflow_list_fsrfix/cutflow_Data_Data_2024.json
+studies/l3_review_20260910/cutflow_20260927/match_Data.tsv
+studies/l3_review_20260910/v3v8_extrabkg_20260927/catalog/ttto2l2nu_2j_v2_files.json
+studies/l3_review_20260910/logs_fsrfix/hist_night.txt
+studies/l3_review_20260910/logs_fsrfix/closure30.log*
+*.parquet
+studies/hdna_refactor_20261013/commit_*.txt
+studies/hdna_refactor_20261013/untracked_after_ignore.txt
