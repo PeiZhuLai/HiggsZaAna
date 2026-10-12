@@ -1259,7 +1259,7 @@ def muon_scale_smear_run3(events, year, is_data):
         pt_scale_dn = pt_scale_var(pt_scale_nom, eta, phi, q, "dn", cset, nested=False)
     except Exception as e:
         # If scale variations are not available (or MuonScaRe implementation errors), fall back to nominal
-        logger.debug("[Lepton Systematics] pt_scale_var failed; falling back to nominal. year=%s, err=%s", year, str(e))
+        logger.warning("[Lepton Systematics] pt_scale_var failed; falling back to nominal. year=%s, err=%s", year, str(e))
         pt_scale_up = pt_scale_nom
         pt_scale_dn = pt_scale_nom
 

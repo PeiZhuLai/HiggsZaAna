@@ -87,7 +87,8 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
 
     # NEW: 若兩個 photon dR < 0.3，計算 PFECalIso 時從 ecalPFClusterIso 扣掉彼此 pt
     # 只修正 ecalPFClusterIso（因為需求點名它），且只在 Run3 ID 計算中使用
-    ecalPFClusterIso_forID = photons.ecalPFClusterIso
+    # NanoAODv9 (Run 2) has no PF-cluster isolations; they are only used by the Run 3 ID.
+    ecalPFClusterIso_forID = photons.ecalPFClusterIso if int(year) > 2020 else None
     if int(year) > 2020:
         try:
             pho_v4 = to_momentum4d(photons)
@@ -132,6 +133,10 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
             )
         except Exception as _e:
             # 回退：不修正，避免因少數奇怪 event 造成整體崩潰
+            import logging
+            logging.getLogger(__name__).warning(
+                "[select_resolved_photons] ECAL-isolation overlap correction failed (%s: %s); "
+                "uncorrected ecalPFClusterIso used", type(_e).__name__, _e)
             ecalPFClusterIso_forID = photons.ecalPFClusterIso
 
     def _apply_quadratic_ea_corr(iso_values, ea_prefix):
@@ -155,8 +160,12 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
             )
         return corrected
 
-    hcalPFClusterIso_PUcorr = photons.hcalPFClusterIso
-    ecalPFClusterIso_PUcorr = photons.ecalPFClusterIso
+    if int(year) > 2020:
+        hcalPFClusterIso_PUcorr = photons.hcalPFClusterIso
+        ecalPFClusterIso_PUcorr = photons.ecalPFClusterIso
+    else:
+        hcalPFClusterIso_PUcorr = ak.full_like(photons.pt, -999.0)
+        ecalPFClusterIso_PUcorr = ak.full_like(photons.pt, -999.0)
     if "pfRelIso03_chg" in photons.fields:
         chiso_PUcorr = photons.pfRelIso03_chg
     elif "pfRelIso03_chg_quadratic" in photons.fields:
@@ -190,21 +199,54 @@ def select_resolved_photons(photons, options, electrons, rho, year, name="none",
     ph_id_hcaliso_flag = no_cut
 
     if int(year) < 2020:
-        phid_custom_tight = ak.ones_like(photons.pt) # all true, dummy TODO
-        phid_official_tight = ak.ones_like(photons.pt) # all true, dummy TODO
+        # Run 2 photon ID of the Run 2 analysis (AN-2020/212, Table "Photon definition for
+        # 2016, 2017 and 2018"): the EGM Fall17V2 cut-based ID without the sigma_ietaieta and
+        # photon-isolation requirements, i.e. H/E, charged and neutral isolation at the given
+        # working point. NanoAODv9 stores the result of each Fall17V2 cut in
+        # Photon_vidNestedWPBitmap (2 bits per cut: 0 fail, 1 loose, 2 medium, 3 tight), in
+        # the order MinPt, SCEta, H/E, sigma_ietaieta, charged iso, neutral iso, photon iso;
+        # the minimum over the 7 cuts reproduces Photon_cutBased exactly. Its thresholds and
+        # rho*EA corrections are those of the Run 2 analysis table.
+        bitmap = photons.vidNestedWPBitmap
 
-        # NEW: 補齊 medium/loose（Run2 先 dummy all-true，避免欄位缺失）
-        phid_custom_mediate = ak.ones_like(photons.pt)
-        phid_custom_extend_mediate = ak.ones_like(photons.pt)
-        phid_sieie_mediate = ak.ones_like(photons.pt)
-        phid_PFECalIso_mediate = ak.ones_like(photons.pt)
-        phid_official_mediate = ak.ones_like(photons.pt)
+        def _vid(i, level):
+            return ((bitmap >> (2 * i)) & 3) >= level
 
-        phid_custom_loose = ak.ones_like(photons.pt)
-        phid_custom_extend_loose = ak.ones_like(photons.pt)
-        phid_sieie_loose = ak.ones_like(photons.pt)
-        phid_PFECalIso_loose = ak.ones_like(photons.pt)
-        phid_official_loose = ak.ones_like(photons.pt)
+        def _run2_wp(level):
+            hoe, sie, ch, neu, pho = (_vid(i, level) for i in (2, 3, 4, 5, 6))
+            return {
+                "custom": hoe & ch & neu,
+                "custom_extend": hoe & ch & neu & sie,
+                "sieie": sie,
+                "PFECalIso": pho,  # Run 2 counterpart of the ECAL isolation: PF photon isolation
+                "official": hoe & ch & neu & sie & pho,
+                "hoe": hoe, "ch": ch, "neu": neu,
+            }
+
+        t, m, l = _run2_wp(3), _run2_wp(2), _run2_wp(1)
+        phid_custom_tight = t["custom"]
+        phid_custom_extend_tight = t["custom_extend"]
+        phid_sieie_tight = t["sieie"]
+        phid_PFECalIso_tight = t["PFECalIso"]
+        phid_official_tight = t["official"]
+
+        phid_custom_mediate = m["custom"]
+        phid_custom_extend_mediate = m["custom_extend"]
+        phid_sieie_mediate = m["sieie"]
+        phid_PFECalIso_mediate = m["PFECalIso"]
+        phid_official_mediate = m["official"]
+
+        phid_custom_loose = l["custom"]
+        phid_custom_extend_loose = l["custom_extend"]
+        phid_sieie_loose = l["sieie"]
+        phid_PFECalIso_loose = l["PFECalIso"]
+        phid_official_loose = l["official"]
+
+        # sub-cut flags of the fine a-candidate cutflow (the neutral isolation takes the
+        # place of the Run 3 PF HCAL-cluster isolation)
+        ph_id_hoe_flag = t["hoe"]
+        ph_id_chiso_flag = t["ch"]
+        ph_id_hcaliso_flag = t["neu"]
 
     elif int(year) > 2020:
         # ID

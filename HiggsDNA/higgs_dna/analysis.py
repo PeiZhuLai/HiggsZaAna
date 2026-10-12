@@ -35,6 +35,8 @@ from higgs_dna.systematics.egm_zeezmmg_systematics import (
     zeezmmg_supported,
 )
 from higgs_dna.systematics.lepton_systematics import electron_scale_smear_run3, muon_scale_smear_run3
+from higgs_dna.systematics.muon_systematics_run2 import muon_pt_rochester_run2
+import higgs_dna.systematics.run2_systematics  # noqa: F401  (Run 2 weights / variations, see metadata/za_signal_run2.json)
 from higgs_dna.systematics.jet_systematics import pt_correction_data, pt_correction_mc
 
 condor=False
@@ -151,6 +153,15 @@ def attach_lhe_weights(events_file, tree, event_cut):
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError("[attach_lhe_weights] LHEScaleWeight present but unreadable: %s" % exc) from exc
     if scale is not None:
+        n_scale = awkward.to_numpy(awkward.num(scale, axis=1))
+        if len(n_scale) and (n_scale == len(LHE_SCALE_INDEX_NAMES) - 1).all():
+            # Run 2 NanoAODv9 stores 8 weights without the nominal (MUF=1, MUR=1); the
+            # Run 3 order has it at index 4. Insert 1.0 there so that the names below
+            # mean the same variation in both runs.
+            title = tree["LHEScaleWeight"].title
+            if 'MUF="1.0" MUR="1.0"' in title or '[4] is MUF="2.0" MUR="1.0"' not in title:
+                raise RuntimeError("[attach_lhe_weights] 8 LHEScaleWeight entries with an unexpected order: %s" % title)
+            scale = awkward.concatenate([scale[:, :4], awkward.ones_like(scale[:, :1]), scale[:, 4:]], axis=1)
         padded = awkward.fill_none(
             awkward.pad_none(scale, len(LHE_SCALE_INDEX_NAMES), clip=True), 1.0)
         for i, name in enumerate(LHE_SCALE_INDEX_NAMES):
@@ -233,8 +244,11 @@ def run_analysis(config):
                 if isinstance(x[0], list):
                     try:
                         events[tuple(x[0])] = events[tuple(x[1])]
-                    except:
-                        logger.debug("[run_analysis] Failed to map branches: %s", x)
+                    except Exception as exc:  # noqa: BLE001
+                        # Not fatal: e.g. the zmmg tag-and-probe skips the EGM correction, so
+                        # Electron.corrected_pt does not exist and Electron.pt stays as is.
+                        logger.warning("[run_analysis] branch_map %s <- %s not applied (%s: %s); the "
+                                       "original field is kept.", x[0], x[1], type(exc).__name__, exc)
                 else:
                     events[x[0]] = events[x[1]]
 
@@ -827,9 +841,25 @@ class AnalysisManager():
                 overlap_cut = mc_overlap_remover.overlap_selection(file, tree)
 
                 trimmed_branches = [x for x in branches if x in tree.keys()]
+                if file_idx == 0:
+                    _absent = sorted(set(branches) - set(trimmed_branches))
+                    if _absent:
+                        logger.warning("[AnalysisManager : LoadEvents] %d requested branches are not in the "
+                                       "input and are skipped: %s", len(_absent), _absent)
                 events_file = tree.arrays(trimmed_branches, library = "ak", how = "zip")
                 events_file = events_file[overlap_cut]
                 events_file = attach_lhe_weights(events_file, tree, overlap_cut)
+
+            if int(year[:4]) < 2020:
+                # Run 2 UL NanoAODv9: the EGM scale and smearing are already applied to
+                # Electron/Photon pt; muons get the Rochester correction (as in HZgamma).
+                if is_data != ("genWeight" not in events_file.fields):
+                    raise RuntimeError("[AnalysisManager : LoadEvents] is_data=%s inconsistent with the "
+                                       "presence of genWeight" % is_data)
+                events_file = muon_pt_rochester_run2(None, events_file, year)
+                if file_idx == 0:
+                    logger.info("[AnalysisManager : LoadEvents] Run 2: Rochester muon correction applied; "
+                                "Muon ptErr is the NanoAODv9 ptErr (no bsConstrainedPtErr in v9).")
 
             if int(year[:4]) > 2020:
                 if skip_photon_scale_smear:

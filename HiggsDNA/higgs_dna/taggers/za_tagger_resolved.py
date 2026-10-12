@@ -1,3 +1,4 @@
+import os
 import awkward as ak
 import time
 import numpy
@@ -322,6 +323,18 @@ class ZaTaggerRun3(Tagger):
             )
 
 
+    def _alp_photon_field(self, photon, field):
+        """Photon field for the ALP_{lead,sublead}_photon_* outputs. NanoAODv9 (Run 2) lacks
+        several of them (energyRaw, hoe_PUcorr, s4, sieip, PF-cluster isolations, ...); they are
+        written as DUMMY_VALUE there. In Run 3 a missing field is still an error."""
+        # getattr, not a test on photon.fields: costheta is a vector-behavior property.
+        try:
+            return getattr(photon, field)
+        except AttributeError:
+            if int(self.year[:4]) < 2020:
+                return ak.full_like(photon.pt, DUMMY_VALUE, dtype=float)
+            raise
+
     def calculate_selection(self, events):
         """
         Select photons and create diphoton pairs.
@@ -416,7 +429,7 @@ class ZaTaggerRun3(Tagger):
         def _flat(arr, fill=0.0):
             return ak.to_numpy(ak.fill_none(arr, fill))
 
-        pt1_refit, pt2_refit = refit_lepton_pts(
+        refit_args = (
             _flat(lead.bare_pt), _flat(lead.bare_eta), _flat(lead.bare_phi),
             _flat(lead.bare_mass), _flat(lead.ptE_error),
             _flat(sub.bare_pt), _flat(sub.bare_eta), _flat(sub.bare_phi),
@@ -424,6 +437,20 @@ class ZaTaggerRun3(Tagger):
             _flat(lead.fsr_pt), _flat(lead.fsr_eta), _flat(lead.fsr_phi),
             _flat(sub.fsr_pt), _flat(sub.fsr_eta), _flat(sub.fsr_phi),
         )
+        # Z refit flavour: "legacy" (default; the refit of the Run 3 AN) or "hzgamma" (the
+        # HZgamma refit: Pythia Z line shape with three extra refinement passes, Gaussian
+        # lepton constraint; its per-era DSCB lepton constraint is not ported). Option
+        # z_refit_method of the tagger, overridden by the env variable HZA_Z_REFIT. The
+        # analysis does not use the refit variables; this only changes the *_refit outputs.
+        method = os.environ.get("HZA_Z_REFIT") or self.options.get("z_refit_method", "legacy")
+        if method == "legacy":
+            pt1_refit, pt2_refit = refit_lepton_pts(*refit_args)
+        elif method == "hzgamma":
+            from higgs_dna.tools import zmass_constraint_refit_hzg as _zr
+            pt1_refit, pt2_refit = _zr.refit_lepton_pts(
+                *refit_args, lineshape=_zr.PYTHIA_LINESHAPE, n_extra_refine=3)
+        else:
+            raise ValueError("unknown Z refit method %r (legacy or hzgamma)" % method)
 
         def _dressed(obj, pt_new):
             lep = ak.zip(
@@ -919,6 +946,10 @@ class ZaTaggerRun3(Tagger):
                     double_mu_trigger_cut = (double_mu_trigger_cut) | (events[hlt] == True)
                 else:
                     logger.debug("[ZGammaTagger] %s is not in these event" % (hlt))
+            for category in ("single_ele_trigger", "double_ele_trigger", "single_muon_trigger", "double_muon_trigger"):
+                if not any(hasattr(events, hlt) for hlt in self.options[category][year]):
+                    logger.warning("[ZGammaTagger] none of the %s paths %s is in the input: this "
+                                   "category never fires (year %s)", category, self.options[category][year], year)
         else:
             single_ele_trigger_cut = ak.num(events.Photon) >= 0 # dummy cut, all True
             double_ele_trigger_cut = ak.num(events.Photon) >= 0
@@ -1230,11 +1261,11 @@ class ZaTaggerRun3(Tagger):
                 )
             name = f"ALP_lead_photon_{field}"
             if name not in events.fields:
-                awkward_utils.add_field(events, name, ak.fill_none(getattr(alp_cand.LeadPhoton, field), DUMMY_VALUE))
+                awkward_utils.add_field(events, name, ak.fill_none(self._alp_photon_field(alp_cand.LeadPhoton, field), DUMMY_VALUE))
 
             name = f"ALP_sublead_photon_{field}"
             if name not in events.fields:
-                awkward_utils.add_field(events, name, ak.fill_none(getattr(alp_cand.SubleadPhoton, field), DUMMY_VALUE))
+                awkward_utils.add_field(events, name, ak.fill_none(self._alp_photon_field(alp_cand.SubleadPhoton, field), DUMMY_VALUE))
 
 
         if int(self.year[:4]) < 2020:

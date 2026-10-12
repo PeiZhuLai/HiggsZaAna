@@ -321,6 +321,13 @@ def HLT_sf(events, year, central_only):
             muons, muon_single_eval, muon_high_eval, muon_low_eval,
             muon_single_thresh, muon_high_thresh, muon_low_thresh,
             False, True, central_only, year)
+    if year == "2017":
+        # 2017 HLT Zvtx inefficiency of the electron paths (EGM UL recommendation,
+        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaUL2016To2018): the data
+        # probability of the electron trigger decision is scaled by 0.991, as in HZgamma
+        # (_hzg_trigger_zvtx_factor) and nano2pico (TriggerWeighter::GetFlavorProbability).
+        prob_e_data = prob_e_data * 0.991
+        unc_e_data = unc_e_data * 0.991
     
     # Calculate probabilities for MC
     prob_e_mc, unc_e_mc = get_flavor_probability(

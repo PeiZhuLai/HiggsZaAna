@@ -349,6 +349,11 @@ def photon_zaid_sf(events, year, central_only, input_collection):
         - https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/EGM_electron_Run2_UL/EGM_electron_2017_UL.html
         - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
     """
+    if year not in PHOTON_ZAID_SF_FILE:
+        raise ValueError("[photon_zaid_sf] no custom photon-ID scale factors for %s. For Run 2 the "
+                         "ID of the Run 2 analysis (AN-2020/212) is used and its scale factors are not "
+                         "in the framework yet; leave photon_id_sf out of the configuration "
+                         "(metadata/za_signal_run2.json)." % year)
 
     required_fields = [
         (input_collection, "eta"), (input_collection, "pt")
@@ -429,13 +434,41 @@ PHOTON_CSEV_SF_FILE_HOLE = {
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/hza_phcsev_2023BPixHole_scalefactors.json"
 }
 
+RUN2_UL_PHOTON_JSON = "higgs_dna/systematics/data/%s_UL/photon.json"
+
+
+def _photon_CSEV_sf_run2(events, year, central_only, input_collection):
+    """Run 2 UL: official EGM conversion-safe electron veto SF (photon.json, UL-Photon-CSEV-SF),
+    binned in EB/EE and R9 > 0.94, as in HZgamma. The Run 2 photon ID (Fall17V2 cut-based without
+    sigma_ietaieta and photon isolation) is a loosened Tight ID, so the Tight working point is used."""
+    evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(RUN2_UL_PHOTON_JSON % year))["UL-Photon-CSEV-SF"]
+    photons = events[input_collection]
+    n_photons = awkward.num(photons)
+    flat = awkward.flatten(photons)
+    is_eb = awkward.to_numpy(flat.isScEtaEB).astype(bool)
+    r9 = awkward.to_numpy(flat.r9)
+    category = numpy.char.add(numpy.where(is_eb, "EB", "EE"), numpy.where(r9 > 0.94, "HighR9", "LowR9"))
+    variations = {}
+    for var, val_type in (("central", "sf"), ("up", "sfup"), ("down", "sfdown")):
+        if central_only and var != "central":
+            continue
+        sf = numpy.ones(len(category))
+        for cat in numpy.unique(category):
+            mask = category == cat
+            sf[mask] = evaluator.evaluate(year, val_type, "Tight", str(cat))
+        variations[var] = awkward.unflatten(sf, n_photons)
+    return variations
+
+
 def photon_CSEV_sf(events, year, central_only, input_collection, working_point = "MVA"):
     """
     See:
         - https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/EGM_electron_Run2_UL/EGM_electron_2017_UL.html
         - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
     """
-    
+    if year in ("2016preVFP", "2016postVFP", "2017", "2018"):
+        return _photon_CSEV_sf_run2(events, year, central_only, input_collection)
+
     evaluator = _core.CorrectionSet.from_file(misc_utils.expand_path(PHOTON_CSEV_SF_FILE[year][0]))
     csev_inputs = _clib_inputs(evaluator["sf_pass"])
 
