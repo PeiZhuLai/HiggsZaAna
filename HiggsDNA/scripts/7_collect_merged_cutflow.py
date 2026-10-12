@@ -102,12 +102,20 @@ xs_DYJet_2022 = [6688.0]
 xs_DYJet_2023 = [6688.0]
 xs_DYJet_2024 = [2213.0,2220.66,2230.33]
 pfTofb = 1000.0
-# fb
-lumi_2022preEE = 7.9804
-lumi_2022postEE = 26.6717
-lumi_2023preBPix = 17.794
-lumi_2023postBPix = 9.451
-lumi_2024 = 108.96
+# fb^-1, per era, from the authoritative constants of the HZgamma framework (read with ast:
+# that file cannot be imported, its ERA dict uses sets as keys). The values hard-coded here
+# before had drifted (e.g. 2024 108.96 instead of 109.82, 2023postBPix 9.451 instead of 9.68).
+def _authoritative_lumi():
+    import ast
+    path = "/afs/cern.ch/work/p/pelai/HZgamma/higgsdna-hzg-run3/higgs_dna/metaconditions/corrections/constants.py"
+    tree = ast.parse(open(path).read())
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", None) == "LUMI":
+            return ast.literal_eval(node.value)
+    raise RuntimeError("LUMI not found in %s" % path)
+
+
+LUMI_FB = _authoritative_lumi()
 
 # -----------------------------
 # Defaults
@@ -1025,16 +1033,9 @@ def main() -> int:
                     xs_pb = float(xs_DYJet_2024[name_DYJet_2024.index(dataset)])
 
             # lumi (fb^-1)
-            if year == "2022preEE":
-                lumi_fb = float(lumi_2022preEE)
-            elif year == "2022postEE":
-                lumi_fb = float(lumi_2022postEE)
-            elif year == "2023preBPix":
-                lumi_fb = float(lumi_2023preBPix)
-            elif year == "2023postBPix":
-                lumi_fb = float(lumi_2023postBPix)
-            elif year == "2024":
-                lumi_fb = float(lumi_2024)
+            if year not in LUMI_FB:
+                raise KeyError("no luminosity for era %s in the authoritative constants" % year)
+            lumi_fb = float(LUMI_FB[year])
 
         result = collect_cutflows(out_files, cutflow_types=cutflow_types, syst=syst)
         sample_label = f"{dataset_type}_{dataset}_{year}"
