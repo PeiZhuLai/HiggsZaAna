@@ -58,11 +58,22 @@ ROI_VAR = "MLPhoton_lead_mass"
 # the new models (see RegressMergedPhoton/training/README.md 5d).
 _ML_VER = os.environ.get("MERGED_ML_VERSION", "old")
 _SIG_BASE = {"old": "parquet_merged_DNA_tmp", "v4": "parquet_merged_DNA_v4"}[_ML_VER]
+# MERGED_PROD=lepclean switches signal AND data together to the production with
+# the photon-lepton dR>0.3 cleaning inside the tagger (old model only: that is
+# the model the re-production used). Default "" = the earlier production.
+_PROD = os.environ.get("MERGED_PROD", "")
+_DATA_BASE = "parquet_friend"
+if _PROD == "lepclean":
+    if _ML_VER != "old":
+        raise SystemExit("MERGED_PROD=lepclean exists only for MERGED_ML_VERSION=old")
+    _SIG_BASE, _DATA_BASE = "parquet_merged_DNA_lepclean_old", "parquet_friend_lepclean"
+elif _PROD:
+    raise SystemExit(f"unknown MERGED_PROD={_PROD!r}")
 SIG_ML = f"/eos/cms/store/group/phys_susy/pelai/HZa_merged/{_SIG_BASE}/Sig_MC_MLNANO_all"
 # Data ML friend parquet (per-dataset dirs from run_merged_data_ml_friend.sh).
 # Covers all Run-3 years: Data_2022*, Data_2023* (produced on IHEP, synced to
 # <tag>/merged/) and Data_2024_* — one glob picks up every per-dataset merged file.
-DATA_ML_GLOB = ("/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_friend/"
+DATA_ML_GLOB = (f"/eos/cms/store/group/phys_susy/pelai/HZa_merged/{_DATA_BASE}/"
                 "Data_202*_*/*/merged_nominal.parquet")
 
 # Per-mA ROI window on MLPhoton_lead_mass = [q16, q84] of the signal reco
@@ -247,6 +258,12 @@ def build_data(tag, data_glob, mlo, mhi):
     if not fs:
         print(f"[data {tag}] no DATA ML parquet found ({data_glob})")
         return None
+    # A short glob silently drops whole datasets (the 2024 partial-merge episode
+    # looked exactly like a normal run). For the lepclean production the full set
+    # is known: 32 x 2024 + 36 x 2022/23.
+    want = int(os.environ.get("MERGED_EXPECT_DATA_FILES", "68" if _PROD == "lepclean" else "0"))
+    if want and len(fs) != want:
+        raise SystemExit(f"[data {tag}] {len(fs)} data parquet files, expected {want} ({data_glob})")
     parts = []
     for f in fs:
         a = load(f, tag, mlo, mhi, use_weight=False)
@@ -295,6 +312,12 @@ def main():
     args = ap.parse_args()
     if not (args.do_signal or args.do_data):
         args.do_signal = args.do_data = True
+    # Signal and data must come from the same production. An explicit --indir
+    # silently overrode MERGED_PROD once (lepclean data + pre-cleaning signal).
+    if args.do_signal and os.path.normpath(args.indir) != os.path.normpath(SIG_ML) \
+            and os.environ.get("MERGED_ALLOW_SIG_OVERRIDE", "0") != "1":
+        raise SystemExit(f"--indir {args.indir} differs from the signal of this production "
+                         f"({SIG_ML}, MERGED_PROD={_PROD!r}); set MERGED_ALLOW_SIG_OVERRIDE=1 if intended")
 
     tags = [t for t in args.signals.split(",") if t]
     for tag in tags:

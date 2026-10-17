@@ -45,7 +45,10 @@ CMSSW_SRC="${CMSSW_SRC:-/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_
 FLASHGG="${FLASHGG:-${CMSSW_SRC}/flashggFinalFit}"
 ROOT_MVACUT="${ROOT_MVACUT:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/root_MVAcut}"
 # Signal ML parquet (all 9 sub-GeV mass points, nominal+16 syst; MLPhoton_lead_*).
-SIG_ML_DIR="${SIG_ML_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa_merged/parquet_merged_DNA_tmp/Sig_MC_MLNANO_all}"
+# Empty = let merged_p2root.py pick it from MERGED_ML_VERSION / MERGED_PROD, so the
+# signal and data inputs switch together. A hard-coded default here used to override
+# that switch: the lepclean chain read the OLD signal with the NEW data.
+SIG_ML_DIR="${SIG_ML_DIR:-}"
 
 # Sub-GeV mass points (flashgg label form, e.g. 0p5 == m_a 0.5 GeV) and channels.
 MASSES="${MASSES:-0p1 0p2 0p3 0p4 0p5 0p6 0p7 0p8 0p9}"
@@ -87,6 +90,9 @@ RUN_BKG="${RUN_BKG:-1}"
 RUN_DATACARD="${RUN_DATACARD:-1}"
 RUN_COMBINE="${RUN_COMBINE:-1}"
 RUN_PLOT_LIMITS="${RUN_PLOT_LIMITS:-1}"
+# Blind by default: AsymptoticLimits without --run blind also fits the SR data
+# and writes an observed limit. Set RUN_BLIND=0 only as part of unblinding.
+RUN_BLIND="${RUN_BLIND:-1}"
 
 echo_step() { echo; echo "==== $* ===="; }
 echo_skip() { echo_step "Skip: $*"; }
@@ -175,8 +181,9 @@ if [[ "$RUN_P2ROOT" == "1" ]]; then
     # per-mA ROI ML path: signal from Sig_MC_MLNANO_all, data per-mA (merged_p2root
     # uses its DATA_ML_GLOB default = parquet_friend/Data_2024_*/). Writes
     # sig/mA_M<m>/output_<year>.root and data/Data_merged_M<m>/run3.root (PER-mA).
+    sig_arg=(); [[ -n "$SIG_ML_DIR" ]] && sig_arg=(--indir "$SIG_ML_DIR")
     python3 "${MERGED_DIR}/merged_p2root.py" \
-        --indir "${SIG_ML_DIR}" --outdir "${ROOT_MVACUT}" \
+        "${sig_arg[@]}" --outdir "${ROOT_MVACUT}" \
         --signals "$sig_csv" --year "$YEAR" --do-signal --do-data
 else
     echo_skip "merged: parquet -> ROOT"
@@ -336,8 +343,9 @@ if [[ "$RUN_COMBINE" == "1" ]]; then
     for m in $MASSES; do
         ws="ws_${m}_merged.root"
         [[ -f "$ws" ]] || { echo "  [WARN] M${m} no workspace; skip"; continue; }
+        blind_args=(); [[ "$RUN_BLIND" == "1" ]] && blind_args=(--run blind)
         combine -M AsymptoticLimits "$ws" -m 125 -n "_merged_flashgg_M${m}" \
-            --freezeParameters MH --rMin 0 --rMax 1000 --rRelAcc 0.01 \
+            --freezeParameters MH --rMin 0 --rMax 1000 --rRelAcc 0.01 "${blind_args[@]}" \
             > "${LIMDIR}/combine_${m}.log" 2>&1
         mv "higgsCombine_merged_flashgg_M${m}.AsymptoticLimits.mH125.root" "${LIMDIR}/" 2>/dev/null || true
         med=$(grep "Expected 50" "${LIMDIR}/combine_${m}.log" | sed 's/.*< //')
