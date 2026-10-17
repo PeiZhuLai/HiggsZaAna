@@ -1,0 +1,16 @@
+# Data/DY re-scoring with a candidate low-mass model (condor/run_rescore_any.sh); queue from $(LIST): "sample outbase lowmodel".
+initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/condor
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/condor/run_rescore_any.sh
+arguments       = $(ARGS)
+log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/rescore.$(ClusterId).log
+output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/rescore.$(ClusterId).$(ProcId).out
+error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/rescore.$(ClusterId).$(ProcId).err
+should_transfer_files     = YES
+when_to_transfer_output   = ON_EXIT
+transfer_output_files     = ""
+request_cpus    = 1
+request_memory  = 4000MB
+request_disk    = 6000MB
++JobFlavour     = "longlunch"
++JobBatchName   = "hza_lowcand_rescore"
+queue ARGS from $(LIST)

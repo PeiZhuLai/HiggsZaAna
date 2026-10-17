@@ -1,0 +1,20 @@
+# Big-change (10-13) models with photon mvaID added back (user 2026-10-15): lead / sublead / both, low and high.
+# Same payload and metrics as the variable search (bdt_varsearch/run_candidate.sh + search_job.py).
+universe              = vanilla
+executable            = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/bdt_varsearch/run_candidate.sh
+arguments             = $(IDX) /eos/home-p/pelai/HZa/bdt_varsearch_20261013/results/minscan_mvaid_20261015 $(MODEL)
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/bdt_varsearch/search_job.py, /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan_mvaid/config.jsonl
+transfer_output_files = ""
+output                = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan_mvaid/logs/job_$(IDX).out
+error                 = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan_mvaid/logs/job_$(IDX).err
+log                   = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan_mvaid/logs/cluster.log
+request_cpus          = 1
+request_memory        = 2000
+request_disk          = 4000000
++JobFlavour           = "longlunch"
+batch_name            = hza_minscan_mvaid
+on_exit_hold          = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release      = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+queue IDX, MODEL from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan_mvaid/args.txt

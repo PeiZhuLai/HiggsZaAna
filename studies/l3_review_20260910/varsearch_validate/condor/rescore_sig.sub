@@ -1,0 +1,21 @@
+# Signal re-scoring with the variable-search BDTs: one job per signal sample dir (5 eras), run_rescore_sig.sh.
+# Queue from $(LIST) (one sample per line; OUTB = EOS output base). Outputs are written by the job via xrdcp, not
+# transferred by condor.
+initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/condor
+executable      = run_rescore_sig.sh
+arguments       = $(SAMPLE) $(OUTB)
+log             = logs/$(ClusterId).log
+output          = logs/$(ClusterId).$(ProcId).out
+error           = logs/$(ClusterId).$(ProcId).err
+should_transfer_files     = YES
+when_to_transfer_output   = ON_EXIT
+transfer_output_files     = ""
+universe        = vanilla
+request_cpus    = 1
+request_memory  = 2500MB
+request_disk    = 5000MB
++JobFlavour     = "longlunch"
++JobBatchName   = "hza_varsearch_rescore_sig"
+max_materialize = 60
+periodic_release = (HoldReasonCode == 12 || HoldReasonCode == 13) && (NumJobStarts < 4)
+queue SAMPLE from $(LIST)

@@ -1,0 +1,17 @@
+# Closure jobs of the low-mass candidates (run_closure_job.sh); queue from $(LIST): one "mode model mA cut [seed card]" per line.
+initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/run_closure_job.sh
+arguments       = $(ARGS)
+log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/closure.$(ClusterId).log
+output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/closure.$(ClusterId).$(ProcId).out
+error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/closure.$(ClusterId).$(ProcId).err
+should_transfer_files     = YES
+when_to_transfer_output   = ON_EXIT
+transfer_output_files     = ""
+request_cpus    = 1
+request_memory  = 4000MB
+request_disk    = 3000MB
++JobFlavour     = "workday"
++JobBatchName   = "hza_lowcand_closure"
+max_materialize = 40
+queue ARGS from $(LIST)

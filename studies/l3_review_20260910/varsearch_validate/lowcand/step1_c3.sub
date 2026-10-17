@@ -1,0 +1,16 @@
+# Step 1 of the validation of the two minimal-change low-mass candidates (float64 retrain + incl/test-DY evaluation).
+initialdir      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand
+executable      = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/run_py.sh
+arguments       = $(ARGS)
+log             = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/step1.$(ClusterId).log
+output          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/step1.$(ClusterId).$(ProcId).out
+error           = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/logs/step1.$(ClusterId).$(ProcId).err
+should_transfer_files     = YES
+when_to_transfer_output   = ON_EXIT
+transfer_output_files     = ""
+request_cpus    = 1
+request_memory  = 12000MB
+request_disk    = 8000MB
++JobFlavour     = "workday"
++JobBatchName   = "hza_lowcand_step1"
+queue ARGS from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/lowcand/args_step1_c3.txt
