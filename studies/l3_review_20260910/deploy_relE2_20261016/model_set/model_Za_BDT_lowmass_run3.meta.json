@@ -1,0 +1,28 @@
+{
+  "features": [
+    "ALP_calculatedPhotonIso",
+    "var_dR_g1g2",
+    "pho1R9",
+    "pho2_relEerr",
+    "param"
+  ],
+  "masses": [
+    1,
+    2,
+    3
+  ],
+  "mA1_window": [
+    115.0,
+    133.0
+  ],
+  "model": "XGB depth4/300/lr0.1/subsample0.8/mcw5",
+  "name": "low_swapPt_relE2",
+  "inputs": "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix",
+  "dtype": "float64",
+  "xgboost": "2.1.1",
+  "training": "studies/l3_review_20260910/varsearch_validate/train_selected.py (models/model_low_swapPt_relE2)",
+  "auc_test": 0.9404,
+  "auc_validation": 0.9403,
+  "ks_sig": 0.347,
+  "ks_bkg": 0.304
+}

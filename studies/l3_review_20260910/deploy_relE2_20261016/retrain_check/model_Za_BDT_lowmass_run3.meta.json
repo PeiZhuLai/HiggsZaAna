@@ -1,0 +1,32 @@
+{
+  "features": [
+    "ALP_calculatedPhotonIso",
+    "var_dR_g1g2",
+    "pho1R9",
+    "pho2_relEerr",
+    "param"
+  ],
+  "masses": [
+    1,
+    2,
+    3
+  ],
+  "mA1_window": [
+    115.0,
+    133.0
+  ],
+  "name": "low_swapPt_relE2",
+  "R": {
+    "1": 1.1715256694488783,
+    "2": 1.1660134642025681,
+    "3": 1.2502514477069928
+  },
+  "auc_test": 0.950689412776579,
+  "ks_sig": 0.6251351837980735,
+  "ks_bkg": 0.3039913691569214,
+  "model": "XGB depth4/300/lr0.1/subsample0.8/mcw5",
+  "inputs": "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix",
+  "dtype": "float64",
+  "xgboost": "2.1.1",
+  "training": "HZaMVA/scripts/train_lowmass_final.py"
+}
