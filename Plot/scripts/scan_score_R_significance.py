@@ -35,7 +35,7 @@ def _significance_asimov_like(s: float, b: float) -> float:
 ROOT_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 MODEL    = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_lowmass_run3.pkl"
 HIGHMASS_MODEL = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_highmass_run3.pkl"
-FEATS    = ["ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho1Pt_oHm"]   # + param
+FEATS    = [f for f in __import__("json").load(open("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_lowmass_run3.meta.json"))["features"] if f != "param"]   # low-mass model inputs (+ param)
 OUTDIR   = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/scan_score_R"
 JSON_PATH = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 # Combined sculpting-ratio R(m_a) for ALL mass points (low-mass + high-mass BDT models),
@@ -198,7 +198,11 @@ LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 #   These are pinned HERE so that re-running this script -- in particular with --write-json --
 #   can NOT silently revert mA2/mA3 back to the R=1 crossing. mA1 is NOT fixed: it keeps its
 #   natural R=1 crossing (~0.963). See memory ref_hza_unblind_procedure / project_hza_lowma_pow1_R1cuts.
-FIXED_WP = {2: 0.975, 3: 0.988}   # mA3 0.992 -> 0.988 (2026-10-01): after the 2024 DY+jets overlap-veto
+# Low-mass BDT low_swapPt_relE2: the m_a 1-3 cuts come from the x0.5 rule of the background-only closure scan
+# (closure + data GOF pass), not from the R=1 crossing; pinned here so that --write-json keeps them.
+FIXED_WP = {1: 0.98036, 2: 0.98661, 3: 0.99194}
+# Previous low-mass model (pho1Pt_oHm input): {2: 0.975, 3: 0.988}, mA1 at the R=1 crossing 0.963.
+# mA3 0.992 -> 0.988: after the 2024 DY+jets overlap-veto
                                   # retrain the closure at 0.992 was Z = 1.59 (bootstrap 1.62 +- 1.17); 0.988 is
                                   # the most stable cut (bootstrap Z 1.03 +- 1.07, data GOF >= 0.92). Earlier:   # mA -> chosen BDT score cut (used for the red star AND --write-json)
                                   # mA3 0.988 -> 0.992 (2026-09-27): after the FSR-fix retraining the
@@ -208,20 +212,23 @@ FIXED_WP = {2: 0.975, 3: 0.988}   # mA3 0.992 -> 0.988 (2026-10-01): after the 2
 
 import sys
 sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
-from hza_features import BASE_VARS, FEATURES   # FEATURES == BASE_VARS + ['pho_pt_asym','param']
+from hza_features import BASE_VARS, FEATURES, feature_matrix, relerr_extra   # FEATURES == BASE_VARS + ['pho_pt_asym','param']
 
 mdl      = pickle.load(open(MODEL, "rb"))            # low-mass model (mA1,2,3)
 mdl_high = pickle.load(open(HIGHMASS_MODEL, "rb"))   # high-mass model (mA4-30; used here for mA30)
 _HM_FEATS = json.load(open(HIGHMASS_META))["features"]   # high-mass model feature order (incl 'param')
 
-def load(path, feats=FEATS):
+def load(path, feats=None):
+    """Inclusive tree in 95-180 GeV; default columns: the low-mass model inputs (derived ones expanded)."""
+    if feats is None:
+        feats = [f for f in FEATS if f not in ("pho1_relEerr", "pho2_relEerr")] + relerr_extra(FEATS)
     a = uproot.open(path)["inclusive"].arrays(list(feats) + ["H_mass", "ALP_mass", "factor"], library="np")
     m = (a["H_mass"] > 95) & (a["H_mass"] < 180) & np.isfinite(a["factor"])
     return {k: a[k][m] for k in a}
 
 def score(a, mh):
-    X = np.column_stack([a[c] for c in FEATS] + [(a["ALP_mass"] - mh) / a["H_mass"]])
-    return mdl.predict_proba(X)[:, 1]
+    b = dict(a, ALP_m=a["ALP_mass"], H_m=a["H_mass"])
+    return mdl.predict_proba(feature_matrix(b, mh, FEATS + ["param"]))[:, 1]
 
 def score_high(a, mA):
     """BDT score from the high-mass parametric model. Builds the full feature matrix with the
@@ -396,23 +403,20 @@ def _bkg_R_at_cuts(model_path, meta_path, cuts):
     NB: the 'inclusive' tree uses branch names H_mass/ALP_mass (not the train-tree H_m/ALP_m)."""
     import sys
     sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
-    from hza_features import BASE_VARS, FEATURES   # FEATURES == BASE_VARS + ['pho_pt_asym','param']
+    from hza_features import BASE_VARS, feature_matrix, relerr_extra
 
     mdl = pickle.load(open(model_path, "rb"))
     feats = json.load(open(meta_path))["features"]          # model feature order (incl 'param')
-    idx = [FEATURES.index(f) for f in feats]
     a = uproot.open(f"{ROOT_DIR}/All_Bkg/run3.root")["inclusive"].arrays(
-        BASE_VARS + ["H_mass", "ALP_mass", "factor"], library="np")
+        BASE_VARS + relerr_extra(feats) + ["H_mass", "ALP_mass", "factor"], library="np")
     m = (a["H_mass"] > 95) & (a["H_mass"] < 180) & np.isfinite(a["factor"])
     a = {k: a[k][m] for k in a}
     wB = np.clip(a["factor"], 0, None); Hb = a["H_mass"]
     peak = (Hb > PEAK[0]) & (Hb < PEAK[1]); frac = wB[peak].sum() / wB.sum()
-    asym = (a["pho1Pt_oHm"] - a["pho2Pt_oHm"]) / (a["pho1Pt_oHm"] + a["pho2Pt_oHm"] + 1e-6)
-    base_cols = [a[b] for b in BASE_VARS]
+    a["ALP_m"], a["H_m"] = a["ALP_mass"], a["H_mass"]
     R = {}
     for mA, cut in cuts.items():
-        param = (a["ALP_mass"] - mA) / a["H_mass"]
-        X = np.column_stack(base_cols + [asym, param])[:, idx]  # FEATURES order -> model order
+        X = feature_matrix(a, float(mA), feats)                 # model feature order, by name
         s = mdl.predict_proba(X)[:, 1]
         pB = s > cut; denom = wB[pB].sum()
         R[mA] = float(wB[pB & peak].sum() / denom / frac) if denom > 0 else float("nan")

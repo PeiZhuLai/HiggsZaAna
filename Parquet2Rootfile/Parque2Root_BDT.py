@@ -15,6 +15,7 @@ from ROOT import Math, TVector2, TVector3, TLorentzVector
 
 from xgboost import XGBClassifier
 import pickle
+import json
 import re
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
@@ -45,15 +46,30 @@ HIGH_MODEL_FILE = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using/model_Z
 LOW_MASSES = {1, 2, 3}
 _LOW_CACHE = None
 _HIGH_CACHE = None
+class ModelFeatureMismatch(RuntimeError):
+    """Installed model was trained on other inputs than the columns fed to it here."""
+def check_model_features(model_file, columns):
+    """The model's meta.json 'features' must equal `columns` name by name and in order. A model of the same size
+    with other inputs (e.g. the old pho1Pt_oHm low-mass set) would otherwise be scored without any error."""
+    meta_file = model_file[:-len(".pkl")] + ".meta.json"
+    try:
+        with open(meta_file) as f:
+            feats = json.load(f)["features"]
+    except Exception as e:
+        raise ModelFeatureMismatch("cannot read the features of %s from %s: %s" % (model_file, meta_file, e))
+    if feats != list(columns):
+        raise ModelFeatureMismatch("%s was trained on %s, but the scorer feeds %s" % (model_file, feats, list(columns)))
 def get_low_model():
     global _LOW_CACHE
     if _LOW_CACHE is None:
+        check_model_features(LOW_MODEL_FILE, LOW_FEATURE_COLUMNS)
         with open(LOW_MODEL_FILE, 'rb') as f:
             _LOW_CACHE = pickle.load(f)
     return _LOW_CACHE
 def get_high_model():
     global _HIGH_CACHE
     if _HIGH_CACHE is None:
+        check_model_features(HIGH_MODEL_FILE, HIGH_FEATURE_COLUMNS)
         with open(HIGH_MODEL_FILE, 'rb') as f:
             _HIGH_CACHE = pickle.load(f)
     return _HIGH_CACHE
@@ -634,8 +650,10 @@ HIGH_FEATURE_COLUMNS = [
     "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z",
     "var_PtaOverMh", "H_pt_oHm", "pho_pt_asym", "param",
 ]
+# Low-mass model = low_swapPt_relE2 (input-variable search): pho1Pt_oHm replaced by the
+# sub-leading-photon sigma_E/E (pho2_relEerr, built in decorate()); m_a = 1 signal trained in 115-133 GeV.
 LOW_FEATURE_COLUMNS = [
-    "ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho1Pt_oHm", "param",
+    "ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho2_relEerr", "param",
 ]
 
 def compute_MVA_Score(x, wanted_ma):
@@ -694,14 +712,10 @@ def add_mva_scores(data, masses=range(1, 31)):
     Features are the H_m-normalized (_oHm) ones decorate() builds before this call, matching
     how both models were trained (hza_features._feat). Each mass = one dense matrix.
     """
-    try:
-        low_model = get_low_model()
-        high_model = get_high_model()
-    except Exception as e:
-        print("WARNING: failed to load MVA model(s): %s" % e)
-        for ma in masses:
-            data[f"MVA_Score_mA_M{ma}"] = np.nan
-        return data
+    # Any load failure (missing or unreadable pkl/meta.json, feature mismatch) stops the job: NaN scores
+    # would silently fail every event at the MVA cut downstream.
+    low_model = get_low_model()
+    high_model = get_high_model()
 
     h_mass = pd.to_numeric(data["H_mass"], errors="coerce").to_numpy(dtype=float)
     alp_mass = pd.to_numeric(data["ALP_mass"], errors="coerce").to_numpy(dtype=float)
@@ -734,10 +748,8 @@ def add_mva_scores(data, masses=range(1, 31)):
         matrix = matrix_for(feat_cols, param)
         valid = valid_base & np.isfinite(matrix).all(axis=1)
         if np.any(valid):
-            try:
-                scores[valid] = model.predict_proba(matrix[valid])[:, 1]
-            except Exception as e:
-                print("WARNING: failed to evaluate MVA score for mA_M%s: %s" % (ma, e))
+            # an evaluation error stops the job (no NaN fallback, same as a load error)
+            scores[valid] = model.predict_proba(matrix[valid])[:, 1]
         score_columns[f"MVA_Score_mA_M{ma}"] = scores
 
     return pd.concat([data, pd.DataFrame(score_columns, index=data.index)], axis=1)
@@ -768,6 +780,10 @@ def decorate(data):
     data['pho1Pt_oHm'] = data.ALP_lead_photon_pt / data.H_mass
     data['pho2Pt_oHm'] = data.ALP_sublead_photon_pt / data.H_mass
     data['H_pt_oHm'] = data.H_pt / data.H_mass
+    # sub-leading-photon sigma_E/E = energyErr / (pT cosh eta) (low-mass BDT input; no m_llgg dependence),
+    # computed in float64 like the training
+    _e2 = data.ALP_sublead_photon_energyErr.astype('float64')
+    data['pho2_relEerr'] = _e2 / (data.ALP_sublead_photon_pt.astype('float64') * np.cosh(data.ALP_sublead_photon_eta.astype('float64')))
     data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1)
     data['var_dR_g1g2'] = data.apply(lambda x: compute_dR_g1_g2(x), axis=1) 
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 

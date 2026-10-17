@@ -45,6 +45,34 @@ def build_matrix(a, mhyp, var_list):
         else:
             cols.append(a[v])
     return np.column_stack(cols)
+# Low-mass model inputs that are not in the 16-variable set (low-mass BDT = low_swapPt_relE2):
+# pho{1,2}_relEerr = sigma_E / E = energyErr / (pT cosh eta) of the leading / sub-leading photon (GeV pT; no m_llgg).
+# Same definition as the variable search (bdt_varsearch/search_job.column) that trained the deployed model.
+def relerr_extra(feats):
+    """Raw branches _load() must read (extra=) for the pho{1,2}_relEerr features in feats."""
+    out = []
+    for f in feats:
+        if f in ("pho1_relEerr", "pho2_relEerr"):
+            w, p = ("lead", "pho1Pt") if f.startswith("pho1") else ("sublead", "pho2Pt")
+            out += [p, "ALP_%s_photon_energyErr" % w, "ALP_%s_photon_eta" % w]
+    return out
+
+def feature_matrix(a, mhyp, feats):
+    """Matrix in the order of feats: names of FEATURES (as _feat) plus pho{1,2}_relEerr.
+    mhyp may be a scalar or a per-event array (background mass hypothesis)."""
+    cols = []
+    for f in feats:
+        if f == "pho_pt_asym":
+            cols.append((a["pho1Pt_oHm"]-a["pho2Pt_oHm"])/(a["pho1Pt_oHm"]+a["pho2Pt_oHm"]+1e-6))
+        elif f == "param":
+            cols.append((a["ALP_m"]-mhyp)/a["H_m"])
+        elif f in ("pho1_relEerr", "pho2_relEerr"):
+            w, p = ("lead", "pho1Pt") if f.startswith("pho1") else ("sublead", "pho2Pt")
+            cols.append(a["ALP_%s_photon_energyErr" % w] / (a[p] * np.cosh(a["ALP_%s_photon_eta" % w])))
+        else:
+            cols.append(a[f])
+    return np.column_stack(cols)
+
 # Extra branches the sideband reweighter needs on the background frame
 # (Z_m is a reweight step variable; event drives the per-event mass hypothesis).
 REWEIGHT_EXTRA = ["Z_m", "event"]

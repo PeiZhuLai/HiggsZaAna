@@ -10,9 +10,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-from hza_features import _load, _feat, BASE_VARS, ROOT_DIR
+from hza_features import _load, ROOT_DIR, feature_matrix, relerr_extra
 
-FULL16 = BASE_VARS + ["pho_pt_asym", "param"]
 
 # ---- CMS-Preliminary label + axis formatting, mirroring run3_Za_BDT.py corr style ----
 def add_cms_preliminary(fig, cms_fontsize=36):
@@ -56,17 +55,17 @@ def main():
     clf = pickle.load(open(a.model, "rb"))
     meta = json.load(open(a.meta))
     feats = meta["features"]; masses = meta["masses"]
-    idx = [FULL16.index(f) for f in feats]
+    extra = relerr_extra(feats)
     print(f"[cfg] model={a.model} feats={feats} masses={masses} -> {a.outdir}")
 
     # ---- build a balanced sig/bkg eval set for a given split (signal@true mass, bkg@random mass) ----
     def build_eval(tree):
-        sig = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, a.n_sig_per) for m in masses}
-        bk = _load(f"{ROOT_DIR}/All_Bkg/run3.root", tree, a.n_bkg)
-        Xs = np.vstack([_feat(sig[m], m)[:, idx] for m in masses])
+        sig = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, a.n_sig_per, extra=extra) for m in masses}
+        bk = _load(f"{ROOT_DIR}/All_Bkg/run3.root", tree, a.n_bkg, extra=extra)
+        Xs = np.vstack([feature_matrix(sig[m], m, feats) for m in masses])
         ws = np.concatenate([np.clip(sig[m]["factor"], 0, None) for m in masses])
         bhyp = np.random.default_rng(1).choice(masses, size=len(bk["H_m"]))
-        Xb = _feat(bk, 0); Xb[:, FULL16.index("param")] = (bk["ALP_m"] - bhyp) / bk["H_m"]; Xb = Xb[:, idx]
+        Xb = feature_matrix(bk, bhyp, feats)
         wb = np.clip(bk["factor"], 0, None)
         ss = clf.predict_proba(Xs)[:, 1]; sb = clf.predict_proba(Xb)[:, 1]
         wsb = ws * (wb.sum() / ws.sum())   # balance for ROC/score shapes

@@ -1,22 +1,36 @@
 #!/usr/bin/env python3
-"""Formal dedicated low-mA (mA=1,2,3) XGBoost with the selected 5-feature set
-(combinatorial-search winner: R(mA1,2,3)=0.99/0.95/1.02, AUC 0.9434).
+"""Formal dedicated low-mA (mA=1,2,3) XGBoost = low_swapPt_relE2 (input-variable search winner).
 CPU only (higgs-alp-ana). Trains on the 'train' tree, checks overtraining on the 'test' tree,
 reports R(mA)/AUC, saves model (pkl + json) + feature metadata, and writes an overtraining PDF.
 
-  ALP_calculatedPhotonIso + var_dR_g1g2 + pho1R9 + pho1Pt_oHm + param
+  ALP_calculatedPhotonIso + var_dR_g1g2 + pho1R9 + pho2_relEerr + param
+  pho2_relEerr = sigma_E/E of the sub-leading photon (hza_features.feature_matrix); param = (m_gg - m_a)/m_llgg
+
+Training set (same events, weights and recipe as the search model, varsearch_validate/train_selected.build):
+  - signal m_a = 1,2,3: all 'train' events with 95 < m_llgg < 180, weight = factor x sideband reweight (true-mass
+    param), clipped at 0; the m_a = 1 signal only inside MA1_WINDOW, its weight rescaled to the full m_a = 1 weight
+  - background: 600k 'train' events (default_rng(0)), weight = factor x sideband reweight, mass hypothesis
+    default_rng(1) over 1,2,3; signal normalized to the background sum
+  - XGB depth 4, 300 trees, lr 0.1, subsample 0.8, min_child_weight 5, n_jobs 1 (as for the deployed model)
+After any change here, retrain to a side path (HZA_LOWMODEL_OUT) and check that the booster equals the installed
+one before installing. FEATS must equal LOW_FEATURE_COLUMNS in Parquet2Rootfile/Parque2Root_BDT.py:
+install_lowhigh_models.sh and the scorer refuse a model whose meta features differ.
+The AUC/KS quoted in the AN come from plot_mva_diagnostics.py / plot_overtrain_lowmass.py on the installed set;
+the numbers printed here are a quick check on the training definition (m_a = 1 windowed in train and test).
+Output: <stem>.pkl / .json / .meta.json with stem = HZA_LOWMODEL_OUT (default model_Za_BDT_lowmass_run3 in the cwd),
+        overtraining PDF in <dir of stem>/plots_lowmass/
 """
-import json, pickle
+import json, os, pickle
 import numpy as np, xgboost as xgb
-from hza_features import _load, _feat, BASE_VARS, _sideband_reweight, signal_weight, ROOT_DIR
+from hza_features import (_load, _sideband_reweight, signal_weight, feature_matrix, relerr_extra,
+                          READ, REWEIGHT_EXTRA, ROOT_DIR)
 
 LOWM = [1, 2, 3]
-FULL16 = BASE_VARS + ["pho_pt_asym", "param"]
-LOWVARS = ["ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho1Pt_oHm"]   # + param
-FEATS = LOWVARS + ["param"]
-IDX = [FULL16.index(n) for n in FEATS]
-OUT = "model_Za_BDT_lowmass_run3"
-PLOT = "plots_lowmass/overtrain_lowmass_run3.pdf"
+FEATS = ["ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho2_relEerr", "param"]
+MA1_WINDOW = (115.0, 133.0)
+EXTRA = REWEIGHT_EXTRA + relerr_extra(FEATS)
+OUT = os.environ.get("HZA_LOWMODEL_OUT", "model_Za_BDT_lowmass_run3")
+PLOT = os.path.join(os.path.dirname(OUT) or ".", "plots_lowmass", "overtrain_lowmass_run3.pdf")
 
 def weighted_auc(vals, y, w):
     o = np.argsort(vals, kind="mergesort"); y = y[o]; w = w[o]; is_b = y < 0.5
@@ -42,31 +56,45 @@ def ks_capped(x1,w1,x2,w2,cap=4000,reps=25,seed=0):
         ps.append(weighted_ks(x1[i1],w1[i1],x2[i2],w2[i2])[1])
     return float(np.median(ps))
 
-def build(tree, n_sig=None, n_bkg=600000):
-    sig = {m: _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, n_sig, extra=["Z_m", "event"]) for m in LOWM}
-    bk  = _load(f"{ROOT_DIR}/All_Bkg/run3.root", tree, n_bkg, extra=["Z_m", "event"])
-    Xs = np.vstack([_feat(sig[m], m)[:, IDX] for m in LOWM])
-    ws = np.concatenate([np.clip(signal_weight(sig[m], m), 0, None) for m in LOWM])  # signal: factor x sideband reweight
-    bhyp = np.random.default_rng(1).choice(LOWM, size=len(bk["H_m"]))
-    Xb = _feat(bk, 0); Xb[:, FULL16.index("param")] = (bk["ALP_m"] - bhyp) / bk["H_m"]; Xb = Xb[:, IDX]
-    wb = np.clip(bk["factor"] * _sideband_reweight(bk), 0, None)
+def reweight_view(a):
+    """Only the branches the sideband reweighter uses (same frame as the search training)."""
+    return {k: a[k] for k in READ + REWEIGHT_EXTRA}
+
+def build(tree, n_bkg=600000):
+    Xs, ws = [], []
+    for m in LOWM:
+        a = _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, None, extra=EXTRA)
+        w = np.clip(signal_weight(reweight_view(a), m), 0, None)   # signal: factor x sideband reweight
+        x = feature_matrix(a, float(m), FEATS)
+        if m == 1:
+            keep = (a["H_m"] > MA1_WINDOW[0]) & (a["H_m"] < MA1_WINDOW[1])
+            print(f"  [{tree}] mA1 window {MA1_WINDOW}: keep {keep.sum()}/{len(keep)}, {w[keep].sum()/w.sum():.3f} of the weight")
+            x, w = x[keep], w[keep] * (w.sum() / w[keep].sum())
+        Xs.append(x); ws.append(w)
+    Xs = np.vstack(Xs); ws = np.concatenate(ws)
+    bk = _load(f"{ROOT_DIR}/All_Bkg/run3.root", tree, n_bkg, extra=EXTRA)
+    bhyp = np.random.default_rng(1).choice(LOWM, size=len(bk["H_m"])).astype(np.float64)
+    Xb = feature_matrix(bk, bhyp, FEATS)
+    wb = np.clip(bk["factor"] * _sideband_reweight(reweight_view(bk)), 0, None)
     X = np.vstack([Xs, Xb]); y = np.concatenate([np.ones(len(Xs)), np.zeros(len(Xb))])
     w = np.concatenate([ws * (wb.sum()/ws.sum()), wb])
     return X, y, w
 
+print(f"[cfg] features={FEATS}  mA1 window={MA1_WINDOW}  inputs={ROOT_DIR}")
 print("[build] train ...")
 Xtr, ytr, wtr = build("train")
+print(f"  X {Xtr.shape} dtype {Xtr.dtype}, {int(ytr.sum())} signal / {int((1-ytr).sum())} background")
 clf = xgb.XGBClassifier(max_depth=4, n_estimators=300, learning_rate=0.1, subsample=0.8,
-                        min_child_weight=5, eval_metric="logloss", n_jobs=4, verbosity=0)
+                        min_child_weight=5, eval_metric="logloss", n_jobs=1, verbosity=0)
 clf.fit(Xtr, ytr, sample_weight=wtr)
 
 # --- R(mA) on inclusive background, AUC + overtraining on test tree ---
-bk_in = _load(f"{ROOT_DIR}/All_Bkg/run3.root", "inclusive")
+bk_in = _load(f"{ROOT_DIR}/All_Bkg/run3.root", "inclusive", extra=relerr_extra(FEATS))
 Hmb = bk_in["H_m"]; wBe = np.clip(bk_in["factor"], 0, None)
 peak = (Hmb > 120) & (Hmb < 130); frac = wBe[peak].sum()/wBe.sum()
 R = {}
 for m in LOWM:
-    s = clf.predict_proba(_feat(bk_in, m)[:, IDX])[:, 1]; thr = wq(s, wBe, 1-0.002); p = s > thr
+    s = clf.predict_proba(feature_matrix(bk_in, float(m), FEATS))[:, 1]; thr = wq(s, wBe, 1-0.002); p = s > thr
     R[m] = float((wBe[p&peak].sum()/wBe[p].sum())/frac) if wBe[p].sum()>0 else float("nan")
 
 print("[build] test (overtraining) ...")
@@ -82,17 +110,20 @@ print(f"\n[result] features={FEATS}")
 print(f"[result] R(mA1)={R[1]:.2f} R(mA2)={R[2]:.2f} R(mA3)={R[3]:.2f}  AUC(test,1-3)={auc:.4f}")
 print(f"[result] overtraining capped-KS p: sig={p_sig:.3g}  bkg={p_bk:.3g}")
 
-# --- save model + metadata ---
+# --- save model + metadata (the three files are written together: install_lowhigh_models.sh checks their mtimes) ---
 pickle.dump(clf, open(f"{OUT}.pkl", "wb"))
 clf.get_booster().save_model(f"{OUT}.json")
-json.dump({"features": FEATS, "masses": LOWM, "R": R, "auc_test": auc,
-           "ks_sig": p_sig, "ks_bkg": p_bk, "model": "XGB depth4/300/lr0.1"},
+json.dump({"features": FEATS, "masses": LOWM, "mA1_window": list(MA1_WINDOW), "name": "low_swapPt_relE2",
+           # auc_test / ks_sig / ks_bkg (AN numbers) are added from plot_mva_diagnostics.py / plot_overtrain_lowmass.py
+           "R": R, "check_auc_test_window": auc, "check_ks_sig_window": p_sig, "check_ks_bkg_window": p_bk,
+           "model": "XGB depth4/300/lr0.1/subsample0.8/mcw5", "inputs": ROOT_DIR, "dtype": "float64",
+           "xgboost": xgb.__version__, "training": "HZaMVA/scripts/train_lowmass_final.py"},
           open(f"{OUT}.meta.json", "w"), indent=2)
 print(f"[save] {OUT}.pkl / .json / .meta.json")
 
 # --- overtraining plot (best-effort; matplotlib/scipy import can be flaky on EOS) ---
 try:
-    import os; os.makedirs("plots_lowmass", exist_ok=True)
+    os.makedirs(os.path.dirname(PLOT), exist_ok=True)
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(8, 6)); rng = (0, 1); bins = 40
     plt.hist(0, color="w", label=f"Sig K-S p = {p_sig:.3g} (n=4000)")

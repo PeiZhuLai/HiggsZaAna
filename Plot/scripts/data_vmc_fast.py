@@ -344,6 +344,7 @@ def _build_hist_specs(var_names: Iterable[str], target_masses: Sequence[str]) ->
         "param": HistSpec("rdf_param_value", "rdf_param_value", 25, -0.3, 0.6),
         # Derived BDT feature (data/MC comparison)
         "pho_pt_asym": HistSpec("rdf_pho_pt_asym", "rdf_pho_pt_asym", 40, 0.0, 1.0),
+        "pho2_relEerr": HistSpec("rdf_pho2_relEerr", "rdf_pho2_relEerr", 55, 0.0, 0.55),
     }
 
     specs = {var: base_specs[var] for var in var_names if var in base_specs}
@@ -460,6 +461,12 @@ def _prepare_dataframe(
         "/ ((double)ALP_lead_photon_pt + (double)ALP_sublead_photon_pt + 1e-6)",
     )
     defined_cols.add("rdf_pho_pt_asym")
+    # low-mass BDT input: sub-leading-photon sigma_E/E = energyErr / (pT cosh eta)
+    df = df.Define(
+        "rdf_pho2_relEerr",
+        "(double)ALP_sublead_photon_energyErr / ((double)ALP_sublead_photon_pt * cosh((double)ALP_sublead_photon_eta))",
+    )
+    defined_cols.add("rdf_pho2_relEerr")
 
     mva_branches: Dict[str, Optional[str]] = {}
     for mass in target_masses:

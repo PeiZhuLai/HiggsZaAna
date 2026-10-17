@@ -117,6 +117,8 @@ class Plot_Config:
             'param': "(m_{a} - m_{a,hyp})/m_{ll#gamma#gamma}",
             # Derived BDT feature (only one kept after corr study)
             'pho_pt_asym': "(p_{T,#gamma1}-p_{T,#gamma2})/(p_{T,#gamma1}+p_{T,#gamma2})",
+            # low-mass BDT input: sub-leading-photon sigma_E/E = energyErr / (p_T cosh eta)
+            'pho2_relEerr': "#sigma_{E}/E_{#gamma2}",
         }
 
     def SetHistStyles(self, hist, sample):

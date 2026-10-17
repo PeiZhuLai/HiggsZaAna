@@ -105,6 +105,7 @@ PLOT_VARIABLES = [
     "param",                   # 16
     "ALP_m",                   # 17
     "H_m",                     # 18
+    "pho2_relEerr",            # 19 (low-mass BDT input)
 ]
 # 1-based number prefix per variable (no zero padding, matching the reference).
 VAR_NUM = {v: i + 1 for i, v in enumerate(PLOT_VARIABLES)}
@@ -129,6 +130,7 @@ XLABELS = {
     "param": "(m_{a} - m_{a,hyp}) / m_{H}",
     "ALP_m": "m_{a} [GeV]",
     "H_m": "m_{H} [GeV]",
+    "pho2_relEerr": "#gamma_{Subleading} #sigma_{E}/E",
 }
 
 X_LIMITS = {
@@ -150,6 +152,7 @@ X_LIMITS = {
     "param": (-1, 1),
     "ALP_m": (0, 55),
     "H_m": (110, 180),
+    "pho2_relEerr": (0.0, 0.55),
 }
 
 BIN_SIZES = {
@@ -171,6 +174,7 @@ BIN_SIZES = {
     "param": 0.05,
     "ALP_m": 1,
     "H_m": 0.5,
+    "pho2_relEerr": 0.01,
 }
 
 OUTDIR = os.environ.get(
@@ -198,7 +202,8 @@ MASS_COLORS_HEX = {
 LINE_STYLE_CYCLE = [1, 2]
 
 # Branches to read from ROOT (pho_pt_asym & param are computed, not read).
-_READ_BRANCHES = BASE_VARIABLES + ["ALP_m", "H_m", "factor", "Z_m", "event"]
+_READ_BRANCHES = BASE_VARIABLES + ["ALP_m", "H_m", "factor", "Z_m", "event",
+                                   "pho2Pt", "ALP_sublead_photon_energyErr", "ALP_sublead_photon_eta"]
 
 SIDEBAND_REWEIGHTER = load_sideband_reweighter()
 
@@ -225,6 +230,8 @@ def _read_frame(path):
     pt1 = frame["pho1Pt_oHm"].astype(float)
     pt2 = frame["pho2Pt_oHm"].astype(float)
     frame["pho_pt_asym"] = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
+    # pho2_relEerr (low-mass BDT input): sigma_E/E = energyErr / (pT cosh eta), as hza_features.feature_matrix
+    frame["pho2_relEerr"] = frame["ALP_sublead_photon_energyErr"] / (frame["pho2Pt"] * np.cosh(frame["ALP_sublead_photon_eta"]))
     return frame
 
 

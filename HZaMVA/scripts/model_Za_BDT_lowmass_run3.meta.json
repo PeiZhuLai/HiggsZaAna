@@ -3,7 +3,7 @@
     "ALP_calculatedPhotonIso",
     "var_dR_g1g2",
     "pho1R9",
-    "pho1Pt_oHm",
+    "pho2_relEerr",
     "param"
   ],
   "masses": [
@@ -11,13 +11,19 @@
     2,
     3
   ],
-  "R": {
-    "1": 1.0126843637672935,
-    "2": 1.1652644959875438,
-    "3": 1.1437068229107386
-  },
-  "auc_test": 0.948085587718788,
-  "ks_sig": 0.46860315598536156,
-  "ks_bkg": 0.3795792851396306,
-  "model": "XGB depth4/300/lr0.1"
+  "mA1_window": [
+    115.0,
+    133.0
+  ],
+  "model": "XGB depth4/300/lr0.1/subsample0.8/mcw5",
+  "name": "low_swapPt_relE2",
+  "inputs": "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix",
+  "dtype": "float64",
+  "xgboost": "2.1.1",
+  "training": "studies/l3_review_20260910/varsearch_validate/train_selected.py (models/model_low_swapPt_relE2)",
+  "auc_test": 0.9404,
+  "auc_validation": 0.9403,
+  "ks_sig": 0.625,
+  "ks_bkg": 0.304,
+  "ks_definition": "plot_overtrain_lowmass.py: train vs test built as in training (m_a = 1 in mA1_window, signal factor x sideband reweight)"
 }

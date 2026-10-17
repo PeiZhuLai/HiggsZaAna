@@ -74,6 +74,7 @@ pdfName_map = {
     "pho_pt_asym": "15_pho_pt_asym",
     "param": "16_param",
     "ALP_m": "17_ALP_m",
+    "pho2_relEerr": "19_pho2_relEerr",
 }
 
 MVA_LARGER_NBINS = 20

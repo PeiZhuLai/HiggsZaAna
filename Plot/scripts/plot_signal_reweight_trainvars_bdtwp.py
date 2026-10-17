@@ -3,7 +3,7 @@
 
 Companion of plot_signal_reweight_mllgg_bdtwp.py (same events: the MVA-cut nominal trees that
 enter the datacards, five Run 3 eras and both lepton channels summed, unit-area normalization so
-that only the shape is compared; "before" = weight / weight_sideband_rwgt). The 16 variables,
+that only the shape is compared; "before" = weight / weight_sideband_rwgt). The 16 variables (+ pho2_relEerr, low-mass input),
 their ranges and axis titles are those of the data/simulation comparison in App. F
 (1_prepare_dataVmc.py, Plot_Configs.py); param uses the true ALP mass, as in the training.
 
@@ -60,8 +60,11 @@ VARS = [
      "(p_{T,#gamma1}-p_{T,#gamma2})/(p_{T,#gamma1}+p_{T,#gamma2})"),
     # range set per mass point in main() (param_range): the signal is much narrower than in App. F
     ("param", None, 40, -0.01, 0.01, "(m_{a} - m_{a,hyp})/m_{ll#gamma#gamma}"),
+    # low-mass BDT input (m_a = 1-3): sub-leading-photon sigma_E/E = energyErr / (pT cosh eta)
+    ("pho2_relEerr", None, 55, 0.0, 0.55, "#sigma_{E}/E_{#gamma2}"),
 ]
-BRANCHES = sorted({v[1] for v in VARS if v[1]} | {"H_m", "ALP_m", "weight", "weight_sideband_rwgt"})
+BRANCHES = sorted({v[1] for v in VARS if v[1]} | {"H_m", "ALP_m", "weight", "weight_sideband_rwgt",
+                                                  "ALP_sublead_photon_energyErr", "ALP_sublead_photon_pt", "ALP_sublead_photon_eta"})
 
 
 def run3_lumi() -> float:
@@ -84,6 +87,7 @@ def load(ma: int):
     p1, p2 = d["pho1Pt_oHm"], d["pho2Pt_oHm"]
     d["pho_pt_asym"] = (p1 - p2) / (p1 + p2 + 1e-6)
     d["param"] = (d["ALP_m"] - float(ma)) / d["H_m"]
+    d["pho2_relEerr"] = d["ALP_sublead_photon_energyErr"] / (d["ALP_sublead_photon_pt"] * np.cosh(d["ALP_sublead_photon_eta"]))
     ok = (d["weight_sideband_rwgt"] != 0) & (d["weight"] != 0)  # zero-weight events carry no information
     wa = d["weight"][ok]
     wb = wa / d["weight_sideband_rwgt"][ok]

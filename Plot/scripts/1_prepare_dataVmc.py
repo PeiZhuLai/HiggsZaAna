@@ -528,7 +528,7 @@ pdfName_map = {'pho1Pt_oHm': '1_pho1Pt_oHm', 'pho1R9': '2_pho1R9', 'pho1IetaIeta
 'var_dR_Za': '10_var_dR_Za', 'var_dR_g1g2': '11_var_dR_g1g2', 'var_dR_g1Z': '12_var_dR_g1Z',
 'var_PtaOverMh': '13_var_PtaOverMh', 'H_pt_oHm': '14_H_pt_oHm',
 'pho_pt_asym': '15_pho_pt_asym',
-'param': '16_param', 'ALP_m': '17_ALP_m'}
+'param': '16_param', 'ALP_m': '17_ALP_m', 'pho2_relEerr': '19_pho2_relEerr'}
 
 # NEW: 輸出檔名依 pdfName_map 排序；沒對應就用原本 var_name
 def _pdf_output_name(var_name: str) -> str:
@@ -811,6 +811,7 @@ def _enable_used_branches(chain, sample, analyzer_cfg, mva_branches):
         "ALP_sublead_photon_chiso",
         "ALP_sublead_photon_hcalPFClusterIso",
         "ALP_sublead_photon_hoe_PUcorr",
+        "ALP_sublead_photon_energyErr",   # pho2_relEerr (low-mass BDT input)
         "ALP_calculatedPhotonIso",
         "var_dR_Za",
         "var_dR_g1g2",
@@ -1148,6 +1149,8 @@ def main():
         histos['param'][sample] = TH1F('param' + '_' + sample, 'param' + '_' + sample, 25, -0.3, 0.6)
         # Derived BDT features added to recover low-ma sensitivity
         histos['pho_pt_asym'][sample]        = TH1F('pho_pt_asym'        + '_' + sample, 'pho_pt_asym'        + '_' + sample, 40,  0.0, 1.0)
+        # low-mass BDT input: sub-leading-photon sigma_E/E (the energy-error cap gives a spike near 0.5)
+        histos['pho2_relEerr'][sample]       = TH1F('pho2_relEerr'       + '_' + sample, 'pho2_relEerr'       + '_' + sample, 55,  0.0, 0.55)
 
         if args.mva:
             # 僅為選定質量建立 MVA 相關直方圖
@@ -1321,6 +1324,10 @@ def main():
                 pho_pt_asym_val = (pt1 - pt2) / (pt1 + pt2 + 1e-6)
                 histos['pho_pt_asym'][sample].Fill( pho_pt_asym_val, weight )
 
+                # low-mass BDT input: sub-leading-photon sigma_E/E = energyErr / (pT cosh eta)
+                pho2_relEerr_val = float(ntup.ALP_sublead_photon_energyErr) / (pt2 * np.cosh(float(ntup.ALP_sublead_photon_eta)))
+                histos['pho2_relEerr'][sample].Fill( pho2_relEerr_val, weight )
+
                 if args.sideband_reweight_unc and fill_systematics:
                     sideband_rwgt_sys_weights = get_sideband_reweight_uncertainty_weights(
                         ntup,
@@ -1332,7 +1339,7 @@ def main():
 
                 if fill_systematics:
                     var_map = {'Z_m':ntup.Z_mass, 'H_m':ntup.H_m, 'ALP_m':ntup.ALP_m,'pho1Pt_oHm':ntup.pho1Pt_oHm, 'pho1eta':ntup.ALP_lead_photon_eta, 'pho1phi':ntup.ALP_lead_photon_phi, 'pho1R9':ntup.ALP_lead_photon_r9, 'pho1IetaIeta':ntup.ALP_lead_photon_sieie, 'pho1IetaIeta55':ntup.ALP_lead_photon_sieie,'pho1ECALIso':ntup.ALP_lead_photon_ecalPFClusterIso, 'pho1CIso':ntup.ALP_lead_photon_chiso, 'pho1HCALIso':ntup.ALP_lead_photon_hcalPFClusterIso, 'pho1HOE':ntup.ALP_lead_photon_hoe_PUcorr, 'pho2Pt_oHm':ntup.pho2Pt_oHm, 'pho2eta':ntup.ALP_sublead_photon_eta, 'pho2phi':ntup.ALP_sublead_photon_phi, 'pho2R9':ntup.ALP_sublead_photon_r9, 'pho2IetaIeta':ntup.ALP_sublead_photon_sieie, 'pho2IetaIeta55':ntup.ALP_sublead_photon_sieie,'pho2ECALIso':ntup.ALP_sublead_photon_ecalPFClusterIso, 'pho2CIso':ntup.ALP_sublead_photon_chiso, 'pho2HCALIso':ntup.ALP_sublead_photon_hcalPFClusterIso, 'pho2HOE':ntup.ALP_sublead_photon_hoe_PUcorr,'ALP_calculatedPhotonIso':ntup.ALP_calculatedPhotonIso, 'var_dR_Za':ntup.var_dR_Za, 'var_dR_g1g2':ntup.var_dR_g1g2, 'var_dR_g1Z':ntup.var_dR_g1Z, 'var_PtaOverMh':ntup.var_PtaOverMh, 'var_Pta':ntup.var_Pta, 'var_MhMZ':ntup.var_MhMZ, 'H_pt_oHm':ntup.H_pt_oHm, 'var_PtaOverMa':ntup.var_PtaOverMa, 'var_MhMa':ntup.var_MhMa, 'param':param_val,
-                               'pho_pt_asym':pho_pt_asym_val}
+                               'pho_pt_asym':pho_pt_asym_val, 'pho2_relEerr':pho2_relEerr_val}
                     if args.mva:
                         for ALP_mass in target_masses:
                             var_map['mvaVal_'+ALP_mass] = MVA_value[ALP_mass]
