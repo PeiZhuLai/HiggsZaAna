@@ -1,0 +1,20 @@
+# Scan 4 (user 2026-10-17): low_swapPt_relE2 plus pho1_relEerr (leading-photon sigma_E/E), window training for m_a = 1 only and for m_a = 1, 2, 3, with the stored production and relE2 references in the same run. search_job.py = minscan3 copy.
+# Same payload and metrics as the variable search (bdt_varsearch/run_candidate.sh + search_job.py).
+universe              = vanilla
+executable            = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/bdt_varsearch/run_candidate.sh
+arguments             = $(IDX) /eos/home-p/pelai/HZa/bdt_varsearch_20261013/results/minscan4_low_20261017 $(MODEL)
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files  = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan4/code/search_job.py, /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan4/config.jsonl
+transfer_output_files = ""
+output                = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan4/logs/job_$(IDX).out
+error                 = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan4/logs/job_$(IDX).err
+log                   = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan4/logs/cluster.log
+request_cpus          = 1
+request_memory        = 2000
+request_disk          = 4000000
++JobFlavour           = "longlunch"
+batch_name            = hza_minscan4_low
+on_exit_hold          = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release      = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+queue IDX, MODEL from /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/varsearch_validate/minscan4/args.txt

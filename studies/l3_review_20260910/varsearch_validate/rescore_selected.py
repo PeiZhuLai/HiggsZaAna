@@ -4,7 +4,8 @@ replace MVA_Score_mA_M1..30 in a copy of run3_bdt_scored_fsrfix (m_a 1-3 low-mas
 same routing as Parque2Root_BDT.add_mva_scores). Every other branch is copied unchanged.
 
 Gate per file, before anything is written: the deployed models (HZaMVA/using/model_Za_BDT_{low,high}mass_run3.pkl)
-are re-evaluated with the production recipe (Parque2Root_BDT LOW/HIGH_FEATURE_COLUMNS, param = (ALP_mass - m)/H_mass)
+are re-evaluated with the production features (HIGH: Parque2Root_BDT HIGH_FEATURE_COLUMNS, param = (ALP_mass - m)/H_mass;
+LOW: the deployed meta.json features through search_job.matrix)
 and must reproduce all 30 stored scores of every tree (same NaN pattern, max |diff| <= 1e-6), which proves the
 columns read here are the ones the production scoring used.
 New scores: features from search_job.column (the definitions of the search and of the training), NaN where a
@@ -38,7 +39,9 @@ TOL = 1e-6
 PROD_HIGH = ["pho1Pt_oHm", "pho1R9", "pho1IetaIeta55", "pho1PIso_noCorr", "pho2Pt_oHm", "pho2R9", "pho2IetaIeta55",
              "pho2PIso_noCorr", "ALP_calculatedPhotonIso", "var_dR_Za", "var_dR_g1g2", "var_dR_g1Z", "var_PtaOverMh",
              "H_pt_oHm", "pho_pt_asym", "param"]
-PROD_LOW = ["ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho1Pt_oHm", "param"]
+# deployed low-mass features (low_swapPt_relE2 since the deployment; pho2_relEerr has no plain branch, so the low-mass
+# gate builds its matrix with search_job.matrix, the definition the deployed m_a 1-3 scores were verified against)
+PROD_LOW = json.load(open(os.path.join(USING, "model_Za_BDT_lowmass_run3.meta.json")))["features"]
 
 
 def prod_matrix(a, cols, m):
@@ -122,9 +125,9 @@ def main():
     prod = {"low": pickle.load(open(os.path.join(USING, "model_Za_BDT_lowmass_run3.pkl"), "rb")),
             "high": pickle.load(open(os.path.join(USING, "model_Za_BDT_highmass_run3.pkl"), "rb"))}
     new = {k: pickle.load(open(os.path.join(HERE, "models", "model_%s.pkl" % n), "rb")) for k, n in (("low", args.low_model), ("high", args.high_model))}
-    need = set(PROD_HIGH + PROD_LOW + ["ALP_mass", "H_mass", "H_m", "ALP_m", "pho1Pt", "pho2Pt"]) - {"param", "pho_pt_asym"}
-    for k in ("low", "high"):
-        for f in feats[k]:
+    need = set(PROD_HIGH + ["ALP_mass", "H_mass", "H_m", "ALP_m", "pho1Pt", "pho2Pt"]) - {"param", "pho_pt_asym"}
+    for k in ("low", "high", "prodlow"):
+        for f in (PROD_LOW if k == "prodlow" else feats[k]):
             if f in ("pho1_relEerr", "pho2_relEerr"):
                 w = "lead" if f.startswith("pho1") else "sublead"
                 need |= {"ALP_%s_photon_energyErr" % w, "ALP_%s_photon_eta" % w}
@@ -149,7 +152,7 @@ def main():
             br = "MVA_Score_mA_M%d" % m
             k = "low" if m in LOW else "high"
             stored = np.asarray(cols[br], dtype=np.float64)
-            rep = score(prod[k], prod_matrix(a, PROD_LOW if k == "low" else PROD_HIGH, m), base)
+            rep = score(prod[k], sj.matrix(a, PROD_LOW, float(m)) if k == "low" else prod_matrix(a, PROD_HIGH, m), base)
             fs, fr = np.isfinite(stored), np.isfinite(rep)
             if not np.array_equal(fs, fr):
                 sys.exit("GATE FAIL %s:%s %s: NaN pattern differs (%d stored vs %d recomputed)" % (src, tn, br, (~fs).sum(), (~fr).sum()))

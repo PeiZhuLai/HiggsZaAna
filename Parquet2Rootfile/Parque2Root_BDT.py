@@ -17,6 +17,8 @@ from xgboost import XGBClassifier
 import pickle
 import json
 import re
+import eos_safe_write as esw
+import score_provenance as sp
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 HZA_MVA_SCRIPTS_DIR = PROJECT_DIR / "HZaMVA" / "scripts"
@@ -704,6 +706,12 @@ def compute_MVA_Score(x, wanted_ma):
     except Exception:
         return np.nan
 
+def pho2_rel_eerr(data):
+    """Sub-leading-photon sigma_E/E = energyErr / (pT cosh eta), in float64 like the training (low-mass BDT input;
+    no m_llgg dependence). Also used by score_provenance.py to recompute scores of files that do not store it."""
+    e2 = data.ALP_sublead_photon_energyErr.astype('float64')
+    return e2 / (data.ALP_sublead_photon_pt.astype('float64') * np.cosh(data.ALP_sublead_photon_eta.astype('float64')))
+
 def add_mva_scores(data, masses=range(1, 31)):
     """
     Add MVA_Score_mA_M* columns using batched XGBoost inference, TWO-MODEL scheme:
@@ -780,10 +788,7 @@ def decorate(data):
     data['pho1Pt_oHm'] = data.ALP_lead_photon_pt / data.H_mass
     data['pho2Pt_oHm'] = data.ALP_sublead_photon_pt / data.H_mass
     data['H_pt_oHm'] = data.H_pt / data.H_mass
-    # sub-leading-photon sigma_E/E = energyErr / (pT cosh eta) (low-mass BDT input; no m_llgg dependence),
-    # computed in float64 like the training
-    _e2 = data.ALP_sublead_photon_energyErr.astype('float64')
-    data['pho2_relEerr'] = _e2 / (data.ALP_sublead_photon_pt.astype('float64') * np.cosh(data.ALP_sublead_photon_eta.astype('float64')))
+    data['pho2_relEerr'] = pho2_rel_eerr(data)
     data['var_dR_Za'] = data.apply(lambda x: compute_dR_Z_ALP(x), axis=1)
     data['var_dR_g1g2'] = data.apply(lambda x: compute_dR_g1_g2(x), axis=1) 
     data['var_dR_g1Z'] = data.apply(lambda x: compute_dR_Z_g1(x), axis=1) 
@@ -978,12 +983,22 @@ def main():
     # data_ZH = data.query("n_leptons == 2 & n_jets <= 1 & MET_pt > 90 & H_relpt > 0.4 & Z_mass > 85 & Z_mass < 95") 
     # data_ttH_had = data.query("n_leptons == 2 & n_jets >= 5 & n_b_jets >= 1 & Z_mass > 85 & Z_mass < 95")
     # data_ttH_lep = data.query("((n_leptons == 3 & n_jets >= 3 & n_b_jets >= 1) | (n_leptons >= 4 & n_jets >= 1 & n_b_jets >= 1)) & (max_I_mini < 0.1 & Z_mass > 85 & Z_mass < 95)")
-    with uproot.recreate(args.output) as f:
-        f['inclusive'] = data
-        if args.split:
-            f['train'] = data_train
-            f['validation'] = data_validation
-            f['test'] = data_test
+    # written to a local file (condor scratch), verified (every branch; ROOT entries per branch), then xrdcp'd to
+    # the output path: writing through the EOS FUSE mount damaged files. The file also records which models
+    # produced the scores (score_provenance; apply_bdt_{data,sig}.py refuse scores of other models).
+    local = esw.stage_path(args.output)
+    expect = {}
+    trees = [('inclusive', data)] + ([('train', data_train), ('validation', data_validation), ('test', data_test)] if args.split else [])
+    with uproot.recreate(local) as f:
+        for name, frame in trees:
+            f[name] = frame
+            esw.record(expect, name, frame)
+        sp.write_fingerprint(f, sp.model_fingerprint(LOW_MODEL_FILE, HIGH_MODEL_FILE, LOW_FEATURE_COLUMNS, HIGH_FEATURE_COLUMNS))
+    try:
+        esw.verify_local(local, expect)
+        esw.publish(local, args.output)
+    finally:
+        esw.cleanup()
         # f['zero_jet'] = data_zero_jet
         # f['one_jet'] = data_one_jet
         # f['zero_to_one_jet'] = data_zero_to_one_jet
