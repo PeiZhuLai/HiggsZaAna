@@ -11,19 +11,27 @@
     2,
     3
   ],
+  "window": [
+    115.0,
+    133.0
+  ],
+  "window_masses": [
+    1,
+    2,
+    3
+  ],
   "mA1_window": [
     115.0,
     133.0
   ],
   "model": "XGB depth4/300/lr0.1/subsample0.8/mcw5",
-  "name": "low_swapPt_relE2",
+  "name": "low_relE2_w123",
   "inputs": "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix",
   "dtype": "float64",
   "xgboost": "2.1.1",
-  "training": "studies/l3_review_20260910/varsearch_validate/train_selected.py (models/model_low_swapPt_relE2)",
-  "auc_test": 0.9404,
-  "auc_validation": 0.9403,
-  "ks_sig": 0.625,
-  "ks_bkg": 0.304,
-  "ks_definition": "plot_overtrain_lowmass.py: train vs test built as in training (m_a = 1 in mA1_window, signal factor x sideband reweight)"
+  "training": "HZaMVA/scripts/train_lowmass_final.py (reproduces varsearch_validate/models/model_low_relE2_w123 bit-exact, retrain_check/compare.txt)",
+  "auc_test": 0.9375,
+  "auc_validation": 0.9376,
+  "ks_sig": 0.502,
+  "ks_bkg": 0.243
 }

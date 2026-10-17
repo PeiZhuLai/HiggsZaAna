@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Formal dedicated low-mA (mA=1,2,3) XGBoost = low_swapPt_relE2 (input-variable search winner).
+"""Formal dedicated low-mA (mA=1,2,3) XGBoost = low_relE2_w123: the low_swapPt_relE2 inputs (input-variable search
+winner), with the signal of every low mass m_a = 1, 2, 3 trained inside the window (one rule for the three points).
 CPU only (higgs-alp-ana). Trains on the 'train' tree, checks overtraining on the 'test' tree,
 reports R(mA)/AUC, saves model (pkl + json) + feature metadata, and writes an overtraining PDF.
 
   ALP_calculatedPhotonIso + var_dR_g1g2 + pho1R9 + pho2_relEerr + param
   pho2_relEerr = sigma_E/E of the sub-leading photon (hza_features.feature_matrix); param = (m_gg - m_a)/m_llgg
 
-Training set (same events, weights and recipe as the search model, varsearch_validate/train_selected.build):
-  - signal m_a = 1,2,3: all 'train' events with 95 < m_llgg < 180, weight = factor x sideband reweight (true-mass
-    param), clipped at 0; the m_a = 1 signal only inside MA1_WINDOW, its weight rescaled to the full m_a = 1 weight
+Training set (same events, weights and recipe as the search model, varsearch_validate/train_selected.build with
+win_masses 2, 3, model low_relE2_w123):
+  - signal m_a = 1,2,3: 'train' events inside WINDOW (115 < m_llgg < 133) only, weight = factor x sideband reweight
+    (true-mass param), clipped at 0, rescaled per mass to the full weight of that mass (WINDOW_MASSES = 1, 2, 3)
   - background: 600k 'train' events (default_rng(0)), weight = factor x sideband reweight, mass hypothesis
     default_rng(1) over 1,2,3; signal normalized to the background sum
   - XGB depth 4, 300 trees, lr 0.1, subsample 0.8, min_child_weight 5, n_jobs 1 (as for the deployed model)
@@ -16,7 +18,7 @@ After any change here, retrain to a side path (HZA_LOWMODEL_OUT) and check that 
 one before installing. FEATS must equal LOW_FEATURE_COLUMNS in Parquet2Rootfile/Parque2Root_BDT.py:
 install_lowhigh_models.sh and the scorer refuse a model whose meta features differ.
 The AUC/KS quoted in the AN come from plot_mva_diagnostics.py / plot_overtrain_lowmass.py on the installed set;
-the numbers printed here are a quick check on the training definition (m_a = 1 windowed in train and test).
+the numbers printed here are a quick check on the training definition (m_a 1-3 windowed in train and test).
 Output: <stem>.pkl / .json / .meta.json with stem = HZA_LOWMODEL_OUT (default model_Za_BDT_lowmass_run3 in the cwd),
         overtraining PDF in <dir of stem>/plots_lowmass/
 """
@@ -27,7 +29,8 @@ from hza_features import (_load, _sideband_reweight, signal_weight, feature_matr
 
 LOWM = [1, 2, 3]
 FEATS = ["ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho2_relEerr", "param"]
-MA1_WINDOW = (115.0, 133.0)
+WINDOW = (115.0, 133.0)
+WINDOW_MASSES = [1, 2, 3]
 EXTRA = REWEIGHT_EXTRA + relerr_extra(FEATS)
 OUT = os.environ.get("HZA_LOWMODEL_OUT", "model_Za_BDT_lowmass_run3")
 PLOT = os.path.join(os.path.dirname(OUT) or ".", "plots_lowmass", "overtrain_lowmass_run3.pdf")
@@ -66,9 +69,9 @@ def build(tree, n_bkg=600000):
         a = _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, None, extra=EXTRA)
         w = np.clip(signal_weight(reweight_view(a), m), 0, None)   # signal: factor x sideband reweight
         x = feature_matrix(a, float(m), FEATS)
-        if m == 1:
-            keep = (a["H_m"] > MA1_WINDOW[0]) & (a["H_m"] < MA1_WINDOW[1])
-            print(f"  [{tree}] mA1 window {MA1_WINDOW}: keep {keep.sum()}/{len(keep)}, {w[keep].sum()/w.sum():.3f} of the weight")
+        if m in WINDOW_MASSES:
+            keep = (a["H_m"] > WINDOW[0]) & (a["H_m"] < WINDOW[1])
+            print(f"  [{tree}] mA{m} window {WINDOW}: keep {keep.sum()}/{len(keep)}, {w[keep].sum()/w.sum():.3f} of the weight")
             x, w = x[keep], w[keep] * (w.sum() / w[keep].sum())
         Xs.append(x); ws.append(w)
     Xs = np.vstack(Xs); ws = np.concatenate(ws)
@@ -80,7 +83,7 @@ def build(tree, n_bkg=600000):
     w = np.concatenate([ws * (wb.sum()/ws.sum()), wb])
     return X, y, w
 
-print(f"[cfg] features={FEATS}  mA1 window={MA1_WINDOW}  inputs={ROOT_DIR}")
+print(f"[cfg] features={FEATS}  window={WINDOW} for mA {WINDOW_MASSES}  inputs={ROOT_DIR}")
 print("[build] train ...")
 Xtr, ytr, wtr = build("train")
 print(f"  X {Xtr.shape} dtype {Xtr.dtype}, {int(ytr.sum())} signal / {int((1-ytr).sum())} background")
@@ -113,7 +116,8 @@ print(f"[result] overtraining capped-KS p: sig={p_sig:.3g}  bkg={p_bk:.3g}")
 # --- save model + metadata (the three files are written together: install_lowhigh_models.sh checks their mtimes) ---
 pickle.dump(clf, open(f"{OUT}.pkl", "wb"))
 clf.get_booster().save_model(f"{OUT}.json")
-json.dump({"features": FEATS, "masses": LOWM, "mA1_window": list(MA1_WINDOW), "name": "low_swapPt_relE2",
+json.dump({"features": FEATS, "masses": LOWM, "window": list(WINDOW), "window_masses": WINDOW_MASSES,
+           "mA1_window": list(WINDOW), "name": "low_relE2_w123",
            # auc_test / ks_sig / ks_bkg (AN numbers) are added from plot_mva_diagnostics.py / plot_overtrain_lowmass.py
            "R": R, "check_auc_test_window": auc, "check_ks_sig_window": p_sig, "check_ks_bkg_window": p_bk,
            "model": "XGB depth4/300/lr0.1/subsample0.8/mcw5", "inputs": ROOT_DIR, "dtype": "float64",

@@ -2,7 +2,8 @@
 """Regenerate ONLY the low-mass overtraining plot (train/test BDT score + capped-KS) from the
 DEPLOYED model pkl -- NO retraining, so it matches bit-exact the model that produced the limits.
 The train/test sets are built exactly as train_lowmass_final.py builds its training set (same events and weights:
-signal factor x sideband reweight, m_a = 1 signal only inside meta["mA1_window"] with its weight rescaled), so the
+signal factor x sideband reweight, the m_a in meta["window_masses"] only inside meta["window"] with the weight
+rescaled per mass; older metas: m_a = 1 inside meta["mA1_window"]), so the
 "train" histogram is the sample the model was fitted on. CPU (higgs-alp-ana).
 """
 import json, pickle
@@ -41,7 +42,8 @@ def ks_capped(x1,w1,x2,w2,cap=4000,reps=25,seed=0):
         ps.append(weighted_ks(x1[i1],w1[i1],x2[i2],w2[i2])[1])
     return float(np.median(ps))
 
-WIN = meta.get("mA1_window")   # None for a model trained without the m_a = 1 window
+WIN = meta.get("window") or meta.get("mA1_window")   # None for a model trained without a window
+WIN_MASSES = meta.get("window_masses", [1] if WIN else [])
 
 def reweight_view(a):
     return {k: a[k] for k in READ + REWEIGHT_EXTRA}
@@ -52,7 +54,7 @@ def build(tree, n_bkg=600000):
         a = _load(f"{ROOT_DIR}/mA_M{m}/run3.root", tree, None, extra=REWEIGHT_EXTRA + EXTRA)
         w = np.clip(signal_weight(reweight_view(a), m), 0, None)   # signal: factor x sideband reweight
         x = feature_matrix(a, float(m), FEATS)
-        if m == 1 and WIN:
+        if WIN and m in WIN_MASSES:
             keep = (a["H_m"] > WIN[0]) & (a["H_m"] < WIN[1])
             x, w = x[keep], w[keep] * (w.sum() / w[keep].sum())
         Xs.append(x); ws.append(w)

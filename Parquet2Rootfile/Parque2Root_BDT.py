@@ -653,7 +653,7 @@ HIGH_FEATURE_COLUMNS = [
     "var_PtaOverMh", "H_pt_oHm", "pho_pt_asym", "param",
 ]
 # Low-mass model = low_swapPt_relE2 (input-variable search): pho1Pt_oHm replaced by the
-# sub-leading-photon sigma_E/E (pho2_relEerr, built in decorate()); m_a = 1 signal trained in 115-133 GeV.
+# sub-leading-photon sigma_E/E (pho2_relEerr, built in decorate()); m_a = 1, 2, 3 signal trained in 115-133 GeV (low_relE2_w123).
 LOW_FEATURE_COLUMNS = [
     "ALP_calculatedPhotonIso", "var_dR_g1g2", "pho1R9", "pho2_relEerr", "param",
 ]

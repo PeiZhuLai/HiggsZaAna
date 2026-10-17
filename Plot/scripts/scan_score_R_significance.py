@@ -198,9 +198,10 @@ LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
 #   These are pinned HERE so that re-running this script -- in particular with --write-json --
 #   can NOT silently revert mA2/mA3 back to the R=1 crossing. mA1 is NOT fixed: it keeps its
 #   natural R=1 crossing (~0.963). See memory ref_hza_unblind_procedure / project_hza_lowma_pow1_R1cuts.
-# Low-mass BDT low_swapPt_relE2: the m_a 1-3 cuts come from the x0.5 rule of the background-only closure scan
-# (closure + data GOF pass), not from the R=1 crossing; pinned here so that --write-json keeps them.
-FIXED_WP = {1: 0.98036, 2: 0.98661, 3: 0.99194}
+# Low-mass BDT low_relE2_w123 (relE2 inputs, m_a 1-3 trained inside 115-133 GeV): the m_a 1-3 cuts come from the
+# x0.5 rule of the background-only closure scan (closure + data GOF pass), not from the R=1 crossing; pinned here so
+# that --write-json keeps them. Previous low_swapPt_relE2 (m_a = 1 window only): {1: 0.98036, 2: 0.98661, 3: 0.99194}.
+FIXED_WP = {1: 0.98115, 2: 0.98837, 3: 0.99226}
 # Previous low-mass model (pho1Pt_oHm input): {2: 0.975, 3: 0.988}, mA1 at the R=1 crossing 0.963.
 # mA3 0.992 -> 0.988: after the 2024 DY+jets overlap-veto
                                   # retrain the closure at 0.992 was Z = 1.59 (bootstrap 1.62 +- 1.17); 0.988 is
