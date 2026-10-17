@@ -288,3 +288,39 @@ studies/l3_review_20260910/logs_fsrfix/closure30.log*
 *.parquet
 studies/hdna_refactor_20261013/commit_*.txt
 studies/hdna_refactor_20261013/untracked_after_ignore.txt
+
+# SF update backups and superseded generated metadata
+HiggsDNA/higgs_dna/systematics/data/backup_*/
+HiggsDNA/metadata/_generated/*_old/
+**/__pycache__/
+# job lists the submit scripts write
+Plot/Condor/*_redo_jobs.txt
+
+# L3-review sandboxes: hand-written scripts (.py/.sh/.sub) are tracked; condor output, job state,
+# pipeline code copies, fit products, models and plots are not
+studies/l3_review_20260910/bdt_varsearch/**
+studies/l3_review_20260910/varsearch_validate/**
+studies/l3_review_20260910/mA1_bdt_variants/**
+studies/l3_review_20260910/twocards/**
+studies/l3_review_20260910/deploy_relE2_20261016/**
+!studies/l3_review_20260910/bdt_varsearch/**/
+!studies/l3_review_20260910/varsearch_validate/**/
+!studies/l3_review_20260910/mA1_bdt_variants/**/
+!studies/l3_review_20260910/twocards/**/
+!studies/l3_review_20260910/deploy_relE2_20261016/**/
+!studies/l3_review_20260910/*/**/*.py
+!studies/l3_review_20260910/*/**/*.sh
+!studies/l3_review_20260910/*/**/*.sub
+!studies/l3_review_20260910/varsearch_validate/selected.json
+!studies/l3_review_20260910/deploy_relE2_20261016/an_edits/*
+!studies/l3_review_20260910/deploy_relE2_20261016/an_numbers/*
+studies/l3_review_20260910/**/flashggFinalFit/
+studies/l3_review_20260910/**/sig_single/
+studies/l3_review_20260910/**/state_*/
+studies/l3_review_20260910/bdt_varsearch/state_condor/
+studies/l3_review_20260910/deploy_relE2_20261016/state/
+studies/l3_review_20260910/deploy_relE2_20261016/logs/
+studies/l3_review_20260910/deploy_relE2_20261016/backup_prod/
+studies/l3_review_20260910/deploy_relE2_20261016/work*/
+studies/l3_review_20260910/*.partial_*/
+MergedAna/condor/logs/
