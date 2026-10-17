@@ -21,6 +21,7 @@ Public API: ``attach_mlphoton(events, nano_url, parent_map, ml_dir, tag)``.
 from __future__ import annotations
 
 import glob
+import time
 import json
 import os
 from typing import Iterable
@@ -57,6 +58,20 @@ def _normalize_lfn(url_or_lfn: str) -> str:
     return s
 
 
+# Fail closed by default. The lenient path (warn and inject an empty MLPhoton)
+# let whole jobs whose MLNanoAOD reads failed at production time pass as
+# "successful" with zero MLPhotons: 41 of 84 jobs of Data_2024_Muon1_RunD_v1,
+# although every one of their events matches when re-read. Set
+# HZA_MLPHOTON_STRICT=0 only for deliberate tests on partial inputs.
+STRICT = os.environ.get("HZA_MLPHOTON_STRICT", "1") == "1"
+MAX_UNMATCHED_FRAC = 0.5      # healthy jobs measure 0-0.5%
+READ_RETRIES = 3
+
+
+class MLPhotonFriendError(RuntimeError):
+    """MLPhoton friend could not be attached; the job must fail and be retried."""
+
+
 def _ml_path_for(uuid: str, ml_dir: str, tag: str) -> str | None:
     """Resolve <ml_dir>/<tag>_<UUID>.root, return None if missing."""
     candidate = os.path.join(ml_dir, f"{tag}_{uuid}.root")
@@ -73,13 +88,18 @@ def _load_ml_chunk(ml_path: str) -> ak.Array | None:
     Returns None on missing file or empty tree."""
     if ml_path is None:
         return None
-    try:
-        with uproot.open(ml_path) as f:
-            tree = f["Events"]
-            arrs = tree.arrays(_ID_BRANCHES + _ML_BRANCHES, library="ak")
-    except Exception as e:
-        # Caller logs; we just bail out
-        return None
+    for attempt in range(1, READ_RETRIES + 1):
+        try:
+            with uproot.open(ml_path) as f:
+                tree = f["Events"]
+                arrs = tree.arrays(_ID_BRANCHES + _ML_BRANCHES, library="ak")
+            break
+        except Exception as e:
+            if attempt == READ_RETRIES:
+                if STRICT:
+                    raise MLPhotonFriendError(f"cannot read {ml_path}: {e}") from e
+                return None
+            time.sleep(10 * attempt)
     if len(arrs) == 0:
         return None
     return arrs
@@ -149,6 +169,8 @@ def attach_mlphoton(
                 parents = parent_map[k]
                 break
     if not parents:
+        if STRICT:
+            raise MLPhotonFriendError(f"no parent-map entry for {nano_lfn}")
         _log(f"[mlphoton] no parents for {nano_lfn}; injecting empty MLPhoton", "warning")
         return _attach_empty(events)
 
@@ -156,6 +178,8 @@ def attach_mlphoton(
     for uuid in parents:
         ml_path = _ml_path_for(uuid, ml_dir, tag)
         if not ml_path:
+            if STRICT:
+                raise MLPhotonFriendError(f"MLNanoAOD missing for parent {uuid} in {ml_dir}")
             _log(f"[mlphoton] MLNanoAOD missing for parent {uuid} in {ml_dir}", "warning")
             continue
         chunk = _load_ml_chunk(ml_path)
@@ -163,6 +187,8 @@ def attach_mlphoton(
             continue
         ml_chunks.append(chunk)
     if not ml_chunks:
+        if STRICT:
+            raise MLPhotonFriendError(f"no MLNanoAOD content for any parent of {nano_lfn}")
         _log(f"[mlphoton] no MLNanoAOD content for any parent of {nano_lfn}", "warning")
         return _attach_empty(events)
 
@@ -207,6 +233,9 @@ def attach_mlphoton(
     n_unmatched = int((matched < 0).sum())
     if n_unmatched:
         _log(f"[mlphoton] {n_unmatched}/{len(main_run)} main events missing MLPhoton match", "warning")
+        if STRICT and n_unmatched > MAX_UNMATCHED_FRAC * len(main_run):
+            raise MLPhotonFriendError(
+                f"{n_unmatched}/{len(main_run)} events of {nano_lfn} have no MLPhoton match")
 
     # Build the MLPhoton record: variable-length per event
     n_ml_arr = ak.to_numpy(ml_all.nMLPhoton)

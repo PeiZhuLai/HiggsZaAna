@@ -465,10 +465,14 @@ def merge_electron_id(base_dir: Path, era: str) -> Path:
         *(edges_for_kind(source[sample_name], "eta") for source in sources.values())
     )
 
-    # Priority: high-pT map covers Et >= 100, ECAL gap overrides the mid/low maps
-    # below 100, low-pT covers remaining Et < 15, and nongap covers the rest.
+    # Priority: the ECAL gap map wins wherever it is measured (up to 500 GeV, +-eta
+    # separately); the high-pT map (barrel/endcap) covers the rest of Et >= 100;
+    # low-pT covers remaining Et < 15, and nongap covers the rest. With a gap map
+    # that stops at 100 this falls back to the |eta|-integrated high-pT gap bin.
+    gap_pt_max = edges_for_kind(sources["gap"][sample_name], "pt")[-1]
+
     def selector(correction_name: str, pt: float, eta: float) -> dict:
-        if pt >= 100.0:
+        if pt >= 100.0 and not (is_ecal_gap(eta) and pt < gap_pt_max):
             return sources["highpt"][correction_name]
         if is_ecal_gap(eta):
             return sources["gap"][correction_name]
@@ -529,10 +533,14 @@ def merge_electron_gap_nongap_efficiency(
         *(edges_for_kind(source[sample_name], "eta") for source in sources.values())
     )
 
-    # Priority (same as merge_electron_id): high-pT map covers Et >= 100 when present,
-    # ECAL gap overrides below that, nongap covers the rest.
+    # Priority: the ECAL gap map wins wherever it is measured; the high-pT map covers
+    # the rest of Et >= 100 when present; nongap covers everything else.
+    # miniIso gap configs measure up to 500 GeV (+-eta separately); with a gap map
+    # that stops at 100 this falls back to the |eta|-integrated high-pT gap bin.
+    gap_pt_max = edges_for_kind(sources["gap"][sample_name], "pt")[-1]
+
     def selector(correction_name: str, pt: float, eta: float) -> dict:
-        if "highpt" in sources and pt >= 100.0:
+        if "highpt" in sources and pt >= 100.0 and not (is_ecal_gap(eta) and pt < gap_pt_max):
             return sources["highpt"][correction_name]
         if is_ecal_gap(eta):
             return sources["gap"][correction_name]

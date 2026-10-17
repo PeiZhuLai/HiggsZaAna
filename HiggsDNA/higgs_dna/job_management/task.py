@@ -447,6 +447,13 @@ class Task():
                 elif job.cluster_id in job_map.keys():
                     if job_map[job.cluster_id] is not None:
                         job.status = job_map[job.cluster_id]
+                        # condor JobStatus 4 means the process exited, not that it
+                        # succeeded: a job that exits 1 is briefly listed as 4 before
+                        # leaving the queue. Without a summary it failed; calling it
+                        # "completed" sends the summary reader below into an endless
+                        # retry loop on a file that will never appear.
+                        if job.status == "completed":
+                            job.status = "failed"
                         continue
                 elif job.status == "retired":
                     continue

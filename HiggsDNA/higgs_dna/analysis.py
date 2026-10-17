@@ -809,6 +809,11 @@ class AnalysisManager():
                 def _ml_loader_attach(ev, nano_url):
                     return attach_mlphoton(ev, nano_url, _ml_parent_map, _ml_dir, _ml_tag, logger=logger)
             except Exception as e:
+                # A requested friend that cannot be set up must fail the job:
+                # silently running without it yields outputs that lack every
+                # MLPhoton column (see mlphoton_loader.STRICT).
+                if os.environ.get("HZA_MLPHOTON_STRICT", "1") == "1":
+                    raise
                 logger.warning(f"[MLPhoton friend] disabled — setup failed: {e}")
                 _ml_loader_attach = None
 
@@ -907,6 +912,8 @@ class AnalysisManager():
                 try:
                     events_file = _ml_loader_attach(events_file, file)
                 except Exception as e:
+                    if os.environ.get("HZA_MLPHOTON_STRICT", "1") == "1":
+                        raise
                     logger.warning(f"[MLPhoton friend] attach failed for {file}: {e}")
 
             # Process corresponding skimmed file if available (only for MC)
