@@ -149,6 +149,29 @@ class MLPhotonRegressorLog(MLPhotonRegressor):
             self.sigma.fill_(float(np.std(log_targets)))
 
 
+class MLPhotonRegressorLinear(MLPhotonRegressorLog):
+    """Same trunk, LINEAR head: m/E = raw * sigma + mu, free to go negative.
+
+    The log head cannot reach m/E <= 0, and an MSE fit returns the conditional
+    mean of the target, so every prediction near the lower edge of the
+    training domain is pulled upwards. M0p1 (true m/E ~0.0027, two photons
+    ~0.3 crystal apart) sits right on that edge, which is why it comes out
+    ~2x too high.
+
+    With a linear head the target distribution can continue through zero:
+    single-photon clusters enter with m/E = 0, and part of the
+    below-resolution band carries a negative label (train_regressor.py
+    --neg-band), so the prior is no longer cut off just under the signal.
+
+    mu/sigma standardise the LINEAR target here; pass the raw m/E values to
+    set_target_scale. MLPhotonProducer multiplies the output by the cluster
+    energy, so a negative prediction becomes a negative mass downstream.
+    """
+
+    def forward(self, img, eta):
+        return self.trunk(img, eta) * self.sigma + self.mu
+
+
 # --------------------------------------------------------------------------
 # ONNX weight transfer
 # --------------------------------------------------------------------------

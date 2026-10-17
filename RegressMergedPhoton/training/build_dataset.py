@@ -202,6 +202,12 @@ def main() -> int:
                          "still needs the full merged regime: restricting its "
                          "diphoton class would stop it learning the most "
                          "collimated signals (M0p1 reaches m/E 0.0012).")
+    ap.add_argument("--reg-mono-frac", type=float, default=0.0,
+                    help="regressor only: add single-photon clusters with "
+                         "m/E = 0, as this fraction of the diphoton rows. They "
+                         "anchor the m/E = 0 end for the LINEAR head "
+                         "(train_regressor.py --head linear); the log head "
+                         "drops them on load.")
     ap.add_argument("--skip-classifier", action="store_true",
                     help="only rebuild the regressor set (reuse an existing "
                          "classifier pack)")
@@ -272,6 +278,15 @@ def main() -> int:
     print(f"[build]   selected {len(sel_r)} rows; m/E "
           f"[{moe[sel_r].min():.6f}, {moe[sel_r].max():.6f}], "
           f"median {np.median(moe[sel_r]):.5f}")
+    if args.reg_mono_frac > 0:
+        mono = np.flatnonzero(lab == LABEL_MONO)
+        n_mono = min(int(round(args.reg_mono_frac * len(sel_r))), len(mono))
+        pick = rng.choice(mono, n_mono, replace=False)
+        moe = moe.copy()
+        moe[pick] = 0.0          # a single prompt photon: m = 0 exactly
+        sel_r = np.concatenate([sel_r, pick])
+        print(f"[build]   + {n_mono} single-photon anchors with m/E = 0 "
+              f"(energy median {np.median(ene[pick]):.1f} GeV)")
     img, extra, sel_r = gather(files, fidx, ridx, sel_r,
                                extra_keys=("eta", "energy", "m_gen"))
     split_and_save(args.out, "regressor",
