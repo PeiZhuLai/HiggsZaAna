@@ -108,6 +108,15 @@ c = rep(c, 'hb "[9] closure with the sandbox xsec card"', 'ln -sfn output_combin
 c = rep(c, "ROOT_DATACARD_PATH=$S/Combine/root_t2w_xsec NCHUNKS=10 bash", "HS_OUT_BASE=$MV/bias_outputs_highstat ROOT_DATACARD_PATH=$S/Combine/root_t2w_xsec NCHUNKS=10 bash")
 c = rep(c, "xargs -P6 -L1 bash -c 'run_interp $0 $1' < $L/closure_interp_cuts.txt", "xargs -r -P6 -L1 bash -c 'run_interp $0 $1' < $L/closure_interp_cuts.txt")
 c = rep(c, '[ $(grep -c "closure Z=" $CH/closure_final_summary.txt) -eq 30 ]', '[ $(grep -c "closure Z=" $CH/closure_final_summary.txt) -eq 3 ]')
+# EOS FUSE caches "no such file": a new name published with xrdcp + xrdfs mv stayed invisible through /eos for minutes
+# (the w123_mA2wp0974 chain stopped on "MVA cut outputs incomplete" with every file on the server). fresh() asks the
+# server and waits for the mount; the scored inputs are synced first because apply_bdt_data only warns about a missing era
+c = rep(c, 'fresh() { [ -s "$1" ] && [ "$(stat -c %Y "$1")" -ge "$2" ]; }',
+        "source /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/eos_fresh.sh   # fresh(), eos_mount_sync()")
+c = rep(c, 'hb "[3] MVA cut: data (30 mA) + signal (14 mA x 5 eras)"\nT=$(date +%s)\n',
+        'hb "[3] MVA cut: data (30 mA) + signal (14 mA x 5 eras)"\n'
+        'eos_mount_sync $SC || die "scored inputs not visible through the /eos mount (apply_bdt_data skips a missing era)"\n'
+        'T=$(date +%s)\n')
 assert "$SBE/run3_bdt_scored" not in c
 open(CH + "/chainlow.sh", "w").write(c)
 os.chmod(CH + "/chainlow.sh", 0o755); os.chmod(CH + "/build_code_copy.sh", 0o755)

@@ -47,7 +47,9 @@ mkdir -p $L $DR $BK
 run() { [ "$START" -le "$1" ]; }
 hb() { echo "$(date '+%F %T') $*" | tee -a $L/chain_heartbeat.txt; }
 die() { hb "STOPPING: $*"; echo "$(date '+%F %T') $*" > $L/chain.FAILED; exit 1; }
-fresh() { [ -s "$1" ] && [ "$(stat -c %Y "$1")" -ge "$2" ]; }
+# fresh(): /eos files are checked on the server, then the mount is given time to show them (EOS FUSE caches "no such
+# file" for new names after xrdcp + xrdfs mv); eos_mount_sync(): the same for every file under a directory
+source /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/eos_fresh.sh
 rm -f $L/chain.DONE $L/chain.FAILED
 AFSDIRS="Signal/outdir_ele Signal/outdir_mu Datacard/yields_leptons Datacard/output_Datacard_leptons Combine/root_t2w_xsec
  Combine/root_t2w_wilson Combine/output_combine_results_xsec Combine/output_combine_results_wilson
@@ -139,6 +141,9 @@ hb "    backup: $n1 files"
 sed 's/^mAs = \[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30\]$/mAs = [1,2,3]/' \
   $F/MVAcut/run3_ReReco_Sys/scripts/apply_bdt_data.py > $DR/apply_bdt_data_m123.py
 grep -q '^mAs = \[1,2,3\]$' $DR/apply_bdt_data_m123.py || die "apply_bdt_data mass list not reduced"
+for d in Data mA_M1 mA_M2 mA_M3; do   # apply_bdt_data only warns about a missing era
+  eos_mount_sync /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix/$d || die "scored $d not visible through the /eos mount"
+done
 T=$(date +%s)
 ( ok=0; for a in 1 2 3; do
     ( timeout 5400 python3 $DR/apply_bdt_data_m123.py 2>&1; echo "CHAIN_RC=$?" ) | head -c 50000000 > $L/mva_data_try$a.log

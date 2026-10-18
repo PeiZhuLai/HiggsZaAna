@@ -34,7 +34,9 @@ MASS14="1 2 3 4 5 6 7 8 9 10 15 20 25 30"
 MASS30=$(seq 1 30 | tr '\n' ' ')
 YEARS="2022preEE 2022postEE 2023preBPix 2023postBPix 2024"
 
-fresh() { [ -s "$1" ] && [ "$(stat -c %Y "$1")" -ge "$2" ]; }
+# fresh(): /eos files are checked on the server, then the mount is given time to show them (EOS FUSE caches "no such
+# file" for new names after xrdcp + xrdfs mv); eos_mount_sync(): the same for every file under a directory
+source /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Parquet2Rootfile/eos_fresh.sh
 # START_STAGE=N skips stages < N (the CMSSW env block always runs). Stages >= 5 are safe to
 # re-enter: the background stage only refits mass points whose envelope is missing, broken,
 # or older than its input workspace.
@@ -139,6 +141,8 @@ echo "  [env] CMSSW_BASE=$CMSSW_BASE  python=$(which python3)"
 echo
 if run 3; then
 echo "=============== [3/9] MVA cut: data (30 mA) + signal (14 mA x 5 eras) ==============="
+# apply_bdt_data only warns about a missing era
+eos_mount_sync /eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix || die "scored inputs not visible through the /eos mount"
 T=$(date +%s)
 for d in data sig; do
   [ -d $EOSMVA/${d}_preFSRfix_20260924 ] || mv $EOSMVA/$d $EOSMVA/${d}_preFSRfix_20260924
