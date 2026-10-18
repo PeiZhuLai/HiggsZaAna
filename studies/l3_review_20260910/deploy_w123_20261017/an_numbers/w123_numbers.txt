@@ -1,0 +1,24 @@
+closure: 20/30 within +-1sigma, 30/30 within +-2sigma; below -1sigma [5, 7, 12, 22, 23]; above +1sigma [2, 25, 28, 29, 30]
+closure: largest local significance mA28 1.92 (rhat +0.045), mA30 1.50 (rhat +0.033), mA25 1.39 (rhat +0.031), mA29 1.36 (rhat +0.034)
+closure mA1: obs 0.234 exp 0.319 [-1s 0.217, +1s 0.478, -2s 0.156, +2s 0.687] Z 0.00 rhat -0.150 -0.105/+0.129
+closure mA2: obs 0.156 exp 0.094 [-1s 0.065, +1s 0.140, -2s 0.048, +2s 0.200] Z 1.32 rhat +0.062 -0.047/+0.053
+closure mA3: obs 0.062 exp 0.061 [-1s 0.042, +1s 0.091, -2s 0.030, +2s 0.129] Z 0.16 rhat +0.004 -0.027/+0.028
+closure: max |rhat| for mA>=3 except 5: 0.045
+bias mA1: Lau1 -0.246 Exp1 -0.159 Pow1 +0.001
+bias mA2: Exp1 -0.096 Lau1 -0.056 Pow3 -0.054
+bias mA3: Bern1 -0.100 Lau1 -0.078 Exp1 -0.075 Pow3 -0.032
+effSigma mA1: per era/channel 1.33-2.70 GeV; combined ele 2.46 mu 1.51
+effSigma mA2: per era/channel 1.36-2.86 GeV; combined ele 2.60 mu 1.52
+effSigma mA3: per era/channel 1.43-2.64 GeV; combined ele 2.56 mu 1.56
+mA1 sigfit ele  2022preEE     kept 97.5% nGauss 2 chi2/ndf 0.394
+mA1 sigfit ele  2022postEE    kept 95.9% nGauss 2 chi2/ndf 0.666
+mA1 sigfit ele  2023preBPix   kept 96.7% nGauss 2 chi2/ndf 0.687
+mA1 sigfit ele  2023postBPix  kept 97.5% nGauss 1 chi2/ndf 0.485
+mA1 sigfit ele  2024          kept 97.7% nGauss 2 chi2/ndf 0.349
+mA1 sigfit mu   2022preEE     kept 98.3% nGauss 2 chi2/ndf 0.343
+mA1 sigfit mu   2022postEE    kept 98.8% nGauss 2 chi2/ndf 0.604
+mA1 sigfit mu   2023preBPix   kept 96.3% nGauss 2 chi2/ndf 0.243
+mA1 sigfit mu   2023postBPix  kept 97.0% nGauss 2 chi2/ndf 0.557
+mA1 sigfit mu   2024          kept 97.9% nGauss 2 chi2/ndf 0.359
+mA1 sigfit: kept 95.9-98.8%, chi2/ndf 0.24-0.69
+low model: AUC test 0.9375, KS sig 0.502 bkg 0.243
