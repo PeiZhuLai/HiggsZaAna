@@ -15,6 +15,10 @@ Why deterministic rounded template (not a Poisson toy): it isolates the SHAPE qu
 without single-toy luck. Negative-weight MC forbids feeding weighted data straight to
 the (unbinned) envelope fit; the floored integer template is non-negative and data-like.
 
+--weighted keeps the floored bin contents as weights (one entry per 1 GeV bin, weight = scaled MC sum, not rounded).
+At tight cuts the template has a few tenths of an event per GeV, and rounding moved the m_a = 5 signal window from
+2.04 to 1 event; the weighted dataset keeps the MC yield (the fit and combine use sumEntries / the binned roohist).
+
 Output: <OUTBASE>/mA_M<mA>/ws/run3.root   (ws 'CMS_hza_workspace', RooDataSet 'Data_13p6TeV')
 
 Env: higgs-alp-ana (uproot + ROOT). Writing a plain RooDataSet workspace needs no
@@ -78,7 +82,7 @@ def _sideband_scale(mA, cut, mm, ww):
     return data_sb / mc_sb if mc_sb > 0.0 else 1.0
 
 
-def build_one(mA, outbase, verbose=True, cut=None, bootstrap=None):
+def build_one(mA, outbase, verbose=True, cut=None, bootstrap=None, weighted=False):
     cut = ADOPTED_CUTS[int(mA)] if cut is None else float(cut)
     lo = mass_low(mA)
     nbin_1gev = int(round(MASS_HIGH - lo))          # 1 GeV bins (roohist binning)
@@ -96,6 +100,7 @@ def build_one(mA, outbase, verbose=True, cut=None, bootstrap=None):
     hist, edges = np.histogram(mm, bins=nbin_1gev, range=(lo, MASS_HIGH), weights=ww)
     centers = 0.5 * (edges[:-1] + edges[1:])
     counts = np.rint(np.clip(hist, 0.0, None)).astype(int)   # floor<0, round to int
+    vals = np.clip(hist, 0.0, None) if weighted else counts
 
     # --- workspace mirroring trees2ws_data.py ---
     ws = ROOT.RooWorkspace(WSNAME, WSNAME)
@@ -109,10 +114,13 @@ def build_one(mA, outbase, verbose=True, cut=None, bootstrap=None):
     getattr(ws, "import")(weight, ROOT.RooFit.Silence())
     aset = ROOT.RooArgSet(mass, weight)
     d = ROOT.RooDataSet(DNAME, DNAME, aset, "weight")
-    for c, n in zip(centers, counts):
+    for c, n in zip(centers, vals):
         if n <= 0:
             continue
         mass.setVal(float(c))
+        if weighted:
+            d.add(aset, float(n))
+            continue
         for _ in range(int(n)):
             d.add(aset, 1.0)
     getattr(ws, "import")(d)
@@ -123,9 +131,10 @@ def build_one(mA, outbase, verbose=True, cut=None, bootstrap=None):
     ws.writeToFile(outpath)
     if verbose:
         print(f"mA{mA:>2}: cut={cut:.4f} range=[{lo:.0f},{MASS_HIGH:.0f}] "
-              f"sumW={ww.sum():.1f} -> pseudo-data N={int(counts.sum())} "
+              f"sumW={ww.sum():.1f} -> pseudo-data N={int(round(float(vals.sum())))} "
+              f"({'weighted, sum %.2f' % vals.sum() if weighted else 'rounded'}) "
               f"(neg_bins_floored={int((hist<0).sum())})  -> {outpath}")
-    return int(counts.sum())
+    return int(round(float(vals.sum())))
 
 
 def main():
@@ -137,13 +146,15 @@ def main():
                     help="override the adopted BDT cut (for WP scans)")
     ap.add_argument("--bootstrap", type=int, default=None,
                     help="seed for a Poisson(1) MC-statistics bootstrap replica (default: off)")
+    ap.add_argument("--weighted", action="store_true",
+                    help="keep the floored bin contents as weights instead of rounding to integer counts")
     a = ap.parse_args()
     if "-" in a.mA and "," not in a.mA:
         lo, hi = a.mA.split("-"); mAs = list(range(int(lo), int(hi) + 1))
     else:
         mAs = [int(x) for x in a.mA.split(",")]
     for mA in mAs:
-        build_one(mA, a.outbase, cut=a.cut, bootstrap=a.bootstrap)
+        build_one(mA, a.outbase, cut=a.cut, bootstrap=a.bootstrap, weighted=a.weighted)
 
 
 if __name__ == "__main__":

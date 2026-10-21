@@ -9,7 +9,7 @@ Reports, on the signal test tree after the BDT WP:
            removed from BOTH (object-level steps only)
 Also the mean per-variable factor on the signal (R_v mean) to see which steps act on the signal.
 """
-import sys, json, argparse
+import os, sys, json, argparse
 import numpy as np, pandas as pd, uproot
 sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/l3_review_20260910/s1_altsideband_20260927")
 from eval_alt_reweight import VARIANTS, SCORED, READ, wp_cuts, FIT_WINDOW, DEFAULT_WINDOW  # noqa
@@ -33,7 +33,7 @@ ap.add_argument("--eras", default="2024")
 ap.add_argument("--out", required=True)
 a_ = ap.parse_args()
 cuts = wp_cuts()
-rws = {k: SidebandReweighter.from_json(v) for k, v in VARIANTS.items()}
+rws = {k: SidebandReweighter.from_json(v) for k, v in VARIANTS.items() if os.path.exists(v)}  # variants without a JSON are skipped, as in eval_alt_reweight
 rows = []
 for m in map(int, a_.masses.split(",")):
     lo, hi = FIT_WINDOW.get(m, DEFAULT_WINDOW)

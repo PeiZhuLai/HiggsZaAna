@@ -8,18 +8,22 @@ Two references (--reference):
            sideband reweight (preselected yield preserved per channel); envelope of
            {z_m&hsb, z_m_narrow&hsb, none} relative to the nominal reweight.
     d_k = eff_k / eff_ref - 1,  kappa_up = 1 + max(0, d_k),  kappa_down = 1 + min(0, d_k)
+--symmetric (user decision 2026-10-20): kappa = exp(max(ln kappa_up, -ln kappa_down)) on both sides. At m_a = 1-3 every
+alternative lowers the efficiency, so the asymmetric envelope gave kappa_up = 1.000; a one-sided nuisance would
+claim the efficiency cannot be higher than nominal, which three correlated alternatives do not establish.
 eff_k = BDT-WP efficiency with reweight k normalized to the preselected yield per channel
 (eval_alt_reweight.py). One value per mA, channel 'all', eras combined with the nominal-
 reweighted yield as weight -> correlated across eras and channels.
 
-Usage: make_s1_lnn_json.py [--reference none|nominal] <out.json> <yields.csv> [<yields.csv> ...]
+Usage: make_s1_lnn_json.py [--reference none|nominal] [--symmetric] <out.json> <yields.csv> [<yields.csv> ...]
        later CSVs override the mass points they contain (e.g. a re-evaluation at a new WP).
 """
-import argparse, json, time
+import argparse, json, math, time
 import numpy as np, pandas as pd
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--reference", choices=("none", "nominal"), default="none")
+ap.add_argument("--symmetric", action="store_true")
 ap.add_argument("out")
 ap.add_argument("csvs", nargs="+")
 args = ap.parse_args()
@@ -40,6 +44,8 @@ for m, g in d.groupby("mA"):
     w = g["yield_nom"].to_numpy(float); w = w / w.sum()
     dk = {k: float(np.sum(w * (g[f"eff_{k}"] / g[f"eff_{REF}"] - 1.0))) for k in VARS}
     up = 1.0 + max(0.0, *dk.values()); dn = 1.0 + min(0.0, *dk.values())
+    if args.symmetric:
+        lk = max(math.log(up), -math.log(dn)); up, dn = math.exp(lk), math.exp(-lk)
     cuts = sorted(set(round(float(c), 6) for c in g["wp"]))
     if len(cuts) != 1:
         raise SystemExit(f"mA{m}: rows were evaluated at different working points {cuts}")
@@ -47,7 +53,7 @@ for m, g in d.groupby("mA"):
     vals[str(int(m))] = {"up": round(up, 5), "down": round(dn, 5), "mvacut": cuts[0]}
     table.append((int(m), dk, up, dn))
 json.dump({"scheme": "S1 scheme 2: envelope of {%s} vs %s reweight" % (", ".join(VARS), REF),
-           "reference": REF, "source": args.csvs, "created": time.strftime("%F %T"), "values": vals},
+           "reference": REF, "symmetric": args.symmetric, "source": args.csvs, "created": time.strftime("%F %T"), "values": vals},
           open(args.out, "w"), indent=1)
 print("mA | " + " | ".join(VARS) + f"  (vs {REF}, %) | kappa_down / kappa_up")
 for m, dk, up, dn in table:
