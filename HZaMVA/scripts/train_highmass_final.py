@@ -16,7 +16,7 @@ LOWVARS = ["pho1Pt_oHm","pho1R9","pho1IetaIeta55","pho1PIso_noCorr","pho2Pt_oHm"
 FEATS = LOWVARS + ["param"]
 IDX = [FULL16.index(n) for n in FEATS]
 OUT = "model_Za_BDT_highmass_run3"
-PLOT = "../plots_MVA/run3_highmass/overtrain_highmass_run3.pdf"
+PLOT = "plots_highmass/overtrain_highmass_run3.pdf"   # quick-look only; the AN plot (with CMS label) is made by plot_overtrain_highmass.py
 
 def weighted_auc(vals, y, w):
     o = np.argsort(vals, kind="mergesort"); y = y[o]; w = w[o]; is_b = y < 0.5
@@ -92,7 +92,7 @@ print(f"[save] {OUT}.pkl / .json / .meta.json")
 
 # --- overtraining plot (best-effort; matplotlib/scipy import can be flaky on EOS) ---
 try:
-    import os; os.makedirs("../plots_MVA/run3_highmass", exist_ok=True)
+    import os; os.makedirs(os.path.dirname(PLOT), exist_ok=True)
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(8, 6)); rng = (0, 1); bins = 40
     plt.plot([], [], " ", label=f"Sig K-S p = {p_sig:.3g}")
