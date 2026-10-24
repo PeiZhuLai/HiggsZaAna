@@ -7,8 +7,8 @@
 # so production and new model are compared on the replica means, not on one value each.
 #
 # varsearch_validate copy: pseudo-data without the BDT training DY events (CLOSURE_DROP_TRAIN=1), new = variable-search models.
-# Usage: boot_closure.sh <prod|new|nodr> <mA> <cut> <nrep> <datacard> [npar]
-# Output: /eos/home-p/pelai/HZa/sandbox_varsearch_v1/closure_boot/<model>_drop_mA<m>_cut<tag>/{rep_<seed>/result.txt, summary.txt}
+# Usage: [OUTSUF=..] [MHLOW=95] boot_closure.sh <prod|new|nodr|cand_*> <mA> <cut> <nrep> <datacard> [npar]
+# Output: /eos/home-p/pelai/HZa/sandbox_varsearch_v1/closure_boot/<model>_drop_mA<m>_cut<tag>$OUTSUF/{rep_<seed>/result.txt, summary.txt}
 set -u
 # Fallback minimizers (not in the production combine calls): without them about 1 replica in a few has a
 # failed initial fit (MultiDimFit 'failed', Significance 0). Same options for both models.
@@ -25,7 +25,7 @@ case $MODEL in
   *) echo "model must be prod, new, nodr or cand_<name>"; exit 1 ;;
 esac
 TAG=$(echo $CUT | tr -d '.')
-OUT=/eos/home-p/pelai/HZa/sandbox_varsearch_v1/closure_boot/${MODEL}_drop_mA${MA}_cut${TAG}; mkdir -p $OUT
+OUT=/eos/home-p/pelai/HZa/sandbox_varsearch_v1/closure_boot/${MODEL}_drop_mA${MA}_cut${TAG}${OUTSUF:-}; mkdir -p $OUT
 BKGDIR=$(awk '$1=="shapes" && $2=="bkg_mass" {print $4}' $DC | head -1 | xargs dirname)
 [ -n "$BKGDIR" ] || { echo "cannot find the bkg_mass shapes line in $DC"; exit 1; }
 set +u
@@ -43,7 +43,7 @@ one_rep() {
   ( cd $FFIT/Background && ./bin/fTest_ALP_turnOn -i $R/mA_M$MA/ws/run3.root \
       --saveMultiPdf $R/fit/CMS-HGG_mva_13p6TeV_multipdf.root -D $R/fit/ft \
       --mass_ALP $MA -c 1 --isFlashgg 0 --isData 0 -f data, --datfile $R/fit/fTest.dat \
-      --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 --gtoys 30 ) > $R/ftest.log 2>&1
+      --mhLow ${MHLOW:-95} --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 --gtoys 30 ) > $R/ftest.log 2>&1
   sed "s#$BKGDIR/#$R/fit/#g" "$DC" > $R/datacard.txt
   grep -q "$R/fit/CMS-HGG_mva_13p6TeV_multipdf.root" $R/datacard.txt || { echo "$seed FAIL_datacard" > $R/result.txt; return; }
   ( cd $R && text2workspace.py datacard.txt -o ws_t2w.root > t2w.log 2>&1
@@ -58,7 +58,7 @@ one_rep() {
   grep -q "MultiDimFit failed" $R/rhat.log && rh=NA
   echo "$seed N=${N:-NA} Z=${Z:-NA} rhat=${rh:-NA}" > $R/result.txt
 }
-export -f one_rep; export OUT C SB CPY FFIT MA CUT DC BKGDIR FB
+MHLOW=${MHLOW:-95}; export -f one_rep; export OUT C SB CPY FFIT MA CUT DC BKGDIR FB MHLOW
 
 echo "=== $MODEL mA$MA cut $CUT: $NREP replicas, $NPAR parallel, datacard $DC ($(date '+%F %T'))"
 if [ -n "${BOOT_SEEDS:-}" ]; then for s in $BOOT_SEEDS; do one_rep $s; done; exit 0; fi   # condor: given seeds only, no summary
