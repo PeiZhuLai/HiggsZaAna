@@ -1,7 +1,7 @@
 import os
 import json
 
-output_latex = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/latexTable_bkg_interpolated_yields.txt"
+output_latex = "/eos/home-p/pelai/HZa/output_tables/latexTable_bkg_interpolated_yields.txt"
 
 # 讀入單一 JSON，解析 results
 input_file_name = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/bkg_interpolated_yields_run3.json"

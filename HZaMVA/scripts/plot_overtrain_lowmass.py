@@ -16,7 +16,7 @@ import os
 # defaults = the deployed model; env overrides let a candidate set be checked before it is installed
 MODEL = os.environ.get("HZA_LOWMODEL_PKL",  f"{_HZAMVA}/using/model_Za_BDT_lowmass_run3.pkl")
 META  = os.environ.get("HZA_LOWMODEL_META", f"{_HZAMVA}/using/model_Za_BDT_lowmass_run3.meta.json")
-PLOT  = os.environ.get("HZA_LOWMODEL_PLOT", f"{_HZAMVA}/plots_MVA/run3_lowmass/overtrain_lowmass_run3.pdf")
+PLOT  = os.environ.get("HZA_LOWMODEL_PLOT", "/eos/home-p/pelai/HZa/output_plots/plots_MVA/run3_lowmass/overtrain_lowmass_run3.pdf")
 LOWM  = [1, 2, 3]
 
 meta = json.load(open(META)); FEATS = meta["features"]; EXTRA = relerr_extra(FEATS)

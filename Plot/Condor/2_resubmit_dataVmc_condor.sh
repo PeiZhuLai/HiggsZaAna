@@ -6,7 +6,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 PLOT_DIR="${PROJECT_DIR}/Plot"
 OUTPUT_DIR="${PLOT_DIR}/plots"
-VARIABLES_DIR="${OUTPUT_DIR}/variables_dataVmc"
+# histogram ROOT lives on eoscms (GB scale); pdfs go to /eos/home-p/pelai/HZa/output_plots/variables_dataVmc (Analyzer_Configs)
+VARIABLES_DIR="${HZA_DATAVMC_ROOT_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc}"
 
 submit_file="${script_dir}/dataVmc.submit"
 jobs_file="${script_dir}/dataVmc_jobs.txt"

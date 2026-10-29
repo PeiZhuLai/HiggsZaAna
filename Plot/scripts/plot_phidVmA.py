@@ -26,7 +26,7 @@ ROOT.gStyle.SetOptFit(0)
 
 baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
 
-outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/phidVmA"
+outDir = "/eos/home-p/pelai/HZa/output_plots/phidVmA"
 
 # 你指定要畫的 cuts（分母皆為 all）
 CUTS_TO_PLOT = ["event"]

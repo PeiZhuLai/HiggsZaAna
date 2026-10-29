@@ -14,7 +14,7 @@ import os
 import numpy as np
 import ROOT
 
-OUT = "/eos/home-p/pelai/HZa/output_plots/MLPhoton_M0p1"
+OUT = "/eos/home-p/pelai/HZa_merged/output_plots/MLPhoton_M0p1"
 M_TRUE = 0.1
 XLO, XHI, NBIN = 0.0, 1.2, 60
 LEFT_MARGIN = 0.215

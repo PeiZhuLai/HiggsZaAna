@@ -943,7 +943,7 @@ def main():
     # 依 branch 名稱把 e/μ 專屬系統分開；沒有寫 electron/muon 的視為 common（兩個 channel 都要考慮）
     SYS_Ele, SYS_Mu, SYS_Ele_central, SYS_Mu_central = _split_sys_branches_by_channel(sys_updown, sys_central)
     print(f"[資訊] syst branches split: common+ele={len(SYS_Ele)} | common+mu={len(SYS_Mu)} | central(ele)={len(SYS_Ele_central)} | central(mu)={len(SYS_Mu_central)}")
-    out_dir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/preselectSigEffSumwVmA")
+    out_dir = Path("/eos/home-p/pelai/HZa/output_plots/preselectSigEffSumwVmA")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 3. 計算並繪圖：每個年份群組各一條線 (2022/2023/2024)

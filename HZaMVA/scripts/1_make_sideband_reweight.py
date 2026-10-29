@@ -102,7 +102,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--plot-dir",
-        default=str(project_dir / "plots_MVA" / "sideband_reweight_run3"),
+        default="/eos/home-p/pelai/HZa/output_plots/plots_MVA/sideband_reweight_run3",
         help="Directory for validation plots.",
     )
     parser.add_argument("--iterations", type=int, default=5, help="Number of iterative reweighting rounds.")

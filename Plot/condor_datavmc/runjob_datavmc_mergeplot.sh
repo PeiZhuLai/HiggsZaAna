@@ -13,7 +13,7 @@ fi
 
 PLOT=/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot
 scriptsDir="$PLOT/scripts"
-V="$PLOT/plots/variables_dataVmc"
+V="${HZA_DATAVMC_ROOT_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc}"
 
 case "$region_key" in
     SR)  suffix="UL_SR";  region_arg=(--region 1) ;;

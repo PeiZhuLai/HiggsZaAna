@@ -12,7 +12,7 @@ maximum significance, to avoid reporting a sculpted/fake result. R=1 maximizes Z
 no peak enrichment.
 
 Outputs a 2D plot (x=BDT score, y=R, colour=Z) per mA to
-  Plot/plots/scan_score_R/lowmass_score_R_significance.{pdf,png}
+  /eos/home-p/pelai/HZa/output_plots/scan_score_R/lowmass_score_R_significance.{pdf,png}
 and prints the R=1 working point (cut + Z) per mA.
 
 Run in higgs-alp-ana (xgboost + uproot + ROOT 6.24).
@@ -36,7 +36,7 @@ ROOT_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 MODEL    = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_lowmass_run3.pkl"
 HIGHMASS_MODEL = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_highmass_run3.pkl"
 FEATS    = [f for f in __import__("json").load(open("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts/model_Za_BDT_lowmass_run3.meta.json"))["features"] if f != "param"]   # low-mass model inputs (+ param)
-OUTDIR   = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/scan_score_R"
+OUTDIR   = "/eos/home-p/pelai/HZa/output_plots/scan_score_R"
 JSON_PATH = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
 # Combined sculpting-ratio R(m_a) for ALL mass points (low-mass + high-mass BDT models),
 # written for the AN table. Sourced from each model's .meta.json "R" field (R at the

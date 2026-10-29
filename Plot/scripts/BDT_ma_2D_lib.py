@@ -264,7 +264,7 @@ def weighted_corr(x, y, w):
     return cov / np.sqrt(vx * vy)
 
 def ensure_outdir():
-    outdir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/BDT_ma_2D")
+    outdir = Path("/eos/home-p/pelai/HZa/output_plots/BDT_ma_2D")
     outdir.mkdir(parents=True, exist_ok=True)
     return outdir
 

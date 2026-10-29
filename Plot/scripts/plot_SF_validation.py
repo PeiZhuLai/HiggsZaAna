@@ -839,7 +839,7 @@ def main() -> None:
         print("[Warning] This script was built for run3 layout; proceeding with configured sample_loc.")
 
     input_dir = args.input_dir or cfg.sample_loc
-    out_dir = args.out_dir or os.path.join(PLOT_DIR, "plots", "SF_validation")
+    out_dir = args.out_dir or os.path.join("/eos/home-p/pelai/HZa/output_plots", "SF_validation")
     era_groups = resolve_eras(cfg, args.eras)
 
     os.makedirs(out_dir, exist_ok=True)

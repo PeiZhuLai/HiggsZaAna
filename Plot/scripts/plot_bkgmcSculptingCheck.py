@@ -36,7 +36,7 @@ except Exception as _exc:  # pragma: no cover - best-effort import
 
 
 DEFAULT_MVA_CUT_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/MVAcut_points_run3.json"
-DEFAULT_OUTPUT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/bkgmcScupltingCheck"
+DEFAULT_OUTPUT_DIR = "/eos/home-p/pelai/HZa/output_plots/bkgmcScupltingCheck"
 DEFAULT_CONTROL_SAMPLE_DIR = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_control"
 DEFAULT_SIGEFF_ELE_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/sigEfficiencyVmA_ele_byYear_5years_quadratic_interp_ma_points.json"
 DEFAULT_SIGEFF_MU_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/sigEfficiencyVmA_muon_byYear_5years_quadratic_interp_ma_points.json"

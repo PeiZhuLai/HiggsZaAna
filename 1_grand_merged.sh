@@ -76,6 +76,11 @@ DC_DIR="${FLASHGG}/Datacard"
 DC_OUT="${DC_DIR}/output_Datacard_leptons"
 LIMDIR="${LIMDIR:-${FLASHGG}/Combine/merged_limits}"
 PLOTDIR="${PLOTDIR:-${FLASHGG}/Plots/plot_limits}"
+# Stage 8 copies the plots and text tables of this run to EOS home
+# (${EOS_RESULTS}/output_plots/<tag>, output_tables/<tag>); logs and the ROOT files
+# later stages read stay above. Real namespace /eos/user, not the /eos/home-p alias.
+EOS_RESULTS="${EOS_RESULTS:-/eos/user/p/pelai/HZa_merged}"
+RESULT_TAG="${RESULT_TAG:-production}"
 
 ANACONDA_SETUP="${ANACONDA_SETUP:-/eos/home-p/pelai/App/Anaconda/Anaconda/env_Anaconda.sh}"
 ANACONDA_CONDA_SH="${ANACONDA_CONDA_SH:-/eos/home-p/pelai/App/Anaconda/Anaconda/Install/anaconda3/etc/profile.d/conda.sh}"
@@ -90,6 +95,7 @@ RUN_BKG="${RUN_BKG:-1}"
 RUN_DATACARD="${RUN_DATACARD:-1}"
 RUN_COMBINE="${RUN_COMBINE:-1}"
 RUN_PLOT_LIMITS="${RUN_PLOT_LIMITS:-1}"
+RUN_PUBLISH="${RUN_PUBLISH:-1}"
 # Blind by default: AsymptoticLimits without --run blind also fits the SR data
 # and writes an observed limit. Set RUN_BLIND=0 only as part of unblinding.
 RUN_BLIND="${RUN_BLIND:-1}"
@@ -385,9 +391,28 @@ else
     echo_skip "merged: plot limits"
 fi
 
+# =============================================================================
+#  Stage 8 -- publish plots + tables to EOS home (datacards and signal-model plots
+#             sit at fixed paths that the next run overwrites, so publish here)
+# =============================================================================
+PUBLISH_RC=0
+if [[ "$RUN_PUBLISH" == "1" ]]; then
+    echo_step "merged: publish plots/tables to ${EOS_RESULTS} (tag ${RESULT_TAG})"
+    # a failed copy must not look like a finished run: remember it, exit non-zero at the end
+    env EOS_RESULTS="$EOS_RESULTS" MASSES="$MASSES" LEPS="$LEPS" YEAR="$YEAR" \
+        PLOTDIR="$PLOTDIR" BKG_WSDIR="$BKG_WSDIR" LIMDIR="$LIMDIR" DC_OUT="$DC_OUT" SIG_DIR="$SIG_DIR" \
+        bash "${MERGED_DIR}/publish_results.sh" "$RESULT_TAG" || PUBLISH_RC=$?
+    [[ "$PUBLISH_RC" -ne 0 ]] && \
+        echo "  [ERROR] publish to ${EOS_RESULTS} incomplete (rc=${PUBLISH_RC}); rerun MergedAna/publish_results.sh ${RESULT_TAG}" >&2
+else
+    echo_skip "merged: publish plots/tables"
+fi
+
 echo_step "merged pipeline done"
 echo "  signal models : ${SIG_DIR}/outdir_<lep>/signalFit/output/"
 echo "  bkg multipdf  : ${BKG_WSDIR}/<m>/CMS-HGG_mva_13p6TeV_multipdf.root (per-mA ROI)"
 echo "  datacards     : ${DC_OUT}/<m>_pruned_datacard_leptons.txt"
 echo "  limits        : ${LIMDIR}/higgsCombine_merged_flashgg_M0p*.root"
 echo "  limit plot    : ${PLOTDIR}/Limits_XS_lowmA_flashgg_run3.{pdf,png}"
+echo "  published     : ${EOS_RESULTS}/output_plots/${RESULT_TAG}/ , ${EOS_RESULTS}/output_tables/${RESULT_TAG}/"
+exit "$PUBLISH_RC"

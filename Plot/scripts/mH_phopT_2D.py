@@ -122,7 +122,7 @@ def read_hz_arrays(file_path: str):
     return x_pt, y_h, ww
 
 def ensure_outdir_mH_mZ():
-    outdir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/mH_phopT_2D")
+    outdir = Path("/eos/home-p/pelai/HZa/output_plots/mH_phopT_2D")
     outdir.mkdir(parents=True, exist_ok=True)
     return outdir
 

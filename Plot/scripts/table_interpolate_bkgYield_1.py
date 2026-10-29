@@ -293,7 +293,7 @@ def build_uniform_mass_edges(masses, step=1.0):
     return np.arange(start, stop, step)
 
 def ensure_outdir():
-    outdir = Path("../plots/interpolate_bkgYield")
+    outdir = Path("/eos/home-p/pelai/HZa/output_plots/interpolate_bkgYield")
     outdir.mkdir(parents=True, exist_ok=True)
     return outdir
 

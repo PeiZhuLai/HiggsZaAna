@@ -14,7 +14,7 @@ set -o pipefail
 
 REGIONS="${*:-0 1 2}"
 IN=/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_mergedflag
-OUT_BASE=/eos/home-p/pelai/HZa/output_plots/merged_dataVmc
+OUT_BASE=/eos/home-p/pelai/HZa_merged/output_plots/merged_dataVmc
 LOG_BASE=/eos/cms/store/group/phys_susy/pelai/HZa_merged
 
 # Sub-GeV signal points overlaid on the plots (flashgg spelling: 0p5 == 0.5 GeV).

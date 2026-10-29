@@ -33,7 +33,7 @@ RUN_FLASHGG_IMPACT="${RUN_FLASHGG_IMPACT:-1}"
 RUN_FLASHGG_BIAS="${RUN_FLASHGG_BIAS:-1}"
 RUN_FLASHGG_COLLECT_BKG="${RUN_FLASHGG_COLLECT_BKG:-1}"
 RUN_EXIT_CMSSW_ENV="${RUN_EXIT_CMSSW_ENV:-1}"
-RUN_UPDATE_AN="${RUN_UPDATE_AN:-1}"
+RUN_UPDATE_AN="${RUN_UPDATE_AN:-0}"
 P2ROOT_RESUBMIT_MAX_ATTEMPTS="${P2ROOT_RESUBMIT_MAX_ATTEMPTS:-5}"
 P2ROOT_RESUBMIT_CHECK_ROOT="${P2ROOT_RESUBMIT_CHECK_ROOT:-5}"
 DATA_VMC_RESUBMIT_MAX_ATTEMPTS="${DATA_VMC_RESUBMIT_MAX_ATTEMPTS:-5}"
@@ -470,7 +470,7 @@ if [[ "$RUN_HIGGSZA_CLEAN_OUTPUTS" == "1" ]]; then
     rm -fr "${HIGGSZA_EOS_DIR}/root_MVAcut"
     rm -fr "${PROJECT_DIR}/Parquet2Rootfile/Condor/logs"
     rm -fr "${PROJECT_DIR}/Plot/log_file"
-    rm -fr "${PROJECT_DIR}/Plot/plots/variables_dataVmc/"*_part_*.root
+    rm -fr "${HZA_DATAVMC_ROOT_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc}/"*_part_*.root
     rm -fr "/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/condor_logs"
     rm -fr "/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/impact_logs"
 else
@@ -492,9 +492,9 @@ if [[ "$RUN_HIGGSZA_MERGE_PARQUET" == "1" ]]; then
         "${HOME}/anaconda3/etc/profile.d/conda.sh" \
         "/usr/etc/profile.d/conda.sh"
 
-    # It only works when running the 3_merge_parquet.sh on HiggsDNA directory, otherwise the relative paths in the script will be messed up. So we cd to HiggsDNA directory before running the script, and then cd back to project directory after the script is done.
+    # It only works when running the 4_merge_parquet.sh on HiggsDNA directory, otherwise the relative paths in the script will be messed up. So we cd to HiggsDNA directory before running the script, and then cd back to project directory after the script is done.
     cd "${PROJECT_DIR}/HiggsDNA"
-    bash "scripts/3_merge_parquet.sh"
+    bash "scripts/4_merge_parquet.sh"
 else
     echo_skip "HiggsZaAna: merge parquet"
 fi

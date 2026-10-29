@@ -131,7 +131,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out-dir",
         default=None,
-        help="Plot output directory. Default: <Plot>/plots/fast_plot_<region>",
+        help="Plot output directory. Default: /eos/home-p/pelai/HZa/output_plots/fast_plot_<region>",
     )
     parser.add_argument(
         "--skip-sys",
@@ -750,9 +750,9 @@ def main() -> None:
     print(f"[Config] signal overlay: {sig_overlay}")
 
     target_masses = list(analyzer_cfg.sig_names) if args.mva and args.year == "run3" else ([args.mA] if args.mva else [])
-    plot_output_path = args.out_dir or os.path.join(PLOT_DIR, "plots", f"fast_plot_{analyzer_cfg.out_region_name}")
+    plot_output_path = args.out_dir or os.path.join("/eos/home-p/pelai/HZa/output_plots", f"fast_plot_{analyzer_cfg.out_region_name}")
     os.makedirs(plot_output_path, exist_ok=True)
-    root_output_path = os.path.join(PLOT_DIR, "plots", f"ALP_fast_plot_{args.year}_{analyzer_cfg.out_region_name}.root")
+    root_output_path = os.path.join(os.path.dirname("/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc"), f"ALP_fast_plot_{args.year}_{analyzer_cfg.out_region_name}.root")
     os.makedirs(os.path.dirname(root_output_path), exist_ok=True)
 
     print(f"[Config] input={analyzer_cfg.sample_loc}")

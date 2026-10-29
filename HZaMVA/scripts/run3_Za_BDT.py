@@ -30,7 +30,7 @@ try:
 except Exception:
     pio = None
 
-PLOTS_DIR = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA/run3")
+PLOTS_DIR = Path("/eos/home-p/pelai/HZa/output_plots/plots_MVA/run3")
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 # Names of features that are derived on the fly inside add_derived_features().
 # bdt_input_branches() must NOT request these from ROOT — they don't exist as branches.

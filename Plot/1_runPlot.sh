@@ -14,7 +14,7 @@ trap print_runtime EXIT
 
 scriptsDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/scripts'
 outputDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots'
-variablesDir="${outputDir}/variables_dataVmc"
+variablesDir="${HZA_DATAVMC_ROOT_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc}"
 sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json'
 export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 
@@ -67,8 +67,8 @@ python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --
 python3 $scriptsDir/ALP_Optimization.py -y run3 -o $outputDir/optimize_run3UL --region 2 -p --sigVSscore -s --doOpt -c 1 --inputTag sideband_rwgt
 
 # ## Update cutflow
-python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/4_collect_cutflow.py
-python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/5_merge_cutflow.py
+python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/5_collect_cutflow.py
+python3 /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/scripts/6_merge_cutflow.py
 
 # # Signal efficinecy after MVA cut
 python3 $scriptsDir/collect_MVAcut_points_run3.py
@@ -85,7 +85,7 @@ python3 $scriptsDir/scan_score_R_significance.py --write-json
 ## the limits. Scripts live in HZaMVA/scripts (must run from there for hza_features import).
 mvaScriptsDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts'
 mvaUsingDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/using'
-mvaPlotDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/plots_MVA'
+mvaPlotDir='/eos/home-p/pelai/HZa/output_plots/plots_MVA'
 (
   cd "$mvaScriptsDir" || exit 1
   python3 plot_mva_diagnostics.py --model "$mvaUsingDir/model_Za_BDT_lowmass_run3.pkl"  --meta "$mvaUsingDir/model_Za_BDT_lowmass_run3.meta.json"  --outdir "$mvaPlotDir/run3_lowmass"
@@ -134,8 +134,8 @@ python3 $scriptsDir/plot_mAmigratedHist.py &
 python3 $scriptsDir/plot_mAmigratedMatrix.py &
 wait
 
-python3 $scriptsDir/plot_mH_phopT_2D.py &
-python3 $scriptsDir/plot_mH_mZ_2D.py &
+python3 $scriptsDir/mH_phopT_2D.py &
+python3 $scriptsDir/mH_mZ_2D.py &
 python3 $scriptsDir/plot_bkgmcSculptingCheck.py &
 wait
 

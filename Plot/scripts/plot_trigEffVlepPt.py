@@ -9,7 +9,7 @@ import ROOT
 
 baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/cutflow_list"
 
-outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/trigEffCompareVlepPt"
+outDir = "/eos/home-p/pelai/HZa/output_plots/trigEffCompareVlepPt"
 
 rootDir = "/eos/home-p-pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 

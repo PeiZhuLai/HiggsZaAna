@@ -20,7 +20,7 @@ set -euo pipefail
 
 scriptsDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/scripts'
 outputDir='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots'
-variablesDir="${outputDir}/variables_dataVmc"
+variablesDir="${HZA_DATAVMC_ROOT_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc}"
 sidebandReweightJson='/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json'
 export PYTHONPATH="${PYTHONPATH:-}:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib:/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/lib"
 

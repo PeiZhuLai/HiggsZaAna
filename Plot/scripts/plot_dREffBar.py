@@ -27,7 +27,7 @@ ROOT.gStyle.SetOptFit(0)
 
 baseDir = "/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_inputs_fsrfix"
 
-outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/dREffBar"
+outDir = "/eos/home-p/pelai/HZa/output_plots/dREffBar"
 
 # Define the list of mA values
 mAs = ["mA_M1", "mA_M2", "mA_M3", "mA_M4", "mA_M5", "mA_M6", "mA_M7", "mA_M8", "mA_M9", "mA_M10", "mA_M15", "mA_M20", "mA_M25", "mA_M30"]

@@ -21,7 +21,7 @@ import argparse  # 新增：CLI 參數
 
 baseDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HiggsDNA/cutflow/cutflow_list"
 
-outDir = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/cutflowVmA"
+outDir = "/eos/home-p/pelai/HZa/output_plots/cutflowVmA"
 
 # ---------------------------------------------------------------------------
 # 主 cutflowVmA（inclusive，cut_type = zgammas_w）

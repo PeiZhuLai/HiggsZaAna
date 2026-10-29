@@ -117,7 +117,7 @@ elif options.year == 'run2':
         #name_SR = "ALP_plot_run2_UL_Ns_10_SR.root"
         #name_CR = "ALP_plot_run2_UL_Ns_10_CR.root"
 elif options.year == 'run3':
-    file_out = os.path.join(PLOT_OUTPUT_DIR, 'variables_dataVmc')
+    file_out = os.environ.get('HZA_DATAVMC_ROOT_DIR', '/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc')
     if options.ele:
         name_SR = "ALP_plot_run3_UL_SR_ele.root"
         name_CR = "ALP_plot_run3_UL_CR_ele.root"

@@ -37,7 +37,8 @@ PROJECT_DIR="${PROJECT_DIR:-/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna}"
 PLOT_DIR="${PROJECT_DIR}/Plot"
 SCRIPTS_DIR="${PLOT_DIR}/scripts"
 OUTPUT_DIR="${PLOT_DIR}/plots"
-VARIABLES_DIR="${OUTPUT_DIR}/variables_dataVmc"
+# histogram ROOT lives on eoscms (GB scale); pdfs go to /eos/home-p/pelai/HZa/output_plots/variables_dataVmc (Analyzer_Configs)
+VARIABLES_DIR="${HZA_DATAVMC_ROOT_DIR:-/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc}"
 LOG_DIR="${OUTPUT_DIR}/logs_split"
 SIDEBAND_REWEIGHT_JSON="${SIDEBAND_REWEIGHT_JSON:-${PROJECT_DIR}/HZaMVA/reweights/sideband_run3_iterative.json}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
@@ -185,6 +186,7 @@ localize_conda_env_if_needed() {
 mkdir -p "$LOG_DIR" "$VARIABLES_DIR"
 export PYTHONPATH="${PYTHONPATH:-}:${PLOT_DIR}/lib:${PROJECT_DIR}/HZaMVA/scripts"
 export PYTHONUNBUFFERED=1
+export ALP_OUTPUT_TMP_DIR="${ALP_OUTPUT_TMP_DIR:-${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}}"
 
 partial_tag="${final_tag}_part_${sample_tag}"
 log_file="${LOG_DIR}/${final_tag}_${region_key}_${sample_tag}.log"

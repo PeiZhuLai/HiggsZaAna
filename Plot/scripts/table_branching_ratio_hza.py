@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 DEFAULT_MASSES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30]
-DEFAULT_OUTPUT = Path(__file__).resolve().parents[1] / "output" / "latexTable_BrHZa.txt"
+DEFAULT_OUTPUT = Path("/eos/home-p/pelai/HZa/output_tables") / "latexTable_BrHZa.txt"
 
 
 def parse_args() -> argparse.Namespace:
