@@ -87,9 +87,101 @@
           ]
         ],
         "content": [
-          0.001435224997206621,
-          0.005569237736466723,
-          0.00225677398692171
+          0.0023412554369762802,
+          0.01951978467995955,
+          0.0023411106161505984
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_stat",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "el_sc_abseta",
+          "type": "real",
+          "description": "el_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "statistical part of unc_pass: data and MC statistics (uncorrelated between eras)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "el_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            100.0,
+            500.0
+          ]
+        ],
+        "content": [
+          0.0014389866026135846,
+          0.00561825551898956,
+          0.0022609749899962536
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_syst",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "el_sc_abseta",
+          "type": "real",
+          "description": "el_sc_abseta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "method part of unc_pass: RMS/sqrt(N) of the four fits and alternative MC (correlated between eras)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "el_sc_abseta",
+          "pt"
+        ],
+        "edges": [
+          [
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            100.0,
+            500.0
+          ]
+        ],
+        "content": [
+          0.0018468336629674062,
+          0.018693774334663585,
+          0.000607281657605823
         ],
         "flow": "clamp"
       }
@@ -179,9 +271,9 @@
           ]
         ],
         "content": [
-          0.09521646834748895,
-          0.2962145048937588,
-          0.16575120465437432
+          0.1420620397292618,
+          0.7867507938975273,
+          0.17035955769881958
         ],
         "flow": "clamp"
       }
