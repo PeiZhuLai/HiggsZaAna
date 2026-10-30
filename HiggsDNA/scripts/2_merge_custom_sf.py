@@ -38,6 +38,7 @@ PHOTON_ERAS = ("2022preEE", "2022postEE", "2023preBPix", "2023postBPix", "2024")
 # 2026 electron SFs are measured from 2026 data against 2024 MC.
 ELECTRON_ERAS = ("2024", "2025", "2026")
 CORRECTION_NAMES = ("sf_pass", "unc_pass", "sf_fail", "unc_fail")
+PHOTON_UNC_SPLIT_NAMES = ("unc_pass_stat", "unc_pass_syst")
 EFFICIENCY_NAMES = ("effdata", "systdata", "effmc", "systmc")
 R9_SPLIT = 0.96
 R9_MAX = 99999.0
@@ -225,6 +226,8 @@ def hza_correction_template(source: dict, correction_name: str) -> dict:
         "sf_pass": "data-MC SF",
         "sf_fail": "data-MC SF",
         "unc_pass": "data-MC unc",
+        "unc_pass_stat": "data-MC unc, statistical part (uncorrelated between eras)",
+        "unc_pass_syst": "data-MC unc, method part (correlated between eras)",
         "unc_fail": "data-MC unc",
         "effdata": "data eff",
         "systdata": "data unc",
@@ -361,6 +364,10 @@ def merge_photon(base_dir: Path, era: str, hole: bool = False) -> Path:
     def selector(correction_name: str, pt: float, eta: float) -> dict:
         return lowpt[correction_name] if pt < highpt_min else highpt[correction_name]
 
+    # the stat/syst split of unc_pass (photon_zaid_sf / photon_zaid_sf_syst) is carried when both inputs have it
+    split_names = [n for n in PHOTON_UNC_SPLIT_NAMES if n in lowpt and n in highpt]
+    if len(split_names) not in (0, len(PHOTON_UNC_SPLIT_NAMES)):
+        raise ValueError(f"{era}: only part of the photon-ID stat/syst split is present ({split_names})")
     corrections = [
         make_merged_correction(
             correction_name,
@@ -369,7 +376,7 @@ def merge_photon(base_dir: Path, era: str, hole: bool = False) -> Path:
             target_eta_edges,
             highpt[correction_name],
         )
-        for correction_name in CORRECTION_NAMES
+        for correction_name in list(CORRECTION_NAMES) + split_names
     ]
 
     output_tag = f"{ERA_TAGS[era]}Hole" if hole else ERA_TAGS[era]
