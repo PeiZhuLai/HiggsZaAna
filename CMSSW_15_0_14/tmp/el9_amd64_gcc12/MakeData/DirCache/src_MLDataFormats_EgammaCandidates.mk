@@ -1,2 +1,0 @@
-ALL_PACKAGES += MLDataFormats/EgammaCandidates
-subdirs_src_MLDataFormats_EgammaCandidates := src_MLDataFormats_EgammaCandidates_src

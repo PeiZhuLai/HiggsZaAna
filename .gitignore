@@ -333,3 +333,11 @@ studies/l3_review_20260910/deploy_w123_20261017/work*/
 studies/l3_review_20260910/*.partial_*/
 MergedAna/condor/logs/
 Parquet2Rootfile/staging/
+
+# generated job lists and debug reports (kept on disk, never commit)
+Parquet2Rootfile/Condor/joblist*.tsv
+Parquet2Rootfile/Condor/missing_outputs.tsv
+/debug_bdt_regression*/
+
+# CMSSW area: only src/ is versioned
+!/CMSSW_15_0_14/src/

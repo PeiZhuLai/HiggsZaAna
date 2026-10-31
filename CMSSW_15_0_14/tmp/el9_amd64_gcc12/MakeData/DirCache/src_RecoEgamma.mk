@@ -1,3 +1,0 @@
-ALL_SUBSYSTEMS+=RecoEgamma
-subdirs_src_RecoEgamma = src_RecoEgamma_EgammaMLPhotonProducers
-subdirs_src += src_RecoEgamma
