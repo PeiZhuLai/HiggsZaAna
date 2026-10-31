@@ -80,6 +80,8 @@ PHOTON_TNP_FIELDS = [
     "origIndex",
     "pass_ph_kinematic",
     "pass_phid_custom_tight",
+    "hcalPFClusterIso_PUcorr",
+    "chiso_PUcorr",
 ]
 
 P4_FIELDS = ["pt", "eta", "phi", "mass"]
@@ -137,6 +139,10 @@ DEFAULT_OPTIONS = {
         "PFHCalIso_EA_EE_4": [0.315793, -0.000795],
         "PFHCalIso_EA_EE_5": [0.36531, -0.000439],
         "e_veto": 0.5,
+        # True (default): probes must pass pass_phid_custom_tight -> denominator of the CSEV measurement.
+        # False: probes only need pass_ph_kinematic and the ID decision is stored as a flag
+        # (probe_photon_pass_phid_custom_tight) -> photon ID efficiency measurement.
+        "probe_require_id": True,
     },
         "fsr": {
             "min_muon_gamma_dr": 0.8,
@@ -690,10 +696,9 @@ class TnPZmmgTagger(Tagger):
             year=year,
         )
 
-        photon_selection = (
-            photons_with_flags.pass_ph_kinematic
-            & photons_with_flags.pass_phid_custom_tight
-        )
+        photon_selection = photons_with_flags.pass_ph_kinematic
+        if self.options["photons"].get("probe_require_id", True):
+            photon_selection = photon_selection & photons_with_flags.pass_phid_custom_tight
         return photon_selection, photons_with_flags
 
     def _select_photons_with_flags(self, photons, options, rho, year):

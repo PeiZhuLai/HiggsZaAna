@@ -9,13 +9,16 @@
 MC 用 DYJetsToLL（與既有 plot_SF_validation.py 慣例一致；只有 2022/2023 4 個 era 有），
 每張圖把 MC 縮放到 data（只比形狀，不需 lumi/xs）。
 Env: higgs-alp-ana（ROOT 6.24 + pyarrow）。
-輸出: Plot/plots/SF_validation_zee_zmmg/<era>/<sf>/<var>.{pdf,png}
+輸出: /eos/home-p/pelai/HZa/output_plots/SF_validation_zee_zmmg/<era>/<sf>/<var>.{pdf,png}
 """
-import argparse, os, glob
+import argparse, os, glob, sys
 from array import array
 import numpy as np
 import pyarrow.parquet as pq
-import ROOT
+# 直接呼叫 env 的 python（沒 activate）時 PATH 裡沒有 conda 的 c++，cling 啟動時會印
+# "cannot extract standard library include paths"；把 python 所在的 bin 放到 PATH 最前面
+os.environ["PATH"] = os.path.dirname(sys.executable) + os.pathsep + os.environ.get("PATH", "")
+import ROOT  # noqa: E402
 
 ROOT.gROOT.SetBatch(True)
 ROOT.TH1.SetDefaultSumw2(True)
@@ -23,9 +26,10 @@ ROOT.gStyle.SetOptStat(0); ROOT.gStyle.SetOptTitle(0)
 ROOT.gStyle.SetLegendBorderSize(0); ROOT.gStyle.SetErrorX(0.5); ROOT.gStyle.SetEndErrorSize(0)
 
 DEFAULT_ROOT = "/eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_zee_zmmg_ctrl"
-# 所有會乘進 weight_central 的 SF central 分支。注意：electron SF 在 SelectedElectron
-# 為空（即整個 z_mumu 區）時回傳 NaN，會毒化 weight_central。因此這裡用
-# weight_central_initial（genweight）× 各 SF（NaN→1，因空集合的 SF 本應=1）自行重建權重。
+# 所有會乘進 weight_central 的 SF central 分支。
+# 2026-10-30：control tagger 修好 SelectedElectron 為 None 的問題後，weight_central 不再是 NaN，
+# 改用 weight_central（genweight × scale1fb × lumi × 全部 SF）。舊做法用 weight_central_initial（只有 genweight）自行乘 SF，
+# 沒有截面正規化，無法把 DYJets 與 DYGto2LG 兩個樣本相加。
 SF_CENTRAL = [
     "weight_hlt_sf_central", "weight_pu_reweight_sf_central",
     "weight_electron_reco_sf_SelectedElectron_central", "weight_electron_wplid_sf_SelectedElectron_central",
@@ -38,7 +42,10 @@ def _sane_sf(a):
     """NaN/inf 或不合理 SF -> 1.0（空集合 SF 本應=1）。"""
     a = np.asarray(a, dtype=float)
     return np.where(np.isfinite(a) & (a > 0.01) & (a < 100.0), a, 1.0)
-LUMI_MAP = {"2022preEE":7.9804,"2022postEE":26.6717,"2023preBPix":18.063,"2023postBPix":9.693,"2024":108.83}
+# lumi 從 HZgamma constants.py 讀（繪圖規範；HZa repo 那份會過期）
+sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZgamma/higgsdna-hzg-run3/plot/scripts")
+from lumi_constants import load_lumi  # noqa: E402
+LUMI_MAP = load_lumi()
 DYLL_ERAS = ["2022preEE","2022postEE","2023preBPix","2023postBPix"]  # 有 DYJetsToLL inclusive 的 era
 # 2024 沒有 DYJetsToLL inclusive，改用 split 樣本合併等同 inclusive（region mask 自然分流 ee/mumu）
 DY_SPLIT  = ["DYJetsTo2E","DYJetsTo2Mu","DYJetsTo2Tau"]
@@ -91,10 +98,15 @@ SFGROUPS = [
 ]
 
 
-def mc_paths(base, eras):
-    """每個 era 優先用 DYJetsToLL inclusive；沒有（如 2024）則合併 split 樣本。"""
+def mc_paths(base, eras, region):
+    """每個 era 優先用 DYJetsToLL inclusive；沒有（如 2024）則合併 split 樣本。
+    z_mumu（Z->mumugamma）區再加 DYGto2LG_10to100：2026-10-30 發現 DY+jets 在這一區幾乎沒有事件
+    （2022postEE 一個 job 40898 列只有 2 列），FSR 光子事件在 DYGto2LG；control 沒有 overlap veto，重複計算可忽略。
+    只用 DY+jets 時 MC 比 data 少約 20 倍，被「MC 縮放到 data」蓋掉，舊的 photon/muon SF 圖不可靠。"""
     out = []
     for e in eras:
+        if region == "z_mumu":
+            out += glob.glob(f"{base}/mc/DYGto2LG_10to100_{e}/merged_nominal.parquet")
         incl = glob.glob(f"{base}/mc/DYJetsToLL_{e}/merged_nominal.parquet")
         if incl:
             out += incl
@@ -210,10 +222,30 @@ def draw(data, after, before, title, after_lab, before_lab, lumi, out, logx):
         up.SetLogx(); lo.SetLogx()
     up.Draw(); lo.Draw()
 
+    # ratio 先算（未縮放的直方圖），y 範圍才能依資料點決定，不會把高 pT 的點畫出框外
+    ratios = []
+    for mc, col, mk in ((before, "#1F78B4", 21), (after, None, 20)):
+        if mc.Integral() <= 0:
+            continue
+        r = data.Clone("r_" + mc.GetName()); r.SetDirectory(0); r.Divide(mc)
+        r.SetMarkerStyle(mk); r.SetMarkerSize(1.2)
+        c2 = ROOT.kRed + 1 if col is None else ROOT.TColor.GetColor(col)
+        r.SetMarkerColor(c2); r.SetLineColor(c2); r.SetLineWidth(3); ratios.append(r)
+    pts = [(r.GetBinContent(i) - r.GetBinError(i), r.GetBinContent(i) + r.GetBinError(i))
+           for r in ratios for i in range(1, r.GetNbinsX() + 1) if r.GetBinContent(i) > 0]
+    rlo = max(0.0, min([0.45] + [lo_ - 0.1 for lo_, _ in pts]))
+    rhi = min(4.0, max([1.55] + [hi_ + 0.1 for _, hi_ in pts]))
+
     up.cd()
     ymax = max(data.GetMaximum(), after.GetMaximum(), before.GetMaximum())
+    # 計數 >= 1e4 時改寫成 Events / 10^{k}：ROOT 自動加的「×10^{k}」落在框頂左角，會和 CMS 標籤疊字
+    k = 3 * int(np.floor(np.log10(ymax * 1.5) / 3)) if ymax * 1.5 >= 1e4 else 0
+    if k:
+        for h in (data, after, before):
+            h.Scale(10.0 ** -k)
+        ymax *= 10.0 ** -k
     after.SetMinimum(0.0); after.SetMaximum(ymax * 1.5 if ymax > 0 else 1.0)
-    after.GetXaxis().SetLabelSize(0); after.GetYaxis().SetTitle("Events")
+    after.GetXaxis().SetLabelSize(0); after.GetYaxis().SetTitle("Events / 10^{%d}" % k if k else "Events")
     after.GetYaxis().SetTitleSize(0.065); after.GetYaxis().SetLabelSize(0.055); after.GetYaxis().SetTitleOffset(1.1)
     after.Draw("hist"); before.Draw("hist same"); data.Draw("E1 same")
     leg = ROOT.TLegend(0.18, 0.66, 0.55, 0.88); leg.SetFillStyle(0); leg.SetBorderSize(0); leg.SetTextSize(0.045)
@@ -224,19 +256,16 @@ def draw(data, after, before, title, after_lab, before_lab, lumi, out, logx):
     edges = array("d", [data.GetBinLowEdge(i + 1) for i in range(data.GetNbinsX() + 1)])
     frame = ROOT.TH1D("frame", "", data.GetNbinsX(), edges); frame.SetStats(False); frame.SetDirectory(0)
     frame.GetYaxis().SetTitle("Data / MC"); frame.GetXaxis().SetTitle(title)
-    frame.GetYaxis().SetRangeUser(0.45, 1.55); frame.GetYaxis().SetNdivisions(505)
+    frame.GetYaxis().SetRangeUser(rlo, rhi); frame.GetYaxis().SetNdivisions(505)
     frame.GetYaxis().SetTitleSize(0.14); frame.GetYaxis().SetTitleOffset(0.45); frame.GetYaxis().SetLabelSize(0.12)
     frame.GetXaxis().SetTitleSize(0.14); frame.GetXaxis().SetTitleOffset(1.3); frame.GetXaxis().SetLabelSize(0.12)
+    if logx:
+        # 跨不到 20 倍（photon pT 10-80）時 log 軸一個十進位刻度都沒有，要補中間刻度的數字
+        frame.GetXaxis().SetMoreLogLabels(edges[-1] / edges[0] < 20); frame.GetXaxis().SetNoExponent(True)
     frame.Draw("axis")
     line = ROOT.TLine(edges[0], 1.0, edges[-1], 1.0); line.SetLineColor(ROOT.kGray + 2); line.SetLineStyle(2); line.Draw("same")
-    keep = []
-    for mc, col, mk in ((before, "#1F78B4", 21), (after, None, 20)):
-        if mc.Integral() <= 0:
-            continue
-        r = data.Clone("r_" + mc.GetName()); r.SetDirectory(0); r.Divide(mc)
-        r.SetMarkerStyle(mk); r.SetMarkerSize(1.2)
-        c2 = ROOT.kRed + 1 if col is None else ROOT.TColor.GetColor(col)
-        r.SetMarkerColor(c2); r.SetLineColor(c2); r.SetLineWidth(3); r.Draw("E1 same"); keep.append(r)
+    for r in ratios:
+        r.Draw("E1 same")
 
     c.SaveAs(out + ".pdf"); c.SaveAs(out + ".png"); c.Close()
 
@@ -244,7 +273,7 @@ def draw(data, after, before, title, after_lab, before_lab, lumi, out, logx):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=DEFAULT_ROOT)
-    ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "plots", "SF_validation_zee_zmmg"))
+    ap.add_argument("--out", default="/eos/home-p/pelai/HZa/output_plots/SF_validation_zee_zmmg")
     ap.add_argument("--eras", default="all", help="comma list or 'all' (+run3_all)")
     args = ap.parse_args()
 
@@ -258,12 +287,13 @@ def main():
 
     for label, eras in groups:
         lumi = sum(LUMI_MAP.get(e, 0.0) for e in eras)
-        mcp = mc_paths(args.base, eras)
+        mcp = mc_paths(args.base, eras, "z_ee")
         if not mcp:
             print(f"[skip] {label}: no DYJetsToLL MC"); continue
         print(f"\n[era] {label} lumi={lumi:.2f} mc_files={len(mcp)}")
         for sfname, region, kind, wbranch, alab, blab, vlist in SFGROUPS:
             dpaths = data_paths(args.base, eras, kind)
+            mcp_r = mc_paths(args.base, eras, region)
             cols = [v[1] for v in vlist]
             # 逐批累積直方圖（記憶體 O(bins)）：acc_a=套SF, acc_b=不套此SF, acc_d=data
             acc_a = {v[0]: _acc_init(v[3]) for v in vlist}
@@ -271,15 +301,11 @@ def main():
             acc_d = {v[0]: _acc_init(v[3]) for v in vlist}
             mc_n = da_n = 0
             # ---- MC：串流讀，逐批重建權重並填圖 ----
-            for arrs, m in stream_batches(mcp, region, cols + ["weight_central_initial"] + SF_CENTRAL):
+            for arrs, m in stream_batches(mcp_r, region, cols + ["weight_central", wbranch]):
                 mc_n += int(m.sum())
-                # 自行重建 MC 權重：genweight × Π(各 SF，NaN→1)；繞過被 electron-SF NaN 毒化的 weight_central
-                wci = arrs.get("weight_central_initial")
-                wci = np.where(np.isfinite(wci[m]), wci[m], 0.0) if wci is not None else np.zeros(int(m.sum()))
-                w_after = wci.copy()
-                for sc in SF_CENTRAL:
-                    v = arrs.get(sc)
-                    w_after = w_after * _sane_sf(v[m] if v is not None else np.ones(int(m.sum())))
+                # weight_central = genweight × scale1fb × lumi × 全部 SF（樣本間可相加）
+                wc = arrs.get("weight_central")
+                w_after = np.where(np.isfinite(wc[m]), wc[m], 0.0) if wc is not None else np.zeros(int(m.sum()))
                 vb = arrs.get(wbranch)
                 w_before = w_after / _sane_sf(vb[m] if vb is not None else np.ones(int(m.sum())))
                 for key, col, title, bins, logx in vlist:

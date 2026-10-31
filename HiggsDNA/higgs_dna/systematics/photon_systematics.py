@@ -343,11 +343,14 @@ PHOTON_ZAID_SF_FILE_HOLE = {
 }
 
 
-def photon_zaid_sf(events, year, central_only, input_collection):
+def photon_zaid_sf(events, year, central_only, input_collection, unc_part = "stat"):
     """
-    See:
-        - https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/EGM_electron_Run2_UL/EGM_electron_2017_UL.html
-        - https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/electronExample.py
+    Custom photon-ID SF. The TnP JSON carries the total uncertainty unc_pass and its two parts
+    (unc_pass_stat**2 + unc_pass_syst**2 = unc_pass**2):
+      unc_part = "stat": central = SF, up/down = SF +- unc_pass_stat (data and MC statistics, uncorrelated between eras);
+      unc_part = "syst": central = 1, up/down = 1 +- unc_pass_syst / SF (fit-model RMS/sqrt(N) and alternative MC,
+                         correlated between eras); used by photon_zaid_sf_syst with modify_central_weight = false.
+    A JSON without the split (older TnP export) falls back to unc_pass for "stat" and fails for "syst".
     """
     if year not in PHOTON_ZAID_SF_FILE:
         raise ValueError("[photon_zaid_sf] no custom photon-ID scale factors for %s. For Run 2 the "
@@ -388,11 +391,25 @@ def photon_zaid_sf(events, year, central_only, input_collection):
         pho_phi = awkward.to_numpy(photons_flattened.phi)
         is_hole_region = (pho_eta > -1.566) & (pho_eta < 0.0) & (pho_phi > -1.2) & (pho_phi < -0.8)
 
+    def _unc(evaluator, sf0):
+        names = set(evaluator)
+        if unc_part == "stat":
+            return evaluator["unc_pass_stat" if "unc_pass_stat" in names else "unc_pass"].evalv(pho_pt, pho_eta)
+        if "unc_pass_syst" not in names:
+            raise ValueError("[photon_zaid_sf] %s: the photon-ID JSON has no unc_pass_syst (stat/syst split); "
+                             "re-export it with tnpEGM_fitter.py --exportJson" % year)
+        return evaluator["unc_pass_syst"].evalv(pho_pt, pho_eta)
+
     def _eval_pass(evaluator, var):
-        if var == "central":
-            return evaluator["sf_pass"].evalv(pho_pt, pho_eta)
         sf0 = evaluator["sf_pass"].evalv(pho_pt, pho_eta)
-        unc = evaluator["unc_pass"].evalv(pho_pt, pho_eta)
+        if unc_part == "syst":
+            if var == "central":
+                return numpy.ones_like(sf0)
+            rel = _unc(evaluator, sf0) / numpy.where(sf0 > 0, sf0, 1.0)
+            return 1.0 + rel if var == "up" else 1.0 - rel
+        if var == "central":
+            return sf0
+        unc = _unc(evaluator, sf0)
         if var == "up":
             return sf0 + unc
         if var == "down":
@@ -417,6 +434,10 @@ def photon_zaid_sf(events, year, central_only, input_collection):
         )
 
     return variations
+
+def photon_zaid_sf_syst(events, year, central_only, input_collection):
+    """Method part of the custom photon-ID SF uncertainty (correlated between eras); central weight 1."""
+    return photon_zaid_sf(events, year, central_only, input_collection, unc_part = "syst")
 
 #################################
 ### Custom Photon e-veto SF #####

@@ -55,7 +55,7 @@ for mA in sorted(sig_map.keys()):
 latex_table = (
     "\\begin{table}[h]\n"
     "\\begin{center}\n"
-    "\\topcaption{Approximate mean significance for different numbers of categories, and its improvement as a function of the number of categories.}\n"
+    "\\topcaption{Approximate median significance (AMS) for different numbers of categories, and its improvement as a function of the number of categories.}\n"
     "\\label{tab:significanceVcat}\n"
     "\\begin{tabular}{cccc}\n"
     "\\hline\n"

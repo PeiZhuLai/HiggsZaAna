@@ -5,7 +5,11 @@ For each mA, scan the BDT score cut and compute:
   - R   : 125-peak sculpting metric = (selected-bkg fraction in 120-130) / inclusive fraction.
           R=1 -> no sculpting (peak neither enriched nor depleted); R>1 -> fake-peak risk;
           R<1 -> peak depleted (conservative but wastes significance).
-  - Z   : Asimov-like significance sqrt(2((s+b)ln(1+s/b))-2s) in the 120-130 window.
+  - Z   : Asimov-like significance sqrt(2((s+b)ln(1+s/b))-2s) in the 120-130 window, with the signal scaled to the
+          expected limit of the mass point (Z_AT_EXPECTED_LIMIT). At r = 1 the window signal is about ten times the
+          expected limit and much larger than the background, so Z rewarded signal efficiency and hardly penalized
+          background: at m_a = 2 it peaked at the cut 0.977, while the full chain gives a 5% better limit at 0.98837.
+          --write-json keeps the unscaled Z (the Significance field of the working-point JSON).
 
 Selection philosophy (Pei-Zhu): pick the cut with R closest to 1 (no sculpting) rather than
 maximum significance, to avoid reporting a sculpted/fake result. R=1 maximizes Z subject to
@@ -18,6 +22,24 @@ and prints the R=1 working point (cut + Z) per mA.
 Run in higgs-alp-ana (xgboost + uproot + ROOT 6.24).
 """
 import os, math, json, shutil, argparse, datetime, numpy as np, pickle, uproot, ROOT
+
+
+# signal of the Z colour scale = expected limit x signal at r = 1 (xsec card, production limits, median)
+Z_AT_EXPECTED_LIMIT = True
+LIMIT_DIR = "/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/output_combine_results_xsec"
+_MU_EXP = {}
+
+
+def _mu_exp(mA):
+    if not Z_AT_EXPECTED_LIMIT:
+        return 1.0
+    if mA not in _MU_EXP:
+        t = uproot.open(f"{LIMIT_DIR}/higgsCombine{mA}.AsymptoticLimits.mH125.38.root")["limit"].arrays(["limit", "quantileExpected"], library="np")
+        q = np.abs(t["quantileExpected"] - 0.5) < 1e-3
+        if q.sum() != 1:
+            raise RuntimeError(f"no unique median expected limit for mA={mA} in {LIMIT_DIR}")
+        _MU_EXP[mA] = float(t["limit"][q][0])
+    return _MU_EXP[mA]
 
 
 def _significance_asimov_like(s: float, b: float) -> float:
@@ -153,13 +175,13 @@ def _R_direct(bk, cut):
     pB = s > cut; denom = w[pB].sum()
     return float(w[pB & peak].sum() / denom / frac) if denom > 0 and frac > 0 else float("nan")
 
-def _Z_direct(bk, sg, cut):
+def _Z_direct(bk, sg, cut, mA):
     """Asimov Z at a fixed cut, computed directly (NOT interpolated from the scan grid), with the
     same S/B definition as scan(): S = clipped signal weights, B = raw bkg weights, both in 120-130.
     Used only by the opt-in --high-masses panels (adopted high-mass cuts can exceed SCORE_RANGE)."""
     pkB = (bk["H_mass"] > PEAK[0]) & (bk["H_mass"] < PEAK[1]) & (bk["s"] > cut)
     pkS = (sg["H_mass"] > PEAK[0]) & (sg["H_mass"] < PEAK[1]) & (sg["s"] > cut)
-    return _significance_asimov_like(float(np.clip(sg["factor"][pkS], 0, None).sum()),
+    return _significance_asimov_like(_mu_exp(mA) * float(np.clip(sg["factor"][pkS], 0, None).sum()),
                                      float(bk["factor"][pkB].sum()))
 
 HIGH_EXTRA_STEP = 0.0025   # plotting-only extension beyond SCORE_RANGE[1] up to the adopted cut
@@ -179,9 +201,9 @@ def scan_high_stored(mA):
     while thr <= cut + 1e-9:
         pkB = (bk["H_mass"] > PEAK[0]) & (bk["H_mass"] < PEAK[1]) & (bk["s"] > thr)
         if pkB.sum() >= 20:   # same raw-count reliability requirement as the grid
-            extra.append((thr, _R_direct(bk, thr), _Z_direct(bk, sg, thr)))
+            extra.append((thr, _R_direct(bk, thr), _Z_direct(bk, sg, thr, mA)))
         thr += HIGH_EXTRA_STEP
-    wp = (cut, _R_direct(bk, cut), _Z_direct(bk, sg, cut))
+    wp = (cut, _R_direct(bk, cut), _Z_direct(bk, sg, cut, mA))
     return pts, np.array(extra).reshape(-1, 3), wp, bk, sg
 
 LUMI_LABEL  = "172.13 fb^{-1} (13.6 TeV)"
@@ -255,7 +277,7 @@ def scan(mA):
         if nB <= 0 or (pB & peak).sum() < 20:   # too few bkg events -> R unreliable
             continue
         R = nB / wB[pB].sum() / frac
-        S = wS[(ss > thr) & pks].sum()
+        S = _mu_exp(mA) * wS[(ss > thr) & pks].sum()
         Z = _significance_asimov_like(S, nB)        # Asimov-like significance, S & B in 120-130
         pts.append((thr, R, Z))
     return np.array(pts), bk
@@ -275,7 +297,7 @@ def scan_high(mA):
         if nB <= 0 or (pB & peak).sum() < 20:
             continue
         R = nB / wB[pB].sum() / frac
-        S = wS[(ss > thr) & pks].sum()
+        S = _mu_exp(mA) * wS[(ss > thr) & pks].sum()
         Z = _significance_asimov_like(S, nB)
         pts.append((thr, R, Z))
     return np.array(pts)
@@ -312,7 +334,7 @@ def chosen_wp(mA, pts, bk=None, sg=None):
     R = _R_direct(bk, cut) if bk is not None else float(np.interp(cut, pts[:, 0], pts[:, 1]))
     # Z directly at the cut when the stored-score samples are given: np.interp clamps at the end of
     # the scan grid, which made every cut above SCORE_RANGE[1] read the last grid value.
-    Z = (_Z_direct(bk, sg, cut) if bk is not None and sg is not None
+    Z = (_Z_direct(bk, sg, cut, mA) if bk is not None and sg is not None
          else float(np.interp(cut, pts[:, 0], pts[:, 2])))
     return (cut, R, Z)
 
@@ -323,8 +345,9 @@ def draw_one(mA, pts, r1, wp, big, xmax=None, wp_pos_override=None):
     xmax (opt-in, high-mass panels only): extend the x-frame beyond SCORE_RANGE[1] so an adopted
     cut above the grid edge (and the plotting-only points up to it) stays on-plot."""
     Rlo, Rhi = pts[:, 1].min(), pts[:, 1].max()
-    if xmax is not None:   # opt-in high-mass path: keep the directly-evaluated star inside the frame
-        Rlo, Rhi = min(Rlo, wp[1], 1.0), max(Rhi, wp[1], 1.0)   # and keep the R=1 reference on-frame
+    # every panel keeps the adopted working point and the R = 1 reference inside the frame (with the range of the scan
+    # points alone, m_a = 2 spanned 1.05-1.30 and its R = 1 line was drawn below the frame)
+    Rlo, Rhi = min(Rlo, wp[1], 1.0), max(Rhi, wp[1], 1.0)
     pad = (Rhi - Rlo) * 0.12 + 1e-3
     xpad = (SCORE_RANGE[1] - SCORE_RANGE[0]) * 0.04   # small x-margin so edge points don't touch the frame
     xlo, xhi = SCORE_RANGE[0] - xpad, max(SCORE_RANGE[1], xmax or SCORE_RANGE[1]) + xpad
@@ -336,13 +359,13 @@ def draw_one(mA, pts, r1, wp, big, xmax=None, wp_pos_override=None):
     for thr, R, Z in pts:
         h.SetBinContent(h.GetXaxis().FindBin(thr), h.GetYaxis().FindBin(R), Z)
     zmin, zmax = pts[:, 2].min(), pts[:, 2].max()
-    h.SetMinimum(zmin); h.SetMaximum(zmax); h.GetZaxis().SetTitle("Asimov significance Z")
+    h.SetMinimum(zmin); h.SetMaximum(zmax); h.GetZaxis().SetTitle("Asimov Z (signal at expected limit)" if Z_AT_EXPECTED_LIMIT else "Asimov significance Z")
     ts, ls = (0.055, 0.05) if big else (0.045, 0.04)
     for ax in (h.GetXaxis(), h.GetYaxis(), h.GetZaxis()):
         ax.SetTitleSize(ts); ax.SetLabelSize(ls)
     h.GetXaxis().SetTitleOffset(1.05 if big else 1.1); h.GetYaxis().SetTitleOffset(1.2 if big else 1.3)
-    h.GetZaxis().SetTitleOffset(1.2 if big else 1.0)
-    ROOT.gPad.SetRightMargin(0.19 if big else 0.16); ROOT.gPad.SetLeftMargin(0.16 if big else 0.13)
+    h.GetZaxis().SetTitleOffset(1.2 if big else 1.35)   # small panels: the longer Z title overlapped the labels at 1.0
+    ROOT.gPad.SetRightMargin(0.19 if big else 0.19); ROOT.gPad.SetLeftMargin(0.16 if big else 0.13)
     ROOT.gPad.SetBottomMargin(0.14 if big else 0.12); ROOT.gPad.SetTopMargin(0.09)
     h.Draw("COLZ"); keep.append(h)
     mk = []
@@ -363,10 +386,11 @@ def draw_one(mA, pts, r1, wp, big, xmax=None, wp_pos_override=None):
     #   mA1 bottom-left, mA2 bottom-right, mA3 top-left.  align = 10*h + v (h:1=L,3=R; v:1=bottom,3=top)
     #   mA30: R is always >1.2 (no R=1 crossing); the point band fills the top, so the label goes
     #   bottom-left where the panel is empty.
-    wp_pos = {1: (0.20, 0.22, 11), 2: (0.78, 0.22, 31), 3: (0.20, 0.83, 13), 30: (0.20, 0.24, 11)}
+    # m_a = 1, 2 top left as m_a = 3: at the bottom the label sat on the R = 1 line once that line was kept in the frame
+    wp_pos = {1: (0.20, 0.83, 13), 2: (0.20, 0.83, 13), 3: (0.20, 0.83, 13), 30: (0.20, 0.24, 11)}
     wx, wy, wa = wp_pos_override or wp_pos.get(mA, (0.20, 0.22, 11))
     tl.SetTextAlign(wa)
-    tl.DrawLatex(wx, wy, f"#splitline{{Working point: cut>{wp[0]:.3f},}}{{R={wp[1]:.2f}, Z={wp[2]:.1f}}}")
+    tl.DrawLatex(wx, wy, f"#splitline{{Working point: cut>{wp[0]:.3f},}}{{R={wp[1]:.2f}, Z={wp[2]:.2f}}}")
 
 
 def write_json(json_path, r1_by_mA):
@@ -457,6 +481,9 @@ def main():
     ap.add_argument("--dump-points", default=None,
                     help="with --high-masses: write the per-mA scan points and WP numbers to this JSON")
     args = ap.parse_args()
+    if args.write_json:   # the JSON Significance field keeps its definition (signal at r = 1)
+        global Z_AT_EXPECTED_LIMIT
+        Z_AT_EXPECTED_LIMIT = False
 
     os.makedirs(OUTDIR, exist_ok=True)
     if args.high_masses:

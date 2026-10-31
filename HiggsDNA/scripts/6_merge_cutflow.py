@@ -11,7 +11,7 @@ Outputs:
   - Background: one table per era.
   - Data: one table per era.
 
-Each sample has two columns: event count and N-1 efficiency.
+Each sample has two columns: event count and step-by-step efficiency (relative to the previous row).
 Counts are rounded to integers; efficiencies are shown as one decimal percent.
 """
 
@@ -212,6 +212,11 @@ def mass_from_dataset(dataset: str) -> Optional[int]:
     return int(match.group(1)) if match else None
 
 
+# Column names that differ from the internal sample key, so that the tables use the names of the
+# AN sample table: in 2024 the DYGto2LG_10to100 key holds the Bin-MLL-50 sample (no photon-pT slicing).
+DISPLAY_NAMES = {("DYGto2LG_10to100", "2024"): "DYGto2LG"}
+
+
 def choose_cutflow(sample: SampleCutflow, preferred_cut_type: str) -> Optional[TableColumn]:
     cut_type = preferred_cut_type
     if cut_type not in sample.cutflows:
@@ -230,7 +235,7 @@ def choose_cutflow(sample: SampleCutflow, preferred_cut_type: str) -> Optional[T
         mass = mass_from_dataset(sample.dataset)
         header = rf"$m_a={mass}$" if mass is not None else latex_texttt(sample.dataset)
     else:
-        header = latex_texttt(sample.dataset)
+        header = latex_texttt(DISPLAY_NAMES.get((sample.dataset, sample.year), sample.dataset))
 
     return TableColumn(
         key=f"{sample.dataset_type}_{sample.dataset}_{sample.year}",
@@ -337,7 +342,7 @@ def render_table(
 
     sub_header = [""]
     for _ in columns:
-        sub_header.extend(["Events", r"N-1 eff. (\%)"])
+        sub_header.extend(["Events", r"Step eff. (\%)"])
     lines.append(" & ".join(sub_header) + r" \\")
     lines.append(r"\hline")
 

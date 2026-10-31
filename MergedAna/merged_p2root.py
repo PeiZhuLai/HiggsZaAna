@@ -116,6 +116,18 @@ _LEP_ANG = ["Z_lead_lepton_eta", "Z_lead_lepton_phi",
             "Z_sublead_lepton_eta", "Z_sublead_lepton_phi"]
 _lepclean_stats = {"before": 0, "removed": 0}
 
+# Optional offline cuts on the lead MLPhoton, applied to signal (all syst trees)
+# and data alike, for the photon-selection scan (MergedAna/photon_sel_scan/).
+# pfIsolation = MLPhoton energy / PF energy in a 0.3 cone, so larger = more
+# isolated. A pT cut also moves the m_llG turn-on up towards the signal region.
+# MERGED_PHO_ABSISO_MAX cuts instead on the PF energy in the cone other than the
+# photon, E * (1/pfIsolation - 1) in GeV, which does not prefer hard photons and
+# moves the turn-on down instead.
+# 0 = no cut (default, the selection is unchanged).
+PHO_ISO_MIN = float(os.environ.get("MERGED_PHO_ISO_MIN", "0"))
+PHO_PT_MIN = float(os.environ.get("MERGED_PHO_PT_MIN", "0"))
+PHO_ABSISO_MAX = float(os.environ.get("MERGED_PHO_ABSISO_MAX", "0"))
+
 # merged_<key>.parquet  ->  flashgg tree-name suffix
 SYST_MAP = {
     "FNUF_up": "FNUFUp01sigma", "FNUF_down": "FNUFDown01sigma",
@@ -131,6 +143,7 @@ SYST_MAP = {
 _Z = ["Z_pt", "Z_eta", "Z_phi", "Z_mass"]
 _ML = ["MLPhoton_lead_pt", "MLPhoton_lead_eta", "MLPhoton_lead_phi", "MLPhoton_lead_mass"]
 _COLS = _Z + _ML + _LEP_ANG + [SEL, "n_MLPhoton_diphoton", "weight_central", "Z_lead_lepton_id",
+                    "MLPhoton_lead_pfIsolation",
                     "run", "luminosityBlock", "event"]  # run/lumi/event for data event-dedup
 
 
@@ -182,6 +195,15 @@ def load(path, tag, mlo, mhi, use_weight=True):
         keep = _min_dr_to_z_leptons(d) > LEPCLEAN_DR
         _lepclean_stats["before"] += len(d)
         _lepclean_stats["removed"] += int((~keep).sum())
+        d = d[keep]
+    if PHO_ISO_MIN > 0 or PHO_PT_MIN > 0 or PHO_ABSISO_MAX > 0:
+        if "MLPhoton_lead_pfIsolation" not in d.columns:
+            raise RuntimeError(f"{fs[0]}: MERGED_PHO_* cuts need MLPhoton_lead_pfIsolation")
+        r = d["MLPhoton_lead_pfIsolation"].to_numpy()
+        keep = (r > PHO_ISO_MIN) & (d["MLPhoton_lead_pt"].to_numpy() > PHO_PT_MIN)
+        if PHO_ABSISO_MAX > 0:
+            e = d["MLPhoton_lead_pt"].to_numpy() * np.cosh(d["MLPhoton_lead_eta"].to_numpy())
+            keep &= e * (1.0 / np.clip(r, 1e-6, None) - 1.0) < PHO_ABSISO_MAX
         d = d[keep]
     if ROI_VAR not in d.columns:
         return None
@@ -319,6 +341,8 @@ def main():
         raise SystemExit(f"--indir {args.indir} differs from the signal of this production "
                          f"({SIG_ML}, MERGED_PROD={_PROD!r}); set MERGED_ALLOW_SIG_OVERRIDE=1 if intended")
 
+    print(f"photon cuts: pfIsolation > {PHO_ISO_MIN}, pT > {PHO_PT_MIN}, "
+          f"abs iso < {PHO_ABSISO_MAX or 'none'} GeV")
     tags = [t for t in args.signals.split(",") if t]
     for tag in tags:
         if tag not in ROI_WINDOWS:

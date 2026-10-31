@@ -67,6 +67,11 @@ RESOLVED_LIMITS_DIR="${RESOLVED_LIMITS_DIR:-${FLASHGG}/Combine/output_combine_re
 # flashgg outputs
 SIG_DIR="${FLASHGG}/Signal"
 BKG_WSDIR="${BKG_WSDIR:-${FLASHGG}/Background/ALP_BkgModel_merged}"
+# bkg fit binaries (fTest_ALP_turnOn, makeBkgPlots_ALP) and their --mass_ALP mode.
+# BKG_MASS_ALP=0 is the merged mode (no resolved mA=1 order caps, open turn-on
+# windows); it needs a build that has it, e.g. BKG_BINDIR=${FLASHGG}/Background_build_merged0/bin.
+BKG_BINDIR="${BKG_BINDIR:-${FLASHGG}/Background/bin}"
+BKG_MASS_ALP="${BKG_MASS_ALP:-1}"
 # per-mA ROI: bkg multipdf + data live per-mA under ${BKG_WSDIR}/<m>/ and
 # ${ROOT_MVACUT}/data/Data_merged_M<m>/ (Stage 4 / Stage 2). BKG_MERGED/DATA_WS
 # (the old single shared paths) are retained only for backward-compat references.
@@ -223,7 +228,9 @@ if [[ "$RUN_TREE2WS" == "1" ]]; then
     for m in $MASSES; do
         dtree="${ROOT_MVACUT}/data/mA_M${m}/run3.root"
         [[ -f "$dtree" ]] || { echo "  [WARN] missing per-mA data tree M${m}: $dtree"; continue; }
-        python3 trees2ws_data.py --inputConfig config.py \
+        # --massLow 100: same low edge as the signal WS (trees2ws.py default) and the
+        # p2root window; the trees2ws_data default 95 left 95-100 empty in the bkg fit.
+        python3 trees2ws_data.py --inputConfig config.py --massLow 100 \
             --inputTreeFile "$dtree" > "logs/data_mA_M${m}.log" 2>&1
     done
     echo "  Tree2WS done (signal + per-mA data)"
@@ -264,9 +271,10 @@ fi
 if [[ "$RUN_BKG" == "1" ]]; then
     echo_step "merged: background discrete-profiling envelope (PER-mA ROI)"
     cd "${FLASHGG}/Background"
-    if [[ ! -x ./bin/fTest_ALP_turnOn ]]; then
-        echo "[ERROR] ./bin/fTest_ALP_turnOn missing (compile Background first)" >&2; exit 1
+    if [[ ! -x "${BKG_BINDIR}/fTest_ALP_turnOn" ]]; then
+        echo "[ERROR] ${BKG_BINDIR}/fTest_ALP_turnOn missing (compile Background first)" >&2; exit 1
     fi
+    echo "  bkg binaries: ${BKG_BINDIR}  --mass_ALP ${BKG_MASS_ALP}"
     # PER-mA: each m_a selects a different MLPhoton_lead_mass ROI sub-sample -> its
     # own data spectrum -> its own multipdf. Output dir = ${BKG_WSDIR}/<m> so it
     # matches makeYields bkg_mass_for_io=<mass_ALP> (Stage 5). Unlike the old shared
@@ -279,11 +287,11 @@ if [[ "$RUN_BKG" == "1" ]]; then
         fi
         bkg_m="${BKG_WSDIR}/${m}"
         mkdir -p "${bkg_m}/HZAmassInde_fTest"
-        ./bin/fTest_ALP_turnOn -i "${data_ws}" \
+        "${BKG_BINDIR}/fTest_ALP_turnOn" -i "${data_ws}" \
             --saveMultiPdf "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" \
             -D "${bkg_m}/HZAmassInde_fTest" \
-            --mass_ALP 1 -c 1 --isFlashgg 0 --isData 0 -f data, \
-            --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
+            --mass_ALP "${BKG_MASS_ALP}" -c 1 --isFlashgg 0 --isData 0 -f data, \
+            --mhLow 100 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
             --gtoys "$GOF_TOYS" > "${bkg_m}/ftest.log" 2>&1
         if [[ ! -f "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" ]]; then
             echo "[ERROR] M${m} bkg multipdf not produced; see ${bkg_m}/ftest.log" >&2; continue
@@ -291,13 +299,13 @@ if [[ "$RUN_BKG" == "1" ]]; then
         echo "  M${m} bkg multipdf: ${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root"
         n_bkg=$((n_bkg+1))
         # per-mA banded Data+envelope plot (real per-mA, NOT a shared symlink)
-        if [[ -x ./bin/makeBkgPlots_ALP ]]; then
+        if [[ -x "${BKG_BINDIR}/makeBkgPlots_ALP" ]]; then
             AFR="${bkg_m}/AllFitResults"; mkdir -p "$AFR"
             ma_gev="${m//p/.}"   # flashgg label 0p5 -> physical mA 0.5 GeV for the plot label
-            ./bin/makeBkgPlots_ALP -b "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" \
+            "${BKG_BINDIR}/makeBkgPlots_ALP" -b "${bkg_m}/CMS-HGG_mva_13p6TeV_multipdf.root" \
                 -d "${bkg_m}/BkgPlots" --total_OutDir "$AFR" -o "${bkg_m}/BkgPlots.root" \
                 --sqrts 13p6TeV --isMultiPdf --useBinnedData --massStep 2.5 --mhVal 125.0 --maVal "${ma_gev}" \
-                --mhLow 95 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
+                --mhLow 100 --mhHigh 180 --mhLowBlind 115 --mhHighBlind 135 \
                 --intLumi "$RUN3_LUMI" -c 0 --isFlashgg 0 --doBands > "${bkg_m}/bkgplot.log" 2>&1 || true
             # makeBkgPlots names outputs bkgplot_<%.0f>.pdf (0 or 1 for sub-GeV); glob picks the single file per per-mA dir
             for base in bkgplot allPdfs; do
@@ -354,8 +362,14 @@ if [[ "$RUN_COMBINE" == "1" ]]; then
             --freezeParameters MH --rMin 0 --rMax 1000 --rRelAcc 0.01 "${blind_args[@]}" \
             > "${LIMDIR}/combine_${m}.log" 2>&1
         mv "higgsCombine_merged_flashgg_M${m}.AsymptoticLimits.mH125.root" "${LIMDIR}/" 2>/dev/null || true
-        med=$(grep "Expected 50" "${LIMDIR}/combine_${m}.log" | sed 's/.*< //')
-        echo "  M${m}  median expected r < ${med:-?}"
+        # grep finds nothing when combine printed no limit (e.g. the asymptotic NLL scan found
+        # no crossing); under set -e that would stop the chain before the remaining m_a.
+        med=$(grep "Expected 50" "${LIMDIR}/combine_${m}.log" | sed 's/.*< //' || true)
+        if [[ -n "$med" ]]; then
+            echo "  M${m}  median expected r < ${med}"
+        else
+            echo "  [WARN] M${m} no limit in ${LIMDIR}/combine_${m}.log"
+        fi
     done
 else
     echo_skip "merged: combine limits"

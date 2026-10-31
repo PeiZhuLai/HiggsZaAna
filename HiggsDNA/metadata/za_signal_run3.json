@@ -134,6 +134,21 @@
                     ]
                 ]
             },
+            "photon_id_syst_sf": {
+                "type": "object",
+                "method": "from_function",
+                "function": {
+                    "module_name": "higgs_dna.systematics.photon_systematics",
+                    "name": "photon_zaid_sf_syst"
+                },
+                "modify_central_weight": false,
+                "input_collection": "SelectedPhoton",
+                "target_collections": [
+                    [
+                        "SelectedPhoton"
+                    ]
+                ]
+            },
             "photon_csev_sf": {
                 "type": "object",
                 "method": "from_function",

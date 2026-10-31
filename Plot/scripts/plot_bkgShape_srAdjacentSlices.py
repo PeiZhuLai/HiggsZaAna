@@ -15,7 +15,7 @@ Samples/weights are the ones of the main (Nominal) suite of plot_bkgmcSculptingC
 Analyzer_Config('run3').sample_loc (run3_bdt_scored_fsrfix), DY+jets 2024 = flavor-split samples
 (Plot_Helper._run3_sources_for_sample), branch H_m, raw 'weight' (negative weights kept).
 
-Per mass it also reports (stdout + JSON):
+Per mass it also reports (stdout + JSON; only the peak-window fractions are drawn in the panels):
   chi2/ndf and p-value of the two normalized 5 GeV shapes in 95-180 GeV (bin variances from sumw2),
   weighted unbinned KS distance and p-value (n_eff), and the peak-window fraction
   f = w(120-130)/w(95-180) in each slice with its uncertainty and their ratio.
@@ -194,15 +194,15 @@ def draw_mass(mass, anchor, cut, h_sr, h_adj, res, outdir):
     t.DrawLatex(lm + 0.03, ylab, f"m_{{a}} = {mass} GeV,  BDT cut c = {cut:.3f}")
     t.SetTextSize(sz(NOTE, up))
     dy = 0.050 / up.GetAbsHNDC()
+    # chi2/ndf and KS p are printed and written to the JSON only: both test the shape over the whole 95-180 GeV range,
+    # not a peak in the window, and with negative weights and a small n_eff their p-values are approximate
     t.DrawLatex(lm + 0.03, ylab - 1.1 * dy,
-                f"#chi^{{2}}/ndf = {res['chi2']:.1f}/{res['ndf']} (p = {res['chi2_p']:.2f}),  KS p = {res['ks_p']:.2f}")
-    t.DrawLatex(lm + 0.03, ylab - 1.9 * dy,
                 f"f_{{120-130}}:  SR {res['f_sr']:.3f} #pm {res['f_sr_err']:.3f},  adj. {res['f_adj']:.3f} #pm {res['f_adj_err']:.3f}")
 
-    nl = 2.7
+    nl = 1.9
     if anchor != mass:
-        t.DrawLatex(lm + 0.03, ylab - 2.7 * dy, f"(c of the nearest simulated m_{{a}} = {anchor} GeV)")
-        nl = 3.5
+        t.DrawLatex(lm + 0.03, ylab - 1.9 * dy, f"(c of the nearest simulated m_{{a}} = {anchor} GeV)")
+        nl = 2.7
     ytop_leg = ylab - nl * dy
     leg = ROOT.TLegend(0.52, ytop_leg - 2 * 0.060 / up.GetAbsHNDC(), 0.93, ytop_leg)
     leg.SetBorderSize(0); leg.SetFillStyle(0); leg.SetTextFont(42); leg.SetTextSize(sz(LEG, up))

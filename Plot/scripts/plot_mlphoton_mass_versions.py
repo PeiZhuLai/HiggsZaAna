@@ -1,122 +1,196 @@
 #!/usr/bin/env python3
-"""M0p1 的重建 merged-photon 質量分布：舊模型 / v3 / v4 疊圖。
+"""重建 merged-photon 質量分布：舊模型 (EXO-22-022) / v3 / v4。
 
-回答的問題：ROI 窗變窄，是「解析度真的變好」還是「先驗收縮」？
-真值 m_a = 0.1 GeV 用虛線標出 —— 看峰有沒有往真值靠，而不只是變窄。
+三種圖（--mode，可多選）：
+  versions  每個 m_a 一張，三版各自的選擇疊圖（面積歸一）
+  same      每個 m_a 一張，兩版都選到、且是同一顆 cluster（dR < 0.02）的事件，舊 vs v4
+            —— 去掉 classifier 收的事件不同，只比 regressor
+  all       每個版本一張，所有 m_a 疊在同一張圖
 
-PyROOT。⚠️ 出 PDF 一律用 LCG_104(ROOT 6.28)：6.34 會把 histogram 丟掉只留座標軸
+「舊模型」是 lepclean_old（現行分析鏈用的那份），見 extract_mlphoton_mass_versions.py。
+真值 m_a 用虛線標出 —— 看峰有沒有往真值靠，而不只是變窄。
+
+PyROOT，版面走共用的 hzg_style（800x600、房規字級、legend 左緣由字寬算）。
+⚠️ 出 PDF 一律用 LCG_104(ROOT 6.28)：6.34 會把 histogram 丟掉只留座標軸
 （rc=0 無警告，見 memory ref_root634_pdf_drops_histograms）。
 
-Input : <out>/m0p1_mass.npz  (由 hza_ana 抽出，避開 LCG 沒有 pyarrow 的問題)
-Output: <out>/m0p1_mass_versions.pdf / .png
+Input : <out>/<tag>_mass.npz  (extract_mlphoton_mass_versions.py，hza_ana 抽出)
+Output: <out>/<tag>_mass_versions、<tag>_mass_sameCluster、all_masses_<ver> 的 .pdf/.png，
+        stdout 印 median / σ_eff / 窗內比例表
 """
+import argparse
 import os
+import sys
+
 import numpy as np
 import ROOT
 
-OUT = "/eos/home-p/pelai/HZa_merged/output_plots/MLPhoton_M0p1"
-M_TRUE = 0.1
-XLO, XHI, NBIN = 0.0, 1.2, 60
-LEFT_MARGIN = 0.215
+if ROOT.gROOT.GetVersion().startswith("6.34"):
+    sys.exit("ROOT 6.34 drops histograms from PDF output; use LCG_104")
+
+HZG = "/afs/cern.ch/work/p/pelai/HZgamma/higgsdna-hzg-run3"
+sys.path.insert(0, f"{HZG}/plot/scripts")
+from hzg_style import (  # noqa: E402
+    HEADROOM, HEADROOM_MANY, LINE_WIDTH, PAIR_COLORS, PETROFF, canvas_single, cms_header,
+    color, house_legend, panel_label, save, style_axes, _keep,
+)
+
+OUT = "/eos/home-p/pelai/HZa_merged/output_plots/MLPhoton_mass_versions"
+TAGS = ["M0p1", "M0p2", "M0p3", "M0p4", "M0p5", "M0p6", "M0p7", "M0p8", "M0p9", "M1"]
+VERSIONS = [
+    ("old", "EXO-22-022 model", 1),
+    ("v3",  "retrained v3",     2),
+    ("v4",  "retrained v4",     1),
+]
+LABEL = dict((k, lab) for k, lab, _ in VERSIONS)
+TITLE = "H #rightarrow Za, a #rightarrow #gamma#gamma"
+XTITLE = "m_{#gamma#gamma}^{reco} (merged photon) [GeV]"
+SAME_DR = 0.02          # same cluster: leading MLPhoton of both versions within this dR
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptTitle(0)
+ROOT.TH1.AddDirectory(False)
 
-z = np.load(os.path.join(OUT, "m0p1_mass.npz"))
-VERSIONS = [
-    ("old", "EXO-22-022 model", ROOT.kBlack, 1),
-    ("v3",  "retrained v3",     ROOT.kAzure + 2, 2),
-    ("v4",  "retrained v4",     ROOT.kRed + 1, 1),
-]
 
-c = ROOT.TCanvas("c", "c", 900, 750)
-c.SetLeftMargin(LEFT_MARGIN)
-c.SetRightMargin(0.05)
-c.SetBottomMargin(0.14)
-c.SetTopMargin(0.085)
-c.SetTickx(1)
-c.SetTicky(1)
+def m_of(tag):
+    return float(tag[1:].replace("p", "."))
 
-hists = []
-hmax = 0.0
-for key, label, color, style in VERSIONS:
-    if key not in z:
-        continue
-    v = z[key]
-    h = ROOT.TH1D(f"h_{key}", "", NBIN, XLO, XHI)
-    for x in v:
-        h.Fill(float(x))
+
+def x_range(m_true):
+    # 20 MeV bins up to 1.2 GeV; the heavier points need room for the old model's tail
+    return (0.0, 1.2, 60) if m_true <= 0.4 else (0.0, 2.0, 50)
+
+
+def sigma_eff(v, frac=0.683):
+    v = np.sort(v)
+    k = int(np.ceil(frac * len(v)))
+    return float((v[k - 1:] - v[:len(v) - k + 1]).min()) / 2.0
+
+
+def stats(v, m_true):
+    q16, q50, q84 = np.quantile(v, [0.16, 0.5, 0.84])
+    return len(v), q50, sigma_eff(v), float(np.mean(np.abs(v - m_true) < 0.2 * m_true))
+
+
+def load(tag, out):
+    path = os.path.join(out, f"{tag}_mass.npz")
+    if not os.path.exists(path):
+        print(f"{tag}: MISSING {path}")
+        return None
+    return np.load(path)
+
+
+def hist(v, name, xlo, xhi, nbin, col, style):
+    h = ROOT.TH1D(name, "", nbin, xlo, xhi)
+    h.FillN(len(v), np.asarray(v, dtype=np.float64), np.ones(len(v)))
     if h.Integral() > 0:
         h.Scale(1.0 / h.Integral())          # 面積歸一：比形狀不比 yield
-    h.SetLineColor(color)
-    h.SetLineWidth(3)                        # 一律 3
+    h.SetLineColor(col)
+    h.SetLineWidth(LINE_WIDTH)
     h.SetLineStyle(style)
-    hmax = max(hmax, h.GetMaximum())
-    hists.append((h, label, v))
+    _keep.append(h)
+    return h
 
-first = True
-for h, _, _ in hists:
-    h.SetMaximum(hmax * 1.45)
-    h.GetXaxis().SetTitle("m_{#gamma#gamma}^{reco} (merged photon) [GeV]")
-    h.GetYaxis().SetTitle("A.U. / %.0f MeV" % (1000.0 * (XHI - XLO) / NBIN))
-    for ax in (h.GetXaxis(), h.GetYaxis()):
-        ax.SetTitleSize(0.055)
-        ax.SetLabelSize(0.050)
-    h.GetYaxis().SetTitleOffset(1.55)
-    h.GetXaxis().SetTitleOffset(1.15)
-    h.Draw("HIST" if first else "HISTSAME")
-    first = False
 
-# 真值：所有版本都應該往這裡收斂
-line = ROOT.TLine(M_TRUE, 0.0, M_TRUE, hmax * 1.45 * 0.58)   # 停在 legend 底邊以下
-line.SetLineColor(ROOT.kGray + 2)
-line.SetLineStyle(7)
-line.SetLineWidth(3)
-line.Draw()
+def draw_overlay(cname, series, xlo, xhi, nbin, notes, m_true=None, headroom=HEADROOM, ncols=1):
+    """series: [(values, legend label, color, line style)]; returns the canvas."""
+    c = canvas_single(cname)
+    labels = [s[1] for s in series]
+    leg = house_legend(c, labels, ncols=ncols, clear_label=TITLE, clear_notes=notes,
+                       size=0.045 if ncols == 1 else 0.040)
+    hists = []
+    for i, (v, label, col, style) in enumerate(series):
+        h = hist(v, f"h_{cname}_{i}", xlo, xhi, nbin, col, style)
+        hists.append(h)
+        leg.AddEntry(h, label, "l")
+    hmax = max(h.GetMaximum() for h in hists)
+    first = hists[0]
+    style_axes(first, c, XTITLE, "A.U. / %.0f MeV" % (1000.0 * (xhi - xlo) / nbin))
+    first.SetMinimum(0.0)
+    first.SetMaximum(headroom * hmax)
+    first.Draw("HIST")
+    for h in hists[1:]:
+        h.Draw("HIST SAME")
+    if m_true is not None:
+        # 真值：停在最高峰上方一點，不穿過 legend
+        line = ROOT.TLine(m_true, 0.0, m_true, 1.05 * hmax)
+        line.SetLineColor(ROOT.kGray + 2)
+        line.SetLineStyle(7)
+        line.SetLineWidth(LINE_WIDTH)
+        line.Draw()
+        _keep.append(line)
+    leg.Draw()
+    cms_header(c, None, "13.6")
+    panel_label(c, TITLE, notes)
+    c.RedrawAxis()
+    return c
 
-lat = ROOT.TLatex()
-lat.SetNDC(True)
-lat.SetTextFont(42)
-lat.SetTextAlign(13)
-lat.SetTextSize(0.050)
-lat.DrawLatex(LEFT_MARGIN + 0.005, 0.935, "#bf{CMS} #it{Simulation}")
-lat.SetTextAlign(31)
-lat.SetTextSize(0.040)
-lat.DrawLatex(0.95, 0.935, "13.6 TeV")
 
-lat.SetTextAlign(13)
-# Split across lines: as one line this runs past x=0.58 and collides with the
-# legend (the legend x range is fixed by the house style).
-lat.SetTextSize(0.038)
-lat.DrawLatex(0.245, 0.80, "H #rightarrow Za, a #rightarrow #gamma#gamma")
-lat.DrawLatex(0.245, 0.745, "m_{a} = 0.1 GeV, 2024")
-lat.SetTextSize(0.034)
-lat.SetTextColor(ROOT.kGray + 3)
-lat.DrawLatex(0.245, 0.692, "dashed: true m_{a}")
-lat.SetTextColor(ROOT.kBlack)
+def plot_versions(tag, z, out, rows):
+    m_true = m_of(tag)
+    keys = [k for k, _, _ in VERSIONS if k in z]
+    if not keys:
+        return
+    series = [(z[k], LABEL[k], color(PETROFF[i]), style)
+              for i, (k, _, style) in enumerate(VERSIONS) if k in z]
+    c = draw_overlay(f"c_{tag}", series, *x_range(m_true),
+                     [f"m_{{a}} = {m_true:g} GeV, 2024", "dashed: true m_{a}"], m_true)
+    save(c, os.path.join(out, f"{tag}_mass_versions"))
+    rows += [(tag, "own selection", LABEL[k]) + stats(z[k], m_true) for k in keys]
 
-leg = ROOT.TLegend(0.58, 0.68, 0.93, 0.68 + 0.075 * len(hists))
-leg.SetBorderSize(0)
-leg.SetFillStyle(0)
-leg.SetTextSize(0.045)
-for h, label, v in hists:
-    q16, q50, q84 = np.quantile(v, [0.16, 0.5, 0.84])
-    leg.AddEntry(h, f"{label}", "l")
-leg.Draw()
 
-c.RedrawAxis()
-os.makedirs(OUT, exist_ok=True)
-pdf = os.path.join(OUT, "m0p1_mass_versions.pdf")
-png = os.path.join(OUT, "m0p1_mass_versions.png")
-c.SaveAs(pdf)
-c.SaveAs(png)
-print(f"wrote {pdf}")
-print(f"wrote {png}")
+def plot_same(tag, z, out, rows):
+    m_true = m_of(tag)
+    if "old" not in z or "v4" not in z:
+        print(f"{tag}: same-cluster needs old and v4")
+        return
+    _, io, iv = np.intersect1d(z["old_key"], z["v4_key"], return_indices=True)
+    dphi = np.abs((z["old_phi"][io] - z["v4_phi"][iv] + np.pi) % (2 * np.pi) - np.pi)
+    same = np.hypot(z["old_eta"][io] - z["v4_eta"][iv], dphi) < SAME_DR
+    a, b = z["old"][io][same], z["v4"][iv][same]
+    series = [(a, LABEL["old"], PAIR_COLORS[0], 1), (b, LABEL["v4"], PAIR_COLORS[1], 1)]
+    notes = [f"m_{{a}} = {m_true:g} GeV, 2024", f"same events + cluster: {same.sum()}"]
+    c = draw_overlay(f"cs_{tag}", series, *x_range(m_true), notes, m_true)
+    save(c, os.path.join(out, f"{tag}_mass_sameCluster"))
+    rows += [(tag, "same cluster", LABEL["old"]) + stats(a, m_true),
+             (tag, "same cluster", LABEL["v4"]) + stats(b, m_true)]
 
-print()
-print(f"{'version':>22s} {'N':>7s} {'median':>8s} {'q16':>7s} {'q84':>7s} {'width':>7s} {'|med-0.1|':>10s}")
-for h, label, v in hists:
-    q16, q50, q84 = np.quantile(v, [0.16, 0.5, 0.84])
-    print(f"{label:>22s} {len(v):>7d} {q50:>8.4f} {q16:>7.4f} {q84:>7.4f} "
-          f"{q84-q16:>7.4f} {abs(q50-M_TRUE):>10.4f}")
+
+def plot_all(zs, out):
+    for key, label, _ in VERSIONS:
+        series = [(z[key], f"m_{{a}} = {m_of(tag):g} GeV", color(PETROFF[i % len(PETROFF)]), 1)
+                  for i, (tag, z) in enumerate(zs) if key in z]
+        if not series:
+            continue
+        c = draw_overlay(f"ca_{key}", series, 0.0, 1.5, 50, [label, "2024"],
+                         headroom=HEADROOM_MANY, ncols=2)
+        save(c, os.path.join(out, f"all_masses_{key}"))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tags", nargs="+", default=TAGS)
+    ap.add_argument("--out", default=OUT)
+    ap.add_argument("--mode", nargs="+", default=["versions", "same", "all"],
+                    choices=["versions", "same", "all"])
+    args = ap.parse_args()
+    zs = [(tag, z) for tag in args.tags for z in [load(tag, args.out)] if z is not None]
+    rows = []
+    for tag, z in zs:
+        if "versions" in args.mode:
+            plot_versions(tag, z, args.out, rows)
+        if "same" in args.mode:
+            plot_same(tag, z, args.out, rows)
+    if "all" in args.mode:
+        plot_all(zs, args.out)
+    print()
+    print(f"{'tag':5s} {'events':>13s} {'version':>17s} {'N':>7s} {'median':>7s} "
+          f"{'sig_eff':>7s} {'f(+-20%)':>8s}")
+    for r in rows:
+        print("%-5s %13s %17s %7d %7.4f %7.4f %8.3f" % r)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

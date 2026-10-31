@@ -301,7 +301,10 @@ class ControlZeeZmmgTagger(ZaTaggerRun3):
         # ==============================================================
         # region-scoped SF 集合
         # ==============================================================
-        sel_electrons = electrons[ak.broadcast_arrays(pass_zee, electrons.pt)[0]]
+        # 從 events.Electron 重取：上面 electrons 加了被 ak.mask 的 Idx，沒有 electron 的事件整個清單變成 None，
+        # electron SF 的乘積會是 NaN（dimuon CR、Z->mumugamma 事件）；這裡沒有 electron 的事件是空清單，SF = 1。
+        all_sel_electrons = events.Electron[electron_cut]
+        sel_electrons = all_sel_electrons[ak.broadcast_arrays(pass_zee, all_sel_electrons.pt)[0]]
         awkward_utils.add_field(events, "SelectedElectron", sel_electrons, overwrite=True)
 
         sel_muons = muons[ak.broadcast_arrays(pass_zmmg, muons.pt)[0]]

@@ -26,6 +26,16 @@ MUON_ID_SF_FILE = {
     "2025" : "higgs_dna/systematics/data/2025_UL/hza_muid_2025_scalefactors.json"
 }
 
+def _eta_axis_is_abs(path, correction="sf_pass"):
+    """True if the eta axis of `correction` starts at 0, i.e. the table is binned in |eta|.
+    The 2022 muon ID tables are in signed eta, the 2023-2025 ones in |eta|; evaluating an |eta|
+    table with signed eta silently puts every eta < 0 muon in the first (|eta| < 0.9) bin."""
+    with open(misc_utils.expand_path(path)) as f:
+        corr = [c for c in json.load(f)["corrections"] if c["name"] == correction][0]
+    data = corr["data"]
+    return data["edges"][data["inputs"].index("eta")][0] >= 0
+
+
 def muon_LooseID_sf(events, year, central_only, input_collection):
 
     required_fields = [
@@ -46,6 +56,8 @@ def muon_LooseID_sf(events, year, central_only, input_collection):
         -2.39999,
         2.39999 # SFs only valid up to eta 2.5
     )
+    if _eta_axis_is_abs(MUON_ID_SF_FILE[year]):
+        reco_muon_eta = numpy.abs(reco_muon_eta)
     reco_muon_pt = numpy.clip(
         awkward.to_numpy(reco_muons_flattened.pt),
         5.0, # SFs only valid for pT >= 10.0
@@ -88,6 +100,8 @@ def muon_LooseID_sf_nomatch(events, year, central_only, input_collection):
     unmatched_variations = {}
     if len(unmatched_gen_flattened) > 0:
         gen_muon_eta = numpy.clip(awkward.to_numpy(unmatched_gen_flattened.eta), -2.39999, 2.39999)
+        if _eta_axis_is_abs(MUON_ID_SF_FILE[year], "sf_fail"):
+            gen_muon_eta = numpy.abs(gen_muon_eta)
         gen_muon_pt = numpy.clip(awkward.to_numpy(unmatched_gen_flattened.pt), 5.0, 499.999)
         sf = evaluator["sf_fail"].evalv(gen_muon_pt, gen_muon_eta)
         unmatched_variations["central"] = awkward.unflatten(sf, n_unmatched_gen)
@@ -820,7 +834,9 @@ ELECTRON_RECO_SF_FILE = {
     "2022postEE" : "higgs_dna/systematics/data/2022postEE_UL/electron_recoSF2022EE.json",
     "2023preBPix" : "higgs_dna/systematics/data/2023preBPix_UL/electron_recoSF2023.json",
     "2023postBPix" : "higgs_dna/systematics/data/2023postBPix_UL/electron_recoSF2023BPix.json",
-    "2024" : "higgs_dna/systematics/data/2024_UL/electron_recoSF2024.json"
+    # official EGM Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15 electron.json (2025-12-15); the older
+    # electron_recoSF2024.json has no RecoBelow20, its Reco20to75/RecoAbove75 values are identical
+    "2024" : "higgs_dna/systematics/data/2024_UL/electron_recoSF2024_withBelow20.json"
 }
 
 def electron_reco_sf(events, year, central_only, input_collection):
@@ -863,9 +879,17 @@ def electron_reco_sf(events, year, central_only, input_collection):
     if year == "2024":
         evaluator_name = "Electron-ID-SF"
         year_key = "2024Prompt"
+        below20_mask = ele_pt_orig < 20.0
         reco20to75_mask = ele_pt_orig < 75.0
 
         def _eval_2024_reco(val_type):
+            sf_below20 = evaluator[evaluator_name].evalv(
+                year_key,
+                val_type,
+                "RecoBelow20",
+                ele_eta,
+                numpy.clip(ele_pt_orig, 10.0, 19.999),
+            )
             sf_20to75 = evaluator[evaluator_name].evalv(
                 year_key,
                 val_type,
@@ -880,7 +904,7 @@ def electron_reco_sf(events, year, central_only, input_collection):
                 ele_eta,
                 numpy.clip(ele_pt_orig, 75.0, 499.999),
             )
-            return numpy.where(reco20to75_mask, sf_20to75, sf_above75)
+            return numpy.where(below20_mask, sf_below20, numpy.where(reco20to75_mask, sf_20to75, sf_above75))
 
         sf = _eval_2024_reco("sf")
         variations["central"] = awkward.unflatten(sf, n_electrons)
@@ -903,7 +927,7 @@ def electron_reco_sf(events, year, central_only, input_collection):
             variations["up"] = awkward.unflatten(syst+sf, n_electrons)
             variations["down"] = awkward.unflatten(sf-syst, n_electrons)
 
-    min_valid_pt = 20.0 if year == "2024" else 10.0
+    min_valid_pt = 10.0
     for var in variations.keys():
         # Set SFs = 1 for leptons which are not applicable
         variations[var] = awkward.where(

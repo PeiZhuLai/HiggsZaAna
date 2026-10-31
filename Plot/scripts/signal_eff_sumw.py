@@ -715,6 +715,81 @@ def _build_sumw_series_by_year_group(channel: str,
         if x:
             out[label] = (x, yy, ylo, yhi)
     return out
+# --- Interpolated mass points: same BDT cut as the data -------------------------------------------
+# For a mass hypothesis m without its own signal MC, the data are selected with the cut of the nearest
+# anchor (apply_bdt_data.py: find_nearest_cut). The efficiency at m must use that same cut, so every
+# anchor is re-evaluated at cut(m) (each anchor with its own-mass BDT score, i.e. hypothesis = true mass,
+# and the same weights / signal reweight as the anchor efficiency), and the curve through the anchors at
+# that common cut is evaluated at m. Anchor points keep their own cut and are not touched.
+_ANCHOR_ARRAYS: Dict[Tuple[int, str], List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]] = {}
+
+
+def _nearest_anchor_cut(m: int, mva_cuts: Dict[int, float]) -> Tuple[int, float]:
+    closest = min(mva_cuts.keys(), key=lambda k: abs(k - m))   # same rule as apply_bdt_data.find_nearest_cut
+    return closest, mva_cuts[closest]
+
+
+def _anchor_arrays(ma: int, sample_map: Dict[int, str], year: str):
+    """(mva, w, is_mu, is_ele) per file of anchor ma in one year; w includes the signal reweight."""
+    key = (ma, year)
+    if key in _ANCHOR_ARRAYS:
+        return _ANCHOR_ARRAYS[key]
+    sample = sample_map[ma]
+    out = []
+    for fp in _list_root_files(INPUT_BASE, sample, [year]):
+        rwn = _signal_rw(fp, ma)
+        with uproot.open(fp) as f:
+            if INPUT_BASE_TREE_NAME not in f:
+                continue
+            t = f[INPUT_BASE_TREE_NAME]
+            mva_branch = _pick_mva_score_branch(t, sample)
+            if not mva_branch:
+                raise RuntimeError(f"no MVA score branch for {sample} in {fp}")
+            wname = _pick_weight_branch(t)
+            branches = [mva_branch] + ([wname] if wname else []) + [b for b in ("z_mumu", "z_ee") if _branch_exists(t, b)]
+            a = t.arrays(branches, library="np")
+        mva = a[mva_branch].astype(np.float64)
+        w = a[wname].astype(np.float64) if wname else np.ones_like(mva)
+        if rwn is not None:
+            w = w * np.asarray(rwn, dtype=np.float64)
+        is_mu = a["z_mumu"].astype(np.int8) == 1 if "z_mumu" in a else np.zeros(len(mva), bool)
+        is_ele = a["z_ee"].astype(np.int8) == 1 if "z_ee" in a else np.zeros(len(mva), bool)
+        out.append((mva, w, is_mu, is_ele))
+    _ANCHOR_ARRAYS[key] = out
+    return out
+
+
+def _anchor_eff_at_cut(ma: int, sample_map: Dict[int, str], year: str, cut: float, channel: str) -> float:
+    w_pass = 0.0
+    for mva, w, is_mu, is_ele in _anchor_arrays(ma, sample_map, year):
+        sel = (mva >= cut) & (is_mu if channel == "muon" else is_ele)
+        w_pass += float(w[sel].sum())
+    return _sumw_to_eff_percent(w_pass, [year])
+
+
+def _interp_values_same_cut(channel: str, sample_map: Dict[int, str], mva_cuts: Dict[int, float],
+                            years: List[str]) -> Dict[str, Dict[int, float]]:
+    """year -> {m: Efficiency x Acceptance (%)} for the mass points without their own signal MC."""
+    anchors = sorted(m for m in ma_list if m in sample_map and m in mva_cuts)
+    targets = [m for m in ma_interpolate if m not in anchors and anchors[0] < m < anchors[-1]]
+    out: Dict[str, Dict[int, float]] = {}
+    for y in years:
+        vals: Dict[int, float] = {}
+        curves: Dict[float, Tuple[np.ndarray, np.ndarray]] = {}
+        for m in targets:
+            near, cut = _nearest_anchor_cut(m, mva_cuts)
+            if cut not in curves:
+                effs = [_anchor_eff_at_cut(a, sample_map, y, cut, channel) for a in anchors]
+                curves[cut] = _quadratic_curve(anchors, effs, n=400)
+                print(f"[interp-cut] {channel} {y} cut={cut}: anchor eff(%) at this cut = "
+                      + ", ".join(f"{a}:{e:.4g}" for a, e in zip(anchors, effs)))
+            xs_, ys_ = curves[cut]
+            vals[m] = float(np.interp(float(m), np.asarray(xs_, float), np.asarray(ys_, float)))
+            print(f"[interp-cut] {channel} {y} mA={m}: data cut {cut} (nearest anchor mA={near}) -> {vals[m]:.5g}%")
+        out[y] = vals
+    return out
+
+
 def _quadratic_curve(xs: List[int], ys: List[float], n: int = 400) -> Tuple[np.ndarray, np.ndarray]:
     """
     產生二次插值的平滑曲線點集。
@@ -769,7 +844,8 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
                         out_dir: Path,
                         name_suffix: str = "",
                         y_min: float = Y_MIN,
-                        y_max: float = Y_MAX_GROUPS) -> Optional[Path]:
+                        y_max: float = Y_MAX_GROUPS,
+                        interp_override: Optional[Dict[str, Dict[int, float]]] = None) -> Optional[Path]:
     from array import array as carray
     if not series_by_year:
         return None
@@ -875,6 +951,8 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
                     continue
                 per_year_items.append((int(m), float(np.interp(mf, x_s, y_s))))
 
+            if interp_override and y in interp_override:
+                per_year_items = [(k, interp_override[y].get(k, v)) for k, v in per_year_items]
             if per_year_items:
                 per_year_items.sort(key=lambda t: t[0])
                 interp_payload["values"][y] = {str(k): v for k, v in per_year_items}
@@ -984,6 +1062,9 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
             "br": BR,
             "keep_fb": KEEP_FB,
             "test_to_all": TEST_TO_ALL,
+            "interpolated_points": ("anchors re-evaluated at the data cut of each interpolated point "
+                                    "(nearest-anchor cut), quadratic curve through the anchors at that cut"
+                                    if interp_override else "quadratic curve through the anchors at their own cuts"),
         }
         try:
             with open(json_path, "w") as jf:
@@ -1031,10 +1112,12 @@ def main():
 
     # 4. 新增：逐子年份（5 條線）各輸出一張圖
     mu_series_5 = _build_sumw_series_by_year("muon", ma_list, sample_map, mva_cuts, years_sig)
-    _plot_lines_by_year(mu_series_5, "Muon", out_dir, name_suffix="_5years", y_max=Y_MAX_5YEARS)
+    mu_interp = _interp_values_same_cut("muon", sample_map, mva_cuts, years_sig)
+    _plot_lines_by_year(mu_series_5, "Muon", out_dir, name_suffix="_5years", y_max=Y_MAX_5YEARS, interp_override=mu_interp)
 
     ele_series_5 = _build_sumw_series_by_year("ele", ma_list, sample_map, mva_cuts, years_sig)
-    _plot_lines_by_year(ele_series_5, "Electron", out_dir, name_suffix="_5years", y_max=Y_MAX_5YEARS)
+    ele_interp = _interp_values_same_cut("ele", sample_map, mva_cuts, years_sig)
+    _plot_lines_by_year(ele_series_5, "Electron", out_dir, name_suffix="_5years", y_max=Y_MAX_5YEARS, interp_override=ele_interp)
 
 if __name__ == "__main__":
     main()

@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--mz",
         type=float,
-        default=91.18,
+        default=91.1876,
         help="Z boson mass in GeV.",
     )
     parser.add_argument(
