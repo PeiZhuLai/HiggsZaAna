@@ -1,11 +1,17 @@
 # ==== Imports/config for plotting ====
 from pathlib import Path
 import ROOT
+ROOT.gROOT.SetBatch(True)
 import numpy as np
 import re
 from typing import Dict, List, Tuple, Optional
 import uproot
 import awkward as ak
+import os as _os_cache, sys as _sys_cache
+# 讀檔快取：同一個 signal 檔（每棵 tree）在整個 process 內只讀一次，各 accumulate 函式共用
+_sys_cache.path.insert(0, _os_cache.path.dirname(_os_cache.path.abspath(__file__)))
+import signal_tree_cache
+from signal_tree_cache import open_cached
 import json
 import argparse
 import traceback  # NEW
@@ -219,14 +225,22 @@ def _signal_rw_weights_impl(w, fp, tname, true_ma, t, wname):
     if _os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0" or true_ma is None or not wname:
         return w
     global _SIGNAL_RW_OBJ
-    key = (str(fp), str(tname))
+    # 歸一化分 n_electrons / n_muons 在這棵 tree 內做，快取 key 含 (檔案, tree, 真實 mA)
+    key = (str(fp), str(tname), int(true_ma))
     if key not in _SIGNAL_RW_CACHE:
         if _SIGNAL_RW_OBJ is None:
             import sys as _sys
             _sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
             from sideband_reweight import SidebandReweighter
             _SIGNAL_RW_OBJ = SidebandReweighter.from_json(_SIGNAL_RW_JSON)
-        fr = t.arrays(library="pd")
+            signal_tree_cache.set_prefetch(_SIGNAL_RW_OBJ, extra=ALT_WEIGHT_CANDS)
+        # 只讀 reweight 會查的欄位（舊版讀整棵 tree 的 379 個 branch；結果相同）
+        cols = signal_tree_cache.rw_columns(_SIGNAL_RW_OBJ, t.keys(), extra=(wname,))
+        if cols is None:
+            with uproot.open(str(fp)) as _f:
+                fr = _f[tname].arrays(library="pd")
+        else:
+            fr = t.arrays(cols, library="pd")
         for logical, cands in (("pho1ECALIso", ("pho1PIso_noCorr",)), ("pho2ECALIso", ("pho2PIso_noCorr",)),
                                ("H_m", ("H_mass",)), ("ALP_m", ("ALP_mass",))):
             if logical not in fr.columns:
@@ -290,7 +304,7 @@ def _accumulate_pred_pass_sumw_by_year(
                 break
 
             try:
-                with uproot.open(str(fp)) as f:
+                with open_cached(str(fp)) as f:
                     n_opened += 1
                     tname = _tree_pick(f)
                     if not tname:
@@ -554,122 +568,6 @@ def _root_color(hex_color: str, fallback: int = 1) -> int:
         return int(fallback)
 
 # RENAME: name reflects it returns ΔR fractions (not "eff scan")
-def _load_dr_fraction_scan_by_year_ma(
-    base_dir: Path,
-    *,
-    years: List[str],
-    ma_dirs: List[str],
-    tree_name: str = "inclusive",
-    dr_branch: str = "var_dR_g1g2",
-    dr_min: float = 0.0,
-    dr_max: float = 4.0,
-    dr_step: float = 0.05,
-    debug: bool = False,               # NEW
-    max_files: Optional[int] = None,   # NEW
-) -> Dict[str, Dict[str, Dict[str, float]]]:
-    """
-    回傳：
-      year -> ma_dir -> { "bin_edges": [...], "fractions": [...] }
-
-    fractions 是依 dr 區間的分段比例（sum=1），用於畫 stacked bar。
-    bin_edges: [dr_min, ..., dr_max]，bins = len(edges)-1
-    """
-    base_dir = Path(base_dir)
-    edges = np.arange(dr_min, dr_max + 1e-9, dr_step, dtype=np.float64)
-    if len(edges) < 2:
-        return {}
-
-    out: Dict[str, Dict[str, Dict[str, float]]] = {}
-    n_opened = 0  # NEW
-
-    for year in years:
-        for ma_tag in ma_dirs:
-            fp = base_dir / ma_tag / f"{year}.root"
-            if not fp.exists():
-                if debug:
-                    print(f"[DEBUG] missing file: {fp}")
-                continue
-
-            if max_files is not None and n_opened >= max_files:
-                if debug:
-                    print(f"[DEBUG] max_files reached ({max_files}), stop reading more files.")
-                break
-
-            try:
-                with uproot.open(str(fp)) as f:
-                    n_opened += 1
-                    tname = tree_name if tree_name in f else _tree_pick(f)
-                    if not tname:
-                        if debug:
-                            print(f"[DEBUG] no tree found in: {fp} (wanted '{tree_name}', fallback test/inclusive)")
-                        continue
-                    t = f[tname]
-                    keys = set(map(str, t.keys()))
-                    if dr_branch not in keys:
-                        if debug:
-                            print(f"[DEBUG] missing branch '{dr_branch}' in {fp} tree={tname}.")
-                        continue
-
-                    wname = _pick_weight_branch(t)
-                    need = [dr_branch] + ([wname] if wname else [])
-
-                    counts = np.zeros(len(edges) - 1, dtype=np.float64)
-                    total = 0.0
-
-                    for arrs in t.iterate(need, library="ak", step_size="200 MB"):
-                        dr = ak.values_astype(arrs[dr_branch], np.float64)
-                        w = _signal_rw_weights(ak.values_astype(arrs[wname], np.float64), fp, tname, _true_ma_from_dir(ma_tag), t, wname) if wname else ak.ones_like(dr, dtype=np.float64)
-
-                        # 清掉 NaN/inf（避免用 ak.isfinite：舊版 awkward 沒這個 API）
-                        dr_np = ak.to_numpy(dr)
-                        w_np  = ak.to_numpy(w)
-
-                        fin = np.isfinite(dr_np) & np.isfinite(w_np)
-                        if not np.any(fin):
-                            continue
-                        dr_np = dr_np[fin]
-                        w_np  = w_np[fin]
-
-                        # 範圍外丟棄（避免最後 overflow）
-                        inrng = (dr_np >= edges[0]) & (dr_np < edges[-1])
-                        if not np.any(inrng):
-                            continue
-                        dr_np = dr_np[inrng]
-                        w_np  = w_np[inrng]
-
-                        hist, _ = np.histogram(dr_np, bins=edges, weights=w_np)
-                        counts += hist
-                        total += float(np.sum(w_np))
-
-                    if total <= 0.0:
-                        if debug:
-                            print(f"[DEBUG] total weight <= 0 for {fp} (branch={dr_branch}, weight={wname}).")
-                        continue
-
-                    fracs = (counts / total).tolist()
-                    payload = {
-                        "bin_edges": edges.tolist(),
-                        "fractions": fracs,
-                        "totalW": float(total),  # NEW: allow Run3 weighted merge
-                    }
-                    out.setdefault(year, {})[ma_tag] = payload
-
-                    if debug:
-                        print(f"[DEBUG] loaded dR fractions: year={year} ma_tag={ma_tag} totalW={total:.3g}")
-
-            except Exception as e:
-                if debug:
-                    print(f"[DEBUG] exception while reading {fp}: {e}")
-                    print(traceback.format_exc())
-                continue
-
-        if max_files is not None and n_opened >= max_files:
-            break
-
-    if debug:
-        tot = sum(len(v) for v in out.values())
-        print(f"[DEBUG] dr_frac_scan summary: years_with_data={len(out)}, total_ma_entries={tot}")
-    return out
 
 def _merge_pred_pass_years_to_run3(
     pred_pass_by_year: Dict[str, Dict[int, Dict[int, float]]],
@@ -693,226 +591,6 @@ def _merge_pred_pass_years_to_run3(
     merged = {p: m for p, m in merged.items() if m}
     return {run3_label: merged} if merged else {}
 
-def _merge_dr_fracs_years_to_run3(
-    dr_frac_by_year: Dict[str, Dict[str, Dict[str, float]]],
-    years: List[str],
-    *,
-    run3_label: str = "Run3",
-) -> Dict[str, Dict[str, Dict[str, float]]]:
-    """
-    dr_frac_by_year: year -> ma_tag -> {bin_edges, fractions}
-    用每個 (year, ma_tag) 的 total weight 當權重做加權平均：
-      weight = totalW = sum(counts) = sum(frac)*totalW -> 我們只有 frac，因此用 totalW 需另外估。
-    由於 loader 內部已用 counts/totalW 的 fractions，但沒有存 totalW，
-    這裡改用「以該 ma_tag 在該 year 的分佈總量 proxy=1」是不合理。
-    所以：在 loader payload 內補存 totalW（最小侵入：如果沒 totalW 就退化成等權重平均）。
-    """
-    # year -> ma_tag -> payload
-    out: Dict[str, Dict[str, Dict[str, float]]] = {}
-
-    # collect union ma_tags
-    ma_tags = set()
-    for y in years:
-        ma_tags |= set((dr_frac_by_year.get(y) or {}).keys())
-
-    by_ma: Dict[str, Dict[str, float]] = {}
-    for ma_tag in sorted(ma_tags):
-        # pick reference edges from first available year
-        ref_edges = None
-        nbins = None
-        for y in years:
-            payload = (dr_frac_by_year.get(y) or {}).get(ma_tag)
-            if payload and isinstance(payload.get("bin_edges"), list) and isinstance(payload.get("fractions"), list):
-                ref_edges = payload["bin_edges"]
-                nbins = len(payload["fractions"])
-                break
-        if ref_edges is None or nbins is None:
-            continue
-
-        num = np.zeros(nbins, dtype=np.float64)
-        den = 0.0
-
-        for y in years:
-            payload = (dr_frac_by_year.get(y) or {}).get(ma_tag)
-            if not payload:
-                continue
-            edges = payload.get("bin_edges")
-            fracs = payload.get("fractions")
-            if not (isinstance(edges, list) and isinstance(fracs, list)):
-                continue
-            if edges != ref_edges or len(fracs) != nbins:
-                continue
-
-            w = payload.get("totalW")
-            w = float(w) if isinstance(w, (int, float, np.integer, np.floating)) else 1.0  # fallback: equal weight
-            if w <= 0:
-                continue
-
-            num += w * np.asarray(fracs, dtype=np.float64)
-            den += w
-
-        if den <= 0:
-            continue
-
-        fr_run3 = (num / den).tolist()
-        by_ma[ma_tag] = {
-            "bin_edges": ref_edges,
-            "fractions": fr_run3,
-            "totalW": den,  # optional: for debug/consistency
-        }
-
-    if by_ma:
-        out[run3_label] = by_ma
-    return out
-
-def _plot_dr_fraction_bar_year(
-    year: str,
-    by_ma: Dict[str, Dict[str, float]],
-    out_dir: Path,
-    *,
-    out_name: str,
-) -> None:
-    """
-    每個 mA 一根水平 stacked bar：
-      x: fraction (%), y: mA
-    顏色依 dR bin 變化（從低到高）。
-    """
-    # rows: (ma_int, ma_tag, fracs, edges)
-    rows = []
-    for ma_tag, payload in (by_ma or {}).items():
-        ma_int = _true_ma_from_dir(ma_tag)
-        if ma_int is None:
-            continue
-        edges = payload.get("bin_edges")
-        fracs = payload.get("fractions")
-        if not isinstance(edges, list) or not isinstance(fracs, list):
-            continue
-        if len(edges) != len(fracs) + 1:
-            continue
-        if sum(fracs) <= 0:
-            continue
-        rows.append((ma_int, ma_tag, fracs, edges))
-
-    if not rows:
-        return
-
-    rows.sort(key=lambda t: t[0])
-    n = len(rows)
-
-    # colors for bins (repeat if too many)
-    palette = [
-        "#5C7AFF", "#59D2FE", "#3BCEAC", "#FFD557", "#FFB640",
-        "#FF688B", "#C77DFF", "#9CD1FF", "#417B5A", "#242038",
-    ]
-
-    c = ROOT.TCanvas(f"c_drfrac_{year}", "", 800, 800)
-    ROOT.gStyle.SetOptStat(0)
-    c.SetMargin(0.15, 0.06, 0.12, 0.12) # left, right, bottom, top
-    c.SetTickx(); c.SetTicky()
-    c.cd()
-
-    frame = ROOT.TH2F(f"frame_drfrac_{year}", "", 1, 0.0, 100.0, n, 0.0, float(n))
-    frame.SetDirectory(0)
-    frame.SetTitle("")
-    frame.GetXaxis().SetTitle("Fraction (%)")
-    frame.GetYaxis().SetTitle("m_{a} (GeV)")
-    frame.GetXaxis().SetTitleOffset(1.05)
-    frame.GetYaxis().SetTitleOffset(1.25)
-    frame.GetXaxis().SetTitleSize(0.05)
-    frame.GetYaxis().SetTitleSize(0.05)
-    frame.GetXaxis().SetLabelSize(0.045)
-    frame.GetYaxis().SetLabelSize(0.060)
-
-    for i, (ma_int, _, _, _) in enumerate(rows, start=1):
-        frame.GetYaxis().SetBinLabel(i, f"{ma_int}")
-    frame.Draw("")
-    if ROOT.gPad:
-        ROOT.gPad.SetGridx(1)
-
-    # legend: show a few representative bins (avoid ultra-wide legend)
-    # use first row edges as reference
-    _, _, fr0, edges0 = rows[0]
-    nbins = len(fr0)
-    leg = ROOT.TLegend(0.12, 0.915, 0.94, 0.94)
-    leg.SetNColumns(min(5, max(1, nbins)))
-    leg.SetBorderSize(0); leg.SetFillStyle(0)
-    leg.SetTextFont(42); leg.SetTextSize(0.05)
-
-    dummy_boxes = []
-    for ib in range(nbins):
-        lo = float(edges0[ib]); hi = float(edges0[ib + 1])
-        col = _root_color(palette[ib % len(palette)], fallback=ROOT.kAzure + 1)
-        b = ROOT.TBox(0, 0, 0, 0)
-        b.SetFillColor(col); b.SetLineColor(col)
-        dummy_boxes.append(b)
-        leg.AddEntry(b, f"{lo:.2f} ≤ ΔR < {hi:.2f}", "f")
-
-    # NEW: percentage labels on bar segments (user coordinates, like dREffBar)
-    pct = ROOT.TLatex()
-    pct.SetTextFont(42)
-    pct.SetTextSize(0.028)
-
-    def _draw_pct(xl: float, xr: float, yy0: float, yy1: float, val: float):
-        w = xr - xl
-        if w < 6.0:  # too narrow in "percent units" (0~100)
-            return
-        pct.SetTextAlign(22)  # center
-        pct.DrawLatex((xl + xr) / 2.0, (yy0 + yy1) / 2.0 - 0.02, f"{val:.1f}%")
-
-    keep = [frame, leg, pct] + dummy_boxes
-
-    bar_h = 0.70
-    for idx, (_, _, fracs, edges) in enumerate(rows):
-        y0 = float(idx) + (1.0 - bar_h) / 2.0
-        y1 = float(idx) + 1.0 - (1.0 - bar_h) / 2.0
-
-        x = 0.0
-        for ib, frac in enumerate(fracs):
-            w = 100.0 * float(frac)
-            if w <= 0:
-                continue
-            col = _root_color(palette[ib % len(palette)], fallback=ROOT.kAzure + 1)
-            bx = ROOT.TBox(x, y0, x + w, y1)
-            bx.SetFillColor(col); bx.SetLineColor(col)
-            bx.Draw("SAME")
-            keep.append(bx)
-
-            # NEW: draw percent label (skip if too narrow)
-            _draw_pct(x, x + w, y0, y1, w)
-
-            x += w
-
-    # CMS + lumi
-    lat = ROOT.TLatex()
-    lat.SetNDC()
-    lat.SetTextFont(42)
-    lat.SetTextSize(0.045)
-    lat.DrawLatex(c.GetLeftMargin(), 0.985, "#bf{CMS} #it{Simulation}")
-    keep.append(lat)
-
-    lumi_fb = _lumi_fb_for_year(year)
-    if lumi_fb is not None:
-        lat_lumi = ROOT.TLatex()
-        lat_lumi.SetNDC()
-        lat_lumi.SetTextFont(42)
-        lat_lumi.SetTextAlign(31)
-        lat_lumi.SetTextSize(0.038)
-        lat_lumi.DrawLatex(0.94, 0.985, f"{lumi_fb:.2f} fb^{{-1}} (13.6 TeV)")
-        keep.append(lat_lumi)
-
-    leg.Draw()
-
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_pdf = out_dir / out_name
-    c.Modified(); c.Update()
-    if ROOT.gPad:
-        ROOT.gPad.RedrawAxis()
-    c.SaveAs(str(out_pdf))
-    try:
-        c.Close()
-    except Exception:
-        pass
-    _ = keep
 
 def _eos_path_default(base_rel: str, *, eos_user: Optional[str] = None, eos_username: Optional[str] = None) -> str:
     """
@@ -945,6 +623,7 @@ def main():
     parser.add_argument("--eos-user", default=None, help="EOS area letter for /eos/home-<letter>/... (default: $EOS_USER or 'p').")
     parser.add_argument("--eos-username", default=None, help="EOS username for /eos/home-*/<username>/... (default: $EOS_USERNAME or 'pelai').")
 
+    parser.add_argument("--outdir", default=output_plot_dir, help="Output plot directory.")
     args = parser.parse_args()
 
     # NEW: normalize input_root_dir to correct EOS format
@@ -957,21 +636,8 @@ def main():
         )
 
     in_dir = Path(input_root_dir)
-    out_dir = Path(output_plot_dir)
+    out_dir = Path(args.outdir)
 
-    # RENAME: clearer name, same payload/usage
-    dr_frac_scan = _load_dr_fraction_scan_by_year_ma(
-        Path(input_root_dir),
-        years=YEAR_ORDER if args.year == "all" else [args.year],
-        ma_dirs=signal_ma_dirs,
-        tree_name="inclusive",
-        dr_branch="var_dR_g1g2",
-        dr_min=0.0,
-        dr_max=4.0,
-        dr_step=0.05,
-        debug=args.debug,          # NEW
-        max_files=args.max_files,  # NEW
-    )
 
     if args.debug:
         print(f"[DEBUG] input_root_dir = {input_root_dir}")

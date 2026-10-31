@@ -52,13 +52,10 @@ LUMI_LABEL_X = 0.95
 LUMI_LABEL_Y = 0.915
 
 
-LUMI_MAP = {
-    "2022preEE": 7.9804,
-    "2022postEE": 26.6717,
-    "2023preBPix": 18.063,
-    "2023postBPix": 9.693,
-    "2024": 108.83,
-}
+# Luminosity for the labels from the HZgamma constants.py (the authoritative values; a hard-coded copy went stale)
+sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZgamma/higgsdna-hzg-run3/plot/scripts")
+from lumi_constants import load_lumi  # noqa: E402
+LUMI_MAP = load_lumi()
 
 
 @dataclass(frozen=True)
@@ -377,8 +374,11 @@ def build_chains(
         if add_file(chains["Data"], os.path.join(base, "Data", f"{era}.root")):
             added["Data"] += 1
 
-        if add_file(chains["MC"], os.path.join(base, "DYJetsToLL", f"{era}.root")):
-            added["MC"] += 1
+        # 2024 has no inclusive DYJetsToLL/2024.root: use the flavor-split samples, as in
+        # Plot_Helper._run3_sources_for_sample (otherwise run3_all has 2024 data but no 2024 MC)
+        for sample in (["DYJetsTo2E", "DYJetsTo2Mu", "DYJetsTo2Tau"] if era == "2024" else ["DYJetsToLL"]):
+            if add_file(chains["MC"], os.path.join(base, sample, f"{era}.root")):
+                added["MC"] += 1
 
     for sample, nfiles in added.items():
         print(f"[Files] {sample}: added {nfiles} files, entries={chains[sample].GetEntries()}")

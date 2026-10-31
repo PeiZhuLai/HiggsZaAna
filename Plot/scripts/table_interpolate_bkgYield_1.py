@@ -269,6 +269,68 @@ def read_arrays_with_mass(file_path: str, mass_tag: str, stats=None):
 
     return mva, w
 
+def read_arrays_all_masses(file_path: str, mass_tags, stats_by_tag=None):
+    """
+    一次读完同一档案内所有 mass_tag 的 MVA 分支 + weight + H_m，回传 {mass_tag: (mva, weight)}；
+    每个 mass_tag 的处理（H_m 视窗、NaN/inf 过滤、stats 计数）与 read_arrays_with_mass 完全相同。
+    旧做法每个内插质量点各开一次档并重读 weight/H_m（16 次）。
+    整批读取失败时退回逐个 mass_tag 调用 read_arrays_with_mass（保留其逐分支的容错行为）。
+    """
+    stats_by_tag = stats_by_tag or {}
+    tree = first_tree(file_path)
+    if tree is None:
+        for tag in mass_tags:
+            _stat_add(stats_by_tag.get(tag), "tree_missing")
+        return {tag: (None, None) for tag in mass_tags}
+    keys = set(tree.keys())
+    mva_branches = {tag: resolve_mva_branch(tree, tag) for tag in mass_tags}
+    wname = next((wv for wv in WEIGHT_CANDIDATES if wv in keys), None)
+    branches = sorted({b for b in mva_branches.values() if b is not None}
+                      | ({wname} if wname else set()) | ({"H_m"} if "H_m" in keys else set()))
+    try:
+        arrs = tree.arrays(branches, library="np") if branches else {}
+    except Exception:
+        return {tag: read_arrays_with_mass(file_path, tag, stats=stats_by_tag.get(tag)) for tag in mass_tags}
+
+    out = {}
+    for tag in mass_tags:
+        stats = stats_by_tag.get(tag)
+        mva_branch = mva_branches[tag]
+        if mva_branch is None:
+            _stat_add(stats, "branch_missing")
+            out[tag] = (None, None)
+            continue
+        mva = arrs[mva_branch]
+        w = arrs[wname] if wname else None
+        if w is None:
+            w = np.ones_like(mva, dtype=np.float64)
+        H = arrs.get("H_m")
+        try:
+            mva = np.asarray(mva).astype(np.float64)
+            w   = np.asarray(w).astype(np.float64)
+            if H is not None:
+                H = np.asarray(H).astype(np.float64)
+        except Exception:
+            _stat_add(stats, "array_convert_error")
+            out[tag] = (None, None)
+            continue
+        n = min(len(mva), len(w))
+        if H is not None:
+            n = min(n, len(H))
+            H = H[:n]
+        mva = mva[:n]
+        w   = w[:n]
+        mask = np.isfinite(mva) & np.isfinite(w)
+        if H is not None:
+            mask = mask & np.isfinite(H) & (H >= 115.0) & (H <= 135.0)
+        if mask.size != 0:
+            mva = mva[mask]
+            w   = w[mask]
+        if len(mva) == 0:
+            _stat_add(stats, "empty_arrays")
+        out[tag] = (mva, w)
+    return out
+
 def build_mass_edges(masses):
     """给定离散的质量中心，产生不等宽 y-edges。"""
     ms = np.array(sorted(set(float(m) for m in masses)))
@@ -490,12 +552,10 @@ def upper_cut_for_mass(cut_dict, mass, anchors, default=0.97):
 def build_interpolated_bkg_hists(mva_bins=240, mva_min=-0.1, mva_max=1.1, mva_branch_candidates=None, weight_candidates=None):
     histos = {}
     stats_by_ma = {}
-    # 填充
+    mass_tags = {int(ma): f"M{int(ma)}" for ma in interploate_ma_list}
     for ma in interploate_ma_list:
-        mass_tag = f"M{int(ma)}"
-        key = f"mvaVal_{mass_tag}"
-        histos[key] = {}
-        stats = {
+        histos[f"mvaVal_{mass_tags[int(ma)]}"] = {}
+        stats_by_ma[int(ma)] = {
             "files_expected": 0,
             "files_missing": 0,
             "files_found": 0,
@@ -508,38 +568,45 @@ def build_interpolated_bkg_hists(mva_bins=240, mva_min=-0.1, mva_max=1.1, mva_br
             "events_filled": 0,
             "sumw_filled": 0.0,
         }
-        stats_by_ma[int(ma)] = stats
+    stats_by_tag = {mass_tags[int(ma)]: stats_by_ma[int(ma)] for ma in interploate_ma_list}
 
-        for sample, years in background_sample_years().items():
-            hname = f"{key}_{sample}"
-            htitle = hname
-            h = TH1F(hname, htitle, mva_bins, mva_min, mva_max)
+    # 填充：每个背景档只读一次（所有内插质量点的 MVA 分支一起读），再分别填各质量点的直方图。
+    # 每个直方图仍按 sample -> years 的顺序填，与旧版逐质量点重读的结果逐位相同。
+    for sample, years in background_sample_years().items():
+        hs = {}
+        for ma in interploate_ma_list:
+            hname = f"mvaVal_{mass_tags[int(ma)]}_{sample}"
+            h = TH1F(hname, hname, mva_bins, mva_min, mva_max)
             h.Sumw2()
-            # 搜集各年资料
-            filled = False
-            for y in years:
-                stats["files_expected"] += 1
-                fpath = os.path.join(INPUT_BASE, sample, f"{y}.root")
-                if not os.path.exists(fpath):
-                    stats["files_missing"] += 1
-                    continue
-                stats["files_found"] += 1
-                # 背景檔為 merged-score 格式，依 mass_tag 讀 MVA_Score_mA_M{ma}
-                mva, w = read_arrays_with_mass(fpath, mass_tag, stats=stats)
+            hs[int(ma)] = [h, False]  # [直方图, filled]
+        # 搜集各年资料
+        for y in years:
+            for st in stats_by_ma.values():
+                st["files_expected"] += 1
+            fpath = os.path.join(INPUT_BASE, sample, f"{y}.root")
+            if not os.path.exists(fpath):
+                for st in stats_by_ma.values():
+                    st["files_missing"] += 1
+                continue
+            for st in stats_by_ma.values():
+                st["files_found"] += 1
+            # 背景檔為 merged-score 格式，依 mass_tag 讀 MVA_Score_mA_M{ma}
+            arrs = read_arrays_all_masses(fpath, list(stats_by_tag), stats_by_tag=stats_by_tag)
+            for ma in interploate_ma_list:
+                mva, w = arrs[mass_tags[int(ma)]]
                 if mva is None or len(mva) == 0:
                     continue
-                # 逐项填入（含权重）
-                for val, wt in zip(mva, w):
-                    try:
-                        h.Fill(float(val), float(wt))
-                        filled = True
-                        stats["events_filled"] += 1
-                        stats["sumw_filled"] += float(wt)
-                    except Exception:
-                        stats["fill_errors"] += 1
-                        continue
+                stats = stats_by_ma[int(ma)]
+                # FillN = 逐事件 TH1::Fill(x, w) 的 C++ 迴圈（同样的 bin、float 累加顺序与 Sumw2），
+                # 取代 Python 逐项 h.Fill（~2000 万次呼叫）
+                hs[int(ma)][0].FillN(len(mva), np.ascontiguousarray(mva), np.ascontiguousarray(w))
+                hs[int(ma)][1] = True
+                stats["events_filled"] += len(mva)
+                stats["sumw_filled"] = sum(w.tolist(), stats["sumw_filled"])  # 与逐项 += 相同的累加顺序
+        for ma in interploate_ma_list:
+            h, filled = hs[int(ma)]
             if filled and (h.GetEntries() > 0 or h.Integral() != 0.0):
-                histos[key][sample] = h
+                histos[f"mvaVal_{mass_tags[int(ma)]}"][sample] = h
     return histos, stats_by_ma
 
 def print_bkg_input_summary(stats_by_ma):
@@ -675,7 +742,14 @@ def collect_signal_xyw():
     return np.concatenate(xs), np.concatenate(ys), np.concatenate(ws)
 
 # ==== Main ====
+OUT_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/bkg_interpolated_yields_run3.json"
+
 def main():
+    global OUT_JSON
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out-json", default=OUT_JSON, help="output yields JSON")
+    OUT_JSON = ap.parse_args().out_json
     outdir = ensure_outdir()
 
     # 先画出各背景在欲内插质量点的 MVA 分布（受开关控制）
@@ -749,7 +823,7 @@ def main():
 
         results.append(entry)
 
-    out_json = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output/bkg_interpolated_yields_run3.json"
+    out_json = OUT_JSON
     os.makedirs(os.path.dirname(out_json), exist_ok=True)
     with open(out_json, "w") as f:
         json.dump({

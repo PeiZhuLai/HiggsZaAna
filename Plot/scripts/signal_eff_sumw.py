@@ -4,6 +4,7 @@ from pathlib import Path
 # 先安全匯入 PyROOT，避免 Cling 解析到重複 LLVM 參數
 import sys
 import ROOT
+ROOT.gROOT.SetBatch(True)
 import numpy as np
 import re
 import ast
@@ -17,6 +18,10 @@ try:
 except Exception:
     _HAVE_SCIPY = False
 import json  # 新增：讀取 MVAcut 的 JSON
+# 讀檔快取：同一個 signal 檔在整個 process 內只讀一次（各 channel / 年份群組 / 逐年 / 內插點共用）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import signal_tree_cache
+from signal_tree_cache import open_cached
 
 # ===== Samples / 常數 (整合後唯一版本) =====
 years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
@@ -45,21 +50,29 @@ INPUT_BASE_TREE_NAME = "test"
 # signal weights as the datacard anchors. HZA_SIGNAL_REWEIGHT=0 disables it (pre-2026-10-02 behavior).
 SIGNAL_RW_JSON = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/reweights/sideband_run3_iterative.json"
 _SIGNAL_RW = None
-_SIGNAL_RW_CACHE: Dict[str, np.ndarray] = {}
+_SIGNAL_RW_CACHE: Dict[Tuple[str, int], np.ndarray] = {}
 
 def _signal_rw(fp: str, ma: int) -> Optional[np.ndarray]:
     """Per-event normalized signal reweight for the test tree of file fp (aligned with its entries)."""
     global _SIGNAL_RW
     if os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0":
         return None
-    if fp in _SIGNAL_RW_CACHE:
-        return _SIGNAL_RW_CACHE[fp]
+    # 歸一化分 n_electrons / n_muons 在這個檔內做，快取 key 含 (檔案, 真實 mA)
+    if (fp, ma) in _SIGNAL_RW_CACHE:
+        return _SIGNAL_RW_CACHE[(fp, ma)]
     if _SIGNAL_RW is None:
         sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
         from sideband_reweight import SidebandReweighter
         _SIGNAL_RW = SidebandReweighter.from_json(SIGNAL_RW_JSON)
-    with uproot.open(fp) as f:
-        fr = f[INPUT_BASE_TREE_NAME].arrays(library="pd")
+        signal_tree_cache.set_prefetch(_SIGNAL_RW, extra=("weight",))
+    # 只讀 reweight 會查的欄位（舊版讀整棵 tree 的 379 個 branch；結果相同）
+    t = open_cached(fp)[INPUT_BASE_TREE_NAME]
+    cols = signal_tree_cache.rw_columns(_SIGNAL_RW, t.keys(), extra=("weight",))
+    if cols is None:
+        with uproot.open(fp) as f:
+            fr = f[INPUT_BASE_TREE_NAME].arrays(library="pd")
+    else:
+        fr = t.arrays(cols, library="pd")
     for logical, cands in (("pho1ECALIso", ("pho1PIso_noCorr",)), ("pho2ECALIso", ("pho2PIso_noCorr",)),
                            ("H_m", ("H_mass",)), ("ALP_m", ("ALP_mass",))):
         if logical not in fr.columns:
@@ -74,7 +87,7 @@ def _signal_rw(fp: str, ma: int) -> Optional[np.ndarray]:
         sel = fr[col].to_numpy() == 2
         den = float(np.sum(w[sel] * r[sel]))
         out[sel] = r[sel] * (float(np.sum(w[sel])) / den if den > 0 else 1.0)
-    _SIGNAL_RW_CACHE[fp] = out
+    _SIGNAL_RW_CACHE[(fp, ma)] = out
     return out
 
 lumiMap = { '16':16.81,'16APV':19.52,'17':41.48,'18':59.83,'combined':137.65,
@@ -294,7 +307,7 @@ def _discover_sys_branches(sample_map: Dict[int, str], years: List[str]) -> Tupl
         return [], []
 
     try:
-        with uproot.open(rep_file) as f:
+        with open_cached(rep_file) as f:
             if INPUT_BASE_TREE_NAME not in f:
                 print(f"[警告] {rep_file} 沒有 tree={INPUT_BASE_TREE_NAME}，無法掃描 systematics branches。")
                 return [], []
@@ -408,7 +421,7 @@ def _accumulate_pass_weights(ma: int,
     for fp in files:
         rwn = _signal_rw(fp, ma)   # outside the try: a reweight failure must not skip the file silently
         try:
-            with uproot.open(fp) as f:
+            with open_cached(fp) as f:
                 if INPUT_BASE_TREE_NAME not in f: continue
                 t = f[INPUT_BASE_TREE_NAME]
                 mva_branch = _pick_mva_score_branch(t, sample)
@@ -476,7 +489,7 @@ def _accumulate_pass_sumw_systs(ma: int,
     for fp in files:
         rwn = _signal_rw(fp, ma)   # outside the try: a reweight failure must not skip the file silently
         try:
-            with uproot.open(fp) as f:
+            with open_cached(fp) as f:
                 if INPUT_BASE_TREE_NAME not in f:
                     continue
                 t = f[INPUT_BASE_TREE_NAME]
@@ -738,7 +751,7 @@ def _anchor_arrays(ma: int, sample_map: Dict[int, str], year: str):
     out = []
     for fp in _list_root_files(INPUT_BASE, sample, [year]):
         rwn = _signal_rw(fp, ma)
-        with uproot.open(fp) as f:
+        with open_cached(fp) as f:
             if INPUT_BASE_TREE_NAME not in f:
                 continue
             t = f[INPUT_BASE_TREE_NAME]
@@ -1051,7 +1064,7 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     # 新增：在 5years 模式把 interpolated y 寫成 JSON（每個 channel 一份）
     if name_suffix == "_5years" and interp_payload["values"]:
         json_name = f"{fname}_quadratic_interp_ma_points.json"
-        jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
+        jsonOutDir = Path(JSON_OUT_DIR)
         json_path = jsonOutDir / json_name
         meta = {
             "input_years": years,
@@ -1076,7 +1089,18 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
 
     return out_path
 
+OUT_DIR = "/eos/home-p/pelai/HZa/output_plots/signal_eff_sumw"
+JSON_OUT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output"
+
 def main():
+    global OUT_DIR, JSON_OUT_DIR
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--outdir", default=OUT_DIR, help="plot output directory")
+    ap.add_argument("--json-outdir", default=JSON_OUT_DIR, help="directory of the *_quadratic_interp_ma_points.json")
+    args = ap.parse_args()
+    OUT_DIR, JSON_OUT_DIR = args.outdir, args.json_outdir
+
     # 1. 解析各質量 BDT cut
     mva_cuts = _parse_mva_cuts(optimized_BDT_Cut)
     if not mva_cuts:
@@ -1094,7 +1118,10 @@ def main():
     # 依 branch 名稱把 e/μ 專屬系統分開；沒有寫 electron/muon 的視為 common（兩個 channel 都要考慮）
     SYS_Ele, SYS_Mu, SYS_Ele_central, SYS_Mu_central = _split_sys_branches_by_channel(sys_updown, sys_central)
     print(f"[資訊] syst branches split: common+ele={len(SYS_Ele)} | common+mu={len(SYS_Mu)} | central(ele)={len(SYS_Ele_central)} | central(mu)={len(SYS_Mu_central)}")
-    out_dir = Path("/eos/home-p/pelai/HZa/output_plots/signal_eff_sumw")
+    # 第一次讀每個檔時就把之後所有函式會用到的 branch 一起讀進來（只讀 tree 裡有的）
+    signal_tree_cache.PREFETCH.update(SYS_Ele + SYS_Mu + SYS_Ele_central + SYS_Mu_central + ALT_WEIGHT_CANDS
+                                      + ["z_mumu", "z_ee", "MVA_Score"] + [f"MVA_Score_{s}" for s in sig_samples])
+    out_dir = Path(OUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 3. 計算並繪圖：每個年份群組各一條線 (2022/2023/2024)

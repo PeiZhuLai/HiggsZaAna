@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import sys
 import ROOT
+ROOT.gROOT.SetBatch(True)
 import numpy as np
 import re
 from typing import Dict, List, Tuple, Optional
@@ -86,6 +87,51 @@ def _safe_np(a) -> np.ndarray:
     except Exception:
         return np.asarray([])
 
+def _read_file(fpath: Path, branches: List[str], tree_name: str) -> Optional[Dict[str, np.ndarray]]:
+    """
+    讀單一檔案的 branches（flatten 成 numpy），只保留非空的 branch；沒有任何 branch 時回傳 {}。
+    開檔 / 讀檔失敗回傳 None。
+    """
+    try:
+        with uproot.open(str(fpath)) as f:
+            t = f[tree_name]
+            keys = set(t.keys())
+            want = [b for b in branches if b in keys]
+            if not want:
+                return {}
+            arrs = t.arrays(want, library="ak")
+    except Exception:
+        return None
+
+    out: Dict[str, np.ndarray] = {}
+    for b in want:
+        a = ak.flatten(arrs[b], axis=None)
+        anp = _safe_np(a)
+        if anp.size:
+            out[b] = anp
+    return out
+
+# 每個檔案只讀一次：第一次讀進全部需要的 branch，之後各變數 / 各 mA / Run3 合併都從這裡取。
+# 舊做法每個變數、每個 mA 各開一次檔（每檔 ~38 次），Run3 再把 5 個 era 全部重讀。
+# key = (檔案路徑, tree)；值 = (讀取時要求的 branch 集合, {branch: array})，或 None（一次讀全部失敗）。
+_FILE_CACHE: Dict[Tuple[str, str], Optional[Tuple[set, Dict[str, np.ndarray]]]] = {}
+
+def _read_file_cached(fpath: Path, branches: List[str], tree_name: str) -> Dict[str, np.ndarray]:
+    key = (str(fpath), tree_name)
+    hit = _FILE_CACHE.get(key, ())
+    if hit is None:
+        # 一次讀全部失敗：退回只讀這次要的 branch（與舊版逐變數讀檔的行為相同）
+        return _read_file(fpath, branches, tree_name) or {}
+    if not hit or not set(branches) <= hit[0]:
+        want = sorted(set(branches) | (hit[0] if hit else set()))
+        arrs = _read_file(fpath, want, tree_name)
+        if arrs is None:
+            _FILE_CACHE[key] = None
+            return _read_file(fpath, branches, tree_name) or {}
+        hit = (set(want), arrs)
+        _FILE_CACHE[key] = hit
+    return {b: hit[1][b] for b in branches if b in hit[1]}
+
 def _load_arrays_for_year_mas(
     base_dir: Path,
     *,
@@ -108,26 +154,10 @@ def _load_arrays_for_year_mas(
         if not fpath.exists():
             continue
 
-        try:
-            with uproot.open(str(fpath)) as f:
-                t = f[tree_name]
-                keys = set(t.keys())
-                want = [b for b in branches if b in keys]
-                if not want:
-                    continue
-                arrs = t.arrays(want, library="ak")
-        except Exception:
-            continue
-
+        arrs = _read_file_cached(fpath, branches, tree_name)
         for b in branches:
-            if b not in arrs.fields:
-                continue
-            a = arrs[b]
-            # 以 "event-level scalar" 為主：flatten 全部
-            a = ak.flatten(a, axis=None)
-            anp = _safe_np(a)
-            if anp.size:
-                out[b].append(anp)
+            if b in arrs:
+                out[b].append(arrs[b])
 
     merged: Dict[str, np.ndarray] = {}
     for b, chunks in out.items():
@@ -154,24 +184,7 @@ def _load_arrays_for_year_ma(
     if not fpath.exists():
         return {}
 
-    try:
-        with uproot.open(str(fpath)) as f:
-            t = f[tree_name]
-            keys = set(t.keys())
-            want = [b for b in branches if b in keys]
-            if not want:
-                return {}
-            arrs = t.arrays(want, library="ak")
-    except Exception:
-        return {}
-
-    out: Dict[str, np.ndarray] = {}
-    for b in want:
-        a = ak.flatten(arrs[b], axis=None)
-        anp = _safe_np(a)
-        if anp.size:
-            out[b] = anp
-    return out
+    return _read_file_cached(fpath, branches, tree_name)
 
 # NEW: 合併多個年份（同一個 mA）成單一 arrays dict
 def _merge_arrays_dicts(dicts: List[Dict[str, np.ndarray]]) -> Dict[str, np.ndarray]:
@@ -978,9 +991,10 @@ def _plot_gen_distributions_for_year(
 def main():
     parser = argparse.ArgumentParser(description="Plot PHID event efficiency vs mA per year.")
     parser.add_argument("--year", default="all", help="Year to plot (e.g. 2022preEE). Use 'all' to plot all years.")
+    parser.add_argument("--outdir", default=outDir, help="Output plot directory.")
     args = parser.parse_args()
 
-    out_dir = Path(outDir)
+    out_dir = Path(args.outdir)
 
     # CHANGED: year=all 時，除了逐年也多跑 run3
     years = YEAR_ORDER if args.year == "all" else [args.year]
@@ -990,7 +1004,7 @@ def main():
     for y in years:
         _plot_gen_distributions_for_year(
             base_dir=Path(baseDir),
-            out_dir=Path(outDir),
+            out_dir=out_dir,
             year=y,
             ma_dirs=ALL_MA_DIRS,
             ma_dirs_pt=PT_MA_DIRS,

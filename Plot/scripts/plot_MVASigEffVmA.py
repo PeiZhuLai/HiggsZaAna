@@ -4,6 +4,7 @@ from pathlib import Path
 # 先安全匯入 PyROOT，避免 Cling 解析到重複 LLVM 參數
 import sys
 import ROOT
+ROOT.gROOT.SetBatch(True)
 import numpy as np
 import re
 import ast
@@ -18,6 +19,10 @@ try:
 except Exception:
     _HAVE_SCIPY = False
 import json  # 新增：讀取 MVAcut 的 JSON
+# 讀檔快取：同一個 signal 檔在整個 process 內只讀一次（與 signal_eff_sumw._signal_rw 共用同一份快取）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import signal_tree_cache
+from signal_tree_cache import open_cached
 
 # ===== Samples / 常數 (整合後唯一版本) =====
 years_sig  = ["2022preEE","2022postEE","2023preBPix","2023postBPix","2024"]  # 信号
@@ -304,7 +309,7 @@ def _discover_sys_branches(sample_map: Dict[int, str], years: List[str]) -> Tupl
         return [], []
 
     try:
-        with uproot.open(rep_file) as f:
+        with open_cached(rep_file) as f:
             tname = _pick_tree_name(f)
             if tname is None:
                 print(f"[警告] {rep_file} 沒有 tree={INPUT_BASE_TREE_NAME}/test/inclusive，無法掃描 systematics branches。")
@@ -430,11 +435,11 @@ def _accumulate_pass_weights(ma: int,
     for fp in files:
         rwn = _signal_rw(fp, ma)   # outside the try: a reweight failure must not skip the file silently
         if rwn is not None:
-            with uproot.open(fp) as _f:
+            with open_cached(fp) as _f:
                 if _pick_tree_name(_f) != "test":
                     raise RuntimeError(f"signal reweight is aligned with the test tree, not {_pick_tree_name(_f)} ({fp})")
         try:
-            with uproot.open(fp) as f:
+            with open_cached(fp) as f:
                 tname = _pick_tree_name(f)
                 if tname is None:
                     continue
@@ -524,7 +529,7 @@ def _accumulate_sumw_systs_pass_total(ma: int,
 
     for fp in files:
         try:
-            with uproot.open(fp) as f:
+            with open_cached(fp) as f:
                 tname = _pick_tree_name(f)
                 if tname is None:
                     continue
@@ -1065,7 +1070,7 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
     # 新增：在 5years 模式把 interpolated y 寫成 JSON（每個 channel 一份）
     if name_suffix == "_5years" and interp_payload["values"]:
         json_name = f"{fname}_quadratic_interp_ma_points.json"
-        jsonOutDir = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output")
+        jsonOutDir = Path(JSON_OUT_DIR)
         json_path = jsonOutDir / json_name
         meta = {
             "input_years": years,
@@ -1086,7 +1091,18 @@ def _plot_lines_by_year(series_by_year: Dict[str, Tuple[List[int], List[float], 
 
     return out_path
 
+OUT_DIR = "/eos/home-p/pelai/HZa/output_plots/MVASigEffVmA"
+JSON_OUT_DIR = "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/output"
+
 def main():
+    global OUT_DIR, JSON_OUT_DIR
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--outdir", default=OUT_DIR, help="plot output directory")
+    ap.add_argument("--json-outdir", default=JSON_OUT_DIR, help="directory of the *_quadratic_interp_ma_points.json")
+    args = ap.parse_args()
+    OUT_DIR, JSON_OUT_DIR = args.outdir, args.json_outdir
+
     # 1. 解析各質量 BDT cut
     mva_cuts = _parse_mva_cuts(optimized_BDT_Cut)
     if not mva_cuts:
@@ -1104,7 +1120,11 @@ def main():
     # 依 branch 名稱把 e/μ 專屬系統分開；沒有寫 electron/muon 的視為 common（兩個 channel 都要考慮）
     SYS_Ele, SYS_Mu, SYS_Ele_central, SYS_Mu_central = _split_sys_branches_by_channel(sys_updown, sys_central)
     print(f"[資訊] syst branches split: common+ele={len(SYS_Ele)} | common+mu={len(SYS_Mu)} | central(ele)={len(SYS_Ele_central)} | central(mu)={len(SYS_Mu_central)}")
-    out_dir = Path("/eos/home-p/pelai/HZa/output_plots/MVASigEffVmA")
+    # 第一次讀每個檔時就把之後所有函式會用到的 branch 一起讀進來（只讀 tree 裡有的）
+    signal_tree_cache.PREFETCH.update(SYS_Ele + SYS_Mu + SYS_Ele_central + SYS_Mu_central + ALT_WEIGHT_CANDS
+                                      + ["z_mumu", "z_ee", "MVA_Score", "BDT_Score"]
+                                      + [f"{p}_{s}" for p in ("MVA_Score", "BDT_Score") for s in sig_samples])
+    out_dir = Path(OUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 3. 計算並繪圖：每個年份群組各一條線 (2022/2023/2024)

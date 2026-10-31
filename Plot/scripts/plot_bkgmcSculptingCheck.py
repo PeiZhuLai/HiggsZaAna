@@ -7,7 +7,10 @@ from array import array
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
+import pandas as pd
 import ROOT
+import uproot
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PLOT_DIR = SCRIPT_DIR.parent
@@ -29,7 +32,13 @@ import CMS_lumi
 import tdrstyle
 
 try:
-    from sideband_reweight import load_sideband_reweighter
+    from sideband_reweight import (
+        DERIVED_VARS,
+        VAR_ALIASES,
+        _mass_from_event,
+        _mass_from_row_order,
+        load_sideband_reweighter,
+    )
 except Exception as _exc:  # pragma: no cover - best-effort import
     load_sideband_reweighter = None
     print(f"[Warning] Cannot import sideband_reweight helper: {_exc}")
@@ -792,41 +801,6 @@ def _book_bdt_shape_histograms(
     return histos, score_edges
 
 
-def _bdt_shape_bin_index(score: float, score_edges: List[float]) -> Optional[int]:
-    if score < score_edges[0] or score > score_edges[-1]:
-        return None
-    if score == score_edges[-1]:
-        return len(score_edges) - 2
-
-    width = score_edges[1] - score_edges[0]
-    idx = int((score - score_edges[0]) / width)
-    if idx < 0 or idx >= len(score_edges) - 1:
-        return None
-    return idx
-
-
-def _fill_bdt_shape_histogram(
-    sample: str,
-    mass: int,
-    score: float,
-    h_mass: float,
-    weight: float,
-    analyzer_cfg: Analyzer_Config,
-    bdt_shape_histos: Optional[Dict[int, List[TH1F]]],
-    bdt_shape_edges: Optional[List[float]],
-) -> None:
-    if bdt_shape_histos is None or bdt_shape_edges is None:
-        return
-    if sample not in analyzer_cfg.bkg_names:
-        return
-
-    idx = _bdt_shape_bin_index(float(score), bdt_shape_edges)
-    if idx is None:
-        return
-
-    bdt_shape_histos[mass][idx].Fill(h_mass, weight)
-
-
 def _draw_bkg_mass_shapes_by_bdt(
     mass: int,
     histos: List[TH1F],
@@ -956,6 +930,132 @@ def _draw_bkg_mass_shapes_by_bdt(
     SaveCanvPic(canvas, str(output_dir), save_name)
 
 
+def _chain_files(chain) -> List[str]:
+    return [str(element.GetTitle()) for element in chain.GetListOfFiles()]
+
+
+def _fill_n(hist, x, w) -> None:
+    """TH1::FillN == TH1::Fill called once per entry in the same order (same float/Sumw2/stat sums)."""
+    if len(x):
+        hist.FillN(len(x), np.ascontiguousarray(x, dtype=np.float64), np.ascontiguousarray(w, dtype=np.float64))
+
+
+def _bdt_shape_bin_indices(scores: np.ndarray, score_edges: List[float]) -> np.ndarray:
+    """BDT-score bin index per entry (last bin closed on the right); -1 outside [min, max]."""
+    n_bins = len(score_edges) - 1
+    width = score_edges[1] - score_edges[0]
+    out = np.full(len(scores), -1, dtype=np.int64)
+    in_range = ~((scores < score_edges[0]) | (scores > score_edges[-1]))
+    at_top = scores == score_edges[-1]
+    other = in_range & ~at_top
+    if np.isnan(scores[other]).any():
+        raise ValueError("cannot convert float NaN to integer")
+    out[other] = ((scores[other] - score_edges[0]) / width).astype(np.int64)
+    out[at_top] = n_bins - 1
+    out[(out < 0) | (out >= n_bins)] = -1
+    return out
+
+
+def _sideband_weights_as_seen_by_chain(sideband_reweighter, chain, enabled: set) -> np.ndarray:
+    """Per-entry sideband weights equal to sideband_reweighter.weight_for_object(chain, row_index=i).
+
+    The per-event loop read the chain after SetBranchStatus("*", 0): a branch that exists but was
+    not re-enabled is seen by getattr as 0.0, a missing one as NaN (factor 1).
+    The frame below reproduces exactly those values, then weights_for_dataframe does the reweighting.
+    """
+    step_vars = list(dict.fromkeys(
+        step["var"] for iteration in sideband_reweighter.iterations for step in iteration.get("steps", [])
+    ))
+    frames = []
+    offset = 0
+    for path in _chain_files(chain):
+        with uproot.open(path) as handle:
+            tree = handle[chain.GetName()]
+            n_rows = tree.num_entries
+            names = set(tree.keys())
+
+            def _seen(name, dtype=np.float64):
+                if name not in names:
+                    return None
+                if name not in enabled:
+                    return np.zeros(n_rows, dtype=dtype)
+                return tree[name].array(library="np").astype(dtype)
+
+            def _first(logical, dtype=np.float64):
+                for candidate in VAR_ALIASES.get(logical, (logical,)):
+                    values = _seen(candidate, dtype)
+                    if values is not None:
+                        return values
+                return None
+
+            def _finite(values):
+                if values is None:
+                    return np.full(n_rows, np.nan)
+                return np.where(np.isfinite(values), values, np.nan)
+
+            columns = {}
+            for var in step_vars:
+                if var == "param":
+                    param = _first("param")
+                    if param is not None:
+                        columns[var] = _finite(param)
+                        continue
+                    h_m, alp_m = _first("H_m"), _first("ALP_m")
+                    if h_m is None or alp_m is None:
+                        columns[var] = np.full(n_rows, np.nan)
+                        continue
+                    events = _first("event", np.int64)
+                    if sideband_reweighter.param_method == "event_hash" and events is not None:
+                        mass_hyp = _mass_from_event(events, sideband_reweighter.seed, sideband_reweighter.mass_hypotheses)
+                    else:
+                        mass_hyp = _mass_from_row_order(
+                            offset + n_rows, sideband_reweighter.seed, sideband_reweighter.mass_hypotheses
+                        )[offset:]
+                    bad = ~np.isfinite(h_m) | (h_m == 0.0) | ~np.isfinite(alp_m)
+                    with np.errstate(divide="ignore", invalid="ignore"):
+                        columns[var] = np.where(bad, np.nan, (alp_m - mass_hyp) / h_m)
+                elif var in DERIVED_VARS:
+                    if var == "pho_pt_asym":
+                        pt1, pt2 = _finite(_first("pho1Pt_oHm")), _finite(_first("pho2Pt_oHm"))
+                        with np.errstate(divide="ignore", invalid="ignore"):
+                            columns[var] = np.where(
+                                np.isfinite(pt1) & np.isfinite(pt2), (pt1 - pt2) / (pt1 + pt2 + 1e-6), np.nan
+                            )
+                    else:
+                        columns[var] = np.full(n_rows, np.nan)
+                else:
+                    columns[var] = _finite(_first(var))
+            frames.append(pd.DataFrame(columns, index=np.arange(offset, offset + n_rows)))
+            offset += n_rows
+    if not frames:
+        return np.ones(0)
+    return sideband_reweighter.weights_for_dataframe(pd.concat(frames))
+
+
+def _read_chain_columns(chain, defaults: Dict[str, float]) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    """Concatenate the chain's files in chain order; a branch missing in a file takes its getattr default
+    (NaN, flagged in the returned 'present' mask, when the per-event loop would have skipped it)."""
+    parts: Dict[str, List[np.ndarray]] = {name: [] for name in defaults}
+    present: Dict[str, List[np.ndarray]] = {name: [] for name in defaults}
+    for path in _chain_files(chain):
+        with uproot.open(path) as handle:
+            tree = handle[chain.GetName()]
+            n_rows = tree.num_entries
+            names = set(tree.keys())
+            to_read = [name for name in defaults if name in names]
+            arrays = tree.arrays(to_read, library="np") if to_read else {}
+            for name, default in defaults.items():
+                if name in arrays:
+                    parts[name].append(np.asarray(arrays[name]).astype(np.float64))
+                    present[name].append(np.ones(n_rows, dtype=bool))
+                else:
+                    parts[name].append(np.full(n_rows, np.nan if default is None else default, dtype=np.float64))
+                    present[name].append(np.full(n_rows, default is not None, dtype=bool))
+    columns = {name: (np.concatenate(chunks) if chunks else np.zeros(0)) for name, chunks in parts.items()}
+    masks = {name: (np.concatenate(chunks) if chunks else np.zeros(0, dtype=bool)) for name, chunks in present.items()}
+    return columns, masks
+
+
 def _fill_histograms(
     ntuples,
     analyzer_cfg: Analyzer_Config,
@@ -969,7 +1069,13 @@ def _fill_histograms(
     only_mu: bool,
     sideband_reweighter=None,
 ) -> None:
+    """Columnar version of the former per-event GetEvent loop (identical histograms).
+
+    Each histogram is filled with TH1::FillN over the selected entries in chain order, which performs the
+    same per-entry float32 bin-content / double Sumw2 accumulation as the former TH1::Fill calls.
+    """
     mva_branch_map: Dict[str, Dict[int, Optional[str]]] = {}
+    enabled_branches: Dict[str, set] = {}
     extra_histos = extra_histos or []
     for sample in analyzer_cfg.samp_names:
         masses_to_use = TARGET_MASSES if (
@@ -984,6 +1090,7 @@ def _fill_histograms(
         needed_branches = ["H_m", "weight", "z_mumu", "z_ee"]
         needed_branches.extend(sorted({branch for branch in branch_map.values() if branch}))
         _configure_needed_branches(ntuples[sample], needed_branches)
+        enabled_branches[sample] = set(needed_branches)
 
         missing = [mass for mass, branch in branch_map.items() if branch is None]
         if missing:
@@ -1000,14 +1107,17 @@ def _fill_histograms(
                 for iteration in getattr(sideband_reweighter, "iterations", []):
                     for step in iteration.get("steps", []):
                         rwgt_branches.add(step.get("var"))
+                # param and ALP_m (with H_m, event) build the mass-hypothesis variable; before 2026-10-31 they
+                # were left disabled, so the reweight saw param = 0 (nominal) or (0 - m_hyp)/H_m (control)
                 rwgt_branches.update(("pho1ECALIso", "pho2ECALIso", "pho1PIso_noCorr", "pho2PIso_noCorr",
                                       "ALP_lead_photon_ecalPFClusterIso", "ALP_sublead_photon_ecalPFClusterIso",
-                                      "H_mass", "ALP_mass", "event"))
+                                      "H_mass", "ALP_mass", "ALP_m", "event"))
                 for branch in list(rwgt_branches):
-                    if not branch or branch == "param":
+                    if not branch:
                         continue
                     if chain.GetListOfBranches() and chain.GetListOfBranches().FindObject(branch):
                         chain.SetBranchStatus(branch, 1)
+                        enabled_branches[sample].add(branch)
             except Exception as _exc_rw:
                 print(f"[Warning] sideband reweight branch enable failed for {sample}: {_exc_rw}")
 
@@ -1020,68 +1130,61 @@ def _fill_histograms(
         if not masses_to_fill:
             continue
 
-        for i_evt in range(entries):
-            ntup.GetEvent(i_evt)
-            ### For short test to tune the style
-            # if i_evt == 1000:
-            #     break
-            if i_evt % 100000 == 1:
-                print(f"  looking at event {i_evt}")
+        active = [
+            (mass, mva_cuts.get(mass), mva_branch_map[sample].get(mass))
+            for mass in masses_to_fill
+        ]
+        active = [(mass, cut, branch) for mass, cut, branch in active if cut is not None and branch is not None]
+        defaults = {"H_m": -999.0, "z_mumu": 0.0, "z_ee": 0.0}
+        if sample != "Data":
+            defaults["weight"] = 1.0
+        defaults.update({branch: None for _, _, branch in active})
+        columns, present = _read_chain_columns(ntup, defaults)
 
-            h_mass = getattr(ntup, "H_m", -999.0)
-            if h_mass < H_M_XMIN or h_mass > H_M_XMAX:
-                continue
+        h_mass = columns["H_m"]
+        keep = ~((h_mass < H_M_XMIN) | (h_mass > H_M_XMAX))
+        if only_ele:
+            keep &= ~(np.abs(columns["z_mumu"].astype(np.int64)) == 1)
+        if only_mu:
+            keep &= ~(np.abs(columns["z_ee"].astype(np.int64)) == 1)
 
-            z_mumu = abs(int(getattr(ntup, "z_mumu", 0)))
-            z_ee = abs(int(getattr(ntup, "z_ee", 0)))
-            if only_ele and z_mumu == 1:
-                continue
-            if only_mu and z_ee == 1:
-                continue
-
-            weight = float(getattr(ntup, "weight", 1.0))
-            if sample == "Data":
-                weight = 1.0
-            elif sideband_reweighter is not None and sample in analyzer_cfg.bkg_names:
-                try:
-                    rwgt = sideband_reweighter.weight_for_object(ntup, row_index=i_evt)
-                    weight *= float(rwgt)
-                except Exception as _exc_rw:
-                    if i_evt < 3:
-                        print(f"[Warning] reweight failed for sample={sample} evt={i_evt}: {_exc_rw}")
-
-            for mass in masses_to_fill:
-                cut = mva_cuts.get(mass)
-                branch = mva_branch_map[sample].get(mass)
-                if cut is None or branch is None:
-                    continue
-
-                score = getattr(ntup, branch, None)
-                if score is None:
-                    continue
-
-                _fill_bdt_shape_histogram(
-                    sample=sample,
-                    mass=mass,
-                    score=float(score),
-                    h_mass=h_mass,
-                    weight=weight,
-                    analyzer_cfg=analyzer_cfg,
-                    bdt_shape_histos=bdt_shape_histos,
-                    bdt_shape_edges=bdt_shape_edges,
+        if sample == "Data":
+            weight = np.ones(len(h_mass))
+        else:
+            weight = columns["weight"]
+            if sideband_reweighter is not None and sample in analyzer_cfg.bkg_names:
+                weight = weight * _sideband_weights_as_seen_by_chain(
+                    sideband_reweighter, ntup, enabled_branches[sample]
                 )
 
-                if score < cut:
-                    continue
+        sel = np.nonzero(keep)[0]
+        h_sel, w_sel = h_mass[sel], weight[sel]
+        blind_sel = (BLIND_LOW <= h_sel) & (h_sel <= BLIND_HIGH)
+        fill_bdt_shape = (
+            bdt_shape_histos is not None and bdt_shape_edges is not None and sample in analyzer_cfg.bkg_names
+        )
 
-                if sample == "Data" and blind and BLIND_LOW <= h_mass <= BLIND_HIGH:
-                    continue
+        for mass, cut, branch in active:
+            has_score = present[branch][sel]
+            score = columns[branch][sel]
 
-                histos[mass][sample].Fill(h_mass, weight)
-                for hist_set in extra_histos:
-                    hist = hist_set.get(mass, {}).get(sample)
-                    if hist is not None:
-                        hist.Fill(h_mass, weight)
+            if fill_bdt_shape:
+                bdt_idx = _bdt_shape_bin_indices(np.where(has_score, score, -1.0), bdt_shape_edges)
+                bdt_idx[~has_score] = -1
+                for idx, hist in enumerate(bdt_shape_histos[mass]):
+                    in_bin = bdt_idx == idx
+                    _fill_n(hist, h_sel[in_bin], w_sel[in_bin])
+
+            passed = has_score & ~(score < cut)
+            if sample == "Data" and blind:
+                passed &= ~blind_sel
+
+            x_pass, w_pass = h_sel[passed], w_sel[passed]
+            _fill_n(histos[mass][sample], x_pass, w_pass)
+            for hist_set in extra_histos:
+                hist = hist_set.get(mass, {}).get(sample)
+                if hist is not None:
+                    _fill_n(hist, x_pass, w_pass)
 
 
 def _channel_mode_from_args(only_ele: bool, only_mu: bool) -> str:

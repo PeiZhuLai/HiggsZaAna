@@ -4,6 +4,9 @@
 #
 # The slow script fills every histogram in a Python event loop.  This version
 # uses TChain.Draw/TTreeFormula so the event scan runs inside ROOT.
+# All histograms of one sample are filled from a single pass over its
+# chain (see fill_planned_hists), with the same expressions, cuts and fill order
+# as one TChain.Draw per histogram.
 
 import argparse
 import os
@@ -24,6 +27,7 @@ ROOT = import_pyroot()
 import Analyzer_Configs as AC
 import Plot_Configs as PC
 from Analyzer_Helper import getMassSigma
+from single_pass_draw import evaluate_draw_requests, fill_like_draw
 from Plot_Helper import (
     CreateCanvas,
     Draw_unc,
@@ -137,6 +141,11 @@ def parse_args() -> argparse.Namespace:
         "--skip-sys",
         action="store_true",
         help="Reuse central histograms for the uncertainty band instead of drawing all systematic variations.",
+    )
+    parser.add_argument(
+        "--root-out",
+        default=None,
+        help="Output ROOT file. Default: /eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/ALP_fast_plot_<year>_<region>.root",
     )
     return parser.parse_args()
 
@@ -563,8 +572,7 @@ def branch_requirements(expr: str) -> List[str]:
     return []
 
 
-def draw_sample_hist(
-    chain: ROOT.TChain,
+def plan_sample_hist(
     sample: str,
     var_name: str,
     spec: HistSpec,
@@ -575,7 +583,8 @@ def draw_sample_hist(
     sigma_hig: dict,
     blind: bool,
     mva_branch_map: Dict[str, Dict[str, str]],
-) -> ROOT.TH1F:
+) -> Tuple[ROOT.TH1F, str, str, str]:
+    """Book the histogram; return (hist, expr, weight, cut) for draw_into_hist / fill_planned_hists."""
     sample_spec = spec
     if var_name == "param" and sample in MASS_VALUES:
         sample_spec = HistSpec(f"(ALP_m - {MASS_VALUES[sample]:.8g}) / {mass_branch}", spec.nbins, spec.xmin, spec.xmax)
@@ -595,11 +604,10 @@ def draw_sample_hist(
 
     hist = make_hist(f"{var_name}_{sample}", sample_spec)
     draw_weight = "1.0" if sample == "Data" else base_weight
-    draw_into_hist(chain, hist, expr, draw_weight, cut)
-    return hist
+    return hist, expr, draw_weight, cut
 
 
-def draw_sys_hist(
+def plan_sys_hist(
     chain: ROOT.TChain,
     sample: str,
     var_name: str,
@@ -611,7 +619,7 @@ def draw_sys_hist(
     sigma_low: dict,
     sigma_hig: dict,
     mva_branch_map: Dict[str, Dict[str, str]],
-) -> ROOT.TH1F:
+) -> Tuple[ROOT.TH1F, str, str, str]:
     sample_spec = spec
     if var_name == "param" and sample in MASS_VALUES:
         sample_spec = HistSpec(f"(ALP_m - {MASS_VALUES[sample]:.8g}) / {mass_branch}", spec.nbins, spec.xmin, spec.xmax)
@@ -626,8 +634,7 @@ def draw_sys_hist(
     cut = f"({base_cut}) && ({extra_cut})"
 
     if sample == "Data":
-        draw_into_hist(chain, hist, expr, "1.0", cut)
-        return hist
+        return hist, expr, "1.0", cut
 
     central = sys_central_branch(sys_name)
     if has_branch(chain, sys_name) and has_branch(chain, central):
@@ -635,8 +642,27 @@ def draw_sys_hist(
     else:
         print(f"[Sys] {sample}/{sys_name}: missing branch, using central weight")
         sys_weight = base_weight
-    draw_into_hist(chain, hist, expr, sys_weight, cut)
-    return hist
+    return hist, expr, sys_weight, cut
+
+
+def fill_planned_hists(chain: ROOT.TChain, plans) -> None:
+    """Fill every (hist, expr, weight, cut) plan of one chain in a single pass over the chain.
+
+    Same histograms as calling draw_into_hist (one TChain.Draw) per plan; see single_pass_draw.
+    """
+    if not plans:
+        return
+    try:
+        values = evaluate_draw_requests(chain, [plan[1:] for plan in plans])
+    except Exception as exc:  # e.g. a formula that does not compile: let TChain.Draw report it as before
+        print(f"[SinglePass] {chain.GetName()}: {exc}; falling back to one TChain.Draw per histogram")
+        for hist, expr, weight, cut in plans:
+            draw_into_hist(chain, hist, expr, weight, cut)
+        return
+    for hist, expr, weight, cut in plans:
+        fill_like_draw(hist, values, expr, weight, cut)
+        hist.SetDirectory(0)
+        add_overflow(hist)
 
 
 def sideband_scale_bkg_to_data(histos, histos_sys, analyzer_cfg, signal_low=115.0,
@@ -689,24 +715,28 @@ def unblinded_hm_reference(ntuples, analyzer_cfg, args, hist_specs, base_weight,
     """H_m for Data + backgrounds over the full 95-180 window, region cut dropped.
 
     Only the sideband normalization is read off these; nothing here is drawn.
-    Filling them BEFORE the main histogram loop matters: draw_into_hist targets
-    the histogram by name, so the reference has to be renamed out of the way
-    before make_hist() creates the real `H_m_<sample>`.
+    Booking them BEFORE the main histograms matters: make_hist() deletes any
+    object with the same name, so the reference has to be renamed out of the
+    way before make_hist() creates the real `H_m_<sample>`.
+    Returns ({sample: hist}, {sample: [plan]}); the plans are filled together
+    with the sample's other histograms (fill_planned_hists).
     """
     reference_cut = (f"({region_cut(0, mass_branch)}) && ({channel_cut(args)})"
                      f" && ({merged_cut(args.merged_only)})")
     reference = {}
+    plans = {}
     for sample in ["Data"] + list(analyzer_cfg.bkg_names):
         if sample not in ntuples:
             continue
-        hist = draw_sample_hist(
-            ntuples[sample], sample, "H_m", hist_specs["H_m"], base_weight,
+        plan = plan_sample_hist(
+            sample, "H_m", hist_specs["H_m"], base_weight,
             reference_cut, mass_branch, sigma_low, sigma_hig, args.blind,
             mva_branch_map,
         )
-        hist.SetName(f"H_m_ref_{sample}")
-        reference[sample] = hist
-    return reference
+        plan[0].SetName(f"H_m_ref_{sample}")
+        reference[sample] = plan[0]
+        plans[sample] = [plan]
+    return reference, plans
 
 
 def clone_sys_from_central(histos, analyzer_cfg):
@@ -752,7 +782,7 @@ def main() -> None:
     target_masses = list(analyzer_cfg.sig_names) if args.mva and args.year == "run3" else ([args.mA] if args.mva else [])
     plot_output_path = args.out_dir or os.path.join("/eos/home-p/pelai/HZa/output_plots", f"fast_plot_{analyzer_cfg.out_region_name}")
     os.makedirs(plot_output_path, exist_ok=True)
-    root_output_path = os.path.join(os.path.dirname("/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc"), f"ALP_fast_plot_{args.year}_{analyzer_cfg.out_region_name}.root")
+    root_output_path = args.root_out or os.path.join(os.path.dirname("/eos/cms/store/group/phys_susy/pelai/HZa/dataVmc_hists/variables_dataVmc"), f"ALP_fast_plot_{args.year}_{analyzer_cfg.out_region_name}.root")
     os.makedirs(os.path.dirname(root_output_path), exist_ok=True)
 
     print(f"[Config] input={analyzer_cfg.sample_loc}")
@@ -797,11 +827,14 @@ def main() -> None:
     # Region 0 and 2 already exclude 115-135 from their sidebands, so this gives
     # them the same factor as before; region 1 (SR) stops falling back to 1.0.
     hm_reference = None
+    plans = {sample: [] for sample in analyzer_cfg.samp_names}
     if "H_m" in var_names:
-        hm_reference = unblinded_hm_reference(
+        hm_reference, reference_plans = unblinded_hm_reference(
             ntuples, analyzer_cfg, args, hist_specs, base_weight, mass_branch,
             sigma_low, sigma_hig, mva_branch_map,
         )
+        for sample, sample_plans in reference_plans.items():
+            plans[sample].extend(sample_plans)
 
     histos = {var_name: {} for var_name in var_names}
     for sample in analyzer_cfg.samp_names:
@@ -816,8 +849,7 @@ def main() -> None:
                 print(f"[Skip] {sample}/{var_name}: missing {missing}")
                 histos[var_name][sample] = make_hist(f"{var_name}_{sample}", spec)
                 continue
-            histos[var_name][sample] = draw_sample_hist(
-                ntuples[sample],
+            plan = plan_sample_hist(
                 sample,
                 var_name,
                 spec,
@@ -829,9 +861,13 @@ def main() -> None:
                 args.blind,
                 mva_branch_map,
             )
+            plans[sample].append(plan)
+            histos[var_name][sample] = plan[0]
             plot_cfg.SetHistStyles(histos[var_name][sample], sample)
 
     if args.skip_sys:
+        for sample in analyzer_cfg.samp_names:
+            fill_planned_hists(ntuples[sample], plans[sample])
         histos_sys = clone_sys_from_central(histos, analyzer_cfg)
     else:
         histos_sys = {var_name: {sample: {} for sample in analyzer_cfg.samp_names} for var_name in var_names}
@@ -839,7 +875,7 @@ def main() -> None:
             print(f"\n[Sys] {var_name}")
             for sample in analyzer_cfg.samp_names:
                 for sys_name in analyzer_cfg.sys_names:
-                    histos_sys[var_name][sample][sys_name] = draw_sys_hist(
+                    plan = plan_sys_hist(
                         ntuples[sample],
                         sample,
                         var_name,
@@ -852,7 +888,11 @@ def main() -> None:
                         sigma_hig,
                         mva_branch_map,
                     )
+                    plans[sample].append(plan)
+                    histos_sys[var_name][sample][sys_name] = plan[0]
                     plot_cfg.SetHistStyles(histos_sys[var_name][sample][sys_name], sample)
+        for sample in analyzer_cfg.samp_names:
+            fill_planned_hists(ntuples[sample], plans[sample])
 
     out_file = ROOT.TFile(root_output_path, "RECREATE")
     raw_dir = out_file.mkdir("raw_plots")

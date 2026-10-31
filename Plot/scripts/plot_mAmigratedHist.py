@@ -6,6 +6,11 @@ import re
 from typing import Dict, List, Tuple, Optional
 import uproot
 import awkward as ak
+import os as _os_cache, sys as _sys_cache
+# 讀檔快取：同一個 signal 檔（每棵 tree）在整個 process 內只讀一次，各 accumulate 函式共用
+_sys_cache.path.insert(0, _os_cache.path.dirname(_os_cache.path.abspath(__file__)))
+import signal_tree_cache
+from signal_tree_cache import open_cached
 import json
 import argparse
 import traceback
@@ -272,14 +277,22 @@ def _signal_rw_weights_impl(w, fp, tname, true_ma, t, wname):
     if _os.environ.get("HZA_SIGNAL_REWEIGHT", "1") == "0" or true_ma is None or not wname:
         return w
     global _SIGNAL_RW_OBJ
-    key = (str(fp), str(tname))
+    # 歸一化分 n_electrons / n_muons 在這棵 tree 內做，快取 key 含 (檔案, tree, 真實 mA)
+    key = (str(fp), str(tname), int(true_ma))
     if key not in _SIGNAL_RW_CACHE:
         if _SIGNAL_RW_OBJ is None:
             import sys as _sys
             _sys.path.insert(0, "/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/HZaMVA/scripts")
             from sideband_reweight import SidebandReweighter
             _SIGNAL_RW_OBJ = SidebandReweighter.from_json(_SIGNAL_RW_JSON)
-        fr = t.arrays(library="pd")
+            signal_tree_cache.set_prefetch(_SIGNAL_RW_OBJ, extra=ALT_WEIGHT_CANDS)
+        # 只讀 reweight 會查的欄位（舊版讀整棵 tree 的 379 個 branch；結果相同）
+        cols = signal_tree_cache.rw_columns(_SIGNAL_RW_OBJ, t.keys(), extra=(wname,))
+        if cols is None:
+            with uproot.open(str(fp)) as _f:
+                fr = _f[tname].arrays(library="pd")
+        else:
+            fr = t.arrays(cols, library="pd")
         for logical, cands in (("pho1ECALIso", ("pho1PIso_noCorr",)), ("pho2ECALIso", ("pho2PIso_noCorr",)),
                                ("H_m", ("H_mass",)), ("ALP_m", ("ALP_mass",))):
             if logical not in fr.columns:
@@ -344,7 +357,7 @@ def _accumulate_pred_pass_sumw_by_year(
                 break
 
             try:
-                with uproot.open(str(fp)) as f:
+                with open_cached(str(fp)) as f:
                     n_opened += 1
                     tname = _tree_pick(f)
                     if not tname:
@@ -816,6 +829,15 @@ def _new_th1f(name: str, title: str, bins: int, x_min: float, x_max: float) -> R
     h.Sumw2()
     return h
 
+def _fill_n(h: ROOT.TH1, x, w) -> None:
+    """等同逐事件 h.Fill(float(x), float(w))：TH1::FillN 是同一個 C++ 迴圈（同樣的 bin、累加順序、Sumw2 與統計量），
+    只是不經過 Python 逐項呼叫。"""
+    x = np.ascontiguousarray(ak.to_numpy(x), dtype=np.float64)
+    w = np.ascontiguousarray(ak.to_numpy(w), dtype=np.float64)
+    n = min(len(x), len(w))
+    if n:
+        h.FillN(n, x, w)
+
 def _accumulate_alp_m_hists_by_year(
     base_dir: Path,
     *,
@@ -874,7 +896,7 @@ def _accumulate_alp_m_hists_by_year(
                 break
 
             try:
-                with uproot.open(str(fp)) as f:
+                with open_cached(str(fp)) as f:
                     n_opened += 1
                     tname = _tree_pick(f)
                     if not tname:
@@ -965,16 +987,14 @@ def _accumulate_alp_m_hists_by_year(
 
                             alp_sel = alp[mask_pred]
                             w_sel = w[mask_pred]
-                            for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
-                                h_pred.Fill(float(xv), float(wv))
+                            _fill_n(h_pred, alp_sel, w_sel)
 
                         # true: diagonal only
                         if true_branch is not None and true_cut is not None:
                             mask_true = arrs[true_branch] >= true_cut
                             alp_sel = alp[mask_true]
                             w_sel = w[mask_true]
-                            for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
-                                h_true.Fill(float(xv), float(wv))
+                            _fill_n(h_true, alp_sel, w_sel)
 
             except Exception as e:
                 if debug:
@@ -1221,7 +1241,7 @@ def _accumulate_alp_m_hists_by_true_ma_year(
             continue
 
         try:
-            with uproot.open(str(fp)) as f:
+            with open_cached(str(fp)) as f:
                 n_opened += 1
                 tname = _tree_pick(f)
                 if not tname:
@@ -1268,8 +1288,7 @@ def _accumulate_alp_m_hists_by_true_ma_year(
                     mask = arrs[score_branch] >= cut
                     alp_sel = alp[mask]
                     w_sel = w[mask]
-                    for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
-                        h.Fill(float(xv), float(wv))
+                    _fill_n(h, alp_sel, w_sel)
 
         except Exception as e:
             if debug:
@@ -1323,7 +1342,7 @@ def _accumulate_alp_m_by_pred_ma_year(
             break
 
         try:
-            with uproot.open(str(fp)) as f:
+            with open_cached(str(fp)) as f:
                 n_opened += 1
                 tname = _tree_pick(f)
                 if not tname:
@@ -1374,8 +1393,7 @@ def _accumulate_alp_m_by_pred_ma_year(
                         if int(p) not in out:
                             out[int(p)] = _new_th1f(f"h_alp_m_predMa{p}_{year}", "", bins, x_min, x_max)
                         hp = out[int(p)]
-                        for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
-                            hp.Fill(float(xv), float(wv))
+                        _fill_n(hp, alp_sel, w_sel)
         except Exception as e:
             if debug:
                 print(f"[DEBUG] predMa(ALP_m): exception reading {fp}: {e}")
@@ -1427,7 +1445,7 @@ def _accumulate_alp_m_hists_predtrue_by_true_ma_year(
             break
 
         try:
-            with uproot.open(str(fp)) as f:
+            with open_cached(str(fp)) as f:
                 n_opened += 1
                 tname = _tree_pick(f)
                 if not tname:
@@ -1518,16 +1536,14 @@ def _accumulate_alp_m_hists_predtrue_by_true_ma_year(
                             mask_pred = mask_pred | (arrs[b] >= cut)
                         alp_sel = alp[mask_pred]
                         w_sel = w[mask_pred]
-                        for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
-                            h_pred.Fill(float(xv), float(wv))
+                        _fill_n(h_pred, alp_sel, w_sel)
 
                     # true: diagonal only
                     if true_branch is not None and true_cut is not None:
                         mask_true = arrs[true_branch] >= true_cut
                         alp_sel = alp[mask_true]
                         w_sel = w[mask_true]
-                        for xv, wv in zip(ak.to_numpy(alp_sel), ak.to_numpy(w_sel)):
-                            h_true.Fill(float(xv), float(wv))
+                        _fill_n(h_true, alp_sel, w_sel)
 
         except Exception as e:
             if debug:
@@ -1566,6 +1582,7 @@ def main():
     parser.add_argument("--alp-m-xmin", type=float, default=0.0, help="ALP_m histogram xmin.")
     parser.add_argument("--alp-m-xmax", type=float, default=33.0, help="ALP_m histogram xmax.")
 
+    parser.add_argument("--outdir", default=output_plot_dir, help="Output plot directory.")
     args = parser.parse_args()
 
     global input_root_dir
@@ -1577,7 +1594,7 @@ def main():
         )
 
     in_dir = Path(input_root_dir)
-    out_dir = Path(output_plot_dir)
+    out_dir = Path(args.outdir)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     if not in_dir.is_dir():

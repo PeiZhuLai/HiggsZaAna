@@ -10,8 +10,10 @@ MC 用 DYJetsToLL（與既有 plot_SF_validation.py 慣例一致；只有 2022/2
 每張圖把 MC 縮放到 data（只比形狀，不需 lumi/xs）。
 Env: higgs-alp-ana（ROOT 6.24 + pyarrow）。
 輸出: /eos/home-p/pelai/HZa/output_plots/SF_validation_zee_zmmg/<era>/<sf>/<var>.{pdf,png}
+每個 era 的直方圖存在 --cache-dir/<era>.pkl；只改版面時用 --from-cache 重畫（幾秒，不讀 parquet）。
+各 era 可分開平行跑（--eras 2024），最後 --eras run3_all --from-cache 由各 era 相加。
 """
-import argparse, os, glob, sys
+import argparse, os, glob, pickle, sys
 from array import array
 import numpy as np
 import pyarrow.parquet as pq
@@ -120,25 +122,113 @@ def data_paths(base, eras, kind):
     return [p for e in eras for p in glob.glob(f"{base}/{sub % e}/merged_nominal.parquet")]
 
 
-def stream_batches(paths, region, cols, batch_size=1000000):
-    """逐檔 iter_batches 串流；每批套 region mask，yield (arrs, m)。
+def stream_batches(path, regions, cols, batch_size=1000000):
+    """單檔 iter_batches 串流；每批對每個 region 做 mask，yield (arrs, {region: m})。
 
     只把單批（batch_size 列）載入記憶體，直方圖在呼叫端逐批累積，記憶體 O(bins)，
     與樣本大小無關。2024 split 樣本破億列且 z_ee/z_mumu 通過率極高（~1.4 億），
     若先把通過列全部累積成陣列會 OOM，故改為 streaming fill。
+    一個檔同時屬於兩個 region 時（DYJets）只讀一遍。
     """
-    need = list(dict.fromkeys(cols + [region]))
-    for p in paths:
-        pf = pq.ParquetFile(p)
-        avail = set(pf.schema_arrow.names)
-        rd = [c for c in need if c in avail]
-        if region not in rd:  # 沒有 region 欄無法遮罩，跳過該檔
-            continue
-        for batch in pf.iter_batches(columns=rd, batch_size=batch_size):
-            arrs = {rd[j]: batch.column(j).to_numpy(zero_copy_only=False) for j in range(len(rd))}
-            m = arrs[region].astype(bool)
-            if m.any():
-                yield arrs, m
+    pf = pq.ParquetFile(path)
+    avail = set(pf.schema_arrow.names)
+    regions = [r for r in regions if r in avail]  # 沒有 region 欄無法遮罩，跳過
+    if not regions:
+        return
+    rd = [c for c in dict.fromkeys(cols + regions) if c in avail]
+    for batch in pf.iter_batches(columns=rd, batch_size=batch_size):
+        arrs = {rd[j]: batch.column(j).to_numpy(zero_copy_only=False) for j in range(len(rd))}
+        masks = {r: arrs[r].astype(bool) for r in regions}
+        masks = {r: m for r, m in masks.items() if m.any()}
+        if masks:
+            yield arrs, masks
+
+
+REGION_KIND = {"z_ee": "ee", "z_mumu": "mmg"}  # region -> data stream（SFGROUPS 裡每個 region 只對應一種 data）
+
+
+def region_vars(region):
+    out = {}
+    for g in SFGROUPS:
+        if g[1] == region:
+            for v in g[6]:
+                out.setdefault(v[0], v)
+    return list(out.values())
+
+
+def era_inputs(base, era):
+    """{path: [regions]}（MC）與 {path: [region]}（data）。"""
+    mc, data = {}, {}
+    for region, kind in REGION_KIND.items():
+        for p in mc_paths(base, [era], region):
+            mc.setdefault(p, []).append(region)
+        for p in data_paths(base, [era], kind):
+            data.setdefault(p, []).append(region)
+    return mc, data
+
+
+def fingerprint(paths):
+    return {p: (os.path.getsize(p), int(os.path.getmtime(p))) for p in sorted(paths)}
+
+
+def fill_era(base, era):
+    """一個 era 的所有直方圖，每個輸入檔只讀一遍、8 個 SF 組同時填。
+
+    舊做法每個 SF 組各讀一次 data 與 MC，run3_all 再把五個 era 全部重讀，同一個檔被讀 ~16 次（全量 3.7 小時）。
+    acc["a"][region][var]：MC 套全部 SF；acc["d"][region][var]：data；acc["b"][sfname][var]：MC 拿掉該 SF。
+    """
+    mc, data = era_inputs(base, era)
+    acc = {"a": {r: {v[0]: _acc_init(v[3]) for v in region_vars(r)} for r in REGION_KIND},
+           "d": {r: {v[0]: _acc_init(v[3]) for v in region_vars(r)} for r in REGION_KIND},
+           "b": {g[0]: {v[0]: _acc_init(v[3]) for v in g[6]} for g in SFGROUPS},
+           "n_mc": {r: 0 for r in REGION_KIND}, "n_data": {r: 0 for r in REGION_KIND},
+           "inputs": fingerprint(list(mc) + list(data))}
+    for p, regions in mc.items():
+        groups = [g for g in SFGROUPS if g[1] in regions]
+        cols = [v[1] for r in regions for v in region_vars(r)] + ["weight_central"] + [g[3] for g in groups]
+        for arrs, masks in stream_batches(p, regions, cols):
+            for region, m in masks.items():
+                n = int(m.sum()); acc["n_mc"][region] += n
+                # weight_central = genweight × scale1fb × lumi × 全部 SF（樣本間可相加）
+                wc = arrs.get("weight_central")
+                w_after = np.where(np.isfinite(wc[m]), wc[m], 0.0) if wc is not None else np.zeros(n)
+                vals = {}
+                for key, col, title, bins, logx in region_vars(region):
+                    v = arrs.get(col); vals[key] = v[m] if v is not None else np.zeros(n)
+                    _acc_add(acc["a"][region][key], vals[key], w_after, bins)
+                for g in groups:
+                    if g[1] != region:
+                        continue
+                    vb = arrs.get(g[3])
+                    w_before = w_after / _sane_sf(vb[m] if vb is not None else np.ones(n))
+                    for key, col, title, bins, logx in g[6]:
+                        _acc_add(acc["b"][g[0]][key], vals[key], w_before, bins)
+        print(f"  [read] {era} {os.path.basename(os.path.dirname(p))} n_mc={acc['n_mc']}", flush=True)
+    for p, regions in data.items():
+        cols = [v[1] for r in regions for v in region_vars(r)]
+        for arrs, masks in stream_batches(p, regions, cols):
+            for region, m in masks.items():
+                n = int(m.sum()); acc["n_data"][region] += n
+                for key, col, title, bins, logx in region_vars(region):
+                    v = arrs.get(col); v = v[m] if v is not None else np.zeros(n)
+                    _acc_add(acc["d"][region][key], v, np.ones(n), bins)
+        print(f"  [read] {era} {os.path.basename(os.path.dirname(p))} n_data={acc['n_data']}", flush=True)
+    return acc
+
+
+def sum_accs(accs):
+    """直方圖可直接相加（MC 縮放到 data 在相加之後才做），run3_all 不必重讀檔案。"""
+    def add(x, y):
+        if isinstance(x, dict):
+            return {k: add(x[k], y[k]) for k in x}
+        if isinstance(x, list):
+            return [add(a, b) for a, b in zip(x, y)]
+        return x + y
+    out = None
+    for a in accs:
+        a = {k: v for k, v in a.items() if k != "inputs"}
+        out = a if out is None else add(out, a)
+    return out
 
 
 def _acc_init(edges):
@@ -274,57 +364,56 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=DEFAULT_ROOT)
     ap.add_argument("--out", default="/eos/home-p/pelai/HZa/output_plots/SF_validation_zee_zmmg")
-    ap.add_argument("--eras", default="all", help="comma list or 'all' (+run3_all)")
+    ap.add_argument("--eras", default="all",
+                    help="comma list of eras and/or run3_all (= sum of the 5 eras); 'all' = 5 eras + run3_all")
+    ap.add_argument("--cache-dir", default="/eos/home-p/pelai/HZa/output_tables/SF_validation_zee_zmmg/hist_cache",
+                    help="per-era accumulated histograms (<era>.pkl), written after every fill")
+    ap.add_argument("--from-cache", action="store_true",
+                    help="do not read parquet; use --cache-dir (refused if an input file changed since the cache was written)")
     args = ap.parse_args()
 
-    if args.eras.strip().lower() == "all":
-        groups = [(e, [e]) for e in ALL_ERAS] + [("run3_all", ALL_ERAS)]
-    else:
-        groups = [(e, [e]) for e in args.eras.split(",") if e.strip()]
+    labels = ALL_ERAS + ["run3_all"] if args.eras.strip().lower() == "all" else [e.strip() for e in args.eras.split(",") if e.strip()]
+    need = list(dict.fromkeys(e for l in labels for e in (ALL_ERAS if l == "run3_all" else [l])))
 
-    os.makedirs(args.out, exist_ok=True)
-    print(f"[cfg] base={args.base} out={args.out}")
+    os.makedirs(args.out, exist_ok=True); os.makedirs(args.cache_dir, exist_ok=True)
+    print(f"[cfg] base={args.base} out={args.out} cache={args.cache_dir} from_cache={args.from_cache}", flush=True)
 
-    for label, eras in groups:
+    accs = {}
+    for era in need:
+        cf = os.path.join(args.cache_dir, f"{era}.pkl")
+        mc, data = era_inputs(args.base, era)
+        if args.from_cache:
+            if not os.path.exists(cf):
+                sys.exit(f"[error] no cache for {era}: {cf}")
+            with open(cf, "rb") as f:
+                accs[era] = pickle.load(f)
+            # 快取只存直方圖，不知道輸入是否換過：比對檔案大小與 mtime，換過就拒絕
+            if accs[era]["inputs"] != fingerprint(list(mc) + list(data)):
+                sys.exit(f"[error] inputs of {era} changed since {cf} was written; rerun without --from-cache")
+            print(f"[cache] {era} <- {cf}", flush=True)
+        else:
+            accs[era] = fill_era(args.base, era)
+            with open(cf + ".tmp", "wb") as f:
+                pickle.dump(accs[era], f)
+            os.replace(cf + ".tmp", cf)
+            print(f"[cache] {era} -> {cf}", flush=True)
+
+    for label in labels:
+        eras = ALL_ERAS if label == "run3_all" else [label]
         lumi = sum(LUMI_MAP.get(e, 0.0) for e in eras)
-        mcp = mc_paths(args.base, eras, "z_ee")
-        if not mcp:
+        if not any(mc_paths(args.base, [e], "z_ee") for e in eras):
             print(f"[skip] {label}: no DYJetsToLL MC"); continue
-        print(f"\n[era] {label} lumi={lumi:.2f} mc_files={len(mcp)}")
+        acc = sum_accs([accs[e] for e in eras])
+        print(f"\n[era] {label} lumi={lumi:.2f}")
         for sfname, region, kind, wbranch, alab, blab, vlist in SFGROUPS:
-            dpaths = data_paths(args.base, eras, kind)
-            mcp_r = mc_paths(args.base, eras, region)
-            cols = [v[1] for v in vlist]
-            # 逐批累積直方圖（記憶體 O(bins)）：acc_a=套SF, acc_b=不套此SF, acc_d=data
-            acc_a = {v[0]: _acc_init(v[3]) for v in vlist}
-            acc_b = {v[0]: _acc_init(v[3]) for v in vlist}
-            acc_d = {v[0]: _acc_init(v[3]) for v in vlist}
-            mc_n = da_n = 0
-            # ---- MC：串流讀，逐批重建權重並填圖 ----
-            for arrs, m in stream_batches(mcp_r, region, cols + ["weight_central", wbranch]):
-                mc_n += int(m.sum())
-                # weight_central = genweight × scale1fb × lumi × 全部 SF（樣本間可相加）
-                wc = arrs.get("weight_central")
-                w_after = np.where(np.isfinite(wc[m]), wc[m], 0.0) if wc is not None else np.zeros(int(m.sum()))
-                vb = arrs.get(wbranch)
-                w_before = w_after / _sane_sf(vb[m] if vb is not None else np.ones(int(m.sum())))
-                for key, col, title, bins, logx in vlist:
-                    v = arrs.get(col); v = v[m] if v is not None else np.zeros(int(m.sum()))
-                    _acc_add(acc_a[key], v, w_after, bins)
-                    _acc_add(acc_b[key], v, w_before, bins)
-            # ---- Data：串流讀，單位權重填圖 ----
-            for arrs, m in stream_batches(dpaths, region, cols + ["weight_central"]):
-                n = int(m.sum()); da_n += n
-                for key, col, title, bins, logx in vlist:
-                    v = arrs.get(col); v = v[m] if v is not None else np.zeros(n)
-                    _acc_add(acc_d[key], v, np.ones(n), bins)
+            mc_n, da_n = acc["n_mc"][region], acc["n_data"][region]
             if mc_n == 0 or da_n == 0:
                 print(f"  [skip] {sfname}: empty mc/data in {region}"); continue
             outdir = os.path.join(args.out, label, sfname); os.makedirs(outdir, exist_ok=True)
             for key, col, title, bins, logx in vlist:
-                hd = _acc_hist(f"d_{label}_{sfname}_{key}", acc_d[key], bins)
-                ha = _acc_hist(f"a_{label}_{sfname}_{key}", acc_a[key], bins)
-                hb = _acc_hist(f"b_{label}_{sfname}_{key}", acc_b[key], bins)
+                hd = _acc_hist(f"d_{label}_{sfname}_{key}", acc["d"][region][key], bins)
+                ha = _acc_hist(f"a_{label}_{sfname}_{key}", acc["a"][region][key], bins)
+                hb = _acc_hist(f"b_{label}_{sfname}_{key}", acc["b"][sfname][key], bins)
                 # Normalise MC-with-SF (after=ha) to data, then scale MC-without-SF
                 # (before=hb) by the SAME factor. Normalising hb separately to data
                 # (the old `scale_to_data(hd, hb)`) absorbs the SF's overall (few-%)
