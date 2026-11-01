@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 import datetime
 import copy
@@ -97,16 +98,39 @@ def stage_and_open(path, label = "input"):
         return uproot.open(path, timeout = 300, num_workers = 1), None
 
     local = os.path.join(_local_scratch_dir(), "stage_%d_%s" % (os.getpid(), os.path.basename(path)))
+    # xrdcp itself has no overall timeout: on 2026-10-30/11-01 a few hundred jobs sat 4-6 h
+    # in a copy from xrootd-cms.infn.it with almost no CPU, while the same file copied from
+    # lxplus in tens of seconds. Each attempt is therefore bounded (HZA_XRDCP_TIMEOUT, s),
+    # and a /store/ LFN that fails or times out on its original redirector is retried on
+    # the global and FNAL redirectors before giving up.
+    timeout = float(os.environ.get("HZA_XRDCP_TIMEOUT", "900"))
+    urls = [path]
+    if "//store/" in path:
+        lfn = "/store/" + path.split("//store/", 1)[1]
+        urls += ["root://%s/%s" % (r, lfn) for r in ("cms-xrd-global.cern.ch", "cmsxrootd.fnal.gov")
+                 if r not in path]
     t0 = time.time()
-    rc = os.system("xrdcp -f --nopbar --retry 2 '%s' '%s' >/dev/null 2>&1" % (path, local))
-    if rc != 0 or not os.path.exists(local):
+    rcs = []
+    for url in urls:
+        try:
+            rc = subprocess.run(["xrdcp", "-f", "--nopbar", "--retry", "2", url, local],
+                                stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL,
+                                timeout = timeout).returncode
+        except subprocess.TimeoutExpired:
+            rc = "timeout %.0fs" % timeout
+        rcs.append(rc)
+        if rc == 0 and os.path.exists(local):
+            break
+        logger.warning("[AnalysisManager : stage_and_open] xrdcp %s from %s (rc=%s)"
+                       % (os.path.basename(path), url.split("//")[1].split("/")[0], rc))
+        if os.path.exists(local):
+            os.remove(local)
+    else:
         # Genuinely unavailable inputs exist (12 of 250 sampled failures were
         # [3010] Unable to open, and xrdcp fails on those too). Fail loudly with
         # the path so the reconciliation can account for it, rather than falling
         # back to a stream that will fail slowly.
-        if os.path.exists(local):
-            os.remove(local)
-        raise RuntimeError("xrdcp failed (rc=%s) staging %s: %s" % (rc, label, path))
+        raise RuntimeError("xrdcp failed (rc=%s) staging %s: %s" % ("/".join(map(str, rcs)), label, path))
     logger.debug("[AnalysisManager : stage_and_open] staged %s in %.1f s (%.2f GB)"
                  % (os.path.basename(path), time.time() - t0, os.path.getsize(local) / 1e9))
     return uproot.open(local, timeout = 300, num_workers = 1), local

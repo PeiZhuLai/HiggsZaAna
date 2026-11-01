@@ -64,8 +64,10 @@ parser.add_option("-c", "--nCats",   dest="nCats",    default=5,    type="int", 
 # scan_score_R_significance.py and pinned in MVAcut_points_run3.json. Override the blue
 # "Working Point" line on the sigVScore plots for those masses so they show the cut actually
 # used in the analysis. Higher masses keep the significance-optimized line. [Pei-Zhu 2026-06-18]
+# mA15 is overridden as well: the significance maximum moved to 0.985, but production keeps 0.990
+# because 0.985 gave 10-21% worse expected limits at mA13-17 with the data-driven background.
 MVACUT_JSON = os.path.join(PLOT_DIR, 'output', 'MVAcut_points_run3.json')
-LOWMASS_WP_OVERRIDE = {'M1', 'M2', 'M3'}
+LOWMASS_WP_OVERRIDE = {'M1', 'M2', 'M3', 'M15'}
 
 def load_wp_overrides():
     overrides = {}
