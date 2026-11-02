@@ -444,7 +444,16 @@ def _prepare_dataframe(
         df = df.Range(int(args.max_events))
 
     defined_cols = {"rdf_nominal_weight"}
-    df = df.Define("rdf_nominal_weight", _nominal_weight_expr(chain, sample, analyzer_cfg, args))
+    weight_expr = _nominal_weight_expr(chain, sample, analyzer_cfg, args)
+    if getattr(args, "bkg_non_train_only", False) and _is_background_sample(sample, analyzer_cfg):
+        # Background MC without the BDT training events: bkg_split from the friend tree
+        # (0 train, 1 validation, 2 test); validation+test is half of the sample -> weight x2.
+        # The systematic weights are built on rdf_nominal_weight, so they follow.
+        if not chain.GetBranch("bkg_split"):   # lives in the friend tree; GetListOfBranches does not see it
+            raise RuntimeError(f"sample={sample}: no bkg_split friend branch for --bkgNonTrainOnly")
+        weight_expr = f"((bkg_split == 1 || bkg_split == 2) ? 2.0 : 0.0) * ({weight_expr})"
+        print(f"[FastBackend][NonTrain] sample={sample}: weight = {weight_expr}")
+    df = df.Define("rdf_nominal_weight", weight_expr)
 
     if sample in MASS_VALUES:
         param_expr = f"(ALP_m - {MASS_VALUES[sample]:.8g}) / H_m"
@@ -571,6 +580,8 @@ def _book_sample_actions(
 
 def _configure_analyzer(args, parse_sample_filter: Callable, format_source_selectors: Callable):
     analyzer_cfg = AC.Analyzer_Config("inclusive", args.year, args.region, args.mva)
+    if getattr(args, "bkg_non_train_only", False):
+        analyzer_cfg.bkg_split_friend_base = args.bkg_split_friend_base
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
     all_sig_names = list(analyzer_cfg.sig_names)

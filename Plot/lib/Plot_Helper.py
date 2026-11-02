@@ -210,6 +210,8 @@ def _run3_sources_for_sample(sample, ana_cfg):
 
     return []
 
+_FRIEND_KEEPALIVE = []   # friend chains must outlive the chains they are attached to
+
 def _run3_build_chain(sample, ana_cfg):
     """
     Build a TChain for run3 according to updated rules:
@@ -231,10 +233,24 @@ def _run3_build_chain(sample, ana_cfg):
                 added += 1
 
     elif sample in ("DYJetsToLL", "DYGto2LG", "Data"):
+        friend_base = getattr(ana_cfg, "bkg_split_friend_base", None) if sample != "Data" else None
+        fch = TChain("bkgsplit", f"friend_{sample}") if friend_base else None
         for directory, year in _run3_sources_for_sample(sample, ana_cfg):
             path = os.path.join(base, directory, f"{year}.root")
             if _add_file_if_exists(ch, path):
                 added += 1
+                if fch is not None:
+                    fpath = os.path.join(friend_base, directory, f"{year}.root")
+                    if not os.path.exists(fpath):
+                        raise RuntimeError(f"[Plot_Helper] missing training-split friend {fpath} (make_bkg_split_friends.py)")
+                    fch.Add(fpath)
+        if fch is not None:
+            # bkg_split: 0 train, 1 validation, 2 test (make_bkg_split_friends.py); entry order must match
+            if fch.GetEntries() != ch.GetEntries():
+                raise RuntimeError(f"[Plot_Helper] sample={sample}: friend has {fch.GetEntries()} entries, chain {ch.GetEntries()}")
+            ch.AddFriend(fch)
+            _FRIEND_KEEPALIVE.append(fch)
+            print(f"[Plot_Helper] sample={sample} training-split friend attached ({fch.GetEntries()} entries)")
 
     else:
         # Fallback

@@ -244,8 +244,12 @@ case "$region_key" in
         ;;
 esac
 
-if [[ "$final_tag" == "sideband_rwgt" ]]; then
+if [[ "$final_tag" == "sideband_rwgt" || "$final_tag" == "sideband_rwgt_nontrain" ]]; then
     cmd+=(--useSidebandReweight --sidebandReweightJson "$SIDEBAND_REWEIGHT_JSON" --noSidebandReweightUnc)
+fi
+# *_nontrain: background MC without the BDT training events (friends of make_bkg_split_friends.py)
+if [[ "$final_tag" == *_nontrain ]]; then
+    cmd+=(--bkgNonTrainOnly)
 fi
 
 if [[ -n "$MAX_EVENTS" ]]; then

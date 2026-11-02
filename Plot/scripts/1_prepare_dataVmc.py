@@ -54,6 +54,8 @@ parser.add_argument('--histOnly', dest='hist_only', action='store_true', default
 parser.add_argument('--skipSystematics', dest='skip_systematics', action='store_true', default=False, help='write nominal histograms and copy them into sys_dir instead of filling per-event systematic variations')
 parser.add_argument('--optimizeBranches', dest='optimize_branches', action='store_true', default=False, help='disable unused TTree branches before the event loop')
 parser.add_argument('--backend', dest='backend', choices=('auto', 'fast', 'loop'), default=os.environ.get('DATA_VMC_BACKEND', 'auto'), help='histogram backend: auto uses the fast RDataFrame backend for supported --histOnly jobs, loop uses the original Python event loop')
+parser.add_argument('--bkgNonTrainOnly', dest='bkg_non_train_only', action='store_true', default=False, help='background MC: keep only the events not used in the BDT training (validation+test split) with weight x2; needs the friends of make_bkg_split_friends.py and the fast backend')
+parser.add_argument('--bkgSplitFriendBase', dest='bkg_split_friend_base', default='/eos/home-p/pelai/HZa/root_P2Root/run3_bdt_scored_fsrfix_bkgsplit', help='directory of the training-split friend trees (with --bkgNonTrainOnly)')
 parser.add_argument('--maxEvents', dest='max_events', type=int, default=-1, help='maximum events per sample; <=0 runs all events')
 # 新增：MVA 偵錯輸出控制
 parser.add_argument('--mvaDebug', dest='mva_debug', action='store_true', default=False, help='print per-mA fill info')
@@ -949,6 +951,14 @@ def main():
             print("[FastBackend] %s; falling back to the original event loop." % exc)
 
     analyzer_cfg = AC.Analyzer_Config('inclusive', args.year, args.region, args.mva)
+    if args.bkg_non_train_only:
+        # The event loop does not apply the training-split weight; refuse instead of silently
+        # mixing training events into the background.
+        _selected, _ = _parse_sample_filter(args.samples, analyzer_cfg)
+        _selected = list(analyzer_cfg.samp_names) if _selected is None else _selected
+        if any(s in analyzer_cfg.bkg_names for s in _selected):
+            print("[NonTrain][ERROR] --bkgNonTrainOnly with background samples needs the fast backend")
+            sys.exit(2)
 
     analyzer_cfg.mva = bool(args.mva)
     analyzer_cfg.mva_alp_mass = str(args.mA) if args.mva else "M1"
