@@ -21,8 +21,8 @@ Per mass it also reports (stdout + JSON; only the peak-window fractions are draw
   f = w(120-130)/w(95-180) in each slice with its uncertainty and their ratio.
 
 Outputs (new subdirectory; nothing existing is overwritten):
-  Plot/plots/bkgmcScupltingCheck/srAdjacentSlices/bkg_mass_shape_srAdjacent_mA{NN}.{pdf,png}
-  Plot/plots/bkgmcScupltingCheck/srAdjacentSlices/srAdjacent_peakFraction_summary.{pdf,png}
+  /eos/home-p/pelai/HZa/output_plots/bkgmcScupltingCheck/srAdjacentSlices/bkg_mass_shape_srAdjacent_mA{NN}.{pdf,png}
+  /eos/home-p/pelai/HZa/output_plots/bkgmcScupltingCheck/srAdjacentSlices/srAdjacent_peakFraction_summary.{pdf,png}
   --json <path>  per-mass numbers
 
 Env: higgs-alp-ana (ROOT 6.24 + uproot).
@@ -47,7 +47,7 @@ import plot_bkgmcSculptingCheck as SC            # reuse constants / cut parsing
 from Analyzer_Configs import Analyzer_Config
 from Plot_Helper import _run3_sources_for_sample, SaveCanvPic
 
-OUT_DEFAULT = SC.LOCAL_OUTPUT_DIR / "srAdjacentSlices"
+OUT_DEFAULT = Path(SC.DEFAULT_OUTPUT_DIR) / "srAdjacentSlices"
 PEAK = (120.0, 130.0)
 XMIN, XMAX = SC.H_M_XMIN, SC.H_M_XMAX
 BINW = SC.BDT_SHAPE_MASS_BIN_WIDTH                 # 5 GeV, as fig:bdt_mass_shapes

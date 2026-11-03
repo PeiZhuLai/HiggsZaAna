@@ -23,7 +23,7 @@ Input : /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix/Sig_M
         /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix_fpo1/{Data,Bkg_MC}
         /eos/project/h/htozg-dy-privatemc/pelai/HZa/parquet_DNA_tmp_fsrfix_fpo1_dyveto/Bkg_MC_dyveto2024
           (2024 DY+jets re-produced with the overlap veto)
-Output: Plot/plots/fsrRecovery_final/*.pdf|.png, fsr_final_summary.txt
+Output: /eos/home-p/pelai/HZa/output_plots/fsrRecovery_final/*.pdf|.png, fsr_final_summary.txt
 
 Env   : LCG_104 (ROOT 6.28). ROOT 6.34 drops histograms from PDF output.
     set +u; source /cvmfs/sft.cern.ch/lcg/views/LCG_104/x86_64-el9-gcc13-opt/setup.sh
@@ -70,7 +70,7 @@ COLS = ["z_mumu", "z_ee", "Z_mass", "Z_noFSR_mass", "H_mass", "H_noFSR_mass",
         "gamma_fsr_pt", "weight_central"]
 RUN3_LUMI = sum(LUMI[e] for e in ERAS)
 SIM_EXTRA = "Simulation Preliminary"
-OUT = Path("/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/Plot/plots/fsrRecovery_final")
+OUT = Path("/eos/home-p/pelai/HZa/output_plots/fsrRecovery_final")
 
 VARS = {
     "mll": dict(before="Z_noFSR_mass", after="Z_mass", nbins=60, lo=60.0, hi=120.0,
