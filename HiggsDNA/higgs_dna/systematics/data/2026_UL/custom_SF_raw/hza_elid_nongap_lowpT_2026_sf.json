@@ -97,11 +97,115 @@
         ],
         "content": [
           0.11435626913875718,
-          0.29564001011860513,
-          0.0076443972293425,
+          0.2967173739308041,
+          0.010045572736447246,
           0.01425313494495438,
-          0.2739263204097648,
+          0.27907724161847774,
           0.08891020183509407
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_stat",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "statistical part of unc_pass: data and MC statistics (uncorrelated between eras)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "eta",
+          "pt"
+        ],
+        "edges": [
+          [
+            -2.5,
+            -1.566,
+            -1.444,
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            7.0,
+            15.0
+          ]
+        ],
+        "content": [
+          0.021223169030975056,
+          0.018364912029419783,
+          0.007070549566821967,
+          0.010481165014572226,
+          0.013872905641725119,
+          0.02438656894352926
+        ],
+        "flow": "clamp"
+      }
+    },
+    {
+      "name": "unc_pass_syst",
+      "version": 1,
+      "inputs": [
+        {
+          "name": "eta",
+          "type": "real",
+          "description": "eta"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": "pt"
+        }
+      ],
+      "output": {
+        "name": "sf",
+        "type": "real",
+        "description": "method part of unc_pass: RMS/sqrt(N) of the four fits and alternative MC (correlated between eras)"
+      },
+      "data": {
+        "nodetype": "multibinning",
+        "inputs": [
+          "eta",
+          "pt"
+        ],
+        "edges": [
+          [
+            -2.5,
+            -1.566,
+            -1.444,
+            0.0,
+            1.444,
+            1.566,
+            2.5
+          ],
+          [
+            7.0,
+            15.0
+          ]
+        ],
+        "content": [
+          0.11236962840384643,
+          0.29614849315595765,
+          0.00713588539890923,
+          0.009659039066925178,
+          0.27873221786947056,
+          0.08550040494360046
         ],
         "flow": "clamp"
       }
@@ -201,10 +305,10 @@
         ],
         "content": [
           0.21245150215764685,
-          0.7060964990353801,
-          0.021921208063913743,
+          0.7086680951255786,
+          0.028502116120596926,
           0.040146315610053794,
-          0.7871155971380875,
+          0.8018140072684729,
           0.16341617065017314
         ],
         "flow": "clamp"
