@@ -1,0 +1,15 @@
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/shellScripts/impact/Condor/runjob_expectedImpact.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_impact_q50_wilson_test
+environment = "IMPACT_CARD=wilson IMPACT_EXPECT=q50 IMPACT_PARALLEL=1 IMPACT_SKIP_T2W=1"
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/logs/impact_q50/wilson_mA$(mA).$(ClusterId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/logs/impact_q50/wilson_mA$(mA).$(ClusterId).err
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/logs/impact_q50/wilson.$(ClusterId).log
+arguments = $(mA) /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue mA in (10)

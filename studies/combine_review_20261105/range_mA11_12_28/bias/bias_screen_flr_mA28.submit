@@ -1,0 +1,94 @@
+universe       = vanilla
+executable     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/range_mA11_12_28/bias/runjob.sh
+request_memory = 3000
+request_cpus   = 1
++JobFlavour    = "workday"
+batch_name     = bias_screen_flr_mA28
+on_exit_hold   = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output         = /dev/null
+error          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/range_mA11_12_28/bias/logs/$(tag)_mA$(m)_$(tr)_$(inj)_c$(c).$(ClusterId).err
+log            = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/range_mA11_12_28/bias/logs/bias_screen.$(ClusterId).log
+arguments      = $(tag) $(m) $(tr) $(inj) $(c) 1000
+queue tag, m, tr, inj, c from (
+flr 28 Bern5 0 0
+flr 28 Bern5 0 1
+flr 28 Bern5 0 2
+flr 28 Bern5 0 3
+flr 28 Bern5 0 4
+flr 28 Bern5 0 5
+flr 28 Bern5 0 6
+flr 28 Bern5 0 7
+flr 28 Bern5 0 8
+flr 28 Bern5 0 9
+flr 28 Bern5 q50 0
+flr 28 Bern5 q50 1
+flr 28 Bern5 q50 2
+flr 28 Bern5 q50 3
+flr 28 Bern5 q50 4
+flr 28 Bern5 q50 5
+flr 28 Bern5 q50 6
+flr 28 Bern5 q50 7
+flr 28 Bern5 q50 8
+flr 28 Bern5 q50 9
+flr 28 Exp1 0 0
+flr 28 Exp1 0 1
+flr 28 Exp1 0 2
+flr 28 Exp1 0 3
+flr 28 Exp1 0 4
+flr 28 Exp1 0 5
+flr 28 Exp1 0 6
+flr 28 Exp1 0 7
+flr 28 Exp1 0 8
+flr 28 Exp1 0 9
+flr 28 Exp1 q50 0
+flr 28 Exp1 q50 1
+flr 28 Exp1 q50 2
+flr 28 Exp1 q50 3
+flr 28 Exp1 q50 4
+flr 28 Exp1 q50 5
+flr 28 Exp1 q50 6
+flr 28 Exp1 q50 7
+flr 28 Exp1 q50 8
+flr 28 Exp1 q50 9
+flr 28 Pow1 0 0
+flr 28 Pow1 0 1
+flr 28 Pow1 0 2
+flr 28 Pow1 0 3
+flr 28 Pow1 0 4
+flr 28 Pow1 0 5
+flr 28 Pow1 0 6
+flr 28 Pow1 0 7
+flr 28 Pow1 0 8
+flr 28 Pow1 0 9
+flr 28 Pow1 q50 0
+flr 28 Pow1 q50 1
+flr 28 Pow1 q50 2
+flr 28 Pow1 q50 3
+flr 28 Pow1 q50 4
+flr 28 Pow1 q50 5
+flr 28 Pow1 q50 6
+flr 28 Pow1 q50 7
+flr 28 Pow1 q50 8
+flr 28 Pow1 q50 9
+flr 28 Lau1 0 0
+flr 28 Lau1 0 1
+flr 28 Lau1 0 2
+flr 28 Lau1 0 3
+flr 28 Lau1 0 4
+flr 28 Lau1 0 5
+flr 28 Lau1 0 6
+flr 28 Lau1 0 7
+flr 28 Lau1 0 8
+flr 28 Lau1 0 9
+flr 28 Lau1 q50 0
+flr 28 Lau1 q50 1
+flr 28 Lau1 q50 2
+flr 28 Lau1 q50 3
+flr 28 Lau1 q50 4
+flr 28 Lau1 q50 5
+flr 28 Lau1 q50 6
+flr 28 Lau1 q50 7
+flr 28 Lau1 q50 8
+flr 28 Lau1 q50 9
+)

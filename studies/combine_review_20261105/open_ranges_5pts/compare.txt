@@ -1,0 +1,146 @@
+=== mA19
+  production: Exp1,Pow1,Lau1,Bern5 default Exp1 | staging: Exp1,Pow1,Lau1,Bern5 default Exp1
+  GOF (truth flag) production: Exp1 0.62(1), Pow1 0.67(1), Lau1 0.49(1), Bern5 0.66(0)
+  GOF (truth flag) staging   : Exp1 0.62(1), Pow1 0.67(1), Lau1 0.49(1), Bern5 0.66(0)
+  params at a range limit: production 8, staging 8
+    Exp1   Exp_p1_exp1      prod -0.05385 [-0.1, -0.02]           stg -0.05385 [-0.1, -0.02]
+    Exp1   Exp_sigma_p1     prod 4.232 [1.559, 10.25]             stg 4.232 [1.559, 10.25]
+    Exp1   Exp_turnon_p1    prod 106.1 [106.1, 116.1] *           stg 106.1 [106.1, 116.1] *
+    Exp1   Exp_width_p1     prod 9.973 [1.091, 9.973] *           stg 9.973 [1.091, 9.973] *
+    Pow1   Pow_p1_pow1      prod -8.779 [-12, -5]                 stg -8.779 [-12, -5]
+    Pow1   Pow_sigma_p1     prod 8.145 [1.732, 11.38]             stg 8.145 [1.732, 11.38]
+    Pow1   Pow_turnon_p1    prod 108.8 [106.3, 116.3]             stg 108.8 [106.3, 116.3]
+    Pow1   Pow_width_p1     prod 8.672 [0.9485, 8.672] *          stg 8.672 [0.9485, 8.672] *
+    Lau1   Lau_p1_lau1      prod -6.5 [-6.5, -2] *                stg -6.5 [-6.5, -2] *
+    Lau1   Lau_sigma_p1     prod 3.783 [1.732, 11.38]             stg 3.783 [1.732, 11.38]
+    Lau1   Lau_turnon_p1    prod 105.9 [105.9, 115.9] *           stg 105.9 [105.9, 115.9] *
+    Lau1   Lau_width_p1     prod 8.238 [0.9011, 8.238] *          stg 8.238 [0.9011, 8.238] *
+    Bern5  Bern_b01         prod 4.547e-10 [-3, 3]                stg 4.547e-10 [-3, 3]
+    Bern5  Bern_b02         prod -9.417e-10 [-3, 3]               stg -9.417e-10 [-3, 3]
+    Bern5  Bern_b03         prod -3.388e-07 [-3, 3]               stg -3.388e-07 [-3, 3]
+    Bern5  Bern_b04         prod 0.224 [-3, 3]                    stg 0.224 [-3, 3]
+    Bern5  Bern_gsigma      prod 8.763 [1.473, 9.677]             stg 8.763 [1.473, 9.677]
+    Bern5  Bern_step        prod 104.7 [104.7, 114.7] *           stg 104.7 [104.7, 114.7] *
+    Bern5  Bern_stepWidth   prod 6.504 [0.7114, 6.504] *          stg 6.504 [0.7114, 6.504] *
+  max |staging - production| / production range width: 0.00e+00
+=== mA10
+  production: Exp3,Pow1,Lau1,Bern5 default Exp3 | staging: Lau1,Exp3,Pow1,Bern4 default Pow1
+  GOF (truth flag) production: Exp3 0.83(1), Pow1 0.37(1), Lau1 0.18(1), Bern5 0.41(0)
+  GOF (truth flag) staging   : Lau1 0.58(1), Exp3 0.75(1), Pow1 0.68(1), Bern4 0.73(1)
+  params at a range limit: production 13, staging 10
+    Lau1   Lau_p1_lau1      prod -6.5 [-6.5, -2] *                stg -6.23 [-6.5, -2]
+    Lau1   Lau_sigma_p1     prod 3.688 [1.26, 8.28]               stg 0.05001 [0.05, 20] *
+    Lau1   Lau_turnon_p1    prod 103.2 [103.2, 113.2] *           stg 95 [95, 125] *
+    Lau1   Lau_width_p1     prod 5.776 [0.6317, 5.776] *          stg 50 [0.1, 50] *
+    Exp3   Exp_cp3_exp3     prod 0.0001 [0.0001, 1] *             stg 1 [0.0001, 1] *
+    Exp3   Exp_p1_exp3      prod -0.1074 [-0.12, -0.02]           stg -0.05577 [-0.12, -0.02]
+    Exp3   Exp_p3_exp3      prod -0.031 [-0.1, -0.015]            stg -0.07354 [-0.1, -0.015]
+    Exp3   Exp_sigma_p3     prod 1.134 [1.134, 7.452] *           stg 9.821 [0.05, 20]
+    Exp3   Exp_turnon_p3    prod 103.4 [103.4, 113.4] *           stg 95 [95, 125] *
+    Exp3   Exp_width_p3     prod 6.992 [0.7647, 6.992] *          stg 50 [0.1, 50] *
+    Pow1   Pow_p1_pow1      prod -9.22 [-12, -5]                  stg -6.449 [-12, -5]
+    Pow1   Pow_sigma_p1     prod 1.26 [1.26, 8.28] *              stg 7.363 [0.05, 20]
+    Pow1   Pow_turnon_p1    prod 103.6 [103.6, 113.6] *           stg 95 [95, 125] *
+    Pow1   Pow_width_p1     prod 6.08 [0.665, 6.08] *             stg 50 [0.1, 50] *
+    Bern4  Bern_b01         prod -                                stg 5.641e-10 [-3, 3]
+    Bern4  Bern_b02         prod -                                stg -1.313e-07 [-3, 3]
+    Bern4  Bern_b03         prod -                                stg 0.4219 [-3, 3]
+    Bern4  Bern_gsigma      prod -                                stg 0.05 [0.05, 20] *
+    Bern4  Bern_step        prod -                                stg 95.26 [95, 125]
+    Bern4  Bern_stepWidth   prod -                                stg 0.1 [0.1, 50] *
+  max |staging - production| / production range width: 8.60e+00
+=== mA15
+  production: Exp3,Pow1,Lau1,Bern5 default Exp3 | staging: Lau1,Pow1,Exp1,Bern5 default Lau1
+  GOF (truth flag) production: Exp3 0.68(1), Pow1 0.12(1), Lau1 0.07(1), Bern5 0.39(0)
+  GOF (truth flag) staging   : Lau1 0.44(1), Pow1 0.64(1), Exp1 0.43(1), Bern5 0.73(0)
+  params at a range limit: production 12, staging 4
+    Lau1   Lau_p1_lau1      prod -6.5 [-6.5, -2] *                stg -6.5 [-6.5, -2] *
+    Lau1   Lau_sigma_p1     prod 1.523 [1.522, 10] *              stg 2.46 [0.05, 20]
+    Lau1   Lau_turnon_p1    prod 104.7 [104.7, 114.7] *           stg 99.33 [95, 125]
+    Lau1   Lau_width_p1     prod 7.144 [0.7814, 7.144] *          stg 0.1 [0.1, 50] *
+    Pow1   Pow_p1_pow1      prod -8.937 [-12, -5]                 stg -9.155 [-12, -5]
+    Pow1   Pow_sigma_p1     prod 1.523 [1.522, 10] *              stg 0.05 [0.05, 20] *
+    Pow1   Pow_turnon_p1    prod 105.1 [105.1, 115.1] *           stg 100.8 [95, 125]
+    Pow1   Pow_width_p1     prod 6.723 [0.8225, 7.52]             stg 2.467 [0.1, 50]
+    Exp1   Exp_p1_exp1      prod -                                stg -0.05413 [-0.1, -0.02]
+    Exp1   Exp_sigma_p1     prod -                                stg 2.406 [0.05, 20]
+    Exp1   Exp_turnon_p1    prod -                                stg 99.25 [95, 125]
+    Exp1   Exp_width_p1     prod -                                stg 0.462 [0.1, 50]
+    Bern5  Bern_b01         prod 2.715e-12 [-3, 3]                stg 9.023e-13 [-3, 3]
+    Bern5  Bern_b02         prod -9.012e-11 [-3, 3]               stg 3.979e-05 [-3, 3]
+    Bern5  Bern_b03         prod -2.571e-09 [-3, 3]               stg 0.1427 [-3, 3]
+    Bern5  Bern_b04         prod -0.2143 [-3, 3]                  stg 0.2153 [-3, 3]
+    Bern5  Bern_gsigma      prod 1.923 [1.294, 8.504]             stg 0.05 [0.05, 20] *
+    Bern5  Bern_step        prod 103.5 [103.5, 113.5] *           stg 98.52 [95, 125]
+    Bern5  Bern_stepWidth   prod 5.64 [0.6169, 5.64] *            stg 2.296 [0.1, 50]
+  max |staging - production| / production range width: 1.11e+00
+=== mA21
+  production: Pow1,Exp1,Lau1 default Pow1 | staging: Exp1,Pow1,Lau1 default Exp1
+  GOF (truth flag) production: Pow1 0.78(1), Exp1 0.79(1), Lau1 0.41(1)
+  GOF (truth flag) staging   : Exp1 0.93(1), Pow1 0.87(1), Lau1 0.94(1)
+  params at a range limit: production 10, staging 3
+    Exp1   Exp_p1_exp1      prod -0.07852 [-0.09, -0.03]          stg -0.06364 [-0.09, -0.03]
+    Exp1   Exp_sigma_p1     prod 4 [0.6, 4] *                     stg 6.054 [0.05, 20]
+    Exp1   Exp_turnon_p1    prod 109 [109, 113] *                 stg 102.4 [95, 125]
+    Exp1   Exp_width_p1     prod 8 [0.8, 8] *                     stg 3.802 [0.1, 50]
+    Pow1   Pow_p1_pow1      prod -8.638 [-10, -6]                 stg -8.474 [-10, -6]
+    Pow1   Pow_sigma_p1     prod 1 [1, 6] *                       stg 7.718 [0.05, 20]
+    Pow1   Pow_turnon_p1    prod 108 [108, 114] *                 stg 102.2 [95, 125]
+    Pow1   Pow_width_p1     prod 8 [0.8, 8] *                     stg 0.1 [0.1, 50] *
+    Lau1   Lau_p1_lau1      prod -6 [-6, -2] *                    stg -6 [-6, -2] *
+    Lau1   Lau_sigma_p1     prod 1 [1, 6] *                       stg 5.289 [0.05, 20]
+    Lau1   Lau_turnon_p1    prod 108 [108, 113] *                 stg 99.95 [95, 125]
+    Lau1   Lau_width_p1     prod 8 [0.8, 8] *                     stg 0.1 [0.1, 50] *
+  max |staging - production| / production range width: 1.65e+00
+=== mA22
+  production: Exp3,Pow1,Bern6,Lau1 default Exp3 | staging: Exp1,Pow1,Bern5,Lau1 default Exp1
+  GOF (truth flag) production: Exp3 0.90(1), Pow1 0.23(1), Bern6 0.52(0), Lau1 0.10(1)
+  GOF (truth flag) staging   : Exp1 0.74(1), Pow1 0.58(1), Bern5 0.66(1), Lau1 0.71(1)
+  params at a range limit: production 12, staging 5
+    Exp1   Exp_p1_exp1      prod -                                stg -0.05861 [-0.08, -0.03]
+    Exp1   Exp_sigma_p1     prod -                                stg 5.186 [0.05, 20]
+    Exp1   Exp_turnon_p1    prod -                                stg 99.62 [95, 125]
+    Exp1   Exp_width_p1     prod -                                stg 0.1 [0.1, 50] *
+    Pow1   Pow_p1_pow1      prod -8.786 [-10, -5.5]               stg -7.859 [-10, -5.5]
+    Pow1   Pow_sigma_p1     prod 5.729 [2, 9.5]                   stg 0.05 [0.05, 20] *
+    Pow1   Pow_turnon_p1    prod 108 [108, 113] *                 stg 102.7 [95, 125]
+    Pow1   Pow_width_p1     prod 6 [0.5, 6] *                     stg 5.644 [0.1, 50]
+    Bern5  Bern_b01         prod -                                stg 2.437e-07 [-3, 3]
+    Bern5  Bern_b02         prod -                                stg 1.002e-06 [-3, 3]
+    Bern5  Bern_b03         prod -                                stg 0.1479 [-3, 3]
+    Bern5  Bern_b04         prod -                                stg -0.1498 [-3, 3]
+    Bern5  Bern_gsigma      prod -                                stg 0.05 [0.05, 20] *
+    Bern5  Bern_step        prod -                                stg 98.04 [95, 125]
+    Bern5  Bern_stepWidth   prod -                                stg 4.367 [0.1, 50]
+    Lau1   Lau_p1_lau1      prod -6 [-6, -2] *                    stg -6 [-6, -2] *
+    Lau1   Lau_sigma_p1     prod 3.634 [2, 9]                     stg 4.568 [0.05, 20]
+    Lau1   Lau_turnon_p1    prod 107.5 [107.5, 113.2] *           stg 98.85 [95, 125]
+    Lau1   Lau_width_p1     prod 7 [0.5, 7] *                     stg 0.1 [0.1, 50] *
+  max |staging - production| / production range width: 1.52e+00
+=== mA23
+  production: Exp3,Pow1,Lau1,Bern6 default Exp3 | staging: Exp3,Pow1,Bern5,Lau1 default Exp3
+  GOF (truth flag) production: Exp3 0.80(1), Pow1 0.35(1), Lau1 0.22(1), Bern6 0.58(0)
+  GOF (truth flag) staging   : Exp3 0.96(0 [fallback-empty-envelope] [family-fallback]), Pow1 0.76(1), Bern5 0.60(1), Lau1 0.75(1)
+  params at a range limit: production 12, staging 5
+    Exp3   Exp_cp3_exp3     prod 0.0001 [0.0001, 1] *             stg 0.01587 [0.0001, 1]
+    Exp3   Exp_p1_exp3      prod -0.12 [-0.12, -0.03] *           stg -0.06052 [-0.12, -0.03]
+    Exp3   Exp_p3_exp3      prod -0.04816 [-0.1, -0.02]           stg -0.06053 [-0.1, -0.02]
+    Exp3   Exp_sigma_p3     prod 5.498 [3, 10]                    stg 4.626 [0.05, 20]
+    Exp3   Exp_turnon_p3    prod 108.5 [108.5, 112.5] *           stg 101 [95, 125]
+    Exp3   Exp_width_p3     prod 6 [0.5, 6] *                     stg 0.1 [0.1, 50] *
+    Pow1   Pow_p1_pow1      prod -8.754 [-10, -5.5]               stg -8.099 [-10, -5.5]
+    Pow1   Pow_sigma_p1     prod 3.833 [2, 10]                    stg 0.05 [0.05, 20] *
+    Pow1   Pow_turnon_p1    prod 108 [108, 113] *                 stg 103.7 [95, 125]
+    Pow1   Pow_width_p1     prod 6 [0.5, 6] *                     stg 5.042 [0.1, 50]
+    Bern5  Bern_b01         prod -                                stg 3.117e-09 [-3, 3]
+    Bern5  Bern_b02         prod -                                stg 1.25e-07 [-3, 3]
+    Bern5  Bern_b03         prod -                                stg -0.05374 [-3, 3]
+    Bern5  Bern_b04         prod -                                stg 0.1735 [-3, 3]
+    Bern5  Bern_gsigma      prod -                                stg 0.05 [0.05, 20] *
+    Bern5  Bern_step        prod -                                stg 99.62 [95, 125]
+    Bern5  Bern_stepWidth   prod -                                stg 3.816 [0.1, 50]
+    Lau1   Lau_p1_lau1      prod -6 [-6, -2] *                    stg -6 [-6, -2] *
+    Lau1   Lau_sigma_p1     prod 2 [2, 10] *                      stg 3.96 [0.05, 20]
+    Lau1   Lau_turnon_p1    prod 107 [107, 115] *                 stg 100.1 [95, 125]
+    Lau1   Lau_width_p1     prod 8 [0.5, 8] *                     stg 0.1 [0.1, 50] *
+  max |staging - production| / production range width: 1.86e+00

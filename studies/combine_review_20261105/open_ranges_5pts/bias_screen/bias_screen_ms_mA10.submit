@@ -1,0 +1,94 @@
+universe       = vanilla
+executable     = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/open_ranges_5pts/bias_screen/runjob.sh
+request_memory = 3000
+request_cpus   = 1
++JobFlavour    = "workday"
+batch_name     = bias_screen_ms_mA10
+on_exit_hold   = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output         = /dev/null
+error          = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/open_ranges_5pts/bias_screen/logs/$(tag)_mA$(m)_$(tr)_$(inj)_c$(c).$(ClusterId).err
+log            = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/open_ranges_5pts/bias_screen/logs/bias_screen.$(ClusterId).log
+arguments      = $(tag) $(m) $(tr) $(inj) $(c) 1000
+queue tag, m, tr, inj, c from (
+ms 10 Pow1 0 0
+ms 10 Pow1 0 1
+ms 10 Pow1 0 2
+ms 10 Pow1 0 3
+ms 10 Pow1 0 4
+ms 10 Pow1 0 5
+ms 10 Pow1 0 6
+ms 10 Pow1 0 7
+ms 10 Pow1 0 8
+ms 10 Pow1 0 9
+ms 10 Pow1 q50 0
+ms 10 Pow1 q50 1
+ms 10 Pow1 q50 2
+ms 10 Pow1 q50 3
+ms 10 Pow1 q50 4
+ms 10 Pow1 q50 5
+ms 10 Pow1 q50 6
+ms 10 Pow1 q50 7
+ms 10 Pow1 q50 8
+ms 10 Pow1 q50 9
+ms 10 Lau1 0 0
+ms 10 Lau1 0 1
+ms 10 Lau1 0 2
+ms 10 Lau1 0 3
+ms 10 Lau1 0 4
+ms 10 Lau1 0 5
+ms 10 Lau1 0 6
+ms 10 Lau1 0 7
+ms 10 Lau1 0 8
+ms 10 Lau1 0 9
+ms 10 Lau1 q50 0
+ms 10 Lau1 q50 1
+ms 10 Lau1 q50 2
+ms 10 Lau1 q50 3
+ms 10 Lau1 q50 4
+ms 10 Lau1 q50 5
+ms 10 Lau1 q50 6
+ms 10 Lau1 q50 7
+ms 10 Lau1 q50 8
+ms 10 Lau1 q50 9
+ms 10 Exp3 0 0
+ms 10 Exp3 0 1
+ms 10 Exp3 0 2
+ms 10 Exp3 0 3
+ms 10 Exp3 0 4
+ms 10 Exp3 0 5
+ms 10 Exp3 0 6
+ms 10 Exp3 0 7
+ms 10 Exp3 0 8
+ms 10 Exp3 0 9
+ms 10 Exp3 q50 0
+ms 10 Exp3 q50 1
+ms 10 Exp3 q50 2
+ms 10 Exp3 q50 3
+ms 10 Exp3 q50 4
+ms 10 Exp3 q50 5
+ms 10 Exp3 q50 6
+ms 10 Exp3 q50 7
+ms 10 Exp3 q50 8
+ms 10 Exp3 q50 9
+ms 10 Bern5 0 0
+ms 10 Bern5 0 1
+ms 10 Bern5 0 2
+ms 10 Bern5 0 3
+ms 10 Bern5 0 4
+ms 10 Bern5 0 5
+ms 10 Bern5 0 6
+ms 10 Bern5 0 7
+ms 10 Bern5 0 8
+ms 10 Bern5 0 9
+ms 10 Bern5 q50 0
+ms 10 Bern5 q50 1
+ms 10 Bern5 q50 2
+ms 10 Bern5 q50 3
+ms 10 Bern5 q50 4
+ms 10 Bern5 q50 5
+ms 10 Bern5 q50 6
+ms 10 Bern5 q50 7
+ms 10 Bern5 q50 8
+ms 10 Bern5 q50 9
+)

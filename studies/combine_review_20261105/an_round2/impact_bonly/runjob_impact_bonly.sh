@@ -1,0 +1,264 @@
+#!/bin/bash
+# Side-study copy (Combine review): b-only impacts. Same as shellScripts/impact/Condor/runjob_expectedImpact.sh except
+# the output directory suffix _bonly and the absolute r range IMPACT_RABS.
+
+if [ -z "${BASH_VERSION:-}" ]; then
+  echo "[ERROR] Please run with bash: bash $0"
+  exit 2
+fi
+
+set -eo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 MASS [BASE_DIR] [CMSSW_TOP]"
+  exit 2
+fi
+
+mA="$1"
+base_dir="${2:-/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit}"
+cmssw_top="${3:-/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4}"
+combine_dir="${base_dir}/Combine"
+mh="125.38"
+# two datacards (2026-10-15): IMPACT_CARD=wilson (default; with the theory uncertainties on the SM cross section, the
+# AN main-text impacts -> output_impacts/) or xsec (cross-section card, AN appendix -> output_impacts_xsec/)
+card_type="${IMPACT_CARD:-wilson}"
+case "$card_type" in
+  wilson) out_impacts="output_impacts" ;;
+  xsec)   out_impacts="output_impacts_xsec" ;;
+  *) echo "[ERROR] IMPACT_CARD must be wilson or xsec"; exit 2 ;;
+esac
+# Injected signal strength of the Asimov dataset: IMPACT_EXPECT=1 (default) or q50, the median expected
+# limit of this mass point and card, so that the impacts are evaluated for a signal near the sensitivity
+# (r = 1 is about 50 times the expected limit). q50 writes to <out_impacts>_q50/.
+impact_expect="${IMPACT_EXPECT:-1}"
+[[ "$impact_expect" == "q50" ]] && out_impacts="${out_impacts}_q50"
+out_impacts="${out_impacts}_bonly"   # side study: b-only Asimov (IMPACT_EXPECT=0)
+impact_parallel="${IMPACT_PARALLEL:-4}"
+# IMPACT_FIX_INDEX=1: freeze pdfindex at the function chosen by a free fit to the same Asimov dataset and skip the
+# parameters of the other functions. With the index profiled, the likelihood scan in each background shape
+# parameter is flat and no interval is found; the total sigma_r with the index profiled is the free fit's one.
+fix_index="${IMPACT_FIX_INDEX:-0}"
+# IMPACT_RANGES=wide (default, as before): wider turn-on/width/sigma ranges for the p1 functions;
+# prod: the ranges stored in the workspace, as in the expected limits.
+impact_ranges="${IMPACT_RANGES:-wide}"
+impact_strategy="${IMPACT_STRATEGY:-0}"
+[[ "$fix_index" == "1" ]] && out_impacts="${out_impacts}_fixidx"
+[[ "$impact_ranges" == "prod" ]] && out_impacts="${out_impacts}_prodrange"
+[[ "$impact_strategy" != "0" ]] && out_impacts="${out_impacts}_s${impact_strategy}"
+
+format_duration() {
+  local total_seconds="${1:-0}"
+  local hours=$(( total_seconds / 3600 ))
+  local minutes=$(( (total_seconds % 3600) / 60 ))
+  local seconds=$(( total_seconds % 60 ))
+  printf "%02dh:%02dm:%02ds" "$hours" "$minutes" "$seconds"
+}
+
+script_start_time=$(date +%s)
+
+echo ">>> Running expected impacts Condor job"
+echo "  mA        = ${mA}"
+echo "  card      = ${card_type}"
+echo "  BASE_DIR  = ${base_dir}"
+echo "  CMSSW_TOP = ${cmssw_top}"
+
+ulimit -s unlimited
+
+if [[ -r /cvmfs/cms.cern.ch/cmsset_default.sh ]]; then
+  source /cvmfs/cms.cern.ch/cmsset_default.sh
+else
+  echo "[ERROR] Missing /cvmfs/cms.cern.ch/cmsset_default.sh"
+  exit 1
+fi
+
+cd "${cmssw_top}/src" || exit 1
+cmsenv
+
+source_crab_env() {
+  set --
+  source /cvmfs/cms.cern.ch/crab3/crab.sh
+}
+
+if [[ -r /cvmfs/cms.cern.ch/crab3/crab.sh ]]; then
+  source_crab_env
+fi
+
+cd "$combine_dir" || exit 1
+mkdir -p "root_t2w_${card_type}" "$out_impacts" impact_jobs
+
+echo ">>> Processing Text2Workspace for mA = ${mA} (${card_type} card)"
+if [[ "${IMPACT_SKIP_T2W:-0}" == "1" ]]; then
+  echo ">>> IMPACT_SKIP_T2W=1: using the existing workspace"
+else
+  python3 RunText2Workspace.py --batch local --queue workday --mA "$mA" --card "$card_type"
+fi
+
+card="${combine_dir}/root_t2w_${card_type}/${mA}_Datacard_leptons.root"
+if [[ ! -f "$card" ]]; then
+  echo "[ERROR] Missing workspace: ${card}"
+  exit 1
+fi
+
+if [[ "$impact_expect" == "q50" ]]; then
+  impact_expect=$(python3 - "${combine_dir}/output_combine_results_${card_type}/higgsCombine${mA}.AsymptoticLimits.mH${mh}.root" <<'PYQ50'
+import sys, ROOT
+f = ROOT.TFile.Open(sys.argv[1])
+print("%.6g" % [e.limit for e in f.Get("limit") if abs(e.quantileExpected - 0.5) < 1e-3][0])
+PYQ50
+)
+fi
+# IMPACT_RRANGE=X sets the r range to [-X, X] times the injected value; with r = q50 the default [-5, 5]
+# is several hundred times sigma_r and the robust fit may not find the lower crossing (mA5: r_lo = rMin).
+r_min=-5; r_max=5
+if [[ -n "${IMPACT_RRANGE:-}" ]]; then
+  r_max=$(python3 -c "print('%.6g' % (${IMPACT_RRANGE} * ${impact_expect}))"); r_min="-${r_max}"
+fi
+# side study: r range [-IMPACT_RABS, IMPACT_RABS] (IMPACT_RRANGE scales the injected value, which is 0 here)
+[[ -n "${IMPACT_RABS:-}" ]] && { r_max="${IMPACT_RABS}"; r_min="-${IMPACT_RABS}"; }
+echo "  expectSignal = ${impact_expect}, r range = [${r_min}, ${r_max}]"
+
+work_dir="${combine_dir}/impact_jobs/mA_${mA}_${card_type}_$(date +%Y%m%d_%H%M%S)_${RANDOM}"
+mkdir -p "$work_dir"
+cd "$work_dir" || exit 1
+
+echo ">>> Running expected impacts for mA = ${mA}"
+echo "  card = ${card}"
+
+wide_ranges='Exp_turnon_p1=95,125:Exp_width_p1=0.1,50:Exp_sigma_p1=0.05,20:Pow_turnon_p1=95,125:Pow_width_p1=0.1,50:Pow_sigma_p1=0.05,20:Lau_turnon_p1=95,125:Lau_width_p1=0.1,50:Lau_sigma_p1=0.05,20:Bern_gsigma=0.05,20:Bern_step=90,130:Bern_stepWidth=0.1,50:'
+[[ "$impact_ranges" == "prod" ]] && wide_ranges=""
+param_ranges="${wide_ranges}lumi_13p6TeV_222324=-5,5"
+min_opts=(
+  --cminDefaultMinimizerType Minuit2
+  --cminDefaultMinimizerStrategy "$impact_strategy"
+  --cminDefaultMinimizerTolerance 0.01
+  --cminFallbackAlgo Minuit2,0:0.1
+  --cminFallbackAlgo Minuit2,Migrad,1:0.1
+  --cminFallbackAlgo Minuit2,Simplex,0:0.1
+  --cminFallbackAlgo Minuit2,Migrad,0:1.0
+  --X-rtd MINIMIZER_freezeDisassociatedParams
+  --X-rtd MINIMIZER_multiMin_hideConstants
+  --X-rtd MINIMIZER_multiMin_maskConstraints
+  --X-rtd MINIMIZER_multiMin_maskChannels=2
+)
+freeze_list="MH"; fix_opts=(); exclude_opts=()
+if [[ "$fix_index" == "1" ]]; then
+  # free fit of the Asimov dataset, as the initial fit of the production impacts, saving the chosen index
+  combine -M MultiDimFit -d "$card" -m "$mh" --redefineSignalPOIs r --rMin "$r_min" --rMax "$r_max" -t -1 \
+    --expectSignal "$impact_expect" --cminPreScan --freezeParameters MH --setParameterRanges "$param_ranges" \
+    "${min_opts[@]}" --saveSpecifiedIndex pdfindex_cat0_13p6TeV -n _selectIndex > select_index.log 2>&1
+  read -r chosen_index exclude_list < <(python3 - "$card" <<'PYIDX'
+import glob, sys, ROOT
+ROOT.gROOT.SetBatch(True)
+tf = ROOT.TFile.Open(glob.glob("higgsCombine_selectIndex.MultiDimFit.mH*.root")[0]); t = tf.Get("limit"); t.GetEntry(0)
+k = int(t.pdfindex_cat0_13p6TeV)
+wf = ROOT.TFile.Open(sys.argv[1]); w = wf.Get("w")
+mp = [p for p in w.allPdfs() if p.InheritsFrom("RooMultiPdf")][0]
+obs = w.set("observables")
+own = lambda i: {v.GetName() for v in mp.getPdf(i).getParameters(obs) if not v.isConstant()}
+keep = own(k); other = set().union(*[own(i) for i in range(mp.getNumPdfs()) if i != k]) - keep
+print(k, ",".join(sorted(other)) or "-")
+PYIDX
+)
+  [[ -n "$chosen_index" ]] || { echo "[ERROR] index selection failed (see select_index.log)"; exit 4; }
+  echo "  chosen pdfindex = ${chosen_index}; excluded parameters of the other functions: ${exclude_list}"
+  freeze_list="MH,pdfindex_cat0_13p6TeV"
+  fix_opts=(--setParameters "pdfindex_cat0_13p6TeV=${chosen_index}")
+  [[ "$exclude_list" != "-" ]] && exclude_opts=(--exclude "$exclude_list")
+fi
+
+common_opts=(
+  -M Impacts
+  -d "$card"
+  -m "$mh"
+  --redefineSignalPOIs r
+  --rMin "$r_min"
+  --rMax "$r_max"
+  -t -1
+  --expectSignal "$impact_expect"
+  --robustFit 1
+  --cminPreScan
+  --freezeParameters="$freeze_list"
+  "${fix_opts[@]}"
+  --X-rtd MINIMIZER_freezeDisassociatedParams
+  --X-rtd MINIMIZER_multiMin_hideConstants
+  --X-rtd MINIMIZER_multiMin_maskConstraints
+  --X-rtd MINIMIZER_multiMin_maskChannels=2
+  --setParameterRanges "$param_ranges"
+  --cminDefaultMinimizerType Minuit2
+  --cminDefaultMinimizerStrategy "$impact_strategy"
+  --cminDefaultMinimizerTolerance 0.01
+  --cminFallbackAlgo Minuit2,0:0.1
+  # [PZ 2026-10-02] mA29: the per-nuisance refits (initial fit inside each --algo impact job) failed with
+  # Migrad status -1 for 31 of 81 nuisances and the initial fit put r_lo on the rMin boundary; those
+  # nuisances were silently dropped from the json. These fallbacks only run after a failed minimization.
+  --cminFallbackAlgo Minuit2,Migrad,1:0.1
+  --cminFallbackAlgo Minuit2,Simplex,0:0.1
+  --cminFallbackAlgo Minuit2,Migrad,0:1.0
+  -v 1
+)
+
+initial_start_time=$(date +%s)
+combineTool.py "${common_opts[@]}" --doInitialFit
+initial_end_time=$(date +%s)
+echo "[Timer] mA=${mA} initial fit finished in $(format_duration $((initial_end_time - initial_start_time)))"
+
+fits_start_time=$(date +%s)
+combineTool.py "${common_opts[@]}" "${exclude_opts[@]}" --doFits --parallel "$impact_parallel"
+# [PZ 2026-10-02] later passes: a refit whose tree lacks the 3 points (nominal, -1, +1) is redone with
+# Minuit strategy 1, then strategy 2 (mA29: MuonSmear/PhotonSmear 2022preEE and csev 2023preBPix fail with
+# strategy 0 even with the fallbacks; with the signal reweight PhotonSmear 2022preEE also fails with
+# strategy 1 and passes with strategy 2).
+short_fits() {
+python3 - <<'PYRETRY'
+import glob, ROOT
+ROOT.gROOT.SetBatch(True)
+bad = []
+for f in sorted(glob.glob("higgsCombine_paramFit_Test_*.MultiDimFit.mH*.root")):
+    tf = ROOT.TFile.Open(f); t = tf.Get("limit") if tf else None
+    if not t or t.GetEntries() < 3:
+        bad.append(f.split("paramFit_Test_")[1].split(".MultiDimFit")[0])
+    if tf: tf.Close()
+print(",".join(bad))
+PYRETRY
+}
+for strat in 1 2; do
+  retry=$(short_fits)
+  [[ -z "$retry" ]] && break
+  echo ">>> Redoing refits with strategy ${strat}: ${retry}"
+  opts_s=(); prev=""
+  for o in "${common_opts[@]}"; do
+    if [[ "$prev" == "--cminDefaultMinimizerStrategy" ]]; then opts_s+=("$strat"); else opts_s+=("$o"); fi
+    prev="$o"
+  done
+  combineTool.py "${opts_s[@]}" --doFits --named "$retry" --parallel "$impact_parallel"
+done
+fits_end_time=$(date +%s)
+echo "[Timer] mA=${mA} nuisance fits finished in $(format_duration $((fits_end_time - fits_start_time)))"
+
+json_file="${combine_dir}/${out_impacts}/${mA}_impacts.json"
+plot_file="${combine_dir}/${out_impacts}/${mA}_Expected_Impacts"
+
+json_start_time=$(date +%s)
+combineTool.py -M Impacts -d "$card" -m "$mh" --redefineSignalPOIs r "${exclude_opts[@]}" -o "$json_file"
+json_end_time=$(date +%s)
+echo "[Timer] mA=${mA} impacts json finished in $(format_duration $((json_end_time - json_start_time)))"
+
+plot_start_time=$(date +%s)
+plotImpacts.py -i "$json_file" -o "$plot_file"
+# Completeness check: combineTool silently drops a nuisance whose refit tree lacks the 3 points.
+python3 - "$json_file" "$work_dir" "$r_min" "$r_max" <<'PYCHK' || { echo "[ERROR] mA=${mA} impacts incomplete (see above)"; exit 3; }
+import glob, json, sys
+d = json.load(open(sys.argv[1])); n = len(d["params"])
+nf = len(glob.glob(sys.argv[2] + "/higgsCombine_paramFit_*.root"))
+r = [p for p in d["POIs"] if p["name"] == "r"][0]["fit"]
+print("[CHECK] params in json %d, refit files %d, r = %.3f / %.3f / %.3f" % (n, nf, r[0], r[1], r[2]))
+rmin, rmax = float(sys.argv[3]), float(sys.argv[4])
+eps = 1e-3 * (rmax - rmin)
+bad = n < nf or r[0] <= rmin + eps or r[2] >= rmax - eps
+sys.exit(1 if bad else 0)
+PYCHK
+plot_end_time=$(date +%s)
+echo "[Timer] mA=${mA} impact plot finished in $(format_duration $((plot_end_time - plot_start_time)))"
+
+echo "[OK] mA=${mA}"
+echo "[Timer] Total runjob_expectedImpact.sh runtime: $(format_duration $(( $(date +%s) - script_start_time )))"

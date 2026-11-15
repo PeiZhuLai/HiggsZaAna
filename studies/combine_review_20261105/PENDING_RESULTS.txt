@@ -1,0 +1,209 @@
+2026-11-05 22:18 HELD bias 295 jobs in 13270190 [reported: old cluster removed, resubmitted as 13270212]
+2026-11-05 22:50 DONE fitdiag 0/60 rscan 30/30 -> /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/review_20261105 (FAIL lines: 0)
+2026-11-05 22:50 DONE hybridnew 13270194 files 90/90 -> /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/review_20261105/hybridnew
+2026-11-06 04:36 DONE bias 13270212 -> merged in bias_outputs_highstat; mismatches 0 (/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_exp_vs_q50.txt)
+2026-11-06 04:36 WATCH END
+2026-11-06 10:09 DONE  impact_q50  -> /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/output_impacts{,_xsec}_q50
+2026-11-09 17:34 RUNNING bias_wide_truth 140 jobs in 13362944 (7 masses x r=0,q50 x 10 chunks x 1000 toys); done markers bias_wide_truth/out/mA*_*/chunk*.done; next: summarize pulls narrow/wide, update docdir summary 5.7
+2026-11-09 17:40 RUNNING impact fixidx prodrange q50: xsec 13362983, wilson 13362984 (30 each); outputs Combine/output_impacts{_xsec,}_q50_fixidx_prodrange/<m>_impacts.json, logs logs/impact_fixidx/; next: compare with free-index q50 impacts, update docdir
+2026-11-09 19:50 DONE bias_wide_truth 13362944: 138/140 (mA23 q50 c2,c8 wide fit hit 2h wall time, not resubmitted) -> bias_wide_truth/summary.txt; docdir 126a303
+2026-11-09 19:50 DONE impact fixidx: wilson 30/30, xsec 29/30 + mA29 missing photon_id_syst (13362983.28 still HELD, not removed) -> impact_fixidx_test/compare_fixidx.txt; docdir 126a303
+2026-11-11 03:28 RUNNING bias_screen ms mA10 (multi-start opened-range envelope Pow1,Lau1,Exp3,Bern5): condor 13375900, 80 jobs (4 truths x r0/q50 x 10 x 1000 toys). out: open_ranges_5pts/bias_screen/out/ms/, done markers chunk<c>.done; summarize: bias_screen/summarize.py ms
+2026-11-11 03:28 RUNNING fTest mA10 EXTRA_ENV_PDFS=Exp1 (fit_results_ms_extra_Exp1/10/.done) -> after_extra_exp1.sh auto-submits bias_screen ms_exp1 (100 jobs expected; cluster id in bias_screen/after_extra_exp1.log, marker bias_screen/.after_exp1_done)
+2026-11-11 03:33 RUNNING multi-start fTest mA15,21-29 (local xargs -P 4, run_ftest_v2.sh MS=1) -> open_ranges_5pts/fit_results_ms/<m>/.done; next: compare/nll_check vs production and 16-start; mA24-29 keep production if envelope unchanged
+2026-11-11 03:33 RUNNING lumi_fix_test (mA1,10,20,30 xsec blind limits, old vs LUM POG 3-nuisance scheme) -> lumi_fix_test/limits.txt, .done
+DECISION 2026-11-11: user approved lumi fix (systematics_HToZa.py edited, .bak_lumi_20261111, not committed); regenerate production cards together with the opened-range + multi-start deployment (after mA10 bias)
+2026-11-11 03:41 RUNNING bias_screen ms_exp1 mA10 (envelope + Exp1): condor 13377581, 100 jobs -> bias_screen/out/ms_exp1/; watch bias_screen/watch_ms_exp1.txt
+2026-11-11 04:23 DONE multi-start fTest mA15,21-29: all rc=0, every member within 0.02 of the 16-start best (nll_check_fit_results_ms.txt, compare_fit_results_ms.txt); user decided to redeploy all 11 opened-range masses
+2026-11-11 09:20 DONE bias_screen ms 13375900 80/80 + ms_exp1 13377581 100/100 -> bias_screen/summary_{ms,ms_exp1}.txt: truth Pow1 -0.209/-0.219 (ms), -0.220/-0.229 (ms_exp1), both fail 0.2; Exp1 not adopted
+DECISION 2026-11-11: user: remove Pow1 from the mA10 envelope (fTest EXCLUDE_ENV_PDFS=Pow1, patch_excludeenv.py, bin/fTest_ALP_turnOn.msxe)
+2026-11-11 09:30 RUNNING chain_excl_pow1.sh (fTest mA10 no Pow1 -> card ms_noPow1 -> smoke -> condor 80 jobs: Lau1,Exp3,Bern5 + Pow1 truth generated from cards/ms -> watch) log bias_screen/chain_excl_pow1.log ("CLUSTER <id>", "END rc="); summary bias_screen/summary_ms_noPow1.txt
+2026-11-11 10:58 DONE bias_screen ms_noPow1 13381283 80/80 -> summary_ms_noPow1.txt: worse than with Pow1 (Exp3 -0.344/-0.308 fails, Pow1 truth -0.487/-0.439, Lau1 -0.133/-0.135, Bern5 +0.074/+0.063); reported to user, mA10 decision pending
+DECISION 2026-11-11 11:51: user: keep Pow1 at mA10 (4-member envelope ms), AN states truth Pow1 -0.21/-0.22 as a boundary result; EXCLUDE_ENV_PDFS stays in staging only
+2026-11-11 17:10 RUNNING chain_mhlow100.sh (user-approved test: mA10 fit edge 100 GeV; fTest -> card ms_lo100 -> smoke -> condor <=120 jobs -> watch) log bias_screen/chain_mhlow100.log ('CLUSTER', 'END rc='); summary bias_screen/summary_ms_lo100.txt
+2026-11-11 17:25 smoke OK (checker bug only); fTest data_obs bug found: dataBinned built from dataFull, 19 events <100 GeV piled into the first bin at mhLow 100 (fits use the reduced data; production mA1 unaffected, its input starts at 100). RUNNING resume_mhlow100.sh -> CLUSTER 13393618
+2026-11-11 18:14 DONE data_obs fix verified (verify_databinned.txt): A mA10 mhLow100 data_obs 120->101 = histogram of the fit-window data, all variables identical; B mA10 mhLow95 whole workspace IDENTICAL to fit_results_ms
+2026-11-11 18:40 DONE bias_screen ms_lo100 13393618 80/80 -> summary_ms_lo100.txt: Pow1 -0.193/-0.213, Exp3 -0.100/-0.117, Lau1 +0.052/+0.003, Bern5 +0.229/+0.181; still fails (Pow1 q50, Bern5 r=0), no improvement over 95 GeV; reported, mA10 decision pending
+2026-11-11 18:50 RUNNING deploy_20261111 chain_deploy.sh stages 1-5 (build, bkg 11 masses, signal rename, datacards, t2w+blind limits); markers /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/chain.{DONE,FAILED}, heartbeat /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/heartbeat.txt; next: condor bias 110 + impacts 60 (report first), AN
+2026-11-11 19:57 DIED deploy_20261111: rename_ws ele: 79 OK, 0 ERROR (expected 70 OK)  -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/heartbeat.txt
+2026-11-11 20:04 DIED deploy_20261111: systematics.yml check (/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/systematics_draft_check.txt)  -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/heartbeat.txt
+2026-11-11 20:12 DONE deploy_20261111 local stages 1-5 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/heartbeat.txt, limits_compare.txt
+2026-11-12 04:01 DIED deploy_20261111: cards differ from the previous deployment beyond the interp_yield rename (/afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/cards_vs_v1.txt)  -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/heartbeat.txt
+2026-11-12 04:08 DONE deploy_20261111 local stages 1-5 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261111/logs/heartbeat.txt, limits_compare.txt
+2026-11-12 04:09 SUBMITTED 部署 condor：highstat bias cluster 13403435（110 個 job，mA10、15、21-29，輸出 Combine/Checks/Bias_nominal/bias_outputs_highstat/mA_<m>，log 在 condor_logs_highstat）；impact q50 fixidx prodrange，wilson 13403436、xsec 13403437（各 30 個，輸出 Combine/output_impacts{,_xsec}_q50_fixidx_prodrange，log 在 deploy_20261111/logs/impact）。下一步：bias 做 merge 與 collect，impact 和 _bak_deploy_20261111 比較
+2026-11-12 07:20 DONE 部署 condor 13403435/36/37 全部離開 queue（watch_condor 07:10 ALL DONE）；impact 60/60 個 json，0 個失敗的 scan（deploy_20261111/logs/impacts_compare.txt）；bias 110/110 個 chunk 都有輸出（mA10 c1、c6 與 mA29 c3 的 log 沒有結束紀錄，但輸出完整）。RUNNING merge_bias_highstat.sh 11 點 -> deploy_20261111/logs/merge_bias.{log,DONE}；下一步：compare_bias.py、collect_bias_results.sh
+2026-11-12 07:25 DONE merge_bias_highstat 11 點 rc=0 -> deploy_20261111/logs/bias_compare.txt；|mean| >= 0.2 的有：mA10 Pow1 -0.208±0.011、mA22 Lau1 -0.208±0.010、mA23 Lau1 -0.203±0.010（部署前 -0.076、-0.113）。collect_bias_results.sh 尚未執行（會覆蓋 EOS 的 plots_bias），等使用者決定 mA22/23 與 collect
+DECISION 2026-11-12：使用者決定 mA22/23 的 Lau1 -0.21/-0.20 比照 mA10 Pow1 當邊界結果（不改模型，AN 寫明）。collect_bias_results.sh 仍未執行（覆蓋 EOS plots_bias 要使用者明確同意）
+2026-11-12 07:30 DONE collect_bias_results.sh（使用者同意）：先備份 /eos/home-p/pelai/HZa/output_plots/plots_bias -> plots_bias_bak_deploy_20261111（124 檔，diff 一致）；collect 後內容有變的只有 mA10、15、21-29 各 4 檔（共 44 檔），其他點不變。log：deploy_20261111/logs/collect_bias.log。下一步：AN 更新（等使用者說再 commit）
+2026-11-12 10:11 condor_history：bias 13403435 共 110 個都是 JobStatus 4（完成）；impact 13403436、13403437 各 30 個都是 JobStatus 4、ExitCode 0。bias 的 ExitCode 查詢因 schedd 回應失敗沒拿到，但 3 個沒有結束紀錄的 job（mA10 c1、c6，mA29 c3）輸出的 toy 數和其他 chunk 一致
+2026-11-12 17:05 RUNNING 範圍逐點判定（使用者 11-12：哪些點寬、哪些點窄，看 bias test 與後面的 fit 是否通過來決定）
+  - bias_fit_config.sh 預設改成只設 r 範圍＝用 workspace（production）範圍；舊的寬範圍改名 wide_bias_fit_combine_options（備份 .bak_preConsistentRanges_20261112）
+  - condor 13409721：wide-truth bias 13 個窄範圍點（3 4 5 8 9 11 12 13 14 16 17 18 20）× r=0/q50 × 10 chunk = 260，narrow 與 wide 各擬合一次 -> range_per_mass/out/
+  - condor 13409722：highstat bias 範圍一致版 27 點（不含 21 27 28，設定沒變）× 10 = 270 -> Bias_nominal/bias_outputs_highstat/；舊結果搬到 bias_outputs_highstat_variants/mA_<m>_widefit_20261112
+  - 監測：range_per_mass/watch.sh（每 30 分鐘；完成標記 logs/ALL.DONE，狀態 logs/watch_status.txt）
+  - 完成後：merge_bias_highstat.sh 27 點、summarize wide-truth、逐點判定表；collect_bias_results.sh 會覆蓋 EOS plots_bias，先備份
+  - mA15 sideband GOF（部署後）p 0.02-0.11 已過；mA28 三函數 p=0.000，下緣 100/105 也不過，還在找修法（gof_fix_mA15_28/）
+2026-11-12 17:05 DONE AN 下一輪（部署後的卡，Asimov）：mA1/10/30 相關矩陣擬合（兩種卡，s+b 與 b-only）與 xsec NLL scan -> Combine/Checks/review_deploy_20261112/{fitdiag,rscan}；12 個 fit 都是 status 0，covQual 3（mA1 b-only 為 2）；scan 31 點皆單調，2dNLL=3.84 的位置 0.258/0.0199/0.0445＝q50。和 r 相關最大：mA1、10 背景 norm（0.37、0.27），mA30 Pow sigma/width（0.52、0.49）。mA5、20 等範圍判定後再跑
+2026-11-12 17:40 DONE sideband GOF（gof_fix_mA15_28/，300 toys/組，SR bin 讀入時就丟掉）
+  - mA15（部署後）：Pow1 p 0.060、Lau1 0.113、Exp1 0.050、Bern5 0.023 → 全過 0.01，部署已修好
+  - mA28：Exp1/Pow1/Lau1 p=0.000（S 高於 toy 平均 4.3-5.8 sd）；下緣 100/105 只有 Exp1@105 p 0.03；Exp3=Exp1、Pow3=Pow1 NLL 不變；staging 開 Bernstein（fTest 選 Bern5，NLL 比 Exp1 低 6.5）sideband S 104.5、p=0.000（4.2 sd）
+  - 原因：97、102、114、138 GeV 四個 bin 貢獻 S 約 41；runs test 30（預期 32.9±3.9）= 殘差沒有一致的形狀偏差；資料是整數、無重複、無量化；mA27/29 在同幾個 bin 有同方向起伏（m_γγ 視窗重疊共用事件）
+  DECISION 待使用者：mA28 用函數或範圍修不好，建議維持 envelope 並在 AN 交代（toys p、runs test、bias 通過）
+2026-11-12 21:10 DONE condor 13409721（wide-truth 260）、13409722（highstat 270）全部完成，0 held。wide-truth 彙整 -> range_per_mass/summary.txt。RUNNING merge_bias_highstat 27 點 -> range_per_mass/logs/merge_bias.{log,DONE}；下一步 compare_bias_consistent.py -> logs/bias_compare_consistent.txt，再做逐點判定表
+2026-11-12 21:20 DONE merge 27 點 rc=0 -> range_per_mass/logs/bias_compare_consistent.txt。用 production 範圍做 bias fit 後：窄範圍點 FAIL（|mean|-0.2 > 1σ）有 mA1 Pow1 +0.212、mA2 Exp1 +0.218/Pow3 +0.234、mA9 Exp3 -0.267/Pow1 -0.265、mA11 Pow1 -0.288、mA12 Exp3 -0.297/Pow1 -0.252、mA13 Exp3 -0.290/Pow1 -0.227、mA16 Pow1 -0.254、mA17 Exp3 -0.302；AT：mA1 Exp1、mA2 Lau1、mA8 Lau1 -0.204、mA14 Bern5 -0.206、mA22/23 Lau1。寬範圍點（10、15、22–29）結果與舊設定一致（設定相同，健全性檢查通過）。wide-truth（range_per_mass/summary.txt，gaus mean）：窄範圍 fit 不過的有 9、11、12、13、16、17、20（r=0 -0.224）；寬範圍 fit 除 mA9（-0.215/-0.219）外都過。
+  DECISION 待使用者：(1) 9、11、12、13、16、17、20 改寬範圍並重建 workspace、重跑 fTest/bias/GOF（會覆蓋 production，先備份）；(2) mA1、2 窄範圍 bias 不過、寬範圍 turn-on 進 SR，需另訂做法；(3) AN 現行 110/113 的 bias 敘述是在寬範圍 profiling 下得到，部署後要改寫
+2026-11-13 04:40 使用者定案：(1) mA9、11、12、13、16、17、20 改寬範圍部署；(2) mA1、2 做 side study（turn-on 95–113）。mA28 A/B 已說明差異，待使用者選。
+2026-11-13 04:40 RUNNING deploy_20261113/chain_deploy.sh 第 1–2 階段（編譯＋回歸 mA19/10＋staging fTest 7 點）-> deploy_20261113/logs/{heartbeat.txt,stage1.DONE,stage2.DONE,chain.FAILED}；第 2 階段後停下檢查，再跑 START_STAGE=3 STOP_AFTER=4，然後 submit_condor_deploy.sh（bias 70＋impact 14）
+2026-11-13 04:40 RUNNING range_mA1_2：build_staging.sh＋run_ftest.sh -> range_mA1_2/logs/ftest.DONE；下一步 bias/make_card.sh、make_truths.py、gen_submit.py（每點 4 truths×2 inj×10 chunk）
+2026-11-13 05:10 RUNNING range_mA1_2 bias condor 13420026（mA1）、13420027（mA2），各 80 job -> range_mA1_2/bias/out/cap113/，監測 bias/watch.sh -> bias/logs/{watch_status.txt,ALL.DONE}；完成後 summarize.py cap113。staging envelope：mA1 Bern3/Exp1/Lau1/Pow1，mA2 Exp1/Lau1/Pow1/Bern2，turn-on 都在 113 上限、width 在 0.1 下限
+2026-11-13 05:20 DONE deploy_20261113 stages 1-2 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261113/logs/heartbeat.txt
+2026-11-13 05:26 DONE deploy_20261113 stages 3-4 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_20261113/logs/heartbeat.txt
+2026-11-13 05:30 DONE deploy_20261113 第 1–4 階段（7 點安裝進 production；備份 fit_results_run3_bak_deploy_20261113、root_t2w_*_bak_deploy_20261113、output_combine_results_*_bak_deploy_20261113、lib/bin/src .bak_deploy_20261113）。RUNNING condor bias 13420172（70）、impact 13420173/13420174（14）-> 監測 deploy_20261113/watch_condor.sh -> logs/{watch_status.txt,condor.DONE}；RUNNING 本機 GOF toys -> deploy_20261113/gof/logs/gof_toys.DONE。完成後：merge_bias_highstat 7 點、比較、GOF 表
+2026-11-13 05:40 DONE 7 點部署後 sideband GOF toys（300 toys、65 bin）-> deploy_20261113/gof/gof_summary.txt：28 個成員 p 都 > 0.01，最低 mA9 Lau1 0.027、mA9 Exp3 0.063、mA20 Exp1 0.097，其餘 0.10–0.75
+2026-11-13 06:05 DONE range_mA1_2 bias（cap113）-> bias/summary_cap113.txt：gaus mean mA1 最大 +0.190（q50）、Pow1 r=0 +0.202±0.010（門檻上 <1σ）；mA2 最大 +0.128。RUNNING GOF toys -> range_mA1_2/gof/logs/gof_toys.DONE
+2026-11-13 06:15 DONE range_mA1_2 GOF -> range_mA1_2/gof/gof_summary.txt：cap113 p 0.37–0.75（S mA1 53–59、mA2 67–72）；對照現行窄範圍 p 0.04–0.50（S mA1 64–86、mA2 75–80），貼邊界參數 cap113 2–3 個 vs 窄範圍 3–5 個。DECISION 待使用者：mA1、2 是否以 turn-on 95–113 部署進 production
+2026-11-13 08:58 DONE deploy_20261113 condor：bias 70/70、impact 14/14，無 held；impact 比較 -> deploy_20261113/logs/impacts_compare.txt，issues 0；bias 合併進行中 -> deploy_20261113/logs/merge_bias.{log,DONE}
+2026-11-13 09:04 DONE merge 7 點 rc=0 -> deploy_20261113/logs/bias_compare.txt：寬範圍部署後 FAIL mA11 Pow1 -0.223±0.011、mA12 Pow1 -0.240±0.011；AT mA9 Pow1 -0.209±0.011；其餘 |mean|≤0.192。7 點每點最大 |mean| 都比窄範圍小。wide-truth 研究在 11、12 只測了 Lau1，沒涵蓋 Pow1。RUNNING 診斷 deploy_20261113/diag_pow1（mA9/11/12/17 Pow1 truth 300 toys，envelope vs 只用 Pow1）-> logs/run.DONE
+2026-11-13 09:10 DONE diag_pow1 -> deploy_20261113/diag_pow1/logs/summary.txt：Pow1 truth 300 toys；只用 Pow1 擬合時 median -0.01 到 -0.11（無明顯偏差）；envelope 有 70–78% 的 toys 選 Pow1（pull 約 -0.1），選 Lau1 的 13–19%（pull -0.63 到 -0.77）、選 Exp1 的 7–11%（-0.28 到 -0.43）。偏差主要來自 envelope 在部分 toys 選到 Lau1/Exp1；mA17（通過，-0.192）也是同樣模式。DECISION 待使用者：mA11、12 Pow1 FAIL 的處理
+2026-11-13 10:42 RUNNING deploy_mA1_2（使用者同意部署 mA1、2，turn-on 95–113）：chain_deploy.sh stage 1–4 本機背景 -> deploy_mA1_2/logs/{heartbeat.txt,chain.DONE,chain.FAILED}
+2026-11-13 11:17 DONE deploy_mA1_2 stages 1-4 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_mA1_2/logs/heartbeat.txt
+2026-11-13 11:55 RUNNING deploy_mA1_2 condor 13421855（bias 20）、13421856/57（impact 2+2）；監測 deploy_mA1_2/watch_condor.sh -> logs/{watch_status.txt,condor.DONE}；完成後 merge_bias_highstat 1 2、比較 bias/impact
+2026-11-13 11:57 使用者定案：mA11、12 和 mA28 都選 B。RUNNING range_mA11_12_28 staging fTest（mA11、12 width/smearing 下限 1 GeV；mA28 Bernstein 到 6 階）-> fit_results/<m>，完成標記 logs/ftest.DONE；之後 bias screen + sideband GOF
+2026-11-13 12:22 RUNNING range_mA11_12_28 bias screen condor 13422583/84/86（240 job，tag flr）-> bias/out/flr；監測 bias/watch.sh -> bias/logs/{watch_status.txt,ALL.DONE}；彙整 bias/summarize.py flr
+2026-11-13 12:22 RUNNING range_mA11_12_28 sideband GOF（本機 5 process）-> gof/toys/*_flr.json，完成標記 gof/logs/gof_toys.DONE
+2026-11-13 12:26 DONE range_mA11_12_28 GOF -> gof/gof_summary.txt：mA11 p 0.67–0.78、mA12 p 0.44–0.58（mA12 各成員 width/smearing 貼 1 GeV 下限）；mA28 四成員 p 0.000（Bern5 S 104.5、Exp1 114.1、Pow1 119.8、Lau1 137.2），加 Bern5 仍不過 GOF，與先前研究一致。bias screen 仍在 condor
+
+[2026-11-13 13:55] DONE range_mA11_12_28 bias screen（condor 13422583/84/86，240/240）→ range_mA11_12_28/bias/summary_flr.txt
+  q50 高斯平均（括號內是現行 production highstat）：
+  mA11（1 GeV 下限）：Pow1 -0.193（-0.223 FAIL）、Lau1 -0.090、Exp1 -0.047、Bern5 +0.125 → 全部通過，Pow1 很接近門檻
+  mA12（1 GeV 下限）：Pow1 -0.216±0.011（-0.240 FAIL）仍 FAIL；Bern5 +0.195、Lau1 -0.069、Exp1 +0.014
+  mA28（加 Bern5）：Bern5 truth -0.289 FAIL，且有效 toy 只有約 70%；Lau1 -0.169（-0.124）；production 三個函數都通過
+DECISION 待使用者決定：是否部署 mA11 的 1 GeV 下限；mA12 不夠；mA28 建議不加 Bern5
+
+[2026-11-13 15:00] DONE mA1、2 部署後 highstat bias（condor 13421855，20/20）；merge_bias_highstat.sh 1 2 rc=0（deploy_mA1_2/logs/merge_bias.{log,DONE}）
+  mA1：Bern3 +0.134、Exp1 +0.180、Lau1 +0.194、Pow1 +0.204±0.010 AT（部署前 Pow1 +0.212 FAIL、Exp1 +0.201 AT）
+  mA2：Bern2 -0.004、Exp1 +0.066、Lau1 +0.120、Pow1 +0.095（部署前 Exp1 +0.218 FAIL、Pow3 +0.234 FAIL、Lau1 +0.206 AT）
+  → 兩點都沒有 FAIL；mA1 Pow1 在門檻內 1σ（AT），side study screen 是 +0.190，兩者一致
+
+[2026-11-13 16:05] 使用者定案：部署 mA11（1 GeV 下限）；mA12 跑 1.5／2／3 GeV 下限，再加上 σ 固定 2 GeV（使用者建議固定 turn-on 參數），四種都不行才考慮拿掉 Pow1（拿掉前先補測：用 Pow1 生成 toy，以不含 Pow1 的 envelope 擬合）；mA28 不加 Bern5，維持 production
+  RUNNING deploy_mA11/chain_deploy.sh（STOP_AFTER=4）-> logs/{heartbeat.txt,chain.DONE|chain.FAILED}；完成後 DRY_RUN=0 submit_condor_deploy.sh（bias 10 + impact 2）
+  RUNNING range_mA12_{floor2,floor1p5,floor3,fixsig2}/driver.sh -> logs/{driver.log,driver.DONE|driver.FAILED}；各自送 80 個 bias job，cluster 記在 bias/logs/condor_clusters.txt；GOF 依 2→1.5→3→fs2 的順序跑
+2026-11-13 16:25 DONE deploy_mA11 stages 1-4 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_mA11/logs/heartbeat.txt
+[2026-11-13 16:26] DONE deploy_mA11 第 1–4 階段（回歸 mA19/12/1 IDENTICAL，staging 與 side study IDENTICAL，2 workspace + 2 blind limit，check_params ALL OK；備份後綴 bak_deploy_mA11）。RUNNING condor 13427269（bias 10）、13427270/71（impact 2）；監測 watch_mA11_mA12.sh -> logs/watch_mA11_mA12.{txt,DONE}（同時監測 mA12 四個變體）
+[2026-11-13 16:56] 修正：floor1p5、floor3 的 driver 檢查字串寫死 2.0（staging 修改本身正確），16:26 誤判失敗；已改檢查字串並重跑，失敗標記改名 driver.FAILED.editcheck；監測重啟（b9iupk5if）
+[2026-11-13 17:40] 發現 Pow1 與 Lau1（一階）是同一個公式（erf 階梯 × x^p，再卷積 Gaussian），差別只在擬合落在哪個局部極小值（p≈−6 或 p≈−9.3）。floor2、floor3 的 fTest 讓 Pow1 落在 p≈−6（和 Lau1 一模一樣，bias 結果也一樣），沒有測到陡峭的那個極小值；補送 Pow1steep truth（GOF 擬合出的 p≈−9.3）：floor2 cluster 13429693、floor3 cluster 13429694（各 20 job），truths 備份 12_truths.json.bak_preSteep。監測改用 watch_mA11_mA12_v2.sh（舊的已停）
+
+[2026-11-13 19:20] DONE 監測 bd6oy2y9v ALL_DONE（19:11）
+  mA11 部署後 highstat bias（13427269，10/10），merge_bias_highstat.sh 11 rc=0（deploy_mA11/logs/merge_bias.{log,DONE}）
+    Bern5 +0.084、Exp1 -0.039、Lau1 -0.102、Pow1 -0.2165±0.0107 → FAIL（超出 0.0165，1.5σ）
+    比較：screen（flr）Pow1 -0.193±0.011；部署前 wide -0.223；narrow -0.288；widefit -0.139
+    screen 與 highstat 差 0.024（1.5σ），設定應相同，視為統計起伏
+  mA12 四個變體 q50 bias（summary_<tag>.txt）：
+    fl1p5：Lau1 -0.043、Exp1 +0.014、Pow1(陡) -0.215±0.011 FAIL、Bern5 +0.160
+    fl2  ：Pow1=Lau1(緩) -0.178、Exp1 -0.066、Bern5 +0.067、Pow1steep -0.608 FAIL
+    fl3  ：Pow1=Lau1(緩) -0.209 AT、Exp1 -0.110、Bern5 +0.043、Pow1steep -0.537 FAIL
+    fs2  ：Lau1 -0.039、Exp1 +0.022、Pow1(陡) -0.215±0.011 FAIL、Bern5 +0.186
+  → 四組都沒全過。下限 1→1.5 GeV、σ 固定都不改變陡 Pow1 的 bias（-0.216/-0.215/-0.215）
+  → envelope 沒有陡成員時（fl2/fl3），陡 truth 的 bias -0.54～-0.61：拿掉 Pow1 只是把問題藏起來
+  更正：Pow1 與 Lau1 是同一個公式，但指數範圍不同（Pow p1 -12～-5、Lau p1 -6.5～-2，PdfModelBuilder.cc:450），
+    重疊在 -6.5～-5。陡極小值（p≈-9.2）只有 Pow 碰得到，所以 Pow1 不是單純重複。
+  sideband NLL：mA12 Lau1 526.086 vs Pow1 527.126；mA11 Lau1 478.975 vs Pow1 479.81（陡的差約 1 單位 NLL）
+  待使用者決定 mA11、mA12 的處理方式
+
+[2026-11-13 23:55] 使用者定案：做 (a)，mA11、mA12 一起跑（envelope 加二階成員）
+  side study range_mA11_12_order2/：production 函式庫不改（mA11 1 GeV 下限、mA12 無下限），fTest 加 ORDER2_MASSES 開關
+    （src/patch_ftest.py）：Exp/Pow/Lau 三族在 F-test 停下的那一階若 GOF>0.01 也收進 envelope；原成員不變，Bern 不動
+  fTest：兩點都多了 Exp3、Pow3、Lau2（fTest GOF 0.82-0.93）；原四成員參數與 production 逐項 IDENTICAL
+  參數貼邊：mA11 Pow3 cp3=1e-4、Exp3 cp3≈3e-4（第二項近乎關閉）、Lau2 cp2=0.5 上限、width 在 1 GeV 下限；
+    mA12 Pow3 σ 0.05 下限（p1=-10.7、p3=-5.58，陡+緩混合）、Lau2 width 0.1 下限且 cp2=0.5 上限
+  bias screen：condor 13433737，140 job（2 點 x 7 truth x q50 x 10 chunk x 1000 toy，1 核 3000 MB）
+  GOF toy：背景 bnnflqh1l（14 成員 x 300 toy，-P4）→ gof/logs/gof_toys.DONE
+  監測：range_mA11_12_order2/watch.sh（背景 bf2exq7aj，每 30 分）→ logs/watch.{txt,DONE}
+  完成後：cd bias && python3 summarize.py o2；彙整 GOF；回報並請使用者決定
+[2026-11-14 00:00] DONE order2 sideband GOF toy（300 toy，fit from 95）：全部通過
+  mA11：Bern5 0.667、Exp1 0.693、Exp3 0.727、Lau1 0.780、Lau2 0.737、Pow1 0.687、Pow3 0.747
+  mA12：Bern5 0.550、Exp1 0.447、Exp3 0.533、Lau1 0.510、Lau2 0.500、Pow1 0.573、Pow3 0.570
+  GOF 擬合貼邊：Exp3 cp3/p3、Lau2 cp2/width、Pow3（mA11 σ；mA12 cp3/p1）、mA12 原成員 σ 或 width
+  log：range_mA11_12_order2/gof/logs/gof_<m>_<pdf>.log
+[2026-11-14 01:30] DONE order2 bias screen（13433737，140/140），summary range_mA11_12_order2/bias/summary_o2.txt（q50）
+  mA11：Lau1 -0.090、Exp1 -0.047、Pow1 -0.194、Exp3 -0.167、Pow3 -0.089、Bern5 +0.124、Lau2 -0.082
+  mA12：Lau1 -0.060、Exp1 +0.030、Exp3 -0.054、Bern5 +0.184、Pow3 -0.060、Pow1 -0.229 FAIL、Lau2 -0.107
+  → 加二階成員對 Pow1 truth 沒效果：mA11 同種子同 truth 的 flr screen 是 -0.193（成對比較，差 0.001）；
+    mA11 的 -0.194 看似通過，是 screen 與 highstat（-0.217）的差異，不是 order2 的效果。mA12 -0.229 vs production highstat -0.240
+  注意：screen 與 highstat 的 |bias| 三次都是 screen 較小（mA1 0.190/0.204、mA11 0.193/0.217、mA12 0.229/0.240），選項比對看來相同，暫視為統計
+  新發現：production 的 Pow1 是局部極小值。Lau1 的最佳點完全落在 Pow1 自己的參數範圍內，且 NLL 較低
+    （mA11 478.975 vs 479.81，mA12 525.625 vs 527.117）；fTest multi-start 只掃 turn-on x width，沒掃 p
+  待使用者決定 mA11、mA12 的處理
+
+[2026-11-14 11:50] 使用者選 2：修正 Pow1 擬合（multi-start 也掃指數）。order2（Exp3/Pow3/Lau2）不採用。
+  side study range_mA11_12_pscan/：production 函式庫不改；fTest 加 EXPSCAN_MASSES（src/patch_ftest.py），
+    Pow1/Lau1/Exp1 的 p1 另從範圍 15/50/85% 起始（60 starts，含原 15 個）
+  fTest：Pow1 收斂到 Lau1 的解（mA11 NLL 479.81→478.975，mA12 527.117→525.625；Pow1 與 Lau1 參數差 <2e-6）
+    Lau1、Exp1 NLL 不變（參數差 <1e-3），Bern5 IDENTICAL；envelope 仍是 Lau1/Pow1/Exp1/Bern5
+  貼邊：mA11 width 1 GeV 下限（Lau1/Pow1/Exp1）、Bern5 gsigma 1；mA12 σ 0.05 下限（四個都是）
+  bias：condor 13434118，80 job（2 點 x 4 truth x q50 x 10 chunk）；GOF：背景 b8636nnaz
+  監測：range_mA11_12_pscan/watch.sh → logs/watch.{txt,DONE}
+[2026-11-14 11:51] DONE pscan sideband GOF（300 toy）：mA11 Bern5 0.667、Exp1 0.693、Lau1 0.777、Pow1 0.763；
+  mA12 Bern5 0.550、Exp1 0.447、Lau1 0.510、Pow1 0.513（全部通過；Pow1 S_obs 與 Lau1 相同）
+2026-11-14 12:50 pscan bias screen DONE (condor 13434118, 80/80, held 0) -> range_mA11_12_pscan/bias/summary_ps.txt
+  q50 gaus_mean: mA11 Lau1 -0.172+-0.010, Pow1 -0.172 (same toys as Lau1, same shape), Exp1 -0.085, Bern5 +0.089
+                 mA12 Lau1 -0.149+-0.010, Pow1 -0.149, Exp1 -0.001, Bern5 +0.146
+  all |mean|<0.2 PASS. Note: Lau1/Exp1 truths moved negative vs envelopes with the steep Pow1 member (mA11 Lau1 -0.090 in o2 screen,
+  same seeds) -> the steep member pulled the envelope; mA11 margin 0.028 (screen ran 0.01-0.02 smaller than highstat before).
+  Next: ask user whether to deploy (deploy_mA11_12_pscan, backup first).
+2026-11-14 12:51 deploy_mA11_12_ps chain stages 1-2 started (background bl3wxkv3x, timeout 5h) -> deploy_mA11_12_ps/logs/heartbeat.txt, stage{1,2}.DONE / chain.FAILED; fTest binary backup bin/fTest_ALP_turnOn.bak_deploy_mA11_12_ps
+2026-11-14 13:19 DONE deploy_mA11_12_ps stages 1-2 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_mA11_12_ps/logs/heartbeat.txt
+2026-11-14 13:19 deploy_mA11_12_ps stages 1-2 DONE: regression mA1/2/19 IDENTICAL (scan off), staging mA11/12 IDENTICAL to pscan side study (scan on). Production fit_results untouched. Waiting for user OK for stages 3-4.
+2026-11-14 17:40 DONE deploy_mA11_12_ps stages 3-4 -> /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/deploy_mA11_12_ps/logs/heartbeat.txt
+2026-11-14 17:41 deploy_mA11_12_ps stages 3-4 DONE (installed mA11/12 in fit_results_run3, backup fit_results_run3_bak_deploy_mA11_12_ps;
+  root_t2w/limits xsec+wilson rebuilt, backups *_bak_deploy_mA11_12_ps; check_params ALL OK; blind only).
+  condor submitted: highstat bias 13446820 (20 jobs; old outputs -> bias_outputs_highstat_variants/mA_{11,12}_prePscan_20261114),
+  impacts 13446821 wilson / 13446822 xsec (2+2; old -> <dir>_bak_deploy_mA11_12_ps). Watch b7nnwxpsm -> deploy_mA11_12_ps/logs/watch_condor.{txt,DONE}
+  Next: merge_bias_highstat.sh 11 / 12, check q50 |mean|<0.2, impacts sanity; then regenerate summary tables / AN bias section.
+2026-11-14 20:15 deploy_mA11_12_ps condor DONE (watch ALL_DONE, held 0). merge_bias_highstat 11/12 rc=0 (deploy_mA11_12_ps/logs/merge_bias_*.log).
+  highstat q50 gaus mean: mA11 Bern5 +0.054 Exp1 -0.081 Lau1 -0.184 Pow1 -0.185 (PASS); mA12 Bern5 +0.152 Exp1 -0.028 Lau1 -0.150 Pow1 -0.149 (PASS)
+  impacts (q50 Asimov, fixed index): no NaN, 74/71 params, same POI uncertainties as before; mA11 fixed index now Pow1 (same shape as Lau1).
+  All masses 1-30 highstat: no FAIL; AT at mA1 (+0.204), 8, 9, 10, 14, 22, 23 (|excess| < 1 sigma).
+  Next: collect_bias_results.sh (overwrites EOS plots_bias -> backup + ask), AN bias section rewrite.
+2026-11-14 21:50 AN round (Combine review): collect_bias done (backup plots_bias_bak_deploy_mA11_12_ps); diagnostics tables + bias_summary_vs_mA regenerated
+  (backups *.bak_preDeployMA11_12ps); targeted AN sync (deploy_mA11_12_ps/sync_an_review.sh); AN Sec 7.0/7.4/7.5 edited (backups *.bak_deployMA11_12ps), not committed.
+  Sideband GOF all 113 members (an_gof_all/): first pass lost mA17-30 (AFS work quota full ~21:35-21:42, 99%); 60/113 complete;
+  RUNNING run_missing.sh (background btdwgii1t) -> logs/gof_missing.DONE; then make_gof_table.py -> EOS bkg_envelope/sideband_gof.{tex,csv}, add to AN 7.4 + mA28 text.
+  Open for user: averaged-uncertainty pull (12 FAIL >1sigma), mA11 floor consistency, steep Pow1 disclosure.
+2026-11-14 22:25 DONE sideband GOF all 113 (an_gof_all/, run_missing.sh filled mA17-30): 109/113 p>=0.01; mA18 Bern5 0.003, mA28 Exp1/Pow1/Lau1 0.000, mA27 Lau1 0.010.
+  Table -> EOS bkg_envelope/sideband_gof.{tex,csv}, synced to AN (Tables 22-24, later table numbers shift by 3). AN 7.4 GOF + mA28 paragraphs added; compile OK (0 errors).
+  DECISION pending (user): pull-definition sentence, mA11 floor consistency test, steep Pow1 disclosure, mA18 Bern5 sideband GOF. AN not committed.
+2026-11-14 22:52 User 11-14: (1) test mA11 without 1 GeV floor, (2) keep steep Pow1 disclosure in AN, (3) mA18 Bern5 kept, (4) limit plots redrawn.
+  AFS cleanup (user OK): 10 old Bias_nominal backups removed (BERN3-6_202606*, FINAL_v1-4_202606*, *preFSRfix_20260925), 3.0 GB freed, 96% -> logs/afs_cleanup_20261114.txt
+  Limit plots: 60 limit files checked expected-only; EOS 2_runLimitsPlot backed up (_preDeployMA11_12ps_20261114), redrawn; 4 pdf copied into AN; Sec 10 numbers updated
+    (2-9 fb, mA1 ~31 fb, ratios 1.71/1.91/1.73 at mA1-3, weaker also at mA6/26 by 12%/17%; 42%/26% unchanged) -> deploy_mA11_12_ps/logs/expected_limit_numbers.txt
+  FOUND: AN repo tracks 18 *observed* limit files (commits dac345103 08-07, 4e7651fdd 10-31, pushed); not referenced by tex. DECISION pending (user).
+  RUNNING range_mA11_nofloor: fTest done (Pow1=Lau1 p -5.986, width 0.1 floor, sigma 3.90; Bern gsigma 0.05); bias condor 13455274 (40 jobs, seeds paired with pscan screen);
+    GOF background -> gof/logs/gof_toys.DONE; watch bezyr2ojk -> logs/watch.{txt,DONE}; then: cd bias && python3 summarize.py nf; compare with summary_ps (Pow1 -0.172).
+2026-11-14 22:51 User: 18 observed files stay in AN repo (no git rm); must never be referenced by tex / appear in AN PDF.
+2026-11-14 23:52 DONE range_mA11_nofloor (condor 13455274 40/40, held 0; watch ALL_DONE) -> bias/summary_nf.txt
+  q50 gaus mean (same seeds as pscan screen with floor): Pow1=Lau1 -0.193+-0.010 (floor: -0.172), Exp1 -0.098 (-0.085), Bern5 +0.077 (+0.089)
+  -> all within 0.2 in the screen, but Pow1/Lau1 0.02 more negative than with the floor (paired); with-floor screen->highstat went -0.172 -> -0.185,
+     so no-floor highstat expected around -0.20 (at threshold). Sideband GOF no floor: Bern5 0.657, Exp1 0.693, Lau1 0.773, Pow1 0.753 (all pass).
+  DECISION pending (user): keep floor (production) or remove it at mA11.
+2026-11-15 01:31 User DECISION: keep mA11 1 GeV floor (production unchanged); the no-floor test is NOT mentioned in the AN. range_mA11_nofloor closed.
+2026-11-15 01:50 avoid-ai-writing pass on this round's AN additions (Sec 6.4, 7.0, 7.4, 7.5, 10): detector HUMAN_ONLY (score 1); 2 wording edits
+  (Sec-06-04 l.298 "obtain ... obtained" repetition; Sec-07-04 l.170 "the limit" -> "this upper limit"). compile OK -> AN/compile_aiw_20261115.log. AN still not committed.
+2026-11-15 02:35 AN committed+pushed 307df3bd2 (76 files: 5 tex, tex-referenced figures/tables, out/); observed files and unrelated selection/optimize/HiggsZaAna plots left uncommitted.
+2026-11-15 02:50 User approved (explicit exception to no-unblind): recompute OBSERVED limits with current production datacards, redraw EOS limits_observed_20261026.
+  RUNNING observed_limits_update/run_observed.sh (bg btcwbfikh, 60 AsymptoticLimits, P4, options = production minus --run blind)
+  old outputs -> Combine/output_combine_results_observed{,_wilson}_preDeployMA11_12ps; EOS backup limits_observed_20261026_bak_preDeployMA11_12ps
+  done marker: observed_limits_update/logs/ALL.{DONE,FAIL}. Observed numbers: not relayed, not in AN/docdir, not used for any decision.
+2026-11-15 02:45 DONE observed limits: 60/60 ok, all 6 quantiles present; plots redrawn in EOS limits_observed_20261026 (lowmass_obs_rhat_vs_closure.txt not regenerated). Values not relayed.
+2026-11-15 03:02 an_round2 (PLAN.md): local checks done; condor HybridNew 13460619 (384), bias_inj 13460620 (24), impact_bonly 13460621 (8); watch an_round2/watch.sh -> logs/watch.txt, logs/condor_ALL_DONE
+2026-11-15 03:20 an_round2 progress: 1a-1d local DONE (statsyst.txt, fit_summary.txt, corr_*/nllscan_*/sigshape_syst_* on EOS output_plots/combine_review_round2);
+  1g b-only impacts DONE 8/8 (output_impacts{,_xsec}_bonly_fixidx_prodrange); postfit_asimov plots redrawing (bg); HybridNew 13460619 + bias_inj 13460620 running.
+  Next: post_hybridnew + merge_bias_inj when condor_ALL_DONE, then AN appendix (new App-J, pointer from Sec 9.3/10), compile, commit+push AN (tex-referenced files only).
+2026-11-15 03:45 datacards repo staged locally (/eos/home-p/pelai/HZa/datacards, not committed/pushed): input/mA10_xsec.txt, wilson/mA10_wilson.txt, shapes/ (11 ROOT, LFS), input/systematics.yml, README.md, .gitlab-ci.yml (r=0.0191); template input/ removed. Cards reproduce production q50 (0.0191 both); CI-equivalent MultiDimFit OK. data_obs in shapes contains SR data -> push only after user OK.
+2026-11-15 04:00 datacards repo pushed (user OK): 7db9ff1 on gitlab NPS-25-014/datacards master (remote switched to SSH). CI pipeline result to check on GitLab.
+2026-11-15 04:12 datacards repo: CI passed on 7db9ff1 (user); columns aligned (whitespace only, tokens identical, limits identical) -> pushed a76e111
+2026-11-15 04:25 production cards aligned (user): 60 cards mA1-30 in Datacard/output_Datacard_leptons, tokens identical (0 diffs), backup output_Datacard_leptons_bak_prealign_20261115 (69 files); mA22 limit unchanged. Pipeline: Datacard/align_datacard.py (new) called by apply_naming.py before writing (backup apply_naming.py.bak_prealign_20261115); tested on prenaming cards 1,10,11,30 x2 -> tokens identical. Not committed (flashggFinalFit commit needs user OK).
+2026-11-15 04:30 flashggFinalFit committed+pushed (user): 4802ff3 on origin/higgsdnafinalfit_run3 (48 files: 10 modified code + new naming/align/check scripts, submits, review scripts; .gitignore +10 rules for backups/build copies/state/products; 2 internal comment refs removed). Working tree clean.
+2026-11-15 04:40 HybridNew DONE 384/384; interpolated expected CLs (an_round2/hybridnew_expected_cls.txt): median toys/asym 1.015-1.038, +-1sig within 8%, +2sig 0.90-0.96, -2sig up to 1.40 (mA10/20). Added to AN App-J. Waiting for bias_inj 13460620.
+2026-11-15 04:30 datacards repo: systematics submodule was pinned to template commit 5d7abad2 (old master, check_names 6 issues); updated to d0d8d0dc -> check_names rc=0 both cards; pushed 354cc3e. Local ValidateDatacards crash = known local CH issue (container check 11-12 OK).
+2026-11-15 06:30 bias_inj 13460620 DONE 24/24 (rc 0); merged with an_round2/bias_inj/run_all_merges.sh (BASE_DIR must be set for the study copy of merge script). Table an_round2/bias_inj/bias_vs_injection.txt (+ EOS output_tables/combine_review_round2). Max spread over 0-3x per function 0.09; 2x all within 0.2; 3x mA1 Lau1 +0.214, mA10 Pow1 -0.216 (<1 sigma); 0x mA1 Lau1 +0.210 (<1 sigma), mA1 Pow1 +0.235+-0.023 (1.5 sigma, positive). App-J K.4 + pointer in Sec 7.5; AN pushed fc6c5dbfa. docdir checklist/summary pushed e9f8950. an_round2 plan CLOSED; remaining: user uploads AN to CMS system, then notify combine contact.

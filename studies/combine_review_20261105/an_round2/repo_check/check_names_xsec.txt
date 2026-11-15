@@ -1,0 +1,37 @@
+[SetFlag] Changing value of flag "workspaces-use-clone" from 0 to 1
+
+ ######################################## 
+
+Systematics lumi_13p6TeV_222324 of class luminosity does not follow CMS conventions.
+Consider the following options for renaming:
+lumi_[78]TeV, lumi_13TeV, lumi_(2016|2017|2018), lumi_13TeV_correlated, lumi_13TeV_1718, lumi_13p6TeV_2022, lumi_13p6TeV_2023
+
+Systematics lumi_13p6TeV_2324 of class luminosity does not follow CMS conventions.
+Consider the following options for renaming:
+lumi_[78]TeV, lumi_13TeV, lumi_(2016|2017|2018), lumi_13TeV_correlated, lumi_13TeV_1718, lumi_13p6TeV_2022, lumi_13p6TeV_2023
+
+Systematics lumi_13p6TeV_2024 of class luminosity does not follow CMS conventions.
+Consider the following options for renaming:
+lumi_[78]TeV, lumi_13TeV, lumi_(2016|2017|2018), lumi_13TeV_correlated, lumi_13TeV_1718, lumi_13p6TeV_2022, lumi_13p6TeV_2023
+
+Systematics CMS_eff_g_id_13p6TeV of class photon_efficiency does not follow CMS conventions.
+Consider the following options for renaming:
+CMS_eff_g, CMS_eff_g_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_g_(7|8|13|13p6)TeV, CMS_eff_g_IDMVA, CMS_eff_g_IDMVA_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_g_SigmaEOverEShift_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_g_PSV_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_g_CSEV_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_g_PixVeto_(2016|2016preVFP|2016postVFP|2017|2018), CMS_eff_g_trigger, CMS_eff_g_trigger_(2016|2016preVFP|2016postVFP|2017|2018)
+
+Systematics CMS_eff_m_reco_syst of class muon_efficiency does not follow CMS conventions.
+Consider the following options for renaming:
+CMS_eff_m, CMS_eff_m_(7|8|13|13p6)TeV, CMS_eff_m_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_id_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_id, CMS_eff_m_reco_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_reco, CMS_eff_m_trigger_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_iso_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_iso
+
+Systematics CMS_eff_m_id_total of class muon_efficiency does not follow CMS conventions.
+Consider the following options for renaming:
+CMS_eff_m, CMS_eff_m_(7|8|13|13p6)TeV, CMS_eff_m_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_id_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_id, CMS_eff_m_reco_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_reco, CMS_eff_m_trigger_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_iso_(2016|2017|2018|2022|2022EE|2023|2023BPix), CMS_eff_m_iso
+
+
+Run on
+  datacard: input/mA10_xsec.txt
+  systematics file: input/systematics.yml
+  master_file: systematics/systematics_master.yml
+Summary: 65 nuisances checked, nuisance check found issues related to 6 nuisance parameter names
+
+ ######################################## 
+
