@@ -1,0 +1,13 @@
+# Bias check with -m 125.38 (side study, differs from production only in -m; production bias uses the RunBiasStudy.py
+# default -m 125). 10000 toys per truth function, r_inj = q50, production seeds and fit options; the toys of the two
+# runs are independent (the signal model depends on MH), so diff_err = sqrt(err1^2 + err2^2).
+# Gaussian-fit mean pull from merged/BiasJson/<mA>_gaussfit.json of bias_outputs_highstat (prod) and bias_outputs_mh12538.
+mA   truth        prod (125)           125.38     diff    err   nsig         combined
+1    Bern3    +0.134+-0.010   +0.123+-0.010   -0.011  0.014   -0.8   +0.129+-0.007
+1    Exp1     +0.180+-0.010   +0.171+-0.010   -0.009  0.014   -0.6   +0.176+-0.007
+1    Lau1     +0.194+-0.010   +0.191+-0.010   -0.003  0.014   -0.2   +0.192+-0.007
+1    Pow1     +0.204+-0.010   +0.188+-0.010   -0.016  0.014   -1.1   +0.196+-0.007
+10   Bern5    +0.112+-0.010   +0.121+-0.010   +0.010  0.015   +0.7   +0.117+-0.007
+10   Exp3     -0.165+-0.011   -0.164+-0.011   +0.001  0.016   +0.0   -0.164+-0.008
+10   Lau1     -0.036+-0.011   -0.048+-0.011   -0.012  0.016   -0.8   -0.042+-0.008
+10   Pow1     -0.207+-0.011   -0.228+-0.011   -0.021  0.015   -1.3   -0.218+-0.008
