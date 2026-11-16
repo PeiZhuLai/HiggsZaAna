@@ -1,0 +1,20 @@
+# Side study (differs from production): mA1 bias at r=0 with modified FITS of the same toys as the x0 injection
+# study (same seeds: INJ_IDX=0). selffit_<f>: pdfindex frozen to the truth function; strat1: minimizer strategy 1,
+# tolerance 0.001. Toy generation identical to production bias (production workspace root_t2w).
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_bias_mA1_fitadjust
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BASE_DIR=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mA1_fitadjust/selffit BIAS_FIT_COMBINE_OPTIONS='--cminDefaultMinimizerType Minuit2 --cminDefaultMinimizerStrategy 0 --cminDefaultMinimizerTolerance 0.01 --cminPreScan --cminFallbackAlgo Minuit2,0:0.1 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2 --freezeParameters MH,pdfindex_cat0_13p6TeV --setParameters pdfindex_cat0_13p6TeV=0 --rMin -5 --rMax 5 --setParameterRanges r=-5,5' SELECT_FUNCTION=Bern3"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mA1_fitadjust/logs/selffit_Bern3_c0.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mA1_fitadjust/logs/selffit_Bern3_c0.$(ClusterId).$(ProcId).err
+arguments = 1 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+

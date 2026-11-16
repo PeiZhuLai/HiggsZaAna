@@ -33,6 +33,21 @@ def constrained(card_path):
     return names
 
 
+def read_lumi_label():
+    import ast
+    src = open("/afs/cern.ch/work/p/pelai/HZgamma/higgsdna-hzg-run3/higgs_dna/metaconditions/corrections/constants.py").read()
+    for node in ast.parse(src).body:
+        if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "LUMI":
+            lumi = ast.literal_eval(node.value)
+            return "%.0f fb^{-1} (13.6 TeV)" % (lumi["2022"] + lumi["2023"] + lumi["2024"])
+    raise RuntimeError("LUMI not found in constants.py")
+
+
+# Axis labels: the parameter names of the workspace, except the background normalization, whose name is too long
+# for the axis (the AN caption gives the mapping).
+LABEL = {"shapeBkg_bkg_mass_cat0__norm": "N_{bkg}"}
+
+
 def corr_plot(res, out):
     allp = [p.GetName() for p in res.floatParsFinal() if p.getError() > 0]
     # keep only parameters correlated with at least one other one; the rest is the identity
@@ -40,17 +55,28 @@ def corr_plot(res, out):
     n = len(pars)
     h = ROOT.TH2D("h", "", n, 0, n, n, 0, n)
     for i, a in enumerate(pars):
-        h.GetXaxis().SetBinLabel(i + 1, a); h.GetYaxis().SetBinLabel(i + 1, a)
+        h.GetXaxis().SetBinLabel(i + 1, LABEL.get(a, a)); h.GetYaxis().SetBinLabel(i + 1, LABEL.get(a, a))
         for j, b in enumerate(pars):
             h.SetBinContent(i + 1, j + 1, res.correlation(a, b))
     c = ROOT.TCanvas("c", "", 1000, 900)
-    c.SetLeftMargin(0.30); c.SetBottomMargin(0.30); c.SetRightMargin(0.12); c.SetTopMargin(0.04)
+    c.SetLeftMargin(0.25); c.SetBottomMargin(0.25); c.SetRightMargin(0.20); c.SetTopMargin(0.08)
     h.SetMinimum(-1); h.SetMaximum(1)
-    h.GetXaxis().SetLabelSize(0.025); h.GetYaxis().SetLabelSize(0.025); h.GetXaxis().LabelsOption("v")
-    ROOT.gStyle.SetPalette(ROOT.kLightTemperature)
-    ROOT.gStyle.SetPaintTextFormat(".2f")
-    h.SetMarkerSize(0.9)
-    h.Draw("colz text")
+    h.GetXaxis().SetLabelSize(0.050); h.GetYaxis().SetLabelSize(0.050); h.GetXaxis().LabelsOption("v")
+    h.GetZaxis().SetLabelSize(0.045); h.GetZaxis().SetTitle("Correlation"); h.GetZaxis().SetTitleSize(0.050)
+    h.GetZaxis().SetTitleOffset(1.30)
+    ROOT.gStyle.SetPalette(ROOT.kBird)
+    ROOT.gStyle.SetNumberContours(100)
+    h.Draw("colz")
+    # cell values drawn by hand: white on the dark (negative) end of kBird, black elsewhere
+    t = ROOT.TLatex(); t.SetTextFont(42); t.SetTextAlign(22); t.SetTextSize(min(0.040, 0.22 / n))
+    for i in range(n):
+        for j in range(n):
+            v = h.GetBinContent(i + 1, j + 1)
+            t.SetTextColor(ROOT.kWhite if v < -0.35 else ROOT.kBlack)
+            t.DrawLatex(i + 0.5, j + 0.5, "%.2f" % v)
+    hdr = ROOT.TLatex(); hdr.SetNDC(); hdr.SetTextFont(42); hdr.SetTextSize(0.040)
+    hdr.DrawLatex(c.GetLeftMargin(), 1 - c.GetTopMargin() + 0.02, "#bf{CMS} #it{Preliminary}")
+    hdr.SetTextAlign(31); hdr.DrawLatex(1 - c.GetRightMargin(), 1 - c.GetTopMargin() + 0.02, read_lumi_label())
     c.SaveAs(out)
 
 

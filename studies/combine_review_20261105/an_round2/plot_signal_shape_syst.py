@@ -63,14 +63,14 @@ def main():
         nus = [v.GetName() for v in w.genobj("ModelConfig").GetNuisanceParameters()]
         groups = {"Energy scale": [n for n in nus if "_scale_" in n],
                   "Resolution": [n for n in nus if "_res_" in n]}
-        c = ROOT.TCanvas("c%d" % m, "", 1600, 800)
+        c = ROOT.TCanvas("c%d" % m, "", 1600, 860)
         c.Divide(2, 1)
         keep = []
         for ip, (label, names) in enumerate(groups.items()):
             c.cd(ip + 1)
             top = ROOT.TPad("t%d%d" % (m, ip), "", 0, 0.32, 1, 1); bot = ROOT.TPad("b%d%d" % (m, ip), "", 0, 0, 1, 0.32)
             top.SetLeftMargin(0.17); top.SetRightMargin(0.04); top.SetTopMargin(0.09); top.SetBottomMargin(0.02)
-            bot.SetLeftMargin(0.17); bot.SetRightMargin(0.04); bot.SetTopMargin(0.03); bot.SetBottomMargin(0.33)
+            bot.SetLeftMargin(0.17); bot.SetRightMargin(0.04); bot.SetTopMargin(0.03); bot.SetBottomMargin(0.45)
             top.Draw(); bot.Draw()
             nom = curve(w, procs, x, {})
             up = curve(w, procs, x, {n: 1.0 for n in names})
@@ -107,13 +107,19 @@ def main():
             t.SetTextAlign(31); t.DrawLatex(0.96, 0.93, LUMI_LABEL)
             bot.cd()
             dev = max(abs(rg.GetY()[i] - 1) for rg in ratios for i in range(rg.GetN()) if 119 < rg.GetX()[i] < 131)
-            lim = max(0.02, min(0.3, round(1.3 * dev + 0.005, 2)))
-            fb = bot.DrawFrame(XMIN, 1 - lim, XMAX, 1 + lim)
+            lim = next(v for v in (0.02, 0.05, 0.1, 0.2, 0.3, 0.5) if v >= min(0.5, 1.3 * dev + 0.005))  # round range: labels 1-lim, 1, 1+lim
+            fb = bot.DrawFrame(XMIN, 1 - 1.3 * lim, XMAX, 1 + 1.3 * lim)  # labels at 1 +- lim stay off the frame edges
             fb.GetXaxis().SetTitle("m_{ll#gamma#gamma} [GeV]"); fb.GetYaxis().SetTitle("Ratio")
             for ax in (fb.GetXaxis(), fb.GetYaxis()):
                 ax.SetTitleSize(0.055 / 0.32); ax.SetLabelSize(0.050 / 0.32)
-            fb.GetXaxis().SetNdivisions(505)
-            fb.GetYaxis().SetTitleOffset(0.48); fb.GetYaxis().SetNdivisions(505); fb.GetYaxis().CenterTitle()
+            fb.GetXaxis().SetNdivisions(505); fb.GetXaxis().SetTitleOffset(1.05); fb.GetXaxis().SetLabelOffset(0.02)
+            fb.GetYaxis().SetTitleOffset(0.48); fb.GetYaxis().SetNdivisions(502); fb.GetYaxis().CenterTitle(); fb.GetYaxis().SetLabelSize(0.042 / 0.32)
+            # y labels only at 1 - lim, 1, 1 + lim, drawn by an axis inside the frame so the lowest one stays off the
+            # x labels (ROOT puts its labels on the frame edges)
+            fb.GetYaxis().SetLabelSize(0)
+            ax = ROOT.TGaxis(XMIN, 1 - lim, XMIN, 1 + lim, 1 - lim, 1 + lim, 2, "S")
+            ax.SetLabelFont(42); ax.SetLabelSize(0.042 / 0.32); ax.SetTickSize(0); ax.SetLabelOffset(0.01); ax.Draw()
+            keep.append(ax)
             line = ROOT.TLine(XMIN, 1, XMAX, 1); line.SetLineStyle(3); line.Draw()
             ratios[0].Draw("L"); ratios[1].Draw("L")
             keep += [nom, up, dn, leg, fr, fb, t, top, bot, line] + ratios

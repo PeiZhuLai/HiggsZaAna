@@ -1,0 +1,137 @@
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c2.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c2.$(ClusterId).$(ProcId).err
+arguments = 1 2 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c3.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c3.$(ClusterId).$(ProcId).err
+arguments = 1 3 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c4.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c4.$(ClusterId).$(ProcId).err
+arguments = 1 4 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c5.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c5.$(ClusterId).$(ProcId).err
+arguments = 1 5 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c6.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c6.$(ClusterId).$(ProcId).err
+arguments = 1 6 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c7.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c7.$(ClusterId).$(ProcId).err
+arguments = 1 7 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c8.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c8.$(ClusterId).$(ProcId).err
+arguments = 1 8 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/bias_inj/runjob_bias_inj.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_review_r2_bias_inj
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+output = /dev/null
+environment = "NTOYS_PER_CHUNK=1000 INJ_E=0.0 INJ_IDX=0 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_inj/x0"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c9.$(ClusterId).log
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/an_round2/logs/bias_inj/x0_mA1_c9.$(ClusterId).$(ProcId).err
+arguments = 1 9 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue

@@ -1,0 +1,67 @@
+# Side study (differs from production): production high-statistics bias at mA = 1 and 10 GeV with -m 125.38
+# (production limits) instead of the RunBiasStudy.py default -m 125; seeds, toys and fit options as in production.
+universe = vanilla
+executable = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/runjob_bias_mh.sh
+getenv = False
+request_memory = 3000
+request_cpus = 1
++JobFlavour = "tomorrow"
+batch_name = HZa_bias_mh12538
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Bern3 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Bern3_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Bern3_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Bern3_c0.$(ClusterId).$(ProcId).err
+arguments = 1 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Exp1 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Exp1_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Exp1_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Exp1_c0.$(ClusterId).$(ProcId).err
+arguments = 1 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Lau1 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Lau1_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Lau1_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Lau1_c0.$(ClusterId).$(ProcId).err
+arguments = 1 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Pow1 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Pow1_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Pow1_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA1_Pow1_c0.$(ClusterId).$(ProcId).err
+arguments = 1 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Bern5 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Bern5_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Bern5_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Bern5_c0.$(ClusterId).$(ProcId).err
+arguments = 10 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Exp3 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Exp3_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Exp3_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Exp3_c0.$(ClusterId).$(ProcId).err
+arguments = 10 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Lau1 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Lau1_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Lau1_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Lau1_c0.$(ClusterId).$(ProcId).err
+arguments = 10 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
+
+environment = "NTOYS_PER_CHUNK=1000 SELECT_FUNCTION=Pow1 BIAS_MH=125.38 BIAS_HS_ROOT=/afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit/Combine/Checks/Bias_nominal/bias_outputs_mh12538"
+log = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Pow1_c0.$(ClusterId).log
+output = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Pow1_c0.$(ClusterId).$(ProcId).out
+error = /afs/cern.ch/work/p/pelai/HZa/HiggsZaAna/studies/combine_review_20261105/bias_mh12538/logs/mA10_Pow1_c0.$(ClusterId).$(ProcId).err
+arguments = 10 0 /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4/src/flashggFinalFit /afs/cern.ch/work/p/pelai/HZa/flashgg_run3/CMSSW_14_1_0_pre4
+queue
