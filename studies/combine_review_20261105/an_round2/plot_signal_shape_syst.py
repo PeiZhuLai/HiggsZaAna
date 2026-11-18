@@ -87,7 +87,9 @@ def main():
                     g.SetPoint(i, g.GetX()[i], g.GetY()[i] / ymax)
             for g, col, sty in ((nom, ROOT.kBlack, 1), (up, ROOT.kRed + 1, 2), (dn, ROOT.kAzure + 2, 2),
                                 (ratios[0], ROOT.kRed + 1, 1), (ratios[1], ROOT.kAzure + 2, 1)):
-                g.SetLineColor(col); g.SetLineWidth(3); g.SetLineStyle(sty)
+                # width 2: the two-panel canvas is shown at 0.90 textwidth, i.e. twice the scale of the single-panel
+                # figures (0.45 textwidth), so width 3 here would look twice as thick as in those figures
+                g.SetLineColor(col); g.SetLineWidth(2); g.SetLineStyle(sty)
             top.cd()
             fr = top.DrawFrame(XMIN, 0, XMAX, 1.4)
             fr.GetYaxis().SetTitle("A.U. (nominal peak = 1)")
