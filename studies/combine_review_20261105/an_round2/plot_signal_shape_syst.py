@@ -78,10 +78,9 @@ def main():
             ymax = max(nom.GetY()[i] for i in range(NPT))
             ratios = []
             for g in (up, dn):
-                rg = ROOT.TGraph()  # only where the nominal model is above 2% of its peak
+                rg = ROOT.TGraph()  # over the whole x range of the upper panel (nominal >= 0.1% of its peak there)
                 for i in range(NPT):
-                    if nom.GetY()[i] > 2e-2 * ymax:
-                        rg.SetPoint(rg.GetN(), g.GetX()[i], g.GetY()[i] / nom.GetY()[i])
+                    rg.SetPoint(rg.GetN(), g.GetX()[i], g.GetY()[i] / nom.GetY()[i])
                 ratios.append(rg)
             for g in (nom, up, dn):  # unit peak of the nominal curve
                 for i in range(NPT):
@@ -106,8 +105,8 @@ def main():
             t.DrawLatex(0.17, 0.93, "#bf{CMS} #it{Preliminary}")
             t.SetTextAlign(31); t.DrawLatex(0.96, 0.93, LUMI_LABEL)
             bot.cd()
-            dev = max(abs(rg.GetY()[i] - 1) for rg in ratios for i in range(rg.GetN()) if 119 < rg.GetX()[i] < 131)
-            lim = next(v for v in (0.02, 0.05, 0.1, 0.2, 0.3, 0.5) if v >= min(0.5, 1.3 * dev + 0.005))  # round range: labels 1-lim, 1, 1+lim
+            dev = max(abs(rg.GetY()[i] - 1) for rg in ratios for i in range(rg.GetN()))
+            lim = next(v for v in (0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5) if v >= min(0.5, 1.3 * dev + 0.005))  # round range: labels 1-lim, 1, 1+lim
             fb = bot.DrawFrame(XMIN, 1 - 1.3 * lim, XMAX, 1 + 1.3 * lim)  # labels at 1 +- lim stay off the frame edges
             fb.GetXaxis().SetTitle("m_{ll#gamma#gamma} [GeV]"); fb.GetYaxis().SetTitle("Ratio")
             for ax in (fb.GetXaxis(), fb.GetYaxis()):
