@@ -8,9 +8,16 @@ Output: /eos/home-p/pelai/HZa/output_plots/combine_review_round2/postfit_asimov_
 Top: Asimov dataset in 1 GeV bins, post-fit background model (envelope member chosen by the fit) with a band
 from 500 parameter sets drawn from the fit covariance, and the signal model at the median expected limit (r = q50).
 The band is the RMS of the sampled curves around the post-fit curve in each bin, the convention of the Combine
-FitDiagnostics shapes. The 16-84% quantiles of the sampled curves (used before) are not centered on the post-fit curve
-when a parameter sits at its range limit with a large Hesse error (mA20: width 0.13 +- 41, range 0.1-50, covariance
-forced positive definite): the draws are clipped at the limit and the quantile band moves away from the curve. Bottom: Asimov minus post-fit background, with the same band and the signal.
+FitDiagnostics shapes.
+Parameters at a limit of their range (closer than 0.1 Hesse errors) are held at the fitted value and the others are
+drawn from the covariance conditional on them; draws outside the parameter ranges are discarded, not clipped.
+Reason: the Hesse matrix does not describe the likelihood at a range limit. At mA20 the erf width of the turn-on is
+0.13 (limit 0.1) with a Hesse error of 41: near zero the width only enters through sqrt(width^2 + sigma^2) with the
+Gaussian resolution, so the curvature vanishes, and plain draws gave curves with a median Asimov chi2 of 142 from the
+post-fit one (band up to 5.8 sqrt(N) per bin). Clipping at a limit (mA30: Pow exponent 0.6 errors from its limit)
+gives parameter sets that break the fitted correlations. The check of this is printed per mass point: the median
+chi2 of the sampled curves against the chi2 median for the number of sampled parameters.
+Bottom: Asimov minus post-fit background, with the same band and the signal.
 Nothing here uses the observed data.
 """
 import ast, math, os
@@ -78,21 +85,37 @@ def main():
             lst.add(res.floatParsFinal().find(n))
         cov = res.reducedCovarianceMatrix(lst)
         C = np.array([[cov[i][j] for j in range(len(names))] for i in range(len(names))])
-        mu = np.array([res.floatParsFinal().find(n).getVal() for n in names])
+        fp = [res.floatParsFinal().find(n) for n in names]
+        mu = np.array([p.getVal() for p in fp])
+        pmin = np.array([p.getMin() for p in fp]); pmax = np.array([p.getMax() for p in fp])
+        # parameters at a range limit stay at the fitted value; the others are drawn conditional on them
+        atlim = [i for i, p in enumerate(fp) if min(p.getVal() - p.getMin(), p.getMax() - p.getVal()) < 0.1 * p.getError()]
+        free = [i for i in range(len(names)) if i not in atlim]
+        Cf = C[np.ix_(free, free)]
+        if atlim:
+            B = C[np.ix_(free, atlim)]
+            Cf = Cf - B @ np.linalg.solve(C[np.ix_(atlim, atlim)], B.T)
         rng = np.random.default_rng(12345)
-        samples = []
+        samples, chi2 = [], []
         tries = 0
-        while len(samples) < NSAMP and tries < 5 * NSAMP:
+        while len(samples) < NSAMP and tries < 20 * NSAMP:
             tries += 1
-            vals = rng.multivariate_normal(mu, C)
-            for n, v in zip(names, vals):
-                w.var(n).setVal(float(v))  # setVal clips to the parameter range
+            vals = rng.multivariate_normal(mu[free], Cf)
+            if np.any(vals < pmin[free]) or np.any(vals > pmax[free]):
+                continue  # discard rather than clip: a clipped set breaks the fitted correlations
+            for i, v in zip(free, vals):
+                w.var(names[i]).setVal(float(v))
             cur = bkg_curve()
             if all(math.isfinite(v) for v in cur):
                 samples.append(cur)
-        print("mA%d: sampled %s" % (m, ",".join(names)))
+                chi2.append(sum((a - b) ** 2 / b for a, b in zip(cur, nom) if b > 0))
         w.allVars().assign(res.floatParsFinal())
-        print("mA%d: %d finite parameter sets out of %d drawn" % (m, len(samples), tries))
+        from scipy.stats import chi2 as chi2dist
+        print("mA%d: sampled %s; held at a range limit: %s" % (m, ",".join(names[i] for i in free),
+                                                              ",".join(names[i] for i in atlim) or "none"))
+        print("mA%d: %d parameter sets kept out of %d drawn; Asimov chi2 of the sampled curves: median %.1f, 90%% %.1f "
+              "(chi2 with %d dof: %.1f, %.1f)" % (m, len(samples), tries, np.median(chi2), np.percentile(chi2, 90),
+                                                 len(free), chi2dist.median(len(free)), chi2dist.ppf(0.9, len(free))))
         band = []
         for i in range(nb):
             rms = math.sqrt(sum((s[i] - nom[i]) ** 2 for s in samples) / len(samples))
